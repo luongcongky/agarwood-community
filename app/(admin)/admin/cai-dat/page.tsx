@@ -5,7 +5,7 @@ export const revalidate = 0
 
 export default async function AdminSettingsPage() {
   const configs = await prisma.siteConfig.findMany({ orderBy: { key: "asc" } })
-  const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]))
+  const configMap = Object.fromEntries(configs.map((c: { key: string; value: string }) => [c.key, c.value]))
 
   return (
     <div className="space-y-6">
