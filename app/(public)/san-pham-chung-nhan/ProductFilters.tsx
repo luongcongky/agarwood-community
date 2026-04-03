@@ -7,9 +7,12 @@ import { cn } from "@/lib/utils"
 type Props = {
   categories: string[]
   provinces: string[]
+  totalProducts: number
+  totalCompanies: number
+  lastUpdated: string
 }
 
-export function ProductFilters({ categories, provinces }: Props) {
+export function ProductFilters({ categories, provinces, totalProducts, totalCompanies, lastUpdated }: Props) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -139,28 +142,38 @@ export function ProductFilters({ categories, provinces }: Props) {
             ))}
           </div>
 
-          {/* View toggle */}
-          <div className="flex items-center gap-1 border border-brand-200 rounded-lg overflow-hidden bg-white">
-            <button
-              onClick={() => update({ view: "grid" })}
-              title="Dạng lưới"
-              className={cn(
-                "px-3 py-1.5 text-sm transition-colors",
-                view !== "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
-              )}
-            >
-              ⊞ Grid
-            </button>
-            <button
-              onClick={() => update({ view: "list" })}
-              title="Dạng danh sách"
-              className={cn(
-                "px-3 py-1.5 text-sm transition-colors",
-                view === "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
-              )}
-            >
-              ≡ List
-            </button>
+          {/* Trust bar + View toggle */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-brand-500 hidden sm:block">
+              <span className="font-semibold text-brand-700">{totalProducts}</span> sản phẩm
+              {" · "}
+              <span className="font-semibold text-brand-700">{totalCompanies}</span> doanh nghiệp
+              {" · "}
+              Cập nhật {lastUpdated}
+            </span>
+
+            <div className="flex items-center gap-1 border border-brand-200 rounded-lg overflow-hidden bg-white">
+              <button
+                onClick={() => update({ view: "grid" })}
+                title="Dạng lưới"
+                className={cn(
+                  "px-3 py-1.5 text-sm transition-colors",
+                  view !== "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
+                )}
+              >
+                ⊞ Grid
+              </button>
+              <button
+                onClick={() => update({ view: "list" })}
+                title="Dạng danh sách"
+                className={cn(
+                  "px-3 py-1.5 text-sm transition-colors",
+                  view === "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
+                )}
+              >
+                ≡ List
+              </button>
+            </div>
           </div>
         </div>
       </div>

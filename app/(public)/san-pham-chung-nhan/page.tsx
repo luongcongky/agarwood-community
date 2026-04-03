@@ -158,26 +158,24 @@ export default async function CertifiedProductsPage({
   return (
     <div className="min-h-screen bg-brand-50">
 
-      {/* ── Tầng 1: Hero + Trust bar ─────────────────────────────────────── */}
-      <div className="bg-brand-800 text-white">
-        <div className="mx-auto max-w-7xl px-4 py-10 text-center">
-          <div className="text-4xl mb-3">🏅</div>
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white">
-            Sản phẩm Trầm Hương được Hội Chứng nhận
-          </h1>
-          {/* Trust stats bar */}
-          <div className="mt-4 inline-flex items-center gap-4 bg-brand-700 rounded-full px-5 py-2 text-sm text-brand-100 flex-wrap justify-center">
-            <span className="font-semibold text-white">{totalProducts} sản phẩm</span>
-            <span className="text-brand-400">·</span>
-            <span>{totalCompanies} doanh nghiệp</span>
-            <span className="text-brand-400">·</span>
-            <span>Cập nhật {lastUpdated}</span>
-          </div>
-        </div>
+      {/* ── Tầng 1: Page Banner ──────────────────────────────────────────── */}
+      <div className="bg-brand-800 py-14 px-4 text-center">
+        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-brand-100">
+          Sản phẩm được Chứng nhận
+        </h1>
+        <p className="mt-2 text-brand-300 text-base">
+          Sản phẩm trầm hương đã được Hội Trầm Hương Việt Nam kiểm định và cấp chứng nhận
+        </p>
       </div>
 
       {/* ── Tầng 2 + 3: Filters (client component) ───────────────────────── */}
-      <ProductFilters categories={categories} provinces={provinces} />
+      <ProductFilters
+        categories={categories}
+        provinces={provinces}
+        totalProducts={totalProducts}
+        totalCompanies={totalCompanies}
+        lastUpdated={lastUpdated}
+      />
 
       {/* ── Tầng 4: Kết quả ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 py-8">
