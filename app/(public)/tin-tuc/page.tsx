@@ -32,10 +32,6 @@ function formatDate(d: Date | null) {
   return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
-function formatDateLong(d: Date | null) {
-  if (!d) return ""
-  return d.toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-}
 
 export default async function NewsPage({
   searchParams,
@@ -95,21 +91,12 @@ export default async function NewsPage({
   return (
     <div className="min-h-screen bg-white">
 
-      {/* ── Masthead ─────────────────────────────────────────────────────────── */}
-      <div className="border-b-4 border-brand-800 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-          <div>
-            <p className="text-xs text-brand-500 uppercase tracking-widest font-medium">
-              Hội Trầm Hương Việt Nam
-            </p>
-            <h1 className="font-heading text-3xl sm:text-4xl font-bold text-brand-900 leading-none mt-0.5">
-              Tin tức
-            </h1>
-          </div>
-          <p className="text-xs text-brand-400 hidden sm:block">
-            {formatDateLong(new Date())}
-          </p>
-        </div>
+      {/* ── Page Banner ─────────────────────────────────────────────────────── */}
+      <div className="bg-brand-800 py-14 px-4 text-center">
+        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-brand-100">Tin tức</h1>
+        <p className="mt-2 text-brand-300 text-base">
+          Thông tin &amp; Cập nhật từ Hội Trầm Hương Việt Nam
+        </p>
       </div>
 
       {/* ── Search bar ───────────────────────────────────────────────────────── */}
