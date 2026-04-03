@@ -20,6 +20,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: "Hội viên",     href: "/admin/hoi-vien",    icon: Users },
   { label: "Chứng nhận",   href: "/admin/chung-nhan",  icon: BadgeCheck },
   { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone },
+  { label: "Xác nhận CK",  href: "/admin/thanh-toan",  icon: BadgeCheck },
   { label: "Báo cáo",      href: "/admin/bao-cao",     icon: Flag },
   { label: "Tin tức",      href: "/admin/tin-tuc",     icon: Newspaper },
   { label: "Cài đặt",      href: "/admin/cai-dat",     icon: Settings },

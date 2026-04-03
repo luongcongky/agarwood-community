@@ -45,6 +45,7 @@ export default async function AdminDashboardPage() {
     unhandledReports,
     newVIPUsers,
     allMemberships,
+    pendingPayments,
   ] = await Promise.all([
     prisma.user.count({ where: { role: "VIP" } }),
     prisma.user.count({
@@ -82,6 +83,7 @@ export default async function AdminDashboardPage() {
       where: { createdAt: { gte: twelveMonthsAgo } },
       select: { amountPaid: true, createdAt: true },
     }),
+    prisma.payment.count({ where: { status: "PENDING" } }),
   ])
 
   // Build chart data
@@ -111,6 +113,7 @@ export default async function AdminDashboardPage() {
     totalVIP > 0 ? Math.round((activeMemberships / totalVIP) * 100) : 0
 
   const hasAlerts =
+    pendingPayments > 0 ||
     expiringMembers.length > 0 ||
     longPendingCerts.length > 0 ||
     unhandledReports > 0
@@ -194,6 +197,16 @@ export default async function AdminDashboardPage() {
             Cần chú ý
           </h2>
           <ul className="space-y-2 text-sm text-amber-800">
+            {pendingPayments > 0 && (
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 text-amber-500">•</span>
+                <Link href="/admin/thanh-toan" className="flex items-center gap-2 hover:underline">
+                  <span>💳</span>
+                  <span>{pendingPayments} yêu cầu chuyển khoản chờ xác nhận</span>
+                  <span className="text-amber-600">→</span>
+                </Link>
+              </li>
+            )}
             {expiringMembers.length > 0 && (
               <li className="flex items-start gap-2">
                 <span className="mt-0.5 text-amber-500">•</span>

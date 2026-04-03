@@ -8,7 +8,7 @@ export const revalidate = 0
 const PAGE_SIZE = 20
 
 const CERT_STATUS_LABELS: Record<CertStatus, string> = {
-  DRAFT: "Nháp",
+  DRAFT: "Chờ xác nhận TT",
   PENDING: "Chờ duyệt",
   UNDER_REVIEW: "Đang xét duyệt",
   APPROVED: "Đã duyệt",
@@ -38,7 +38,9 @@ export default async function AdminCertificationsPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let where: any = {}
 
-  if (statusFilter === "pending") {
+  if (statusFilter === "awaiting_payment") {
+    where = { status: "DRAFT" }
+  } else if (statusFilter === "pending") {
     where = { status: { in: ["PENDING", "UNDER_REVIEW"] } }
   } else if (statusFilter === "approved") {
     where = { status: "APPROVED" }
@@ -64,6 +66,7 @@ export default async function AdminCertificationsPage({
 
   const statusTabs = [
     { label: "Tất cả", value: "" },
+    { label: "Chờ xác nhận TT", value: "awaiting_payment" },
     { label: "Chờ duyệt", value: "pending" },
     { label: "Đã duyệt", value: "approved" },
     { label: "Từ chối", value: "rejected" },

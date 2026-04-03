@@ -16,6 +16,7 @@ const MEMBER_PREFIXES = [
   "/gia-han",
   "/ho-so",
   "/chung-nhan",
+  "/thanh-toan/lich-su",
 ]
 
 /** Chỉ ADMIN mới vào được */
@@ -41,9 +42,8 @@ function isMembershipValid(membershipExpires: string | null | undefined): boolea
   return new Date(membershipExpires) > new Date()
 }
 
-// ── Middleware ───────────────────────────────────────────────────────────────
-
-export default auth((req) => {
+// ── Proxy ────────────────────────────────────────────────────────────────────
+export const proxy = auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
   const role = session?.user?.role as Role | undefined
@@ -88,6 +88,8 @@ export default auth((req) => {
   // ── 4. Public routes: cho qua ──────────────────────────────────────────
   return NextResponse.next()
 })
+
+export default proxy
 
 export const config = {
   matcher: [

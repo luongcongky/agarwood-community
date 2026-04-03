@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { payos } from "@/lib/payos"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -22,15 +21,20 @@ export async function POST(request: Request) {
 
   const orderCode = Date.now()
 
-  const paymentLink = await payos.createPaymentLink({
-    orderCode,
-    amount,
-    description: `Gia han hoi vien ${user.name}`,
-    returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/thanh-toan/thanh-cong?type=membership&orderCode=${orderCode}`,
-    cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/gia-han`,
+  // Fetch bank info from SiteConfig (fallback to defaults)
+  const configs = await prisma.siteConfig.findMany({
+    where: { key: { in: ["bank_name", "bank_account_number", "bank_account_name"] } },
   })
+  const cfg = Object.fromEntries(configs.map((c) => [c.key, c.value]))
+  const bankInfo = {
+    bankName: cfg.bank_name ?? "Vietcombank",
+    accountNumber: cfg.bank_account_number ?? "1234567890",
+    accountName: cfg.bank_account_name ?? "HOI TRAM HUONG VIET NAM",
+    amount,
+    description: `HTVNCK${orderCode}`,
+  }
 
-  // Create membership record (placeholder dates — updated on webhook/success)
+  // Create membership record (dates updated when admin confirms)
   const membership = await prisma.membership.create({
     data: {
       userId: session.user.id,
@@ -54,5 +58,5 @@ export async function POST(request: Request) {
     },
   })
 
-  return NextResponse.json({ paymentUrl: paymentLink.checkoutUrl })
+  return NextResponse.json({ orderCode, bankInfo })
 }

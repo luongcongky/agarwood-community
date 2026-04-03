@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
+type BankInfo = {
+  bankName: string
+  accountNumber: string
+  accountName: string
+  amount: number
+  description: string
+}
+
 type Product = {
   id: string
   name: string
@@ -37,6 +45,10 @@ const STEP_LABELS = [
   { step: 2, label: "Hồ sơ & Tài liệu" },
   { step: 3, label: "Thanh toán" },
 ]
+
+function formatVND(amount: number) {
+  return amount.toLocaleString("vi-VN") + "đ"
+}
 
 function StepIndicator({ current }: { current: number }) {
   return (
@@ -99,6 +111,8 @@ export default function NopDonPage() {
   // Step 3 state
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [certBankInfo, setCertBankInfo] = useState<BankInfo | null>(null)
+  const [certDone, setCertDone] = useState(false)
 
   // Restore from sessionStorage on mount
   useEffect(() => {
@@ -189,10 +203,7 @@ export default function NopDonPage() {
         }
         return
       }
-      // Clear session storage
-      sessionStorage.removeItem("cert_step1")
-      sessionStorage.removeItem("cert_step2")
-      router.push(data.paymentUrl)
+      setCertBankInfo(data.bankInfo)
     } catch {
       setSubmitError("Không thể kết nối. Vui lòng thử lại.")
     } finally {
@@ -458,69 +469,124 @@ export default function NopDonPage() {
             Xác nhận & Thanh toán
           </h2>
 
-          {/* Summary card */}
-          <div className="bg-brand-50 rounded-xl p-4 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-brand-600">Sản phẩm</span>
-              <span className="font-semibold text-brand-900">
-                {selectedProduct?.name ?? "—"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-600">Hình thức xét duyệt</span>
-              <span className="font-semibold text-brand-900">
-                {isOnlineReview ? "Online" : "Offline"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-600">Tài khoản hoàn phí</span>
-              <span className="font-semibold text-brand-900 text-right max-w-48 truncate">
-                {bankAccountName} — {bankName}
-              </span>
-            </div>
-            <div className="border-t border-brand-200 pt-3 flex justify-between">
-              <span className="text-brand-700 font-semibold">
-                Phí xét duyệt
-              </span>
-              <span className="text-brand-900 font-bold text-lg">
-                {CERT_FEE.toLocaleString("vi-VN")} VND
-              </span>
-            </div>
-          </div>
+          {/* Summary card — only shown before bank info is loaded */}
+          {!certBankInfo && !certDone && (
+            <>
+              <div className="bg-brand-50 rounded-xl p-4 space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-brand-600">Sản phẩm</span>
+                  <span className="font-semibold text-brand-900">
+                    {selectedProduct?.name ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-brand-600">Hình thức xét duyệt</span>
+                  <span className="font-semibold text-brand-900">
+                    {isOnlineReview ? "Online" : "Offline"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-brand-600">Tài khoản hoàn phí</span>
+                  <span className="font-semibold text-brand-900 text-right max-w-48 truncate">
+                    {bankAccountName} — {bankName}
+                  </span>
+                </div>
+                <div className="border-t border-brand-200 pt-3 flex justify-between">
+                  <span className="text-brand-700 font-semibold">
+                    Phí xét duyệt
+                  </span>
+                  <span className="text-brand-900 font-bold text-lg">
+                    {CERT_FEE.toLocaleString("vi-VN")} VND
+                  </span>
+                </div>
+              </div>
 
-          <p className="text-xs text-brand-500">
-            Sau khi thanh toán thành công, đơn sẽ được ghi nhận và chúng tôi
-            sẽ liên hệ với bạn trong 3–5 ngày làm việc. Phí được hoàn lại nếu
-            đơn bị từ chối.
-          </p>
+              <p className="text-xs text-brand-500">
+                Sau khi thanh toán thành công, đơn sẽ được ghi nhận và chúng tôi
+                sẽ liên hệ với bạn trong 3–5 ngày làm việc. Phí được hoàn lại nếu
+                đơn bị từ chối.
+              </p>
 
-          {submitError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-              {submitError}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  {submitError}
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2">
+                <button
+                  onClick={() => setCurrentStep(2)}
+                  className="text-brand-600 px-4 py-2.5 rounded-lg font-medium hover:bg-brand-50 transition-colors border border-brand-200"
+                >
+                  ← Quay lại
+                </button>
+                <button
+                  onClick={handleSubmitPayment}
+                  disabled={submitting}
+                  className="bg-brand-700 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submitting ? "Đang xử lý..." : "Gửi yêu cầu & Xem hướng dẫn CK"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Bank transfer info card */}
+          {certBankInfo && !certDone && (
+            <div className="bg-white border-2 border-brand-300 rounded-2xl p-6 space-y-5">
+              <h3 className="font-semibold text-brand-800">Hướng dẫn chuyển khoản phí xét duyệt</h3>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b border-brand-100">
+                  <span className="text-brand-500">Ngân hàng</span>
+                  <span className="font-semibold text-brand-900">{certBankInfo.bankName}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-brand-100">
+                  <span className="text-brand-500">Số tài khoản</span>
+                  <span className="font-semibold text-brand-900 font-mono">{certBankInfo.accountNumber}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-brand-100">
+                  <span className="text-brand-500">Chủ tài khoản</span>
+                  <span className="font-semibold text-brand-900">{certBankInfo.accountName}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-brand-100">
+                  <span className="text-brand-500">Số tiền</span>
+                  <span className="font-bold text-brand-700 text-base">{formatVND(certBankInfo.amount)}</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-brand-500">Nội dung CK</span>
+                  <span className="font-bold text-brand-900 font-mono bg-brand-50 px-2 py-0.5 rounded">{certBankInfo.description}</span>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                ⚠️ Nhập đúng nội dung CK. Đơn chứng nhận sẽ được xét duyệt sau khi admin xác nhận thanh toán.
+              </div>
+
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("cert_step1")
+                  sessionStorage.removeItem("cert_step2")
+                  setCertDone(true)
+                }}
+                className="w-full bg-brand-700 text-white rounded-xl py-3 font-semibold hover:bg-brand-800 transition-colors"
+              >
+                Tôi đã chuyển khoản ✓
+              </button>
             </div>
           )}
 
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="text-brand-600 px-4 py-2.5 rounded-lg font-medium hover:bg-brand-50 transition-colors border border-brand-200"
-            >
-              ← Quay lại
-            </button>
-            <button
-              onClick={handleSubmitPayment}
-              disabled={submitting}
-              className="bg-brand-700 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {submitting ? (
-                "Đang xử lý..."
-              ) : (
-                <>
-                  💳 Thanh toán qua PayOS
-                </>
-              )}
-            </button>
-          </div>
+          {/* Done state */}
+          {certDone && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center space-y-4">
+              <div className="text-5xl">✅</div>
+              <h2 className="text-xl font-semibold text-green-800">Đơn đã được ghi nhận!</h2>
+              <p className="text-sm text-green-700">Admin sẽ xác nhận thanh toán trong 1–2 ngày làm việc. Sau đó đơn sẽ được đưa vào xét duyệt.</p>
+              <Link href="/thanh-toan/lich-su" className="inline-block bg-green-700 text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-green-800 transition-colors">
+                Xem lịch sử thanh toán
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

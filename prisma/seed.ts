@@ -2,9 +2,13 @@
 // Chạy: npx prisma db seed
 
 import { PrismaClient, Role, MembershipStatus, CertStatus, PostStatus, MediaServiceType, MediaOrderStatus } from "@prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
 import { hash } from "bcryptjs"
 
-const prisma = new PrismaClient()
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log("🌱 Bắt đầu seed data...")
@@ -335,7 +339,10 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error("❌ Seed thất bại:", e)
+    console.error("❌ Seed thất bại!")
+    if (e.code) console.error("Error Code:", e.code)
+    if (e.meta) console.error("Meta:", JSON.stringify(e.meta, null, 2))
+    console.error(e)
     process.exit(1)
   })
   .finally(async () => {

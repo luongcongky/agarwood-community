@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { payos } from "@/lib/payos"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -16,10 +15,7 @@ export async function POST(request: Request) {
   })
   if (!user?.membershipExpires || user.membershipExpires < new Date()) {
     return NextResponse.json(
-      {
-        error: "Membership đã hết hạn. Vui lòng gia hạn trước.",
-        redirectTo: "/gia-han",
-      },
+      { error: "Membership đã hết hạn. Vui lòng gia hạn trước.", redirectTo: "/gia-han" },
       { status: 403 }
     )
   }
@@ -31,10 +27,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Thiếu thông tin sản phẩm" }, { status: 400 })
   }
 
-  const FEE = 5_000_000 // 5,000,000 VND
+  const FEE = 5_000_000
   const orderCode = Date.now()
 
-  // Create certification record
+  // Fetch bank info from SiteConfig
+  const configs = await prisma.siteConfig.findMany({
+    where: { key: { in: ["bank_name", "bank_account_number", "bank_account_name"] } },
+  })
+  const cfg = Object.fromEntries(configs.map((c) => [c.key, c.value]))
+  const bankInfo = {
+    bankName: cfg.bank_name ?? "Vietcombank",
+    accountNumber: cfg.bank_account_number ?? "1234567890",
+    accountName: cfg.bank_account_name ?? "HOI TRAM HUONG VIET NAM",
+    amount: FEE,
+    description: `HTVNCK${orderCode}`,
+  }
+
   const cert = await prisma.certification.create({
     data: {
       productId,
@@ -43,14 +51,14 @@ export async function POST(request: Request) {
       documentUrls: [],
       applicantNote: applicantNote ?? null,
       isOnlineReview: isOnlineReview ?? true,
-      feePaid: FEE * 100, // schema stores *100
+      feePaid: FEE * 100,
       refundBankName: bankName ?? null,
       refundAccountName: bankAccountName ?? null,
       refundAccountNo: bankAccountNumber ?? null,
     },
   })
 
-  await prisma.payment.create({
+  const payment = await prisma.payment.create({
     data: {
       userId: session.user.id,
       type: "CERTIFICATION_FEE",
@@ -62,13 +70,5 @@ export async function POST(request: Request) {
     },
   })
 
-  const paymentLink = await payos.createPaymentLink({
-    orderCode,
-    amount: FEE,
-    description: "Phi xet duyet chung nhan SP",
-    returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/thanh-toan/thanh-cong?type=certification&certId=${cert.id}`,
-    cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/chung-nhan/nop-don`,
-  })
-
-  return NextResponse.json({ paymentUrl: paymentLink.checkoutUrl })
+  return NextResponse.json({ certId: cert.id, paymentId: payment.id, orderCode, bankInfo })
 }
