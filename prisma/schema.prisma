@@ -1,0 +1,522 @@
+// ============================================================
+// Agarwood Community Platform — Prisma Schema
+// Database: PostgreSQL (Supabase)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  GUEST
+  VIP
+  ADMIN
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  PENDING_PAYMENT
+}
+
+enum PostStatus {
+  PUBLISHED
+  LOCKED   // bị lock do report vi phạm
+  DELETED
+}
+
+enum ReportStatus {
+  PENDING    // chờ admin xử lý
+  REVIEWED   // đã xem xét, giữ bài
+  DISMISSED  // bác report
+  ACTIONED   // đã lock bài
+}
+
+enum CertStatus {
+  DRAFT          // hội viên đang điền form
+  PENDING        // đã nộp, chờ xét duyệt
+  UNDER_REVIEW   // admin đang xét duyệt
+  APPROVED       // được cấp badge
+  REJECTED       // từ chối
+  REFUNDED       // đã hoàn tiền
+}
+
+enum MediaOrderStatus {
+  NEW            // vừa đặt hàng
+  CONFIRMED      // admin đã xác nhận
+  IN_PROGRESS    // đang thực hiện
+  DELIVERED      // đã bàn giao bài viết
+  REVISION       // khách yêu cầu chỉnh sửa
+  COMPLETED      // hoàn tất, đã thanh toán
+  CANCELLED
+}
+
+enum MediaServiceType {
+  ARTICLE_COMPANY   // viết bài giới thiệu doanh nghiệp
+  ARTICLE_PRODUCT   // viết bài giới thiệu sản phẩm
+  PRESS_RELEASE     // thông cáo báo chí
+  SOCIAL_CONTENT    // nội dung mạng xã hội
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  MEMBERSHIP_FEE      // phí hội viên hàng năm
+  CERTIFICATION_FEE   // phí xét duyệt chứng nhận SP
+  MEDIA_SERVICE       // phí dịch vụ truyền thông
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String
+  phone             String?
+  avatarUrl         String?
+  passwordHash      String?   // null cho OAuth users
+  role              Role      @default(GUEST)
+
+  // Membership & ranking
+  contributionTotal Int       @default(0) // tổng phí membership tích lũy (VND)
+  displayPriority   Int       @default(0) // thứ tự ưu tiên hiển thị bài — tính từ contributionTotal
+  reputationScore   Int       @default(100) // điểm uy tín — future use, schema sẵn sàng
+
+  // Refund info — dùng khi hoàn phí chứng nhận bị từ chối
+  bankAccountName   String?
+  bankAccountNumber String?
+  bankName          String?
+
+  membershipExpires DateTime?
+  isActive          Boolean   @default(true)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  accounts          Account[]
+  sessions          Session[]
+  memberships       Membership[]
+  company           Company?
+  posts             Post[]
+  reports           Report[]        @relation("ReporterRelation")
+  certifications    Certification[]
+  mediaOrders       MediaOrder[]
+  payments          Payment[]
+  postReactions     PostReaction[]
+
+  @@index([role])
+  @@index([contributionTotal])
+  @@index([displayPriority])
+  @@map("users")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// MEMBERSHIP & PAYMENT
+// ============================================================
+
+model Membership {
+  id            String           @id @default(cuid())
+  userId        String
+  amountPaid    Int              // VND
+  validFrom     DateTime
+  validTo       DateTime
+  status        MembershipStatus @default(ACTIVE)
+  paymentRef    String?          // mã giao dịch PayOS
+  note          String?
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment       Payment?
+
+  @@index([userId])
+  @@index([status])
+  @@index([validTo])
+  @@map("memberships")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  userId           String
+  type             PaymentType
+  status           PaymentStatus @default(PENDING)
+  amount           Int           // VND
+  payosOrderCode   String?       @unique  // mã đơn hàng PayOS
+  payosTransId     String?       // mã giao dịch PayOS sau khi thành công
+  description      String?
+  failureReason    String?
+
+  // Polymorphic reference — chỉ 1 trong 3 field này có giá trị
+  membershipId     String?       @unique
+  certificationId  String?       @unique
+  mediaOrderId     String?       @unique
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User          @relation(fields: [userId], references: [id])
+  membership       Membership?   @relation(fields: [membershipId], references: [id])
+  certification    Certification? @relation(fields: [certificationId], references: [id])
+  mediaOrder       MediaOrder?   @relation(fields: [mediaOrderId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([payosOrderCode])
+  @@map("payments")
+}
+
+// ============================================================
+// COMPANY & PRODUCTS
+// ============================================================
+
+model Company {
+  id               String    @id @default(cuid())
+  ownerId          String    @unique  // 1 VIP = 1 company
+  name             String
+  slug             String    @unique  // dùng cho URL: /companies/[slug]
+  description      String?   @db.Text
+  logoUrl          String?
+  coverImageUrl    String?
+  website          String?
+  phone            String?
+  address          String?
+  foundedYear      Int?
+  employeeCount    String?   // "1-10", "10-50", "50-200",...
+  businessLicense  String?   // số ĐKKD
+  isVerified       Boolean   @default(false) // admin verify
+  isPublished      Boolean   @default(true)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  owner            User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products         Product[]
+
+  @@index([slug])
+  @@index([isPublished])
+  @@map("companies")
+}
+
+model Product {
+  id              String      @id @default(cuid())
+  companyId       String
+  name            String
+  slug            String      @unique
+  description     String?     @db.Text
+  imageUrls       String[]    // mảng URL ảnh sản phẩm (Cloudinary)
+  category        String?     // loại trầm: trầm tự nhiên, trầm nuôi cấy, tinh dầu,...
+  priceRange      String?     // "500k-1tr", "1tr-5tr",...
+  isPublished     Boolean     @default(true)
+
+  // Certification
+  certStatus      CertStatus  @default(DRAFT)
+  badgeUrl        String?     // URL badge chứng nhận (Cloudinary)
+  certAppliedAt   DateTime?
+  certApprovedAt  DateTime?
+  certExpiredAt   DateTime?   // badge có thể có hạn sử dụng — future use
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  certifications  Certification[]
+
+  @@index([companyId])
+  @@index([certStatus])
+  @@index([slug])
+  @@map("products")
+}
+
+// ============================================================
+// CERTIFICATION
+// ============================================================
+
+model Certification {
+  id                String      @id @default(cuid())
+  productId         String
+  applicantId       String      // userId của hội viên nộp đơn
+  status            CertStatus  @default(PENDING)
+
+  // Thông tin hồ sơ
+  documentUrls      String[]    // tài liệu đính kèm (Cloudinary)
+  applicantNote     String?     @db.Text
+  reviewNote        String?     @db.Text // ghi chú của admin khi duyệt/từ chối
+
+  // Thanh toán & hoàn tiền
+  feePaid           Int         @default(500000000) // 5.000.000 VND (lưu bằng đồng, *100)
+  refundBankName    String?
+  refundAccountName String?
+  refundAccountNo   String?
+  refundedAt        DateTime?
+  refundNote        String?
+
+  // Xét duyệt
+  reviewedBy        String?     // adminId
+  reviewedAt        DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+
+  // Process type
+  isOnlineReview    Boolean     @default(true) // true = online, false = offline
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  product           Product     @relation(fields: [productId], references: [id])
+  applicant         User        @relation(fields: [applicantId], references: [id])
+  payment           Payment?
+
+  @@index([productId])
+  @@index([applicantId])
+  @@index([status])
+  @@map("certifications")
+}
+
+// ============================================================
+// SOCIAL FEED — POSTS & INTERACTIONS
+// ============================================================
+
+model Post {
+  id              String      @id @default(cuid())
+  authorId        String
+  title           String?
+  content         String      @db.Text
+  imageUrls       String[]    // ảnh đính kèm (Cloudinary)
+  status          PostStatus  @default(PUBLISHED)
+
+  // Visibility
+  isPremium       Boolean     @default(false) // true nếu author là VIP — set tự động
+  isPromoted      Boolean     @default(false) // admin có thể pin bài lên top
+
+  // Ranking — denormalized từ author.displayPriority tại thời điểm đăng
+  // Cập nhật lại khi hội viên gia hạn membership
+  authorPriority  Int         @default(0)
+
+  // Engagement
+  viewCount       Int         @default(0)
+  reportCount     Int         @default(0)
+
+  // Lock info
+  lockedAt        DateTime?
+  lockedBy        String?     // adminId
+  lockReason      String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reports         Report[]
+  reactions       PostReaction[]
+  tags            PostTag[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([isPremium])
+  @@index([authorPriority, createdAt]) // index cho feed query chính
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  type      String   @default("LIKE") // LIKE, LOVE,... mở rộng sau
+
+  createdAt DateTime @default(now())
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId]) // 1 user chỉ react 1 lần / bài
+  @@map("post_reactions")
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  slug  String    @unique
+
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model PostTag {
+  postId String
+  tagId  String
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+// ============================================================
+// REPORT & MODERATION
+// ============================================================
+
+model Report {
+  id           String       @id @default(cuid())
+  postId       String
+  reporterId   String
+  reason       String       // "SPAM", "FAKE_INFO", "INAPPROPRIATE", "OTHER"
+  description  String?      @db.Text
+  status       ReportStatus @default(PENDING)
+
+  reviewedBy   String?      // adminId
+  reviewedAt   DateTime?
+  adminNote    String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  post         Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter     User         @relation("ReporterRelation", fields: [reporterId], references: [id])
+
+  @@unique([postId, reporterId]) // 1 user chỉ report 1 lần / bài
+  @@index([postId])
+  @@index([status])
+  @@map("reports")
+}
+
+// ============================================================
+// NEWS & ANNOUNCEMENTS (Ban quản trị hội đăng)
+// ============================================================
+
+model News {
+  id           String    @id @default(cuid())
+  title        String
+  slug         String    @unique
+  excerpt      String?
+  content      String    @db.Text
+  coverImageUrl String?
+  isPublished  Boolean   @default(false)
+  isPinned     Boolean   @default(false)
+  publishedAt  DateTime?
+  authorId     String    // adminId
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([slug])
+  @@map("news")
+}
+
+// ============================================================
+// MEDIA SERVICE — DỊCH VỤ TRUYỀN THÔNG
+// ============================================================
+
+model MediaOrder {
+  id              String           @id @default(cuid())
+  requesterId     String           // userId đặt dịch vụ (có thể là guest)
+  requesterName   String           // lưu lại tên lúc đặt
+  requesterEmail  String
+  requesterPhone  String
+
+  serviceType     MediaServiceType
+  status          MediaOrderStatus @default(NEW)
+
+  // Yêu cầu từ khách
+  requirements    String           @db.Text
+  targetKeywords  String?          // từ khóa SEO mong muốn
+  referenceUrls   String[]         // URL tham khảo
+  deadline        DateTime?        // deadline mong muốn của khách
+  budget          String?          // ngân sách dự kiến
+
+  // Xử lý nội bộ
+  assignedTo      String?          // email/tên nhân sự phụ trách
+  quotedPrice     Int?             // giá báo (VND)
+  internalNote    String?          @db.Text
+  deliveryFileUrls String[]        // URL file bài viết bàn giao (Cloudinary)
+  deliveredAt     DateTime?
+  completedAt     DateTime?
+  cancelReason    String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  requester       User?            @relation(fields: [requesterId], references: [id])
+  payment         Payment?
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([serviceType])
+  @@map("media_orders")
+}
+
+// ============================================================
+// SITE CONFIG — cấu hình chung của website
+// ============================================================
+
+model SiteConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique  // "membership_fee_min", "membership_fee_max", "cert_fee",...
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("site_config")
+}
