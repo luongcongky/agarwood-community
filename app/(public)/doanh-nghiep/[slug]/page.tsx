@@ -1,0 +1,160 @@
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { CompanyTabs } from "./CompanyTabs"
+
+type Props = { params: Promise<{ slug: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const company = await prisma.company.findUnique({
+    where: { slug, isPublished: true },
+    select: { name: true, description: true },
+  })
+  if (!company) return { title: "Không tìm thấy" }
+  return {
+    title: `${company.name} | Hội Trầm Hương Việt Nam`,
+    description: company.description?.slice(0, 160) ?? undefined,
+  }
+}
+
+export default async function CompanyProfilePage({ params }: Props) {
+  const { slug } = await params
+  const session = await auth()
+  const currentUserId = session?.user?.id
+  const currentUserRole = session?.user?.role
+
+  const company = await prisma.company.findUnique({
+    where: { slug, isPublished: true },
+    include: {
+      owner: { select: { id: true, name: true, avatarUrl: true, role: true } },
+      products: {
+        where: { isPublished: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrls: true,
+          category: true,
+          priceRange: true,
+          certStatus: true,
+          badgeUrl: true,
+        },
+      },
+    },
+  })
+  if (!company) notFound()
+
+  const isOwner = currentUserId === company.ownerId
+  const isAdmin = currentUserRole === "ADMIN"
+  const canEdit = isOwner || isAdmin
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Cover image header */}
+      <div className="relative w-full h-48 sm:h-64 md:h-72 bg-gradient-to-br from-brand-700 to-brand-900 rounded-xl overflow-hidden">
+        {company.coverImageUrl && (
+          <img
+            src={company.coverImageUrl}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        )}
+        {/* Logo overlay */}
+        <div className="absolute -bottom-10 left-6 sm:left-10">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-brand-700">
+            {company.logoUrl ? (
+              <img
+                src={company.logoUrl}
+                alt={company.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-100">
+                {company.name
+                  .split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Edit/Verify buttons */}
+        {canEdit && (
+          <div className="absolute top-4 right-4 flex gap-2">
+            {isOwner && (
+              <Link
+                href={`/doanh-nghiep/${slug}/chinh-sua`}
+                className="bg-white text-brand-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-brand-50 transition-colors"
+              >
+                ✏️ Chỉnh sửa
+              </Link>
+            )}
+            {isAdmin && (
+              <button className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-green-700 transition-colors">
+                {company.isVerified ? "✓ Đã xác minh" : "Xác minh"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Company info below cover */}
+      <div className="mt-14 sm:mt-16">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-brand-900">
+                {company.name}
+              </h1>
+              {company.isVerified && (
+                <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
+                  ✓ Đã xác minh
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-4 mt-2 text-sm text-brand-600">
+              {company.address && <span>📍 {company.address}</span>}
+              {company.phone && (
+                <a href={`tel:${company.phone}`} className="hover:text-brand-800">
+                  📞 {company.phone}
+                </a>
+              )}
+              {company.website && (
+                <a
+                  href={company.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-brand-800"
+                >
+                  🌐 {company.website}
+                </a>
+              )}
+              {company.foundedYear && (
+                <span>📅 Thành lập {company.foundedYear}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <CompanyTabs
+          description={company.description}
+          products={company.products.map((p) => ({
+            ...p,
+            imageUrls: p.imageUrls as string[],
+          }))}
+          companyName={company.name}
+          foundedYear={company.foundedYear}
+          employeeCount={company.employeeCount}
+          businessLicense={company.businessLicense}
+          address={company.address}
+          phone={company.phone}
+          website={company.website}
+        />
+      </div>
+    </div>
+  )
+}

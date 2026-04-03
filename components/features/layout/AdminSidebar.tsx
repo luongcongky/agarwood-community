@@ -9,14 +9,20 @@ import {
   BadgeCheck,
   Megaphone,
   LogOut,
+  Flag,
+  Newspaper,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const ADMIN_NAV_ITEMS = [
-  { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
-  { label: "Hội viên",     href: "/members",      icon: Users },
-  { label: "Chứng nhận",   href: "/certifications", icon: BadgeCheck },
-  { label: "Truyền thông", href: "/media-orders",  icon: Megaphone },
+  { label: "Tổng quan",    href: "/admin",             icon: LayoutDashboard },
+  { label: "Hội viên",     href: "/admin/hoi-vien",    icon: Users },
+  { label: "Chứng nhận",   href: "/admin/chung-nhan",  icon: BadgeCheck },
+  { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone },
+  { label: "Báo cáo",      href: "/admin/bao-cao",     icon: Flag },
+  { label: "Tin tức",      href: "/admin/tin-tuc",     icon: Newspaper },
+  { label: "Cài đặt",      href: "/admin/cai-dat",     icon: Settings },
 ]
 
 interface AdminNavLinksProps {

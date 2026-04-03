@@ -8,11 +8,24 @@ const { auth } = NextAuth(authConfig)
 
 // ── Route definitions ────────────────────────────────────────────────────────
 
-/** Chỉ VIP + ADMIN mới vào được */
-const MEMBER_PREFIXES = ["/feed", "/company", "/certification"]
+/** Chỉ VIP (còn hạn) + ADMIN mới vào được — /feed là public (guest xem blur) */
+const MEMBER_PREFIXES = [
+  "/feed/tao-bai",
+  "/company",
+  "/certification",
+  "/gia-han",
+  "/ho-so",
+  "/chung-nhan",
+]
 
 /** Chỉ ADMIN mới vào được */
-const ADMIN_PREFIXES = ["/dashboard", "/members", "/certifications", "/media-orders"]
+const ADMIN_PREFIXES = [
+  "/dashboard",
+  "/members",
+  "/certifications",
+  "/media-orders",
+  "/admin",
+]
 
 /** Redirect sang feed/dashboard nếu đã đăng nhập */
 const AUTH_PATHS = ["/login", "/register"]
@@ -39,7 +52,7 @@ export default auth((req) => {
   // ── 1. Auth routes: redirect nếu đã đăng nhập ──────────────────────────
   if (AUTH_PATHS.includes(pathname)) {
     if (session) {
-      const dest = role === "ADMIN" ? "/dashboard" : "/feed"
+      const dest = role === "ADMIN" ? "/admin" : "/feed"
       return NextResponse.redirect(new URL(dest, req.url))
     }
     return NextResponse.next()

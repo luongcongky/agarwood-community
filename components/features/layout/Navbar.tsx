@@ -17,16 +17,18 @@ const GUEST_LINKS: NavLink[] = [
 
 const MEMBER_LINKS: NavLink[] = [
   { label: "Bảng tin", href: "/feed" },
-  { label: "Doanh nghiệp", href: "/company" },
-  { label: "Chứng nhận SP", href: "/certification" },
-  { label: "Tin tức", href: "/news" },
+  { label: "Doanh nghiệp", href: "/doanh-nghiep" },
+  { label: "Chứng nhận SP", href: "/chung-nhan/nop-don" },
+  { label: "Gia hạn", href: "/gia-han" },
+  { label: "Hồ sơ", href: "/ho-so" },
 ]
 
 const ADMIN_LINKS: NavLink[] = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Hội viên", href: "/members" },
-  { label: "Chứng nhận", href: "/certifications" },
-  { label: "Truyền thông", href: "/media-orders" },
+  { label: "Tổng quan", href: "/admin" },
+  { label: "Hội viên", href: "/admin/hoi-vien" },
+  { label: "Chứng nhận", href: "/admin/chung-nhan" },
+  { label: "Truyền thông", href: "/admin/truyen-thong" },
+  { label: "Báo cáo", href: "/admin/bao-cao" },
 ]
 
 // ── Component ─────────────────────────────────────────────────────────────────
