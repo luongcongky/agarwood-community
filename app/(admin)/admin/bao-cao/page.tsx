@@ -4,8 +4,27 @@ import { cn } from "@/lib/utils"
 
 export const revalidate = 0
 
+type ReportItem = {
+  id: string
+  reason: string
+  description: string | null
+  createdAt: Date
+  postId: string
+  post: {
+    id: string
+    title: string | null
+    content: string
+    status: string
+    reportCount: number
+  }
+  reporter: {
+    name: string | null
+    email: string | null
+  }
+}
+
 export default async function AdminReportsPage() {
-  const reports = await prisma.report.findMany({
+  const reports = (await prisma.report.findMany({
     where: { status: "PENDING" },
     orderBy: { createdAt: "asc" },
     take: 50,
@@ -22,7 +41,7 @@ export default async function AdminReportsPage() {
       },
       reporter: { select: { name: true, email: true } },
     },
-  })
+  })) as ReportItem[]
 
   function getContentPreview(content: string, lines = 3): string {
     return content.split("\n").slice(0, lines).join("\n")
