@@ -1,7 +1,5 @@
+import { redirect } from "next/navigation"
+
 export default function NewsPage() {
-  return (
-    <div>
-      <h1>Tin tức</h1>
-    </div>
-  )
+  redirect("/tin-tuc")
 }

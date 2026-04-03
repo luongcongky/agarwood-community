@@ -8,8 +8,11 @@ import { NavMobile, type NavLink } from "./NavMobile"
 
 const GUEST_LINKS: NavLink[] = [
   { label: "Trang chủ", href: "/" },
-  { label: "Giới thiệu", href: "/about" },
-  { label: "Tin tức", href: "/news" },
+  { label: "Giới thiệu", href: "/gioi-thieu" },
+  { label: "Tin tức", href: "/tin-tuc" },
+  { label: "Hội viên", href: "/hoi-vien" },
+  { label: "Dịch vụ", href: "/dich-vu" },
+  { label: "Liên hệ", href: "/lien-he" },
 ]
 
 const MEMBER_LINKS: NavLink[] = [

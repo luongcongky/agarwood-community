@@ -30,9 +30,12 @@ export function Footer() {
             <ul className="space-y-2">
               {[
                 { label: "Trang chủ",        href: "/" },
-                { label: "Giới thiệu",       href: "/about" },
-                { label: "Tin tức",          href: "/news" },
-                { label: "Đăng ký hội viên", href: "/register" },
+                { label: "Giới thiệu",       href: "/gioi-thieu" },
+                { label: "Tin tức",          href: "/tin-tuc" },
+                { label: "Hội viên",         href: "/hoi-vien" },
+                { label: "Dịch vụ",          href: "/dich-vu" },
+                { label: "Liên hệ",          href: "/lien-he" },
+                { label: "Điều lệ Hội",      href: "/dieu-le" },
               ].map((l) => (
                 <li key={l.href}>
                   {/* py-1 tăng vùng tap trên mobile */}
