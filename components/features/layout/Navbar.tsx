@@ -11,8 +11,9 @@ const GUEST_LINKS: NavLink[] = [
   { label: "Giới thiệu", href: "/gioi-thieu" },
   { label: "Tin tức", href: "/tin-tuc" },
   { label: "Hội viên", href: "/hoi-vien" },
+  { label: "Tin từ Hội viên", href: "/feed" },
+  { label: "Sản phẩm Chứng nhận", href: "/san-pham-chung-nhan" },
   { label: "Dịch vụ", href: "/dich-vu" },
-  { label: "Liên hệ", href: "/lien-he" },
 ]
 
 const MEMBER_LINKS: NavLink[] = [

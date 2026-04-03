@@ -114,20 +114,23 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
             {[
-              { value: statsData.memberCount, label: "Hội viên" },
+              { value: statsData.memberCount, label: "Hội viên", href: "/hoi-vien" },
               {
                 value: statsData.certifiedProducts,
                 label: "Sản phẩm được chứng nhận",
+                href: "/san-pham-chung-nhan",
               },
-              { value: statsData.companies, label: "Doanh nghiệp" },
+              { value: statsData.companies, label: "Doanh nghiệp", href: "/hoi-vien" },
               {
                 value: statsData.newsCount,
                 label: "Tin tức & Thông báo",
+                href: "/tin-tuc",
               },
-            ].map(({ value, label }) => (
-              <div
+            ].map(({ value, label, href }) => (
+              <Link
                 key={label}
-                className="rounded-xl border border-brand-100 bg-brand-50 px-6 py-8 text-center shadow-sm"
+                href={href}
+                className="rounded-xl border border-brand-100 bg-brand-50 px-6 py-8 text-center shadow-sm hover:shadow-md hover:border-brand-300 transition-all block"
               >
                 <p className="text-4xl font-bold text-brand-700">
                   {value.toLocaleString("vi-VN")}
@@ -135,7 +138,7 @@ export default async function HomePage() {
                 <p className="mt-2 text-sm font-medium text-brand-600">
                   {label}
                 </p>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

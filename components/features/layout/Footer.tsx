@@ -30,10 +30,6 @@ export function Footer() {
             <ul className="space-y-2">
               {[
                 { label: "Trang chủ",        href: "/" },
-                { label: "Giới thiệu",       href: "/gioi-thieu" },
-                { label: "Tin tức",          href: "/tin-tuc" },
-                { label: "Hội viên",         href: "/hoi-vien" },
-                { label: "Dịch vụ",          href: "/dich-vu" },
                 { label: "Liên hệ",          href: "/lien-he" },
                 { label: "Điều lệ Hội",      href: "/dieu-le" },
               ].map((l) => (
