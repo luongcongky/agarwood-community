@@ -85,7 +85,7 @@ export default async function AdminReportsPage() {
                     {report.post.title}
                   </p>
                 )}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",

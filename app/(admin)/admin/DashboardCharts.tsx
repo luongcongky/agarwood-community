@@ -1,5 +1,6 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
 import {
   BarChart,
   Bar,
@@ -44,6 +45,21 @@ export function DashboardCharts({
   membersData,
   feeDistribution,
 }: DashboardChartsProps) {
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
+
+  if (!isMounted) {
+    return (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="h-[350px] rounded-xl border bg-brand-50/50 animate-pulse lg:col-span-2" />
+        <div className="h-[350px] rounded-xl border bg-brand-50/50 animate-pulse" />
+        <div className="h-[350px] rounded-xl border bg-brand-50/50 animate-pulse" />
+      </div>
+    )
+  }
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Bar Chart — Doanh thu theo tháng */}
