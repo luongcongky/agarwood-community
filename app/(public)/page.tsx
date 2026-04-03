@@ -45,13 +45,16 @@ async function getHomePageData() {
   }
 }
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
+function getInitials(name?: string | null) {
+  if (!name || name.trim() === "") return "🌿"
+  const words = name.trim().split(/\s+/)
+  const initials = words
     .map((w) => w[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase()
+  return initials || "🌿"
 }
 
 export default async function HomePage() {

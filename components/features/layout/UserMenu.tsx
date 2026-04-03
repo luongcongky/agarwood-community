@@ -36,8 +36,8 @@ const roleBadgeClass: Record<Role, string> = {
 
 export function UserMenu({ name, email, image, role }: UserMenuProps) {
   const router = useRouter()
-  const initials = name
-    ? name.split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase()
+  const initials = name?.trim() 
+    ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
     : "?"
 
   return (
