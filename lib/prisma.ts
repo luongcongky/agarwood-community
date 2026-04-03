@@ -4,13 +4,15 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
 
 function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL!
   const isProduction = process.env.NODE_ENV === "production"
+  const isLocal = connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
   
   const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL!,
+    connectionString,
     max: 20,
-    // Cấu hình SSL tường minh cho môi trường production/cloud
-    ssl: isProduction ? { rejectUnauthorized: false } : undefined
+    // Chỉ dùng SSL nếu là production VÀ không phải database local
+    ssl: (isProduction && !isLocal) ? { rejectUnauthorized: false } : undefined
   })
   
   const adapter = new PrismaPg(pool)
