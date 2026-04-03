@@ -184,7 +184,7 @@ export default async function HomePage() {
                   "Cập nhật tin tức và chính sách ngành sớm nhất",
                 ].map((benefit) => (
                   <li key={benefit} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex-shrink-0 text-brand-500 font-bold">
+                    <span className="mt-0.5 shrink-0 text-brand-500 font-bold">
                       ✓
                     </span>
                     <span className="text-brand-700">{benefit}</span>
@@ -323,10 +323,11 @@ export default async function HomePage() {
                   {/* Logo or initials */}
                   <div className="relative mb-4 h-20 w-20 overflow-hidden rounded-full border border-brand-100">
                     {company.logoUrl ? (
-                      <img
+                      <Image
                         src={company.logoUrl}
                         alt={company.name}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-brand-400">

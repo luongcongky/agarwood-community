@@ -4,10 +4,15 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
 
 function createPrismaClient() {
-const pool = new Pool({ 
+  const isProduction = process.env.NODE_ENV === "production"
+  
+  const pool = new Pool({ 
     connectionString: process.env.DATABASE_URL!,
-    max: 20
+    max: 20,
+    // Cấu hình SSL tường minh cho môi trường production/cloud
+    ssl: isProduction ? { rejectUnauthorized: false } : undefined
   })
+  
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
