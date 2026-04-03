@@ -10,7 +10,8 @@
       "Bash(git --version)",
       "Bash(git config:*)",
       "Bash(powershell -Command \"gh auth status\")",
-      "Bash(powershell -Command \"& 'C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe' auth status\")"
+      "Bash(powershell -Command \"& 'C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe' auth status\")",
+      "Bash(npx shadcn@latest add dropdown-menu avatar badge sheet separator navigation-menu --yes)"
     ]
   }
 }

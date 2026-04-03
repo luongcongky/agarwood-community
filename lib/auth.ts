@@ -37,15 +37,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Reads from JWT — no DB query.
      */
     async session({ session, token }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.sub!,
-          role: token.role as Role,
-          membershipExpires: (token.membershipExpires as string | null) ?? null,
-        },
-      }
+      session.user.id = token.sub!
+      session.user.role = token.role as Role
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(session.user as any).membershipExpires = (token.membershipExpires as string | null) ?? null
+      return session
     },
   },
 

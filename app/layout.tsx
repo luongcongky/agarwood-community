@@ -1,33 +1,40 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from "next"
+import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google"
+import "./globals.css"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["vietnamese", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+})
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
-});
+  weight: ["400", "600", "700"],
+  variable: "--font-heading",
+})
 
 export const metadata: Metadata = {
-  title: "Hội Trầm Hương Việt Nam",
-  description: "Cộng đồng trầm hương - kết nối, chứng nhận, truyền thông",
-};
+  title: {
+    default: "Hội Trầm Hương Việt Nam",
+    template: "%s | Hội Trầm Hương Việt Nam",
+  },
+  description: "Cộng đồng kết nối, chứng nhận và truyền thông sản phẩm trầm hương Việt Nam",
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="vi"
+      className={`${beVietnamPro.variable} ${playfairDisplay.variable}`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-screen flex flex-col antialiased">
+        {children}
+      </body>
     </html>
-  );
+  )
 }

@@ -1,5 +1,9 @@
-export default async function NewsDetailPage(props: PageProps<"/news/[slug]">) {
-  const { slug } = await props.params
+export default async function NewsDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
 
   return (
     <div>
