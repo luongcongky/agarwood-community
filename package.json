@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:supabase": "powershell -Command \"$env:MIGRATE_TARGET='supabase'; npx prisma migrate deploy\"",
+    "db:push:supabase": "powershell -Command \"$env:MIGRATE_TARGET='supabase'; npx prisma db push\"",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
