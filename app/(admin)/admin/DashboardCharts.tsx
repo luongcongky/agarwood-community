@@ -57,7 +57,8 @@ export function DashboardCharts({
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
             <Tooltip
-              formatter={(value: number) => [`${value} triệu`, "Doanh thu"]}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any) => [`${value} triệu`, "Doanh thu"]}
             />
             <Bar dataKey="revenue" fill="#b45309" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -74,7 +75,10 @@ export function DashboardCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f0e8" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-            <Tooltip formatter={(value: number) => [value, "Hội viên mới"]} />
+            <Tooltip
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any) => [value, "Hội viên mới"]}
+            />
             <Line
               type="monotone"
               dataKey="members"
@@ -101,14 +105,17 @@ export function DashboardCharts({
               outerRadius={100}
               dataKey="value"
               label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(0)}%`
+                `${name}: ${((percent || 0) * 100).toFixed(0)}%`
               }
             >
               {feeDistribution.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value: number) => [value, "Hội viên"]} />
+            <Tooltip
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any) => [value, "Hội viên"]}
+            />
             <Legend />
           </PieChart>
         </ResponsiveContainer>

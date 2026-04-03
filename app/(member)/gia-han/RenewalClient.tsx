@@ -37,6 +37,7 @@ const FEE_OPTIONS = [
     label: "5.000.000đ / năm",
     description: "Ưu tiên chuẩn",
     priorityNote: "Tăng +50 điểm ưu tiên hiển thị",
+    recommended: false,
   },
   {
     amount: 10_000_000,
@@ -169,7 +170,7 @@ export function RenewalClient({
 
           {/* Warning about description */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-            ⚠️ Vui lòng nhập <strong>đúng nội dung chuyển khoản</strong> để admin có thể xác nhận nhanh nhất. Sau khi chuyển khoản, bấm "Tôi đã chuyển khoản" bên dưới.
+            ⚠️ Vui lòng nhập <strong>đúng nội dung chuyển khoản</strong> để admin có thể xác nhận nhanh nhất. Sau khi chuyển khoản, bấm &quot;Tôi đã chuyển khoản&quot; bên dưới.
           </div>
 
           <div className="flex gap-3">
