@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(openssl rand:*)",
+      "Bash(npx prisma:*)",
+      "Bash(ls c:/DATA/Projects/agarwood-community/node_modules/prisma/config*)",
+      "Bash(npm install:*)",
+      "Bash(xargs grep:*)",
+      "Bash(gh auth:*)",
+      "Bash(git --version)",
+      "Bash(git config:*)",
+      "Bash(powershell -Command \"gh auth status\")",
+      "Bash(powershell -Command \"& 'C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe' auth status\")"
+    ]
+  }
+}
