@@ -1,0 +1,235 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { PRODUCT_CATEGORIES, AGARWOOD_REGIONS } from "@/lib/constants/agarwood"
+import { createProduct, updateProduct } from "./_actions"
+
+type ProductData = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  category: string | null
+  priceRange: string | null
+  imageUrls: string[]
+  isPublished: boolean
+}
+
+const inputClass = "w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 placeholder:text-brand-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors"
+const selectClass = "w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors"
+
+function slugify(str: string) {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
+export function ProductForm({ product, companySlug }: { product?: ProductData; companySlug: string }) {
+  const router = useRouter()
+  const isEdit = !!product
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const [name, setName] = useState(product?.name ?? "")
+  const [slug, setSlug] = useState(product?.slug ?? "")
+  const [description, setDescription] = useState(product?.description ?? "")
+  const [category, setCategory] = useState(product?.category ?? "")
+  const [priceRange, setPriceRange] = useState(product?.priceRange ?? "")
+  const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? [])
+  const [isPublished, setIsPublished] = useState(product?.isPublished ?? true)
+  const [slugEdited, setSlugEdited] = useState(false)
+
+  function handleNameChange(val: string) {
+    setName(val)
+    if (!slugEdited) setSlug(slugify(val))
+  }
+
+  async function handleImageUpload(files: FileList) {
+    if (imageUrls.length + files.length > 10) {
+      setMsg({ type: "error", text: "Tối đa 10 ảnh" })
+      return
+    }
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append("file", file)
+        const res = await fetch("/api/upload", { method: "POST", body: formData })
+        if (res.ok) {
+          const data = await res.json()
+          setImageUrls((prev) => [...prev, data.secure_url])
+        }
+      }
+    } catch {
+      setMsg({ type: "error", text: "Upload ảnh thất bại" })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeImage(index: number) {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setMsg(null)
+
+    const data = { name, slug, description, category, priceRange, imageUrls, isPublished }
+
+    try {
+      const result = isEdit
+        ? await updateProduct(product!.id, data)
+        : await createProduct(data)
+
+      if (result.error) {
+        setMsg({ type: "error", text: result.error })
+      } else {
+        router.push(`/san-pham/${result.slug}`)
+        router.refresh()
+      }
+    } catch {
+      setMsg({ type: "error", text: "Có lỗi xảy ra" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {msg && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 text-sm",
+          msg.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700",
+        )}>
+          {msg.text}
+        </div>
+      )}
+
+      {/* ── Section 1: Thong tin co ban ─────────────────────────────── */}
+      <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
+        <h2 className="font-semibold text-brand-900">Thông tin cơ bản</h2>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Tên sản phẩm *</label>
+          <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} className={inputClass} required />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Slug (URL)</label>
+          <input
+            type="text"
+            value={slug}
+            onChange={(e) => { setSlug(e.target.value); setSlugEdited(true) }}
+            className={inputClass}
+            pattern="^[a-z0-9-]+$"
+          />
+          <p className="text-xs text-brand-400">URL: /san-pham/{slug || "..."}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-800">Danh mục *</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectClass} required>
+              <option value="">-- Chọn danh mục --</option>
+              {PRODUCT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-800">Mức giá</label>
+            <input type="text" value={priceRange} onChange={(e) => setPriceRange(e.target.value)} className={inputClass} placeholder='Ví dụ: "500k-2tr" hoặc "Liên hệ"' />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Mô tả chi tiết</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={3000}
+            rows={6}
+            className={cn(inputClass, "resize-none")}
+            placeholder="Mô tả nguồn gốc, đặc điểm hương thơm, cách bảo quản và sử dụng..."
+          />
+          <p className="text-xs text-brand-400">{description.length}/3000 ký tự</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="isPublished"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="rounded accent-brand-600"
+          />
+          <label htmlFor="isPublished" className="text-sm text-brand-800">Công khai sản phẩm</label>
+        </div>
+      </section>
+
+      {/* ── Section 2: Hình ảnh ─────────────────────────────────────── */}
+      <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
+        <h2 className="font-semibold text-brand-900">Hình ảnh ({imageUrls.length}/10)</h2>
+        <p className="text-xs text-brand-400">Nên chụp ảnh dưới ánh sáng tự nhiên để thể hiện đúng màu sắc và vân gỗ. Ảnh đầu tiên là ảnh đại diện.</p>
+
+        {/* Image grid */}
+        {imageUrls.length > 0 && (
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+            {imageUrls.map((url, i) => (
+              <div key={i} className="relative aspect-square rounded-lg border border-brand-200 overflow-hidden group">
+                <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />
+                {i === 0 && (
+                  <span className="absolute top-1 left-1 bg-brand-700 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">Đại diện</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => { if (e.target.files) handleImageUpload(e.target.files) }}
+            className="text-sm text-brand-600"
+            disabled={uploading || imageUrls.length >= 10}
+          />
+          {uploading && <p className="text-xs text-brand-400 mt-1">Đang tải lên...</p>}
+        </div>
+      </section>
+
+      {/* Submit */}
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded-lg bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 transition-colors disabled:opacity-60"
+        >
+          {loading ? "Đang lưu..." : isEdit ? "Cập nhật sản phẩm" : "Tạo sản phẩm"}
+        </button>
+        <Link
+          href={`/doanh-nghiep/${companySlug}`}
+          className="rounded-lg border border-brand-300 px-6 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+        >
+          Huỷ
+        </Link>
+      </div>
+    </form>
+  )
+}

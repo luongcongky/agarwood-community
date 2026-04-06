@@ -222,6 +222,7 @@ model Payment {
   @@index([type])
   @@index([status])
   @@index([payosOrderCode])
+  @@index([createdAt])
   @@map("payments")
 }
 

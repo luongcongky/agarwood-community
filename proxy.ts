@@ -10,12 +10,16 @@ const { auth } = NextAuth(authConfig)
 
 /** Chỉ VIP (còn hạn) + ADMIN mới vào được — /feed là public (guest xem blur) */
 const MEMBER_PREFIXES = [
+  "/tong-quan",
   "/feed/tao-bai",
   "/company",
+  "/doanh-nghiep/chinh-sua",
+  "/san-pham/tao-moi",
   "/certification",
   "/gia-han",
   "/ho-so",
   "/chung-nhan",
+  "/chung-nhan/lich-su",
   "/thanh-toan/lich-su",
 ]
 
@@ -29,7 +33,7 @@ const ADMIN_PREFIXES = [
 ]
 
 /** Redirect sang feed/dashboard nếu đã đăng nhập */
-const AUTH_PATHS = ["/login", "/register"]
+const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau"]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +56,7 @@ export const proxy = auth((req) => {
   // ── 1. Auth routes: redirect nếu đã đăng nhập ──────────────────────────
   if (AUTH_PATHS.includes(pathname)) {
     if (session) {
-      const dest = role === "ADMIN" ? "/admin" : "/feed"
+      const dest = role === "ADMIN" ? "/admin" : "/tong-quan"
       return NextResponse.redirect(new URL(dest, req.url))
     }
     return NextResponse.next()

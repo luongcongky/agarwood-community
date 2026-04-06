@@ -5,18 +5,35 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { CompanyTabs } from "./CompanyTabs"
 
+export const revalidate = 3600
+
 type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const company = await prisma.company.findUnique({
     where: { slug, isPublished: true },
-    select: { name: true, description: true },
+    select: { name: true, description: true, logoUrl: true, coverImageUrl: true, address: true, foundedYear: true },
   })
   if (!company) return { title: "Không tìm thấy" }
   return {
     title: `${company.name} | Hội Trầm Hương Việt Nam`,
     description: company.description?.slice(0, 160) ?? undefined,
+    openGraph: {
+      title: company.name,
+      images: company.coverImageUrl ? [{ url: company.coverImageUrl }] : company.logoUrl ? [{ url: company.logoUrl }] : [],
+      type: "profile",
+    },
+    other: {
+      "application/ld+json": JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        name: company.name,
+        description: company.description?.slice(0, 300),
+        foundingDate: company.foundedYear ? String(company.foundedYear) : undefined,
+        address: company.address ?? undefined,
+      }),
+    },
   }
 }
 
@@ -29,18 +46,13 @@ export default async function CompanyProfilePage({ params }: Props) {
   const company = await prisma.company.findUnique({
     where: { slug, isPublished: true },
     include: {
-      owner: { select: { id: true, name: true, avatarUrl: true, role: true } },
+      owner: { select: { id: true, name: true, role: true, contributionTotal: true } },
       products: {
         where: { isPublished: true },
+        orderBy: { certStatus: "desc" },
         select: {
-          id: true,
-          name: true,
-          slug: true,
-          imageUrls: true,
-          category: true,
-          priceRange: true,
-          certStatus: true,
-          badgeUrl: true,
+          id: true, name: true, slug: true, imageUrls: true,
+          category: true, priceRange: true, certStatus: true, badgeUrl: true,
         },
       },
     },
@@ -51,108 +63,101 @@ export default async function CompanyProfilePage({ params }: Props) {
   const isAdmin = currentUserRole === "ADMIN"
   const canEdit = isOwner || isAdmin
 
+  // VIP tier
+  const contribution = company.owner.contributionTotal
+  const tier =
+    contribution >= 20_000_000 ? { label: "Hội viên Vàng", stars: 3 } :
+    contribution >= 10_000_000 ? { label: "Hội viên Bạc", stars: 2 } :
+                                 { label: "Hội viên", stars: 1 }
+
+  // Posts count for tab label
+  const postCount = await prisma.post.count({
+    where: { authorId: company.ownerId, status: "PUBLISHED" },
+  })
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Cover image header */}
-      <div className="relative w-full h-48 sm:h-64 md:h-72 bg-gradient-to-br from-brand-700 to-brand-900 rounded-xl overflow-hidden">
-        {company.coverImageUrl && (
-          <img
-            src={company.coverImageUrl}
-            alt=""
-            className="w-full h-full object-cover"
-          />
+      {/* Cover image */}
+      <div className="relative w-full h-48 sm:h-64 md:h-72 rounded-xl overflow-hidden">
+        {company.coverImageUrl ? (
+          <img src={company.coverImageUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-linear-to-br from-brand-800 via-brand-700 to-brand-900" />
         )}
+
         {/* Logo overlay */}
         <div className="absolute -bottom-10 left-6 sm:left-10">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-brand-700">
             {company.logoUrl ? (
-              <img
-                src={company.logoUrl}
-                alt={company.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={company.logoUrl} alt={company.name} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-100">
-                {company.name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")}
+                {company.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
               </div>
             )}
           </div>
         </div>
-        {/* Edit/Verify buttons */}
+
+        {/* Edit button */}
         {canEdit && (
-          <div className="absolute top-4 right-4 flex gap-2">
-            {isOwner && (
-              <Link
-                href={`/doanh-nghiep/${slug}/chinh-sua`}
-                className="bg-white text-brand-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-brand-50 transition-colors"
-              >
-                ✏️ Chỉnh sửa
-              </Link>
-            )}
-            {isAdmin && (
-              <button className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-green-700 transition-colors">
-                {company.isVerified ? "✓ Đã xác minh" : "Xác minh"}
-              </button>
-            )}
+          <div className="absolute top-4 right-4">
+            <Link
+              href="/doanh-nghiep/chinh-sua"
+              className="bg-white/90 text-brand-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-white transition-colors"
+            >
+              Chỉnh sửa
+            </Link>
           </div>
         )}
       </div>
 
-      {/* Company info below cover */}
+      {/* Company info */}
       <div className="mt-14 sm:mt-16">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-heading font-bold text-brand-900">
-                {company.name}
-              </h1>
-              {company.isVerified && (
-                <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
-                  ✓ Đã xác minh
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-4 mt-2 text-sm text-brand-600">
-              {company.address && <span>📍 {company.address}</span>}
-              {company.phone && (
-                <a href={`tel:${company.phone}`} className="hover:text-brand-800">
-                  📞 {company.phone}
-                </a>
-              )}
-              {company.website && (
-                <a
-                  href={company.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-brand-800"
-                >
-                  🌐 {company.website}
-                </a>
-              )}
-              {company.foundedYear && (
-                <span>📅 Thành lập {company.foundedYear}</span>
-              )}
-            </div>
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-brand-900">{company.name}</h1>
+          {company.isVerified && (
+            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
+              ✓ Đã xác minh
+            </span>
+          )}
+          {company.owner.role === "VIP" && (
+            <span className="inline-flex items-center gap-1 bg-brand-100 text-brand-700 text-xs font-medium px-2 py-1 rounded-full">
+              Thành viên Hội
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-brand-600">
+          {company.foundedYear && <span>Thành lập {company.foundedYear}</span>}
+          {company.address && <span>{company.address}</span>}
+          <span>{"★".repeat(tier.stars)} {tier.label}</span>
+        </div>
+
+        {/* Contact row */}
+        <div className="flex flex-wrap gap-4 mt-3 text-sm">
+          {company.phone && (
+            <a href={`tel:${company.phone}`} className="text-brand-600 hover:text-brand-800">{company.phone}</a>
+          )}
+          {company.website && (
+            <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-800 underline">
+              {company.website.replace(/^https?:\/\//, "")}
+            </a>
+          )}
         </div>
 
         <CompanyTabs
           description={company.description}
-          products={company.products.map((p) => ({
-            ...p,
-            imageUrls: p.imageUrls as string[],
-          }))}
+          products={company.products.map((p) => ({ ...p, imageUrls: p.imageUrls as string[] }))}
           companyName={company.name}
+          companySlug={company.slug}
           foundedYear={company.foundedYear}
           employeeCount={company.employeeCount}
           businessLicense={company.businessLicense}
           address={company.address}
           phone={company.phone}
           website={company.website}
+          postCount={postCount}
+          canEdit={canEdit}
         />
       </div>
     </div>

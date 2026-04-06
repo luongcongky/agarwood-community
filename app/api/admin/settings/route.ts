@@ -22,7 +22,11 @@ export async function POST(req: Request) {
   )
 
   revalidatePath("/")
+  revalidatePath("/gia-han")
   revalidatePath("/dich-vu")
+  revalidatePath("/chung-nhan/nop-don")
+  revalidatePath("/gioi-thieu")
+  revalidatePath("/admin")
 
   return NextResponse.json({ success: true })
 }

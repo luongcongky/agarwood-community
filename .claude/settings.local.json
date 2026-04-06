@@ -13,7 +13,13 @@
       "Bash(powershell -Command \"& 'C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe' auth status\")",
       "Bash(npx shadcn@latest add dropdown-menu avatar badge sheet separator navigation-menu --yes)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(npx next:*)",
+      "Bash(npm test:*)",
+      "Bash(grep -l \"POST\\\\|PATCH\\\\|PUT\" /c/DATA/Projects/agarwood-community/app/api/**/route.ts)",
+      "Bash(grep -rL \"revalidate\" app/\\\\\\(public\\\\\\)/*/page.tsx app/\\\\\\(public\\\\\\)/*/*/page.tsx)",
+      "Bash(npx playwright:*)",
+      "Bash(node -e ':*)"
     ]
   }
 }

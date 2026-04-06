@@ -32,8 +32,8 @@ export default function LoginPage() {
         const res = await fetch("/api/auth/session")
         const session = await res.json()
         const role = session?.user?.role
-        if (role === "ADMIN") router.push("/dashboard")
-        else if (role === "VIP") router.push("/feed")
+        if (role === "ADMIN") router.push("/admin")
+        else if (role === "VIP") router.push("/tong-quan")
         else router.push("/")
       }
     } catch {
@@ -58,7 +58,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1">
           <label htmlFor="email" className="block text-sm font-medium text-foreground">
             Email

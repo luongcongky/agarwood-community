@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -55,13 +56,15 @@ export function UserMenu({ name, email, image, role }: UserMenuProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-1">
-          <span className="font-semibold truncate">{name}</span>
-          <span className="text-xs text-muted-foreground font-normal truncate">{email}</span>
-          <Badge className={`w-fit text-xs mt-1 ${roleBadgeClass[role]}`}>
-            {roleLabel[role]}
-          </Badge>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col gap-1">
+            <span className="font-semibold truncate">{name}</span>
+            <span className="text-xs text-muted-foreground font-normal truncate">{email}</span>
+            <Badge className={`w-fit text-xs mt-1 ${roleBadgeClass[role]}`}>
+              {roleLabel[role]}
+            </Badge>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 

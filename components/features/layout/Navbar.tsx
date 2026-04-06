@@ -17,6 +17,7 @@ const GUEST_LINKS: NavLink[] = [
 ]
 
 const MEMBER_LINKS: NavLink[] = [
+  { label: "Tổng quan", href: "/tong-quan" },
   { label: "Bảng tin", href: "/feed" },
   { label: "Doanh nghiệp", href: "/doanh-nghiep" },
   { label: "Chứng nhận SP", href: "/chung-nhan/nop-don" },
@@ -44,7 +45,7 @@ export async function Navbar() {
     : role === "VIP"   ? MEMBER_LINKS
     :                    GUEST_LINKS
 
-  const homeHref = role === "ADMIN" ? "/dashboard" : role === "VIP" ? "/feed" : "/"
+  const homeHref = role === "ADMIN" ? "/admin" : role === "VIP" ? "/tong-quan" : "/"
 
   return (
     <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md">

@@ -1,0 +1,25 @@
+export const VIETNAM_BANKS = [
+  { code: "VCB",  name: "Vietcombank" },
+  { code: "TCB",  name: "Techcombank" },
+  { code: "BIDV", name: "BIDV" },
+  { code: "VPB",  name: "VPBank" },
+  { code: "MBB",  name: "MB Bank" },
+  { code: "ACB",  name: "ACB" },
+  { code: "VIB",  name: "VIB" },
+  { code: "TPB",  name: "TPBank" },
+  { code: "STB",  name: "Sacombank" },
+  { code: "HDB",  name: "HDBank" },
+  { code: "OCB",  name: "OCB" },
+  { code: "MSB",  name: "MSB" },
+  { code: "SHB",  name: "SHB" },
+  { code: "EIB",  name: "Eximbank" },
+  { code: "NAB",  name: "Nam A Bank" },
+  { code: "SCB",  name: "SCB" },
+  { code: "ABB",  name: "ABBank" },
+  { code: "BAB",  name: "Bac A Bank" },
+  { code: "SEAB", name: "SeABank" },
+  { code: "LPB",  name: "LienVietPostBank" },
+  { code: "AGR",  name: "Agribank" },
+] as const
+
+export type BankCode = (typeof VIETNAM_BANKS)[number]["code"]

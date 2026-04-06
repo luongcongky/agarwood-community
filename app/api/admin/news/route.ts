@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import DOMPurify from "isomorphic-dompurify"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
     publishedAt,
   } = await req.json()
 
-  if (!title || !slug) {
+  if (!title || !slug || !/^[a-z0-9-]+$/.test(slug)) {
     return NextResponse.json(
       { error: "Tiêu đề và slug là bắt buộc" },
       { status: 400 }
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       title,
       slug,
       excerpt: excerpt ?? null,
-      content: content ?? "",
+      content: content ? DOMPurify.sanitize(content) : "",
       coverImageUrl: coverImageUrl ?? null,
       isPublished: isPublished ?? false,
       isPinned: isPinned ?? false,

@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
+import DOMPurify from "isomorphic-dompurify"
 import { prisma } from "@/lib/prisma"
 import { CopyLinkButton } from "./CopyLinkButton"
+
+export const revalidate = 1800
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -101,7 +104,7 @@ export default async function NewsDetailPage({ params }: Props) {
       <article className="mb-10">
         <div
           className="prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: news.content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content) }}
         />
       </article>
 

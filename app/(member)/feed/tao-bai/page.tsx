@@ -7,6 +7,7 @@ import TiptapLink from "@tiptap/extension-link"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 
 // ─── Toolbar Button ──────────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ export default function TaoBaiPage() {
           {preview ? (
             <div
               className="px-5 py-4 min-h-[300px] prose prose-sm max-w-none text-brand-800"
-              dangerouslySetInnerHTML={{ __html: previewHtml || "<p class='text-muted-foreground italic'>Chưa có nội dung...</p>" }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml || "<p class='text-muted-foreground italic'>Chưa có nội dung...</p>") }}
             />
           ) : (
             <EditorContent

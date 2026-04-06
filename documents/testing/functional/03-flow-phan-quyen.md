@@ -1,0 +1,86 @@
+# Flow Phan quyen (Authorization)
+
+## Tai khoan test
+- Guest: khong dang nhap
+- VIP A: nguyen.van.a@tramhuong-hn.vn / 123456
+- VIP B: tran.thi.b@tramhuong-hcm.vn / 123456
+- Admin: admin@hoi-tram-huong.vn / 123456
+
+## Kich ban
+
+### TC-AUTH-01: Guest truy cap trang VIP -> redirect login
+1. Khong dang nhap -> truy cap /tong-quan
+2. **Kiem tra**: Redirect den /login?callbackUrl=/tong-quan
+3. Truy cap /ho-so
+4. **Kiem tra**: Redirect den /login?callbackUrl=/ho-so
+5. Truy cap /feed/tao-bai
+6. **Kiem tra**: Redirect den /login?callbackUrl=/feed/tao-bai
+
+### TC-AUTH-02: Guest truy cap trang Admin -> redirect login
+1. Khong dang nhap -> truy cap /admin
+2. **Kiem tra**: Redirect den /login?callbackUrl=/admin
+3. Truy cap /admin/hoi-vien
+4. **Kiem tra**: Redirect den /login?callbackUrl=/admin/hoi-vien
+
+### TC-AUTH-03: VIP truy cap trang Admin -> redirect ve /
+1. Login VIP -> truy cap /admin
+2. **Kiem tra**: Redirect den / (khong phai /login)
+3. Truy cap /admin/hoi-vien
+4. **Kiem tra**: Redirect den /
+5. Truy cap /admin/thanh-toan
+6. **Kiem tra**: Redirect den /
+
+### TC-AUTH-04: VIP A xem profile DN cua VIP B
+1. Login VIP A -> truy cap /doanh-nghiep/tram-huong-sai-gon (DN cua B)
+2. **Kiem tra**: Trang hien thi binh thuong (public page)
+3. **Kiem tra**: KHONG co nut "Chinh sua" tren header
+4. **Kiem tra**: KHONG co nut "+ Them san pham" trong tab San pham
+
+### TC-AUTH-05: VIP A co sua thong tin cong ty B qua API
+1. Login VIP A
+2. Goi Server Action updateCompany voi data cua cong ty B
+3. **Kiem tra**: Tra ve loi "Khong tim thay doanh nghiep" (vi action tim theo ownerId = user A)
+
+### TC-AUTH-06: VIP A co sua SP cua VIP B qua API
+1. Login VIP A
+2. Goi Server Action updateProduct voi productId cua SP thuoc cong ty B
+3. **Kiem tra**: Tra ve loi "Khong co quyen chinh sua" (403)
+
+### TC-AUTH-07: Membership het han -> khong dang bai duoc
+1. Login VIP co membership het han
+2. Truy cap /feed -> **Kiem tra**: Feed hien thi binh thuong (xem duoc)
+3. Truy cap /feed/tao-bai
+4. **Kiem tra**: Redirect den /membership-expired
+5. Truy cap /gia-han
+6. **Kiem tra**: Redirect den /membership-expired
+
+### TC-AUTH-08: Account isActive=false -> login bi block
+1. Admin vo hieu hoa tai khoan VIP (toggle isActive = false)
+2. VIP co dang nhap voi mat khau dung
+3. **Kiem tra**: Login that bai voi thong bao "Email hoac mat khau khong chinh xac"
+4. **Kiem tra**: KHONG redirect duoc vao bat ky trang VIP nao
+
+### TC-AUTH-09: Admin da dang nhap -> truy cap /login -> redirect
+1. Login Admin -> truy cap /login
+2. **Kiem tra**: Redirect den /admin (khong hien form login)
+3. Login VIP -> truy cap /login
+4. **Kiem tra**: Redirect den /tong-quan
+
+### TC-AUTH-10: Guest xem feed -> content blur tu bai 4
+1. Khong dang nhap -> truy cap /feed
+2. **Kiem tra**: 3 bai dau hien noi dung day du
+3. **Kiem tra**: Bai thu 4 tro di noi dung bi blur
+4. **Kiem tra**: Tieu de bai viet khong bi blur (van doc duoc)
+5. **Kiem tra**: Co nut "Dang nhap de doc" overlay tren noi dung blur
+
+## Ket qua
+- [ ] TC-AUTH-01: PASS / FAIL
+- [ ] TC-AUTH-02: PASS / FAIL
+- [ ] TC-AUTH-03: PASS / FAIL
+- [ ] TC-AUTH-04: PASS / FAIL
+- [ ] TC-AUTH-05: PASS / FAIL
+- [ ] TC-AUTH-06: PASS / FAIL
+- [ ] TC-AUTH-07: PASS / FAIL
+- [ ] TC-AUTH-08: PASS / FAIL
+- [ ] TC-AUTH-09: PASS / FAIL
+- [ ] TC-AUTH-10: PASS / FAIL
