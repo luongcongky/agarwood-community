@@ -4,6 +4,7 @@ import { getMemberTier } from "@/lib/tier"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { CompanyTabs } from "./CompanyTabs"
 
 export const revalidate = 3600
@@ -77,7 +78,7 @@ export default async function CompanyProfilePage({ params }: Props) {
       {/* Cover image */}
       <div className="relative w-full h-48 sm:h-64 md:h-72 rounded-xl overflow-hidden">
         {company.coverImageUrl ? (
-          <img src={company.coverImageUrl} alt="" className="w-full h-full object-cover" />
+          <Image src={company.coverImageUrl} alt={company.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 1024px" priority />
         ) : (
           <div className="w-full h-full bg-linear-to-br from-brand-800 via-brand-700 to-brand-900" />
         )}
@@ -86,7 +87,7 @@ export default async function CompanyProfilePage({ params }: Props) {
         <div className="absolute -bottom-10 left-6 sm:left-10">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-brand-700">
             {company.logoUrl ? (
-              <img src={company.logoUrl} alt={company.name} className="w-full h-full object-cover" />
+              <Image src={company.logoUrl} alt={company.name} fill className="object-cover" sizes="96px" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-100">
                 {company.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { PRODUCT_CATEGORIES, AGARWOOD_REGIONS } from "@/lib/constants/agarwood"
 import { createProduct, updateProduct } from "./_actions"
@@ -185,7 +186,7 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
             {imageUrls.map((url, i) => (
               <div key={i} className="relative aspect-square rounded-lg border border-brand-200 overflow-hidden group">
-                <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />
+                <Image src={url} alt={`Ảnh ${i + 1}`} fill className="object-cover" sizes="(max-width: 640px) 25vw, 20vw" />
                 {i === 0 && (
                   <span className="absolute top-1 left-1 bg-brand-700 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">Đại diện</span>
                 )}

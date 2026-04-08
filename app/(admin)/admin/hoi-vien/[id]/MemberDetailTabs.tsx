@@ -165,6 +165,23 @@ export function MemberDetailTabs({
     }
   }
 
+  async function handleResetPassword() {
+    if (!window.confirm(`Gửi email đặt lại mật khẩu cho ${user.name} (${user.email})?`)) return
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: "POST" })
+      if (res.ok) alert("Đã gửi email đặt lại mật khẩu thành công")
+      else {
+        const data = await res.json()
+        alert(data.error ?? "Không thể gửi email")
+      }
+    } catch {
+      alert("Có lỗi xảy ra")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-brand-200 overflow-hidden">
       {/* ── Action buttons ──────────────────────────────────────────────── */}
@@ -190,6 +207,13 @@ export function MemberDetailTabs({
             Gửi lại email mời
           </button>
         )}
+        <button
+          onClick={handleResetPassword}
+          disabled={actionLoading}
+          className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+        >
+          Đặt lại mật khẩu
+        </button>
       </div>
 
       {/* ── Tab bar ─────────────────────────────────────────────────────── */}

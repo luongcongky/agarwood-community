@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier } from "@/lib/tier"
+import Image from "next/image"
 import { ProfileTabs } from "./ProfileTabs"
 
 export const revalidate = 0
@@ -59,9 +60,9 @@ export default async function ProfilePage() {
 
       {/* ── Profile Header ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-brand-200 p-6 flex items-center gap-5">
-        <div className="w-16 h-16 rounded-full bg-brand-700 flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="relative w-16 h-16 rounded-full bg-brand-700 flex items-center justify-center shrink-0 overflow-hidden">
           {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+            <Image src={user.avatarUrl} alt={user.name} fill className="object-cover" sizes="64px" />
           ) : (
             <span className="text-2xl font-bold text-brand-100">
               {user.name?.[0]?.toUpperCase() ?? "?"}

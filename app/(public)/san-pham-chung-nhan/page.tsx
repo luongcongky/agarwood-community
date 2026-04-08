@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
@@ -215,9 +216,9 @@ export default async function CertifiedProductsPage({
                   className="group flex items-center gap-4 px-4 py-4 hover:bg-brand-50 transition-colors"
                 >
                   {/* Thumbnail */}
-                  <div className="w-16 h-14 shrink-0 rounded-lg overflow-hidden bg-brand-100">
+                  <div className="relative w-16 h-14 shrink-0 rounded-lg overflow-hidden bg-brand-100">
                     {firstImage ? (
-                      <img src={firstImage} alt={product.name} className="w-full h-full object-cover" />
+                      <Image src={firstImage} alt={product.name} fill className="object-cover" sizes="64px" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-brand-700">
                         <span className="text-lg">🌿</span>
@@ -286,9 +287,9 @@ export default async function CertifiedProductsPage({
 
                     {/* Company */}
                     <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-full overflow-hidden bg-brand-700 shrink-0 flex items-center justify-center">
+                      <div className="relative w-5 h-5 rounded-full overflow-hidden bg-brand-700 shrink-0 flex items-center justify-center">
                         {product.company.logoUrl ? (
-                          <img src={product.company.logoUrl} alt="" className="w-full h-full object-cover" />
+                          <Image src={product.company.logoUrl} alt="" fill className="object-cover" sizes="20px" />
                         ) : (
                           <span className="text-[9px] font-bold text-brand-100">{product.company.name[0]}</span>
                         )}

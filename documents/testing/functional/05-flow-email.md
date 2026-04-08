@@ -55,7 +55,19 @@
 2. **Kiem tra**: Admin nhan email "[Hoi Tram Huong] Ten VIP vua xac nhan CK Xd"
 3. **Kiem tra**: Email co link den /admin/thanh-toan
 
-### TC-EMAIL-09: Hien thi email tren nhieu nen tang
+### TC-EMAIL-09: Email dat lai mat khau
+1. Admin vao chi tiet hoi vien -> click "Dat lai mat khau"
+2. **Kiem tra**: Hoi vien nhan email "Dat lai mat khau - Hoi Tram Huong Viet Nam"
+3. **Kiem tra**: Email co nut "Dat mat khau moi" voi link /dat-mat-khau?token=xxx&email=xxx
+4. **Kiem tra**: Email ghi "Lien ket co hieu luc trong 48 gio"
+5. Click link -> **Kiem tra**: Trang dat mat khau hien thi voi email read-only
+6. Nhap mat khau moi (8+ ky tu) -> **Kiem tra**: Thanh do luc hien thi (Yeu/Trung binh/Manh)
+7. Nhap xac nhan khop -> Click "Kich hoat tai khoan"
+8. **Kiem tra**: Trang thanh cong hien thi -> tu dong redirect den /tong-quan
+9. Dang nhap lai voi mat khau cu -> **Kiem tra**: That bai
+10. Dang nhap voi mat khau moi -> **Kiem tra**: Thanh cong
+
+### TC-EMAIL-10: Hien thi email tren nhieu nen tang
 1. Gui email test
 2. Mo tren Gmail desktop -> **Kiem tra**: Layout khong bi vo
 3. Mo tren Gmail mobile -> **Kiem tra**: Responsive dung
@@ -71,3 +83,4 @@
 - [ ] TC-EMAIL-07: PASS / FAIL
 - [ ] TC-EMAIL-08: PASS / FAIL
 - [ ] TC-EMAIL-09: PASS / FAIL
+- [ ] TC-EMAIL-10: PASS / FAIL

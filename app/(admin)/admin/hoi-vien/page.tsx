@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma"
 import { getTierThresholds } from "@/lib/tier"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { MemberActionCell } from "./MemberActionCell"
 
-export const revalidate = 0
+export const revalidate = 30 // 30s — admin list refreshes on actions
 
 const PAGE_SIZE = 20
 
@@ -241,9 +242,9 @@ export default async function AdminMembersPage({
                 <tr key={m.id} className="hover:bg-brand-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/admin/hoi-vien/${m.id}`} className="flex items-center gap-3 group">
-                      <div className="w-8 h-8 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="relative w-8 h-8 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
                         {m.avatarUrl ? (
-                          <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          <Image src={m.avatarUrl} alt="" fill className="object-cover" sizes="32px" />
                         ) : (
                           <span className="text-xs font-bold text-brand-800">{m.name[0]?.toUpperCase()}</span>
                         )}

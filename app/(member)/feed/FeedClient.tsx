@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -189,9 +190,9 @@ function PostCard({
       {/* Author row */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="relative w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
             {post.author.avatarUrl ? (
-              <img src={post.author.avatarUrl} alt="" className="w-full h-full object-cover" />
+              <Image src={post.author.avatarUrl} alt="" fill className="object-cover" sizes="40px" />
             ) : (
               <span className="text-sm font-bold text-brand-700">{getInitials(post.author.name)}</span>
             )}
@@ -295,7 +296,7 @@ function PostCard({
           post.imageUrls.length === 1 ? "" : "grid grid-cols-2",
         )}>
           {(post.imageUrls as string[]).slice(0, 4).map((url, i) => (
-            <img key={i} src={url} alt="" className="w-full object-cover max-h-64 rounded-lg" />
+            <Image key={i} src={url} alt="" width={600} height={400} className="w-full object-cover max-h-64 rounded-lg" sizes="(max-width: 768px) 100vw, 600px" />
           ))}
         </div>
       )}
@@ -556,9 +557,9 @@ export function FeedClient({
                 return (
                   <li key={c.id} className="flex items-center gap-3">
                     <span className="text-xs font-bold text-brand-400 w-4 text-center">{i + 1}</span>
-                    <div className="w-8 h-8 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="relative w-8 h-8 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
                       {c.avatarUrl ? (
-                        <img src={c.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        <Image src={c.avatarUrl} alt="" fill className="object-cover" sizes="32px" />
                       ) : (
                         <span className="text-xs font-bold text-brand-700">{getInitials(c.name)}</span>
                       )}

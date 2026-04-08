@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { EMPLOYEE_COUNTS, PROVINCES } from "@/lib/constants/agarwood"
 import { updateCompany } from "./_actions"
@@ -205,9 +206,9 @@ export function CompanyEditForm({ company }: { company: Company }) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-brand-800">Logo (tỷ lệ 1:1, tối đa 2MB)</label>
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-xl border border-brand-200 overflow-hidden bg-brand-50 flex items-center justify-center shrink-0">
+            <div className="relative w-20 h-20 rounded-xl border border-brand-200 overflow-hidden bg-brand-50 flex items-center justify-center shrink-0">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                <Image src={logoUrl} alt="Logo" fill className="object-cover" sizes="80px" />
               ) : (
                 <span className="text-brand-300 text-2xl font-bold">{name[0]?.toUpperCase()}</span>
               )}
@@ -228,8 +229,8 @@ export function CompanyEditForm({ company }: { company: Company }) {
         {/* Cover */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-brand-800">Ảnh bìa (tỷ lệ 3:1, tối đa 5MB)</label>
-          <div className="w-full h-32 rounded-xl border border-brand-200 overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900">
-            {coverImageUrl && <img src={coverImageUrl} alt="Cover" className="w-full h-full object-cover" />}
+          <div className="relative w-full h-32 rounded-xl border border-brand-200 overflow-hidden bg-linear-to-br from-brand-700 to-brand-900">
+            {coverImageUrl && <Image src={coverImageUrl} alt="Cover" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" />}
           </div>
           <input
             type="file"

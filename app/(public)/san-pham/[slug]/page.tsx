@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { ProductGallery } from "./ProductGallery"
 
 export const revalidate = 3600
@@ -128,9 +129,9 @@ export default async function ProductDetailPage({ params }: Props) {
               {product.name}
             </h1>
             <div className="mt-2 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
+              <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
                 {product.company.logoUrl ? (
-                  <img src={product.company.logoUrl} alt="" className="w-full h-full object-cover" />
+                  <Image src={product.company.logoUrl} alt={product.company.name} fill className="object-cover" sizes="24px" />
                 ) : (
                   <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
                     {product.company.name[0]}
@@ -168,7 +169,7 @@ export default async function ProductDetailPage({ params }: Props) {
             <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-3">
               <div className="flex items-start gap-3">
                 {product.badgeUrl && (
-                  <img src={product.badgeUrl} alt="Badge" className="w-14 h-14 rounded-lg object-contain shrink-0" />
+                  <Image src={product.badgeUrl} alt="Badge" width={56} height={56} className="rounded-lg object-contain shrink-0" />
                 )}
                 <div>
                   <p className="text-amber-900 font-bold text-base uppercase tracking-wide">
@@ -251,7 +252,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 >
                   <div className="relative aspect-square bg-brand-100">
                     {rpImages.length > 0 ? (
-                      <img src={rpImages[0]} alt={rp.name} className="w-full h-full object-cover" />
+                      <Image src={rpImages[0]} alt={rp.name} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-brand-200 to-brand-300">
                         <span className="text-3xl">🌿</span>

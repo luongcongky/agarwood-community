@@ -98,6 +98,12 @@ Moi sang mo trang `/admin`, ban se thay:
 - Vao chi tiet hoi vien dang "Cho kich hoat"
 - Click "Gui lai email moi" — tao link moi (het han 48h)
 
+### Dat lai mat khau
+- Vao chi tiet hoi vien -> click "Dat lai mat khau" (nut amber)
+- He thong gui email voi link dat mat khau moi (het han 48h)
+- Hoi vien click link -> dat mat khau moi -> tu dong dang nhap
+- Dung khi: hoi vien quen mat khau, can reset mat khau bao mat
+
 > **Luu y**: Khong co chuc nang xoa tai khoan. Chi vo hieu hoa.
 
 ---
@@ -280,8 +286,10 @@ Moi sang mo trang `/admin`, ban se thay:
 3. Gui mat khau qua Zalo/dien thoai
 
 ### Hoi vien quen mat khau
-- Hien tai chua co chuc nang "Quen mat khau" tu dong
-- Admin tao mat khau moi: reset trong DB hoac tao email moi dat mat khau
+1. Vao chi tiet hoi vien (`/admin/hoi-vien/[id]`)
+2. Click "Dat lai mat khau" (nut amber)
+3. He thong gui email voi link dat mat khau moi (het han 48h)
+4. Hoi vien click link -> dat mat khau moi -> tu dong dang nhap
 
 ### Payment CK nhung noi dung sai
 - Tu choi voi ly do "Noi dung CK khong khop"

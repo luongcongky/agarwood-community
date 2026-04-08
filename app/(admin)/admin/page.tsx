@@ -90,19 +90,22 @@ export default async function AdminDashboardPage() {
   const monthRevenueTotal = monthRevenue._sum.amount ?? 0
   const yearRevenueTotal = yearRevenue._sum.amount ?? 0
 
-  // Tier distribution for PieChart (respects accountType thresholds)
-  const allVIP = await prisma.user.findMany({ where: { role: "VIP" }, select: { contributionTotal: true, accountType: true } })
+  // Tier distribution for PieChart — use DB-side count (no JS filtering)
   const [bizT, indT] = await Promise.all([getTierThresholds("BUSINESS"), getTierThresholds("INDIVIDUAL")])
-  function userTier(u: { contributionTotal: number; accountType: string }) {
-    const { silver, gold } = u.accountType === "INDIVIDUAL" ? indT : bizT
-    if (u.contributionTotal >= gold) return "gold"
-    if (u.contributionTotal >= silver) return "silver"
-    return "basic"
-  }
+  const [bizGold, bizSilver, indGold, indSilver] = await Promise.all([
+    prisma.user.count({ where: { role: "VIP", accountType: "BUSINESS", contributionTotal: { gte: bizT.gold } } }),
+    prisma.user.count({ where: { role: "VIP", accountType: "BUSINESS", contributionTotal: { gte: bizT.silver, lt: bizT.gold } } }),
+    prisma.user.count({ where: { role: "VIP", accountType: "INDIVIDUAL", contributionTotal: { gte: indT.gold } } }),
+    prisma.user.count({ where: { role: "VIP", accountType: "INDIVIDUAL", contributionTotal: { gte: indT.silver, lt: indT.gold } } }),
+  ])
+  const totalGold = bizGold + indGold
+  const totalSilver = bizSilver + indSilver
+  const totalVIPCount = (tierCounts[0]?._count ?? 0)
+  const totalBasic = totalVIPCount - totalGold - totalSilver
   const tierData = [
-    { name: "★ Cơ bản", value: allVIP.filter(u => userTier(u) === "basic").length },
-    { name: "★★ Bạc", value: allVIP.filter(u => userTier(u) === "silver").length },
-    { name: "★★★ Vàng", value: allVIP.filter(u => userTier(u) === "gold").length },
+    { name: "★ Cơ bản", value: totalBasic },
+    { name: "★★ Bạc", value: totalSilver },
+    { name: "★★★ Vàng", value: totalGold },
   ]
 
   // Revenue chart data (12 months)
@@ -158,7 +161,7 @@ export default async function AdminDashboardPage() {
   // GRAY alerts
   if (newActivatedVIP.length > 0) alerts.push({ text: `${newActivatedVIP.length} hội viên mới được kích hoạt tuần này`, href: "/admin/hoi-vien", level: "gray" })
   if (certApprovedRecent.length > 0) alerts.push({ text: `${certApprovedRecent.length} SP vừa được chứng nhận tuần này`, href: "/admin/chung-nhan", level: "gray" })
-  const totalVIP = allVIP.length
+  const totalVIP = totalVIPCount
   alerts.push({ text: `Slot VIP: ${totalVIP}/${maxSlot}`, href: "/admin/hoi-vien", level: "gray" })
 
   const alertColors = { red: "border-red-300 bg-red-50 text-red-800", yellow: "border-yellow-300 bg-yellow-50 text-yellow-800", gray: "border-gray-300 bg-gray-50 text-gray-700" }

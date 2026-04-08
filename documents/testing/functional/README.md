@@ -2,7 +2,7 @@
 
 ## Tong quan
 - 6 nhom test flow
-- 60 test case
+- 61 test case
 - 3 role can test: Guest, VIP, Admin
 
 ## Tai khoan test
@@ -21,7 +21,7 @@
 | 02 | [02-flow-chung-nhan.md](02-flow-chung-nhan.md) | 9 | Cao |
 | 03 | [03-flow-phan-quyen.md](03-flow-phan-quyen.md) | 10 | Cao |
 | 04 | [04-flow-feed.md](04-flow-feed.md) | 11 | Trung binh |
-| 05 | [05-flow-email.md](05-flow-email.md) | 9 | Trung binh |
+| 05 | [05-flow-email.md](05-flow-email.md) | 10 | Trung binh |
 | 06 | [06-flow-khac.md](06-flow-khac.md) | 13 | Trung binh |
 
 ## Cach chay test

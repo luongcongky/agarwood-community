@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 type Product = {
@@ -112,7 +113,7 @@ export function CompanyTabs({
                   >
                     <div className="relative aspect-square bg-brand-100">
                       {product.imageUrls.length > 0 ? (
-                        <img src={product.imageUrls[0]} alt={product.name} className="w-full h-full object-cover" />
+                        <Image src={product.imageUrls[0]} alt={product.name} fill className="object-cover" sizes="(max-width: 640px) 50vw, 33vw" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-brand-200 to-brand-300">
                           <span className="text-3xl">🌿</span>

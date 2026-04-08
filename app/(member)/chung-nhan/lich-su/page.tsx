@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-export const revalidate = 0
+export const revalidate = 300
 
 const STATUS_MAP: Record<string, { label: string; cls: string; description: string }> = {
   DRAFT:        { label: "Chờ xác nhận CK",    cls: "bg-gray-100 text-gray-700",   description: "Đang chờ admin xác nhận chuyển khoản" },

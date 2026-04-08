@@ -19,7 +19,23 @@ export async function GET(request: Request) {
     ],
     take: 20,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    include: {
+    select: {
+      id: true,
+      authorId: true,
+      title: true,
+      content: true,
+      imageUrls: true,
+      status: true,
+      isPremium: true,
+      isPromoted: true,
+      authorPriority: true,
+      viewCount: true,
+      reportCount: true,
+      lockedBy: true,
+      lockReason: true,
+      createdAt: true,
+      updatedAt: true,
+      lockedAt: true,
       author: {
         select: {
           id: true,
@@ -39,7 +55,7 @@ export async function GET(request: Request) {
     },
   })
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     posts: posts.map((p) => ({
       ...p,
       createdAt: p.createdAt.toISOString(),
@@ -47,6 +63,8 @@ export async function GET(request: Request) {
       lockedAt: p.lockedAt?.toISOString() ?? null,
     })),
   })
+  response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  return response
 }
 
 // POST /api/posts

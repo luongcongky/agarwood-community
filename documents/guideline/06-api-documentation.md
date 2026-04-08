@@ -253,6 +253,22 @@ Bat / tat tai khoan VIP. Yeu cau: ADMIN.
 ### POST /api/admin/users/{id}/resend-invite
 Gui lai email moi (tao token moi 48h). Yeu cau: ADMIN.
 
+### POST /api/admin/users/{id}/reset-password
+Dat lai mat khau hoi vien. Yeu cau: ADMIN. Khong ap dung cho tai khoan ADMIN.
+
+**Process:**
+1. Xoa token cu cua email hoi vien
+2. Tao token moi (48h)
+3. Gui email voi link `/dat-mat-khau?token=...&email=...`
+
+**Response:** `{ success: true }`
+
+**Errors:**
+- `403` — Khong phai ADMIN
+- `404` — Khong tim thay nguoi dung
+- `400` — Khong the reset mat khau tai khoan ADMIN
+- `500` — Khong the gui email
+
 ---
 
 ## 5. Media Orders
@@ -324,9 +340,14 @@ Kiem tra token kich hoat tai khoan.
 **Response:** `{ valid: true | false }`
 
 ### POST /api/auth/set-password
-Dat mat khau va kich hoat tai khoan.
+Dat mat khau va kich hoat tai khoan. Dung cho ca 2 flow: kich hoat lan dau va reset mat khau.
 
 **Body:** `{ "token": "xxx", "email": "xxx", "password": "xxx" }`
+
+**Side effects:**
+- User.passwordHash cap nhat (bcrypt cost 12)
+- User.isActive = true
+- VerificationToken bi xoa (1 lan dung)
 
 ---
 

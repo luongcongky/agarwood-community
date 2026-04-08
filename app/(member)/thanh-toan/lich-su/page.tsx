@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-export const revalidate = 0
+export const revalidate = 300 // 5 min — historical data
 
 const TYPE_LABELS: Record<string, string> = {
   MEMBERSHIP_FEE: "Phí hội viên",

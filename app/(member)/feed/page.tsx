@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getTierThresholds } from "@/lib/tier"
 import { FeedClient } from "./FeedClient"
 
-export const revalidate = 0
+export const revalidate = 60 // 1 min — feed updates are not real-time critical
 
 export default async function FeedPage() {
   const session = await auth()
@@ -18,7 +18,23 @@ export default async function FeedPage() {
       { createdAt: "desc" },
     ],
     take: 20,
-    include: {
+    select: {
+      id: true,
+      authorId: true,
+      title: true,
+      content: true,
+      imageUrls: true,
+      status: true,
+      isPremium: true,
+      isPromoted: true,
+      authorPriority: true,
+      viewCount: true,
+      reportCount: true,
+      lockedBy: true,
+      lockReason: true,
+      createdAt: true,
+      updatedAt: true,
+      lockedAt: true,
       author: {
         select: {
           id: true,

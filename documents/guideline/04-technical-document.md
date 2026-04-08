@@ -59,7 +59,7 @@ agarwood-community/
 │       ├── auth/               # NextAuth + verify-token + set-password
 │       ├── posts/              # Feed CRUD + react + report + lock
 │       ├── admin/              # Admin-only endpoints
-│       │   ├── users/          # CRUD user + toggle + resend invite
+│       │   ├── users/          # CRUD user + toggle + resend invite + reset password
 │       │   ├── payments/       # Confirm + reject CK
 │       │   ├── certifications/ # Approve + reject + refund
 │       │   ├── media-orders/   # Update status
@@ -205,6 +205,7 @@ MIGRATE_TARGET=supabase npx prisma migrate deploy  # Production
 |---------|-----------|---------|
 | Admin tao VIP (invite) | VIP | Chao mung gia nhap |
 | Admin resend invite | VIP | Kich hoat tai khoan |
+| Admin reset password | VIP | Dat lai mat khau |
 | VIP xac nhan CK membership | Admin | [Hoi TH] Ten vua CK Xd |
 | Admin confirm payment | VIP | Membership da kich hoat |
 | Admin reject payment | VIP | CK bi tu choi + ly do |

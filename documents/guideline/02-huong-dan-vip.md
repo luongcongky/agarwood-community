@@ -44,10 +44,12 @@ He thong co 2 loai tai khoan hoi vien:
 ### Neu ban nhan email moi:
 1. Mo email tu "Hoi Tram Huong Viet Nam"
 2. Click nut "Dat mat khau & Kich hoat tai khoan"
-3. Nhap mat khau moi (toi thieu 8 ky tu) + xac nhan
-4. He thong tu dong dang nhap va dua ban den trang Tong quan
+3. He thong xac minh link — neu hop le, hien form dat mat khau
+4. Nhap mat khau moi (toi thieu 8 ky tu) + xac nhan
+5. Thanh do luc mat khau hien thi muc do: Yeu / Trung binh / Manh
+6. He thong tu dong dang nhap va dua ban den trang Tong quan
 
-> **Luu y**: Link trong email chi co hieu luc 48 gio. Neu het han, lien he ban quan tri.
+> **Luu y**: Link trong email chi co hieu luc 48 gio. Neu het han, lien he ban quan tri de gui lai.
 
 ### Neu ban nhan mat khau tu admin:
 1. Truy cap: `https://[domain]/login`
@@ -272,7 +274,7 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 ## 10. Cau hoi thuong gap
 
 **Q: Toi quen mat khau, lam sao?**
-A: Lien he ban quan tri de duoc cap mat khau moi.
+A: Lien he ban quan tri. Admin se gui email dat lai mat khau voi link co hieu luc 48 gio. Click link de dat mat khau moi va tu dong dang nhap.
 
 **Q: Toi muon doi email dang nhap?**
 A: Email khong the tu doi. Lien he admin de ho tro.

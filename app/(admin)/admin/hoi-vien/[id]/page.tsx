@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier, getTierThresholds } from "@/lib/tier"
 import { MemberDetailTabs } from "./MemberDetailTabs"
 
-export const revalidate = 0
+export const revalidate = 60
 
 
 export default async function MemberDetailPage({
@@ -137,9 +138,9 @@ export default async function MemberDetailPage({
       </Link>
 
       <div className="bg-white rounded-xl border border-brand-200 p-6 flex items-start gap-5">
-        <div className="w-14 h-14 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="relative w-14 h-14 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
           {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+            <Image src={user.avatarUrl} alt="" fill className="object-cover" sizes="56px" />
           ) : (
             <span className="text-xl font-bold text-brand-800">{user.name[0]?.toUpperCase()}</span>
           )}

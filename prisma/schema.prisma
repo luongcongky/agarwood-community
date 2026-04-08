@@ -128,6 +128,7 @@ model User {
   postReactions     PostReaction[]
 
   @@index([role])
+  @@index([accountType])
   @@index([contributionTotal])
   @@index([displayPriority])
   @@map("users")
@@ -379,7 +380,9 @@ model Post {
   @@index([authorId])
   @@index([status])
   @@index([isPremium])
-  @@index([authorPriority, createdAt]) // index cho feed query chính
+  @@index([authorPriority, createdAt])
+  @@index([status, createdAt])
+  @@index([isPromoted, authorPriority, createdAt]) // feed ORDER BY
   @@index([createdAt])
   @@map("posts")
 }

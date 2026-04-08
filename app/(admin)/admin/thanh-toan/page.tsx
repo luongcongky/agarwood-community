@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PaymentActionRow } from "./PaymentActionRow"
 
-export const revalidate = 0
+export const revalidate = 30
 
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
   MEMBERSHIP_FEE:    { label: "Membership",    cls: "bg-blue-100 text-blue-700" },
