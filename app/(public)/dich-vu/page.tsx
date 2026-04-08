@@ -72,7 +72,7 @@ export default function MediaServicePage() {
     <div>
       {/* Hero */}
       <section className="bg-brand-800 py-20 px-4 text-center">
-        <h1 className="font-heading text-4xl sm:text-5xl font-bold text-brand-100">
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
           Dịch vụ Truyền thông
         </h1>
         <p className="mt-3 text-brand-300 text-lg max-w-2xl mx-auto">
@@ -83,7 +83,7 @@ export default function MediaServicePage() {
 
       {/* Service Cards */}
       <section className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="font-heading text-2xl font-bold text-foreground text-center mb-10">
+        <h2 className="text-2xl font-bold text-foreground text-center mb-10">
           Các dịch vụ của chúng tôi
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -93,7 +93,7 @@ export default function MediaServicePage() {
               className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow space-y-3"
             >
               <div className="text-3xl">{svc.icon}</div>
-              <h3 className="font-heading text-lg font-semibold text-foreground">{svc.title}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{svc.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{svc.description}</p>
               <p className="text-brand-700 font-semibold text-sm">{svc.price}</p>
             </div>
@@ -104,7 +104,7 @@ export default function MediaServicePage() {
       {/* Process Steps */}
       <section className="bg-brand-50 py-16 px-4">
         <div className="max-w-4xl mx-auto">
-          <h2 className="font-heading text-2xl font-bold text-foreground text-center mb-10">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-10">
             Quy trình thực hiện
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -113,7 +113,7 @@ export default function MediaServicePage() {
                 <div className="w-12 h-12 rounded-full bg-brand-700 text-brand-100 flex items-center justify-center text-xl font-bold mx-auto">
                   {s.step}
                 </div>
-                <h3 className="font-heading font-semibold text-foreground">{s.title}</h3>
+                <h3 className="font-semibold text-foreground">{s.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{s.description}</p>
               </div>
             ))}
@@ -123,7 +123,7 @@ export default function MediaServicePage() {
 
       {/* Order Form */}
       <section className="max-w-2xl mx-auto px-4 py-16">
-        <h2 className="font-heading text-2xl font-bold text-foreground text-center mb-2">
+        <h2 className="text-2xl font-bold text-foreground text-center mb-2">
           Đặt dịch vụ ngay
         </h2>
         <p className="text-muted-foreground text-sm text-center mb-8">

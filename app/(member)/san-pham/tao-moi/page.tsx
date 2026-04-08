@@ -16,7 +16,7 @@ export default async function CreateProductPage() {
   if (!company) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-heading font-bold text-brand-900">Thêm sản phẩm</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Thêm sản phẩm</h1>
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-sm text-yellow-800">
           Bạn cần có thông tin doanh nghiệp trước khi thêm sản phẩm.
         </div>
@@ -30,7 +30,7 @@ export default async function CreateProductPage() {
         <Link href={`/doanh-nghiep/${company.slug}`} className="text-brand-600 hover:text-brand-800 text-sm">
           ← Quay lại
         </Link>
-        <h1 className="text-2xl font-heading font-bold text-brand-900">Thêm sản phẩm mới</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Thêm sản phẩm mới</h1>
       </div>
       <ProductForm companySlug={company.slug} />
     </div>

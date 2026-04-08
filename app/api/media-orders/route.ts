@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     // Create MediaOrder in DB
     await prisma.mediaOrder.create({
       data: {
-        requesterId: requesterId ?? "guest",
+        requesterId: requesterId ?? undefined,
         requesterName: name,
         requesterEmail: email,
         requesterPhone: phone,

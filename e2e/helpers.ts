@@ -12,6 +12,6 @@ export async function login(page: Page, email: string, password: string) {
   await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10000 })
 }
 
-export const ADMIN = { email: "admin@hoi-tram-huong.vn", password: "123456" }
-export const VIP_A = { email: "nguyen.van.a@tramhuong-hn.vn", password: "123456" }
-export const VIP_B = { email: "tran.thi.b@tramhuong-hcm.vn", password: "123456" }
+export const ADMIN = { email: "admin@hoitramhuong.vn", password: "Demo@123" }
+export const VIP_A = { email: "trankhanh@tramhuongkhanhhoa.vn", password: "Demo@123" }
+export const VIP_B = { email: "levanminh@tramhuongquangnam.vn", password: "Demo@123" }

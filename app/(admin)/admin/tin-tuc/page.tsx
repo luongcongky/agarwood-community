@@ -78,7 +78,7 @@ export default async function AdminNewsPage() {
                 <td className="px-4 py-3">
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      "inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium",
                       news.isPublished
                         ? "bg-green-100 text-green-700"
                         : "bg-gray-100 text-gray-600"
@@ -89,7 +89,7 @@ export default async function AdminNewsPage() {
                 </td>
                 <td className="px-4 py-3">
                   {news.isPinned && (
-                    <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-700">
+                    <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-1 text-sm font-medium text-brand-700">
                       Ghim
                     </span>
                   )}

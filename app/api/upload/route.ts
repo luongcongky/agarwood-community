@@ -33,10 +33,21 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(arrayBuffer)
   const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
 
+  // Determine folder based on context
+  const folder = (formData.get("folder") as string) || "agarwood/posts"
+
   const result = await cloudinary.uploader.upload(base64, {
-    folder: "agarwood/posts",
+    folder,
     resource_type: "image",
+    // Auto optimization
+    format: "webp",
+    quality: "auto",
+    // Resize large images to max 1600px width
+    transformation: [
+      { width: 1600, crop: "limit" },
+      { fetch_format: "auto", quality: "auto" },
+    ],
   })
 
-  return NextResponse.json({ url: result.secure_url })
+  return NextResponse.json({ secure_url: result.secure_url, url: result.secure_url })
 }

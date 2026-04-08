@@ -39,6 +39,20 @@
 5. Flow Email (05) — xac nhan email hoat dong
 6. Flow Khac (06) — cac tinh nang phu
 
+## Demo Flow Tests (E2E + Video)
+
+Ngoai 60 test case thu cong, du an co 2 test suite Playwright chay tu dong va ghi video:
+
+| File | Doi tuong | So buoc | Muc dich |
+|------|----------|---------|---------|
+| `e2e/vip-demo-flow.spec.ts` | VIP | 16 | Demo toan bo flow hoi vien |
+| `e2e/admin-demo-flow.spec.ts` | Admin | 12 | Demo toan bo flow quan tri |
+
+- Seed data tu dau, chay tuan tu, du lieu xuyensuot
+- Video output: `e2e/test-results/` (file `.webm`)
+- Dung de demo san pham, luu tru huong dan su dung
+- Xem chi tiet: [documents/testing/demo-flow/README.md](../demo-flow/README.md)
+
 ## Luu y
 - Reset mat khau ve 123456 truoc moi lan test: chay script reset password
 - Mot so TC can chinh DB truc tiep (vd: doi createdAt de test alert 24h)

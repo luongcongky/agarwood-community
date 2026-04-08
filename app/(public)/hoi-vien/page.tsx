@@ -1,6 +1,13 @@
+import Image from "next/image"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { cn } from "@/lib/utils"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Hội viên",
+  description: "Danh sách hội viên Hội Trầm Hương Việt Nam — các doanh nghiệp trầm hương uy tín trên toàn quốc.",
+  alternates: { canonical: "/hoi-vien" },
+}
 
 export const revalidate = 3600
 
@@ -20,7 +27,6 @@ export default async function MembersPage({
   searchParams: Promise<{ province?: string; q?: string }>
 }) {
   const params = await searchParams
-  const province = params.province ?? ""
   const q = params.q ?? ""
 
   const companies = await prisma.company.findMany({
@@ -53,7 +59,7 @@ export default async function MembersPage({
     <div>
       {/* Page Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
-        <h1 className="font-heading text-4xl font-bold text-brand-100">Hội viên</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Hội viên</h1>
         <p className="mt-2 text-brand-300 text-lg">
           Danh sách doanh nghiệp thành viên Hội Trầm Hương Việt Nam
         </p>
@@ -107,18 +113,21 @@ export default async function MembersPage({
                 {/* Logo + Name Row */}
                 <div className="flex items-center gap-3">
                   {company.logoUrl ? (
-                    <img
-                      src={company.logoUrl}
-                      alt={company.name}
-                      className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                    />
+                    <div className="relative w-16 h-16 shrink-0">
+                      <Image
+                        src={company.logoUrl}
+                        alt={company.name}
+                        fill
+                        className="rounded-full object-cover"
+                      />
+                    </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-brand-700 text-brand-100 flex items-center justify-center text-xl font-bold flex-shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-brand-700 text-brand-100 flex items-center justify-center text-xl font-bold shrink-0">
                       {getInitials(company.name)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <h2 className="font-heading font-bold text-foreground text-base leading-tight">
+                    <h2 className="font-bold text-foreground text-base leading-tight">
                       {company.name}
                     </h2>
                     {company.isVerified && (

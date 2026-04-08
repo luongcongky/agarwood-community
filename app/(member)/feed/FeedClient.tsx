@@ -12,6 +12,7 @@ type PostAuthor = {
   name: string
   avatarUrl: string | null
   role: string
+  accountType: string
   contributionTotal: number
   company: { name: string; slug: string } | null
 }
@@ -43,6 +44,7 @@ type TopContributor = {
   name: string
   avatarUrl: string | null
   contributionTotal: number
+  accountType: string
   company: { name: string } | null
 }
 
@@ -54,6 +56,10 @@ type FeedClientProps = {
   currentUserRole: string | null
   currentUserName: string | null
   membershipInfo: MembershipInfo | null
+  tierSilver?: number
+  tierGold?: number
+  tierIndSilver?: number
+  tierIndGold?: number
   topContributors: TopContributor[]
 }
 
@@ -75,9 +81,18 @@ function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
 }
 
-function getTierBadge(contribution: number) {
-  if (contribution >= 20_000_000) return { label: "★★★", cls: "bg-yellow-400 text-yellow-900" }
-  if (contribution >= 10_000_000) return { label: "★★", cls: "bg-brand-300 text-brand-900" }
+function getTierBadge(
+  contribution: number,
+  accountType: string,
+  bizSilver: number = 10_000_000,
+  bizGold: number = 20_000_000,
+  indSilver: number = 3_000_000,
+  indGold: number = 5_000_000,
+) {
+  const silverT = accountType === "INDIVIDUAL" ? indSilver : bizSilver
+  const goldT = accountType === "INDIVIDUAL" ? indGold : bizGold
+  if (contribution >= goldT) return { label: "★★★", cls: "bg-yellow-400 text-yellow-900" }
+  if (contribution >= silverT) return { label: "★★", cls: "bg-brand-300 text-brand-900" }
   return { label: "★", cls: "bg-brand-200 text-brand-800" }
 }
 
@@ -99,6 +114,10 @@ function PostCard({
   onReact,
   onLock,
   onDelete,
+  tierSilver,
+  tierGold,
+  tierIndSilver,
+  tierIndGold,
 }: {
   post: Post
   currentUserId: string | null
@@ -107,6 +126,10 @@ function PostCard({
   onReact: (id: string) => void
   onLock: (id: string) => void
   onDelete: (id: string) => void
+  tierSilver?: number
+  tierGold?: number
+  tierIndSilver?: number
+  tierIndGold?: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -117,7 +140,7 @@ function PostCard({
   const isGuest = !currentUserRole
   const isGuestBlurred = isGuest && index >= GUEST_VISIBLE_COUNT
 
-  const tier = getTierBadge(post.author.contributionTotal)
+  const tier = getTierBadge(post.author.contributionTotal, post.author.accountType, tierSilver, tierGold, tierIndSilver, tierIndGold)
 
   // Strip HTML for truncation
   const plainText = post.content.replace(/<[^>]*>/g, "")
@@ -176,9 +199,11 @@ function PostCard({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-brand-900 text-sm">{post.author.name}</span>
-              {post.author.company && (
-                <span className="text-xs text-brand-500">· {post.author.company.name}</span>
-              )}
+              {post.author.company ? (
+                <span className="text-sm text-brand-500">· {post.author.company.name}</span>
+              ) : post.author.accountType === "INDIVIDUAL" ? (
+                <span className="text-sm text-brand-500">· Chuyên gia</span>
+              ) : null}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={cn("text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none", tier.cls)}>
@@ -194,7 +219,7 @@ function PostCard({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="text-brand-400 hover:text-brand-700 p-1 rounded transition-colors"
+              className="text-brand-400 hover:text-brand-700 p-2.5 -m-1.5 rounded transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
               ···
             </button>
@@ -277,7 +302,7 @@ function PostCard({
 
       {/* Stats + reaction bar */}
       {!isLocked && !isGuestBlurred && (
-        <div className="flex items-center justify-between pt-3 border-t border-brand-100">
+        <div className="flex items-center justify-between pt-3 border-t border-brand-200">
           <div className="flex items-center gap-4">
             {currentUserRole && currentUserRole !== "GUEST" ? (
               <button
@@ -293,7 +318,7 @@ function PostCard({
               <span className="text-sm text-brand-400">Hữu ích ({post._count.reactions})</span>
             )}
           </div>
-          <span className="text-xs text-brand-400">{post.viewCount} lượt xem</span>
+          <span className="text-sm text-brand-500">{post.viewCount} lượt xem</span>
         </div>
       )}
     </article>
@@ -347,6 +372,10 @@ export function FeedClient({
   currentUserName,
   membershipInfo,
   topContributors,
+  tierSilver,
+  tierGold,
+  tierIndSilver,
+  tierIndGold,
 }: FeedClientProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [hasMore, setHasMore] = useState(initialPosts.length >= 20)
@@ -448,7 +477,7 @@ export function FeedClient({
             <div className="w-9 h-9 rounded-full bg-brand-200 flex items-center justify-center shrink-0">
               <span className="text-sm font-bold text-brand-700">{currentUserName?.[0]?.toUpperCase() ?? "?"}</span>
             </div>
-            <span className="text-sm text-brand-400 flex-1">
+            <span className="text-sm text-brand-500 flex-1">
               Chia sẻ kiến thức, kinh nghiệm hoặc thông tin thị trường trầm hương...
             </span>
           </Link>
@@ -476,6 +505,10 @@ export function FeedClient({
             onReact={handleReact}
             onLock={handleLock}
             onDelete={handleDelete}
+            tierSilver={tierSilver}
+            tierGold={tierGold}
+            tierIndSilver={tierIndSilver}
+            tierIndGold={tierIndGold}
           />
         ))}
 
@@ -519,7 +552,7 @@ export function FeedClient({
             <h3 className="font-semibold text-brand-900 text-sm mb-4">Hội viên tiêu biểu</h3>
             <ul className="space-y-3">
               {topContributors.map((c, i) => {
-                const t = getTierBadge(c.contributionTotal)
+                const t = getTierBadge(c.contributionTotal, c.accountType, tierSilver, tierGold, tierIndSilver, tierIndGold)
                 return (
                   <li key={c.id} className="flex items-center gap-3">
                     <span className="text-xs font-bold text-brand-400 w-4 text-center">{i + 1}</span>

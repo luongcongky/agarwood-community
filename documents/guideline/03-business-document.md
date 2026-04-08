@@ -24,19 +24,33 @@
 
 ## 1. Quy trinh dang ky hoi vien
 
-### 1.1 Dieu kien gia nhap
-- La doanh nghiep hoat dong trong linh vuc tram huong tai Viet Nam
-- Co giay dang ky kinh doanh hop le
-- Dong phi hoi vien toi thieu theo quy dinh hien hanh
+### 1.1 Hai loai tai khoan
+| Loai | Doi tuong | Dieu kien |
+|------|---------|-----------|
+| **Doanh nghiep (BUSINESS)** | Cong ty, ho kinh doanh trong nganh tram huong | Co giay DKKD hop le |
+| **Ca nhan (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan, nha suu tam | Hoat dong lien quan tram huong |
 
-### 1.2 Quy trinh
-1. Ban quan tri xet duyet ho so dang ky
-2. Tao tai khoan tren he thong (email moi hoac mat khau tam thoi)
-3. Hoi vien kich hoat tai khoan va dat mat khau
-4. Hoi vien dong phi membership thong qua chuyen khoan ngan hang
-5. Admin xac nhan chuyen khoan -> membership kich hoat
+### 1.2 Quyen theo loai tai khoan
+| Tinh nang | Doanh nghiep | Ca nhan |
+|-----------|:---:|:---:|
+| Dang bai feed | ✓ | ✓ |
+| Ho so ca nhan | ✓ | ✓ |
+| Gia han membership | ✓ | ✓ |
+| Tai lieu Hoi | ✓ | ✓ |
+| Dich vu truyen thong | ✓ | ✓ |
+| Profile doanh nghiep | ✓ | — |
+| Tao san pham | ✓ | — |
+| Chung nhan san pham | ✓ | — |
 
-### 1.3 Gioi han
+### 1.3 Quy trinh dang ky
+1. Nguoi dang ky dien form tai /dang-ky (chon loai: Doanh nghiep hoac Ca nhan)
+2. Ban quan tri xet duyet trong 3 ngay lam viec
+3. Neu duoc duyet: gui email kich hoat tai khoan
+4. Hoi vien dat mat khau va dang nhap
+5. Dong phi membership thong qua chuyen khoan ngan hang
+6. Admin xac nhan chuyen khoan -> membership kich hoat
+
+### 1.4 Gioi han
 - Toi da 100 hoi vien VIP (co the dieu chinh boi ban quan tri)
 - Moi hoi vien dai dien cho 1 doanh nghiep (1 tai khoan = 1 cong ty)
 
@@ -79,6 +93,7 @@
 ## 3. Quy trinh chung nhan san pham
 
 ### 3.1 Dieu kien nop don
+- **Loai tai khoan: Doanh nghiep** (tai khoan Ca nhan khong the nop don chung nhan)
 - Membership con hieu luc
 - San pham da duoc tao tren he thong
 - San pham chua co don chung nhan dang xu ly

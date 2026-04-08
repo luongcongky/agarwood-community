@@ -1,6 +1,13 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Tin tức",
+  description: "Tin tức, thông báo và cập nhật mới nhất từ Hội Trầm Hương Việt Nam — thị trường, sự kiện, kiến thức chuyên ngành.",
+  alternates: { canonical: "/tin-tuc" },
+}
 
 export const revalidate = 3600
 
@@ -93,14 +100,14 @@ export default async function NewsPage({
 
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-brand-100">Tin tức</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Tin tức</h1>
         <p className="mt-2 text-brand-300 text-base">
           Thông tin &amp; Cập nhật từ Hội Trầm Hương Việt Nam
         </p>
       </div>
 
       {/* ── Search bar ───────────────────────────────────────────────────────── */}
-      <div className="border-b border-brand-100 bg-brand-50">
+      <div className="border-b border-brand-200 bg-brand-50">
         <div className="mx-auto max-w-7xl px-4 py-3">
           <form method="GET" action="/tin-tuc" className="flex gap-2 max-w-lg">
             <input type="hidden" name="page" value="1" />
@@ -167,7 +174,7 @@ export default async function NewsPage({
                         Tin nổi bật
                       </span>
                     )}
-                    <h2 className="font-heading text-white text-xl sm:text-2xl lg:text-3xl font-bold leading-snug group-hover:text-brand-300 transition-colors line-clamp-3">
+                    <h2 className="text-white text-xl sm:text-2xl lg:text-3xl font-bold leading-snug group-hover:text-brand-300 transition-colors line-clamp-3">
                       {heroItem.title}
                     </h2>
                     {heroItem.excerpt && (
@@ -228,7 +235,7 @@ export default async function NewsPage({
 
             {/* Section heading */}
             <div className="flex items-center gap-3 mb-5 pb-3 border-b-2 border-brand-800">
-              <h2 className="font-heading font-bold text-brand-900 text-lg">
+              <h2 className="font-bold text-brand-900 text-lg">
                 {isSearch ? `Kết quả tìm kiếm` : page === 1 ? "Tin mới nhất" : `Trang ${page}`}
               </h2>
               {!isSearch && (
@@ -294,7 +301,7 @@ export default async function NewsPage({
 
             {/* ── Pagination ────────────────────────────────────────────────── */}
             {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-between border-t border-brand-100 pt-6">
+              <div className="mt-8 flex items-center justify-between border-t border-brand-200 pt-6">
                 {/* Mobile: Prev / Next only */}
                 <div className="flex sm:hidden gap-2 w-full justify-between">
                   {page > 1 ? (
@@ -357,7 +364,7 @@ export default async function NewsPage({
             {/* Tin nổi bật */}
             <div>
               <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                <h3 className="font-heading font-bold text-brand-900">Tin nổi bật</h3>
+                <h3 className="font-bold text-brand-900">Tin nổi bật</h3>
               </div>
               <ul className="space-y-4">
                 {featuredNews.map((item, i) => (
@@ -385,7 +392,7 @@ export default async function NewsPage({
             {totalPages > 1 && (
               <div>
                 <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                  <h3 className="font-heading font-bold text-brand-900">Chuyển trang nhanh</h3>
+                  <h3 className="font-bold text-brand-900">Chuyển trang nhanh</h3>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: Math.min(totalPages, 20) }, (_, i) => i + 1).map((p) => (
@@ -416,7 +423,7 @@ export default async function NewsPage({
                 Tham gia Hội Trầm Hương Việt Nam để nhận tin tức sớm nhất
               </p>
               <Link
-                href="/register"
+                href="/dang-ky"
                 className="mt-3 inline-block bg-brand-400 text-brand-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-300 transition-colors"
               >
                 Đăng ký hội viên

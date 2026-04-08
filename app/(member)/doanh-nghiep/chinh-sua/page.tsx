@@ -30,7 +30,7 @@ export default async function CompanyEditPage() {
   if (!company) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-heading font-bold text-brand-900">Doanh nghiệp của tôi</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Doanh nghiệp của tôi</h1>
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-3">
           <p className="text-sm text-yellow-800">Bạn chưa có thông tin doanh nghiệp. Liên hệ ban quản trị để được hỗ trợ.</p>
         </div>
@@ -40,7 +40,7 @@ export default async function CompanyEditPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-brand-900">Chỉnh sửa doanh nghiệp</h1>
+      <h1 className="text-2xl font-bold text-brand-900">Chỉnh sửa doanh nghiệp</h1>
       <CompanyEditForm company={company} />
     </div>
   )

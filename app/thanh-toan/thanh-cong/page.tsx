@@ -82,7 +82,7 @@ export default async function PaymentSuccessPage({
     <div className="min-h-screen bg-brand-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center space-y-6">
         <div className="text-6xl">✅</div>
-        <h1 className="text-2xl font-heading font-bold text-brand-900">
+        <h1 className="text-2xl font-bold text-brand-900">
           Thanh toán thành công!
         </h1>
         <p className="text-brand-600">

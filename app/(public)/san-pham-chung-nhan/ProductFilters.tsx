@@ -49,7 +49,7 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
 
           {/* Loại */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
+            <span className="text-sm font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
               Loại:
             </span>
             <div className="flex gap-1.5 flex-wrap">
@@ -73,7 +73,7 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
 
           {/* Vùng + Tìm kiếm */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
+            <span className="text-sm font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
               Vùng:
             </span>
             <div className="flex gap-1.5 flex-wrap flex-1">
@@ -115,12 +115,12 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
       </div>
 
       {/* ── Tầng 3: Sort + View mode ─────────────────────────────────────── */}
-      <div className="border-b border-brand-100 bg-brand-50">
+      <div className="border-b border-brand-200 bg-brand-50">
         <div className="mx-auto max-w-7xl px-4 py-2 flex items-center justify-between gap-4 flex-wrap">
 
           {/* Sort */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-brand-500 mr-1">Sắp xếp:</span>
+            <span className="text-sm text-brand-500 mr-1">Sắp xếp:</span>
             {[
               { value: "moi-nhat", label: "Mới nhất" },
               { value: "ten-az", label: "Tên A–Z" },

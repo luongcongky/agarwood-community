@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier } from "@/lib/tier"
 
 export const revalidate = 0
 
@@ -12,12 +13,6 @@ function getGreeting(): string {
   if (h < 12) return "Chào buổi sáng"
   if (h < 18) return "Chào buổi chiều"
   return "Chào buổi tối"
-}
-
-function getMemberTier(contributionTotal: number): { label: string; stars: number } {
-  if (contributionTotal >= 20_000_000) return { label: "Hội viên Vàng", stars: 3 }
-  if (contributionTotal >= 10_000_000) return { label: "Hội viên Bạc", stars: 2 }
-  return { label: "Hội viên", stars: 1 }
 }
 
 function formatDate(d: Date): string {
@@ -37,6 +32,7 @@ export default async function VipDashboardPage() {
       where: { id: userId },
       select: {
         name: true,
+        accountType: true,
         contributionTotal: true,
         membershipExpires: true,
         company: { select: { name: true } },
@@ -79,7 +75,8 @@ export default async function VipDashboardPage() {
   if (!user) redirect("/login")
 
   const greeting = getGreeting()
-  const tier = getMemberTier(user.contributionTotal)
+  const tier = await getMemberTier(user.contributionTotal, user.accountType as "BUSINESS" | "INDIVIDUAL")
+  const isBusiness = user.accountType === "BUSINESS"
 
   // Membership days left
   const daysLeft = user.membershipExpires
@@ -125,13 +122,15 @@ export default async function VipDashboardPage() {
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-brand-200 p-6">
-        <h1 className="font-heading text-xl sm:text-2xl font-bold text-brand-900">
+        <h1 className="text-xl sm:text-2xl font-bold text-brand-900">
           {greeting}, {user.name ?? "Hội viên"}
         </h1>
-        <p className="mt-1 text-sm text-brand-500">
-          {user.company?.name && <span>{user.company.name} · </span>}
-          <span>{tier.label} {"★".repeat(tier.stars)}</span>
-        </p>
+        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+          {user.company?.name && <span className="text-sm text-brand-500">{user.company.name}</span>}
+          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm font-semibold px-2.5 py-0.5 rounded-full">
+            {"★".repeat(tier.stars)} {tier.label}
+          </span>
+        </div>
       </div>
 
       {/* ── Stat Cards ──────────────────────────────────────────────────── */}
@@ -161,27 +160,38 @@ export default async function VipDashboardPage() {
           <p className="mt-1 text-xs text-brand-400">Đã đăng trên bảng tin</p>
         </Link>
 
-        {/* SP Chứng nhận */}
-        <Link
-          href="/chung-nhan/nop-don"
-          className="group bg-white rounded-xl border border-brand-200 p-5 hover:border-brand-400 transition-colors"
-        >
-          <p className="text-xs font-medium text-brand-400 uppercase tracking-wide">SP Chứng nhận</p>
-          <p className="mt-2 text-2xl font-bold text-brand-900">
-            {approvedProducts}
-            <span className="text-base font-normal text-brand-500">
-              {totalProducts > 0 ? ` / ${totalProducts} sản phẩm` : " được duyệt"}
-            </span>
-          </p>
-          <p className="mt-1 text-xs text-brand-400">
-            {approvedProducts > 0 ? "Đã được cấp chứng nhận" : "Chưa có sản phẩm nào"}
-          </p>
-        </Link>
+        {/* SP Chứng nhận — only for BUSINESS */}
+        {isBusiness ? (
+          <Link
+            href="/chung-nhan/nop-don"
+            className="group bg-white rounded-xl border border-brand-200 p-5 hover:border-brand-400 transition-colors"
+          >
+            <p className="text-xs font-medium text-brand-400 uppercase tracking-wide">SP Chứng nhận</p>
+            <p className="mt-2 text-2xl font-bold text-brand-900">
+              {approvedProducts}
+              <span className="text-base font-normal text-brand-500">
+                {totalProducts > 0 ? ` / ${totalProducts} sản phẩm` : " được duyệt"}
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-brand-400">
+              {approvedProducts > 0 ? "Đã được cấp chứng nhận" : "Chưa có sản phẩm nào"}
+            </p>
+          </Link>
+        ) : (
+          <Link
+            href="/tai-lieu"
+            className="group bg-white rounded-xl border border-brand-200 p-5 hover:border-brand-400 transition-colors"
+          >
+            <p className="text-xs font-medium text-brand-400 uppercase tracking-wide">Tài liệu Hội</p>
+            <p className="mt-2 text-2xl font-bold text-brand-900">Xem</p>
+            <p className="mt-1 text-xs text-brand-400">Công văn, biên bản, quyết định</p>
+          </Link>
+        )}
       </div>
 
       {/* ── Thao tác nhanh ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-brand-200 p-6">
-        <h2 className="font-heading text-base font-semibold text-brand-900 mb-4">Thao tác nhanh</h2>
+        <h2 className="text-base font-semibold text-brand-900 mb-4">Thao tác nhanh</h2>
         <div className="flex flex-wrap gap-3">
           <Link
             href="/feed/tao-bai"
@@ -189,12 +199,14 @@ export default async function VipDashboardPage() {
           >
             + Đăng bài
           </Link>
-          <Link
-            href="/chung-nhan/nop-don"
-            className="inline-flex items-center gap-2 rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
-          >
-            Nộp đơn chứng nhận
-          </Link>
+          {isBusiness && (
+            <Link
+              href="/chung-nhan/nop-don"
+              className="inline-flex items-center gap-2 rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
+            >
+              Nộp đơn chứng nhận
+            </Link>
+          )}
           <Link
             href="/gia-han"
             className="inline-flex items-center gap-2 rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
@@ -212,7 +224,7 @@ export default async function VipDashboardPage() {
 
       {/* ── Thông báo gần đây ───────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-brand-200 p-6">
-        <h2 className="font-heading text-base font-semibold text-brand-900 mb-4">Thông báo gần đây</h2>
+        <h2 className="text-base font-semibold text-brand-900 mb-4">Thông báo gần đây</h2>
         {displayNotifications.length === 0 ? (
           <p className="text-sm text-brand-400">Chưa có thông báo nào.</p>
         ) : (

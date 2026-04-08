@@ -60,8 +60,21 @@ export default async function NewsDetailPage({ params }: Props) {
 
   const articleUrl = `https://hoitramhuong.vn/tin-tuc/${slug}`
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: news.title,
+    description: news.excerpt ?? news.content.replace(/<[^>]*>/g, "").slice(0, 160),
+    image: news.coverImageUrl ?? undefined,
+    datePublished: news.publishedAt?.toISOString(),
+    dateModified: news.updatedAt?.toISOString(),
+    author: { "@type": "Organization", name: "Hội Trầm Hương Việt Nam" },
+    publisher: { "@type": "Organization", name: "Hội Trầm Hương Việt Nam" },
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
         <Link href="/" className="hover:text-brand-700 transition-colors">
@@ -77,7 +90,7 @@ export default async function NewsDetailPage({ params }: Props) {
 
       {/* Article Header */}
       <header className="mb-8 space-y-4">
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-foreground leading-tight">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
           {news.title}
         </h1>
         {news.publishedAt && (
@@ -135,7 +148,7 @@ export default async function NewsDetailPage({ params }: Props) {
       {/* Related Articles */}
       {related.length > 0 && (
         <section>
-          <h2 className="font-heading text-xl font-semibold text-foreground mb-5">
+          <h2 className="text-xl font-semibold text-foreground mb-5">
             Tin tức liên quan
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

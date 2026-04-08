@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { getTierThresholds } from "@/lib/tier"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { MemberActionCell } from "./MemberActionCell"
@@ -27,10 +28,16 @@ function getMembershipStatus(user: {
   return { label: "Active", cls: "bg-green-100 text-green-700", sort: 0 }
 }
 
-function getTierBadge(contribution: number): { label: string; cls: string } {
-  if (contribution >= 20_000_000) return { label: "Vàng", cls: "text-yellow-700" }
-  if (contribution >= 10_000_000) return { label: "Bạc", cls: "text-brand-500" }
-  return { label: "—", cls: "text-brand-300" }
+function getTierBadge(
+  contribution: number,
+  accountType: string,
+  biz: { silver: number; gold: number },
+  ind: { silver: number; gold: number },
+): { label: string; cls: string } {
+  const { silver, gold } = accountType === "INDIVIDUAL" ? ind : biz
+  if (contribution >= gold) return { label: "Vàng", cls: "text-yellow-700" }
+  if (contribution >= silver) return { label: "Bạc", cls: "text-brand-500" }
+  return { label: "—", cls: "text-brand-500" }
 }
 
 export default async function AdminMembersPage({
@@ -47,7 +54,7 @@ export default async function AdminMembersPage({
   const thirtyDaysLater = new Date(now.getTime() + 30 * 86400000)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let where: any = { role: "VIP" }
+  let where: any = { role: { in: ["VIP", "GUEST"] } }
 
   if (status === "active") {
     where = { role: "VIP", isActive: true, membershipExpires: { gt: thirtyDaysLater } }
@@ -57,6 +64,8 @@ export default async function AdminMembersPage({
     where = { role: "VIP", isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] }
   } else if (status === "pending") {
     where = { role: "VIP", isActive: false, membershipExpires: null }
+  } else if (status === "registration") {
+    where = { role: "GUEST", isActive: false }
   } else if (status === "disabled") {
     where = { role: "VIP", isActive: false, membershipExpires: { not: null } }
   }
@@ -79,6 +88,7 @@ export default async function AdminMembersPage({
     countExpired,
     countPending,
     countDisabled,
+    countRegistration,
     maxSlotCfg,
   ] = await Promise.all([
     prisma.user.findMany({
@@ -95,6 +105,7 @@ export default async function AdminMembersPage({
         membershipExpires: true,
         contributionTotal: true,
         role: true,
+        accountType: true,
         company: { select: { name: true } },
       },
     }),
@@ -105,19 +116,25 @@ export default async function AdminMembersPage({
     prisma.user.count({ where: { role: "VIP", isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] } }),
     prisma.user.count({ where: { role: "VIP", isActive: false, membershipExpires: null } }),
     prisma.user.count({ where: { role: "VIP", isActive: false, membershipExpires: { not: null } } }),
+    prisma.user.count({ where: { role: "GUEST", isActive: false } }),
     prisma.siteConfig.findUnique({ where: { key: "max_vip_accounts" } }),
   ])
 
   const maxSlot = Number(maxSlotCfg?.value ?? 100)
+  const [bizTier, indTier] = await Promise.all([
+    getTierThresholds("BUSINESS"),
+    getTierThresholds("INDIVIDUAL"),
+  ])
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const tabs = [
-    { key: "",         label: "Tất cả",         count: countAll },
-    { key: "active",   label: "Active",          count: countActive },
-    { key: "expiring", label: "Sắp hết hạn",    count: countExpiring },
-    { key: "expired",  label: "Hết hạn",         count: countExpired },
-    { key: "pending",  label: "Chờ kích hoạt",   count: countPending },
-    { key: "disabled", label: "Vô hiệu hoá",    count: countDisabled },
+    { key: "",             label: "Tất cả",         count: countAll },
+    { key: "registration", label: "Chờ duyệt",      count: countRegistration },
+    { key: "active",       label: "Active",          count: countActive },
+    { key: "expiring",     label: "Sắp hết hạn",    count: countExpiring },
+    { key: "expired",      label: "Hết hạn",         count: countExpired },
+    { key: "pending",      label: "Chờ kích hoạt",   count: countPending },
+    { key: "disabled",     label: "Vô hiệu hoá",    count: countDisabled },
   ]
 
   function buildUrl(overrides: Record<string, string | undefined>) {
@@ -216,7 +233,7 @@ export default async function AdminMembersPage({
             )}
             {members.map((m) => {
               const st = getMembershipStatus(m)
-              const tier = getTierBadge(m.contributionTotal)
+              const tier = getTierBadge(m.contributionTotal, m.accountType, bizTier, indTier)
               const expires = m.membershipExpires
                 ? new Date(m.membershipExpires).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
                 : "—"
@@ -233,7 +250,7 @@ export default async function AdminMembersPage({
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-brand-900 group-hover:text-brand-700 transition-colors truncate">{m.name}</p>
-                        <p className="text-xs text-brand-400 truncate">{m.email}</p>
+                        <p className="text-sm text-brand-500 truncate">{m.email}</p>
                       </div>
                     </Link>
                   </td>
@@ -245,13 +262,13 @@ export default async function AdminMembersPage({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", st.cls)}>
+                    <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-sm font-medium", st.cls)}>
                       {st.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-brand-400 hidden md:table-cell">{expires}</td>
+                  <td className="px-4 py-3 text-sm text-brand-500 hidden md:table-cell">{expires}</td>
                   <td className="px-4 py-3">
-                    <MemberActionCell memberId={m.id} memberName={m.name} isActive={m.isActive} />
+                    <MemberActionCell memberId={m.id} memberName={m.name} isActive={m.isActive} isRegistration={m.role === "GUEST" && !m.isActive} />
                   </td>
                 </tr>
               )
@@ -295,7 +312,7 @@ export default async function AdminMembersPage({
         </div>
       )}
 
-      <p className="text-xs text-brand-400">Không có chức năng xoá tài khoản. Chỉ vô hiệu hoá.</p>
+      <p className="text-sm text-brand-500">Không có chức năng xoá tài khoản. Chỉ vô hiệu hoá.</p>
     </div>
   )
 }

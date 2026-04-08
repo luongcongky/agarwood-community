@@ -13,6 +13,7 @@ const MEMBER_PREFIXES = [
   "/tong-quan",
   "/feed/tao-bai",
   "/company",
+  "/doanh-nghiep-cua-toi",
   "/doanh-nghiep/chinh-sua",
   "/san-pham/tao-moi",
   "/certification",
@@ -21,6 +22,7 @@ const MEMBER_PREFIXES = [
   "/chung-nhan",
   "/chung-nhan/lich-su",
   "/thanh-toan/lich-su",
+  "/tai-lieu",
 ]
 
 /** Chỉ ADMIN mới vào được */
@@ -33,7 +35,7 @@ const ADMIN_PREFIXES = [
 ]
 
 /** Redirect sang feed/dashboard nếu đã đăng nhập */
-const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau"]
+const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau", "/dang-ky"]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

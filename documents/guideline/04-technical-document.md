@@ -96,8 +96,8 @@ agarwood-community/
 ## 3. ERD — Entity Relationship Diagram
 
 ```
-User (1) ──── (1) Company ──── (*) Product ──── (*) Certification
-  │                                                       │
+User (1) ──── (0..1) Company ──── (*) Product ──── (*) Certification
+  │              ↑ chi BUSINESS                           │
   ├──── (*) Membership                                    │
   ├──── (*) Payment ────────────────────────────── (0..1) ─┘
   ├──── (*) Post ──── (*) PostReaction
@@ -108,13 +108,20 @@ User (1) ──── (1) Company ──── (*) Product ──── (*) Cert
 
 SiteConfig (key-value store doc lap)
 VerificationToken (NextAuth)
+Document (Google Drive)
 ```
+
+### User.accountType
+| Gia tri | Mo ta | Company | SP/CN |
+|---------|-------|---------|-------|
+| BUSINESS | Doanh nghiep | Bat buoc | Co |
+| INDIVIDUAL | Ca nhan / Chuyen gia | Khong co | Khong |
 
 ### Models chinh:
 | Model | Records du kien | Ghi chu |
 |-------|----------------|---------|
-| User | ~100 VIP + 1 Admin | Gioi han boi max_vip_accounts |
-| Company | ~100 (1:1 voi VIP) | |
+| User | ~100 VIP + 1 Admin | accountType: BUSINESS hoac INDIVIDUAL |
+| Company | ~70-80 (chi BUSINESS VIP) | 0..1 voi User |
 | Product | ~500 | ~5 SP/DN |
 | Post | ~5000/nam | ~50 bai/thang |
 | Payment | ~200/nam | Membership + cert fee |
@@ -245,10 +252,69 @@ npm run test:watch    # Watch mode
 
 ### E2E Tests (Playwright)
 ```bash
-npm run test:e2e      # Chay tat ca 47 tests
+npm run test:e2e      # Chay tat ca tests
 ```
-- 5 file test: auth, VIP pages, admin pages, public pages, performance
+- 8 file test: auth, VIP pages, admin pages, public pages, performance, mobile responsive
 - Config: playwright.config.ts (chromium, auto start dev server)
+- Video recording: bat (`video: "on"`), output: `e2e/test-results/`
+- Viewport: 1280x720
+
+### Demo Flow Tests (Playwright — Video Recording)
+
+2 test suite chay tuan tu (serial), seed data moi tu dau, ghi video tung buoc.
+Dung de **demo san pham** va **luu tru huong dan su dung**.
+
+```bash
+# VIP flow (16 test cases)
+npx playwright test e2e/vip-demo-flow.spec.ts --headed
+
+# Admin flow (12 test cases)
+npx playwright test e2e/admin-demo-flow.spec.ts --headed
+
+# Ca 2
+npx playwright test e2e/vip-demo-flow.spec.ts e2e/admin-demo-flow.spec.ts --headed
+```
+
+**VIP Demo Flow** (`e2e/vip-demo-flow.spec.ts` — 16 steps):
+| Step | Noi dung |
+|------|---------|
+| 00 | Seed du lieu demo moi |
+| 01 | VIP dang nhap |
+| 02 | Xem Dashboard tong quan |
+| 03 | Cap nhat ho so ca nhan (4 tab) |
+| 04 | Quan ly profile doanh nghiep |
+| 05 | Tao san pham moi |
+| 06 | Doc Feed cong dong |
+| 07 | Dang bai viet len Feed |
+| 08 | Nop don chung nhan SP (3 buoc) |
+| 09 | Gia han membership (chon phi, CK, ghi chu) |
+| 10 | Xem lich su thanh toan |
+| 11 | Xem lich su chung nhan |
+| 12 | Admin xac nhan chuyen khoan |
+| 13 | Admin xet duyet chung nhan |
+| 14 | Admin quan ly hoi vien |
+| 15 | Admin Dashboard tong quan |
+
+**Admin Demo Flow** (`e2e/admin-demo-flow.spec.ts` — 12 steps):
+| Step | Noi dung |
+|------|---------|
+| 00 | Seed du lieu demo moi |
+| 01 | Admin dang nhap |
+| 02 | Dashboard — KPI, alerts, bieu do |
+| 03 | Xac nhan chuyen khoan (confirm/reject) |
+| 04 | Xet duyet chung nhan SP (review 2 cot) |
+| 05 | Quan ly hoi vien (tabs, search, chi tiet) |
+| 06 | Tao hoi vien VIP moi |
+| 07 | Quan ly tin tuc |
+| 08 | Xu ly bao cao vi pham (khoa bai, bo qua) |
+| 09 | Quan ly don truyen thong (CRM) |
+| 10 | Cai dat he thong (phi, ngan hang, hang) |
+| 11 | Tong ket — Dashboard sau khi xu ly |
+
+**Luu y:**
+- Can start dev server truoc (`npm run dev`)
+- Video output: `e2e/test-results/` (file `.webm`)
+- Tai khoan demo: `admin@hoitramhuong.vn` / `trankhanh@tramhuongkhanhhoa.vn` / `Demo@123`
 
 ---
 

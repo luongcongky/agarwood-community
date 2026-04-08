@@ -46,7 +46,7 @@ export default function LoginPage() {
   return (
     <div className="bg-card rounded-xl shadow-lg p-8 space-y-6">
       <div>
-        <h2 className="font-heading text-brand-800 text-2xl font-semibold text-center">
+        <h2 className="text-brand-800 text-2xl font-semibold text-center">
           Đăng nhập
         </h2>
         <p className="text-muted-foreground text-sm text-center mt-1">Chào mừng trở lại!</p>
@@ -100,9 +100,9 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-muted-foreground">
         Chưa có tài khoản?{" "}
-        <span className="text-brand-700 font-medium">
-          Liên hệ ban quản trị để đăng ký hội viên.
-        </span>
+        <a href="/dang-ky" className="text-brand-700 font-medium hover:underline">
+          Đăng ký hội viên
+        </a>
       </p>
     </div>
   )

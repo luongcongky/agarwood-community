@@ -228,7 +228,7 @@ export default function LienHePage() {
 
               <ul className="space-y-5">
                 <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex-shrink-0 text-xl">📞</span>
+                  <span className="mt-0.5 shrink-0 text-xl">📞</span>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 mb-0.5">
                       Điện thoại
@@ -243,7 +243,7 @@ export default function LienHePage() {
                 </li>
 
                 <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex-shrink-0 text-xl">📧</span>
+                  <span className="mt-0.5 shrink-0 text-xl">📧</span>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 mb-0.5">
                       Email
@@ -258,7 +258,7 @@ export default function LienHePage() {
                 </li>
 
                 <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex-shrink-0 text-xl">📍</span>
+                  <span className="mt-0.5 shrink-0 text-xl">📍</span>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 mb-0.5">
                       Địa chỉ
@@ -272,7 +272,7 @@ export default function LienHePage() {
                 </li>
 
                 <li className="flex items-start gap-4">
-                  <span className="mt-0.5 flex-shrink-0 text-xl">🕐</span>
+                  <span className="mt-0.5 shrink-0 text-xl">🕐</span>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 mb-0.5">
                       Giờ làm việc
@@ -330,7 +330,7 @@ export default function LienHePage() {
       {/* ── Map ── */}
       <section className="bg-white pb-20">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="overflow-hidden rounded-xl border border-brand-100 shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-brand-200 shadow-sm">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125411.87690118406!2d106.62966155!3d10.7544272!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f4670702e31%3A0xa25c43e2beaadca4!2zVFAuIEjhu5MgQ2jDrSBNaW5o!5e0!3m2!1svi!2svn!4v1700000000000"
               width="100%"

@@ -42,7 +42,7 @@ export default async function CertHistoryPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-bold text-brand-900">Lịch sử chứng nhận</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Lịch sử chứng nhận</h1>
         <Link
           href="/chung-nhan/nop-don"
           className="rounded-lg bg-brand-700 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-800 transition-colors"

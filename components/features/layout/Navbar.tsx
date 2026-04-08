@@ -16,11 +16,19 @@ const GUEST_LINKS: NavLink[] = [
   { label: "Dịch vụ", href: "/dich-vu" },
 ]
 
-const MEMBER_LINKS: NavLink[] = [
+const BUSINESS_LINKS: NavLink[] = [
   { label: "Tổng quan", href: "/tong-quan" },
   { label: "Bảng tin", href: "/feed" },
-  { label: "Doanh nghiệp", href: "/doanh-nghiep" },
+  { label: "Doanh nghiệp", href: "/doanh-nghiep-cua-toi" },
   { label: "Chứng nhận SP", href: "/chung-nhan/nop-don" },
+  { label: "Gia hạn", href: "/gia-han" },
+  { label: "Hồ sơ", href: "/ho-so" },
+]
+
+const INDIVIDUAL_LINKS: NavLink[] = [
+  { label: "Tổng quan", href: "/tong-quan" },
+  { label: "Bảng tin", href: "/feed" },
+  { label: "Tài liệu", href: "/tai-lieu" },
   { label: "Gia hạn", href: "/gia-han" },
   { label: "Hồ sơ", href: "/ho-so" },
 ]
@@ -40,9 +48,21 @@ export async function Navbar() {
   const role = session?.user?.role
   const user = session?.user
 
+  // Fetch accountType for VIP users
+  let accountType: string | null = null
+  if (session?.user?.id && role === "VIP") {
+    const { prisma } = await import("@/lib/prisma")
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { accountType: true },
+    })
+    accountType = dbUser?.accountType ?? "BUSINESS"
+  }
+
   const links =
     role === "ADMIN" ? ADMIN_LINKS
-    : role === "VIP"   ? MEMBER_LINKS
+    : role === "VIP" && accountType === "INDIVIDUAL" ? INDIVIDUAL_LINKS
+    : role === "VIP"   ? BUSINESS_LINKS
     :                    GUEST_LINKS
 
   const homeHref = role === "ADMIN" ? "/admin" : role === "VIP" ? "/tong-quan" : "/"
@@ -55,7 +75,7 @@ export async function Navbar() {
           {/* Logo */}
           <Link href={homeHref} className="flex items-center gap-2 shrink-0">
             <span className="text-brand-400 text-2xl select-none" aria-hidden>🌿</span>
-            <span className="font-heading text-brand-100 font-semibold text-lg leading-tight hidden sm:block">
+            <span className="text-brand-100 font-semibold text-lg leading-tight hidden sm:block">
               Hội Trầm Hương<br />
               <span className="text-brand-400 text-xs font-sans font-normal tracking-widest uppercase">
                 Việt Nam
@@ -94,7 +114,7 @@ export async function Navbar() {
                   Đăng nhập
                 </Link>
                 <Link
-                  href="/register"
+                  href="/dang-ky"
                   className="px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
                 >
                   Đăng ký hội viên

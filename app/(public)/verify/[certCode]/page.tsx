@@ -40,7 +40,7 @@ export default async function VerifyPage({ params }: Props) {
         <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
           <span className="text-2xl">✗</span>
         </div>
-        <h1 className="text-xl font-heading font-bold text-brand-900">Mã chứng nhận không hợp lệ</h1>
+        <h1 className="text-xl font-bold text-brand-900">Mã chứng nhận không hợp lệ</h1>
         <p className="text-sm text-brand-500">
           Không tìm thấy sản phẩm với mã &quot;{certCode}&quot;. Vui lòng kiểm tra lại mã trên bao bì sản phẩm.
         </p>
@@ -58,7 +58,7 @@ export default async function VerifyPage({ params }: Props) {
         <div className="w-16 h-16 mx-auto rounded-full bg-yellow-100 flex items-center justify-center">
           <span className="text-2xl">⚠</span>
         </div>
-        <h1 className="text-xl font-heading font-bold text-brand-900">Chứng nhận chưa có hiệu lực</h1>
+        <h1 className="text-xl font-bold text-brand-900">Chứng nhận chưa có hiệu lực</h1>
         <p className="text-sm text-brand-500">
           Sản phẩm &quot;{product.name}&quot; chưa được Hội Trầm Hương Việt Nam chứng nhận hoặc đang trong quá trình xét duyệt.
         </p>
@@ -75,7 +75,7 @@ export default async function VerifyPage({ params }: Props) {
         <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
           <span className="text-2xl">⏰</span>
         </div>
-        <h1 className="text-xl font-heading font-bold text-brand-900">Chứng nhận đã hết hiệu lực</h1>
+        <h1 className="text-xl font-bold text-brand-900">Chứng nhận đã hết hiệu lực</h1>
         <p className="text-sm text-brand-500">
           Chứng nhận cho sản phẩm &quot;{product.name}&quot; đã hết hạn. Doanh nghiệp cần nộp đơn gia hạn chứng nhận.
         </p>
@@ -98,7 +98,7 @@ export default async function VerifyPage({ params }: Props) {
           <span className="text-4xl">✓</span>
         </div>
 
-        <h1 className="text-xl font-heading font-bold text-amber-900 uppercase tracking-wide">
+        <h1 className="text-xl font-bold text-amber-900 uppercase tracking-wide">
           Sản phẩm đã được chứng nhận
         </h1>
         <p className="text-amber-800 text-sm">Hội Trầm Hương Việt Nam</p>

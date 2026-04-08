@@ -1,15 +1,10 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier } from "@/lib/tier"
 import { ProfileTabs } from "./ProfileTabs"
 
 export const revalidate = 0
-
-function getMemberTier(contributionTotal: number): { label: string; stars: number } {
-  if (contributionTotal >= 20_000_000) return { label: "Hội viên Vàng", stars: 3 }
-  if (contributionTotal >= 10_000_000) return { label: "Hội viên Bạc", stars: 2 }
-  return { label: "Hội viên", stars: 1 }
-}
 
 export default async function ProfilePage() {
   const session = await auth()
@@ -28,6 +23,7 @@ export default async function ProfilePage() {
         bankAccountNumber: true,
         bankName: true,
         role: true,
+        accountType: true,
         contributionTotal: true,
         membershipExpires: true,
         displayPriority: true,
@@ -51,7 +47,7 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login")
 
-  const tier = getMemberTier(user.contributionTotal)
+  const tier = await getMemberTier(user.contributionTotal, user.accountType as "BUSINESS" | "INDIVIDUAL")
   const daysLeft = user.membershipExpires
     ? Math.max(0, Math.ceil((new Date(user.membershipExpires).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0
@@ -73,7 +69,7 @@ export default async function ProfilePage() {
           )}
         </div>
         <div className="min-w-0">
-          <h1 className="font-heading text-xl font-bold text-brand-900 truncate">{user.name}</h1>
+          <h1 className="text-xl font-bold text-brand-900 truncate">{user.name}</h1>
           {user.company && (
             <p className="text-sm text-brand-500 truncate">{user.company.name}</p>
           )}

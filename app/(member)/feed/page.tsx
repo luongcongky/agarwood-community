@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getTierThresholds } from "@/lib/tier"
 import { FeedClient } from "./FeedClient"
 
 export const revalidate = 0
@@ -24,6 +25,7 @@ export default async function FeedPage() {
           name: true,
           avatarUrl: true,
           role: true,
+          accountType: true,
           contributionTotal: true,
           company: { select: { name: true, slug: true } },
         },
@@ -60,9 +62,15 @@ export default async function FeedPage() {
         name: true,
         avatarUrl: true,
         contributionTotal: true,
+        accountType: true,
         company: { select: { name: true } },
       },
     }),
+  ])
+
+  const [bizTier, indTier] = await Promise.all([
+    getTierThresholds("BUSINESS"),
+    getTierThresholds("INDIVIDUAL"),
   ])
 
   return (
@@ -71,6 +79,10 @@ export default async function FeedPage() {
       currentUserId={userId ?? null}
       currentUserRole={session?.user?.role ?? null}
       currentUserName={session?.user?.name ?? null}
+      tierSilver={bizTier.silver}
+      tierGold={bizTier.gold}
+      tierIndSilver={indTier.silver}
+      tierIndGold={indTier.gold}
       membershipInfo={
         membershipInfo
           ? {

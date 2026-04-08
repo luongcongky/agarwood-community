@@ -84,3 +84,46 @@
 - [ ] TC-AUTH-08: PASS / FAIL
 - [ ] TC-AUTH-09: PASS / FAIL
 - [ ] TC-AUTH-10: PASS / FAIL
+
+---
+
+## Kich ban bo sung — Loai tai khoan BUSINESS vs INDIVIDUAL
+
+### TC-AUTH-11: VIP INDIVIDUAL khong thay menu DN/SP/CN
+1. Login VIP loai INDIVIDUAL
+2. **Kiem tra**: Menu KHONG co "Doanh nghiep", "Chung nhan SP"
+3. **Kiem tra**: Menu CO "Tong quan", "Bang tin", "Tai lieu", "Gia han", "Ho so"
+
+### TC-AUTH-12: VIP INDIVIDUAL khong truy cap duoc trang DN
+1. Login VIP INDIVIDUAL -> truy cap /doanh-nghiep-cua-toi
+2. **Kiem tra**: Hien "Chua co thong tin doanh nghiep"
+3. Truy cap /san-pham/tao-moi
+4. **Kiem tra**: Hien "Ban chua co doanh nghiep"
+
+### TC-AUTH-13: VIP INDIVIDUAL khong nop don chung nhan duoc
+1. Login VIP INDIVIDUAL -> truy cap /chung-nhan/nop-don
+2. **Kiem tra**: Dropdown san pham trong (khong co SP vi khong co DN)
+
+### TC-AUTH-14: VIP INDIVIDUAL van dang bai feed duoc
+1. Login VIP INDIVIDUAL -> /feed/tao-bai
+2. Nhap noi dung -> Dang bai
+3. **Kiem tra**: Bai xuat hien tren feed voi label "Chuyen gia"
+
+### TC-AUTH-15: VIP BUSINESS van thay day du menu
+1. Login VIP loai BUSINESS
+2. **Kiem tra**: Menu CO "Doanh nghiep", "Chung nhan SP"
+3. **Kiem tra**: Truy cap /doanh-nghiep-cua-toi -> redirect den profile DN
+
+### TC-AUTH-16: Dang ky voi loai INDIVIDUAL
+1. Truy cap /dang-ky -> chon "Ca nhan / Chuyen gia"
+2. **Kiem tra**: Form KHONG hien phan "Thong tin doanh nghiep"
+3. Dien form + submit
+4. **Kiem tra**: User tao voi accountType = INDIVIDUAL, KHONG co Company
+
+## Ket qua bo sung
+- [ ] TC-AUTH-11: PASS / FAIL
+- [ ] TC-AUTH-12: PASS / FAIL
+- [ ] TC-AUTH-13: PASS / FAIL
+- [ ] TC-AUTH-14: PASS / FAIL
+- [ ] TC-AUTH-15: PASS / FAIL
+- [ ] TC-AUTH-16: PASS / FAIL

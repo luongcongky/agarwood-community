@@ -2,6 +2,14 @@ import Link from "next/link"
 import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Hội Trầm Hương Việt Nam — Cộng đồng Doanh nghiệp Trầm Hương",
+  description: "Nền tảng kết nối doanh nghiệp trầm hương Việt Nam. Chứng nhận sản phẩm, chia sẻ kinh nghiệm, dịch vụ truyền thông chuyên ngành.",
+  alternates: { canonical: "/" },
+  openGraph: { title: "Hội Trầm Hương Việt Nam", description: "Cộng đồng kết nối doanh nghiệp trầm hương uy tín trên toàn quốc.", type: "website" },
+}
 
 export const revalidate = 3600
 
@@ -60,8 +68,20 @@ function getInitials(name?: string | null) {
 export default async function HomePage() {
   const { statsData, latestNews, featuredMembers } = await getHomePageData()
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Hội Trầm Hương Việt Nam",
+    url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://hoitramhuong.vn",
+    description: "Cộng đồng kết nối, chứng nhận và truyền thông sản phẩm trầm hương Việt Nam.",
+    foundingDate: "2007",
+    address: { "@type": "PostalAddress", addressCountry: "VN" },
+    sameAs: [],
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       {/* ── Hero ── */}
       <section className="relative bg-brand-800 text-white overflow-hidden">
         {/* Decorative background pattern */}
@@ -96,7 +116,7 @@ export default async function HomePage() {
               Tìm hiểu thêm
             </Link>
             <Link
-              href="/register"
+              href="/dang-ky"
               className={cn(
                 "inline-flex items-center justify-center rounded-md",
                 "bg-brand-400 px-6 py-3 text-base font-medium text-brand-900",
@@ -130,7 +150,7 @@ export default async function HomePage() {
               <Link
                 key={label}
                 href={href}
-                className="rounded-xl border border-brand-100 bg-brand-50 px-6 py-8 text-center shadow-sm hover:shadow-md hover:border-brand-300 transition-all block"
+                className="rounded-xl border border-brand-200 bg-brand-50 px-6 py-8 text-center shadow-sm hover:shadow-md hover:border-brand-300 transition-all block"
               >
                 <p className="text-4xl font-bold text-brand-700">
                   {value.toLocaleString("vi-VN")}
@@ -234,7 +254,7 @@ export default async function HomePage() {
               {latestNews.map((news) => (
                 <article
                   key={news.id}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-brand-100 bg-brand-50 shadow-sm transition-shadow hover:shadow-md"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-brand-200 bg-brand-50 shadow-sm transition-shadow hover:shadow-md"
                 >
                   {/* Cover image */}
                   <div className="relative h-48 w-full overflow-hidden">
@@ -265,7 +285,7 @@ export default async function HomePage() {
                       </p>
                     )}
                     <div className="mt-auto flex items-center justify-between pt-4">
-                      <time className="text-xs text-brand-500">
+                      <time className="text-sm text-brand-500">
                         {news.publishedAt
                           ? new Date(news.publishedAt).toLocaleDateString(
                               "vi-VN",
@@ -279,7 +299,7 @@ export default async function HomePage() {
                       </time>
                       <Link
                         href={`/tin-tuc/${news.slug}`}
-                        className="text-xs font-medium text-brand-600 hover:text-brand-800 underline underline-offset-2"
+                        className="text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-2"
                       >
                         Đọc thêm →
                       </Link>
@@ -324,7 +344,7 @@ export default async function HomePage() {
                   className="group flex flex-col items-center rounded-xl border border-brand-200 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md"
                 >
                   {/* Logo or initials */}
-                  <div className="relative mb-4 h-20 w-20 overflow-hidden rounded-full border border-brand-100">
+                  <div className="relative mb-4 h-20 w-20 overflow-hidden rounded-full border border-brand-200">
                     {company.logoUrl ? (
                       <Image
                         src={company.logoUrl}
@@ -345,7 +365,7 @@ export default async function HomePage() {
                     {company.name}
                   </h3>
 
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-sm font-medium text-green-700">
                     ✓ Đã xác minh
                   </span>
                 </Link>
@@ -380,7 +400,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8">
             <Link
-              href="/register"
+              href="/dang-ky"
               className={cn(
                 "inline-flex items-center justify-center rounded-md",
                 "bg-brand-400 px-8 py-3 text-base font-semibold text-brand-900",

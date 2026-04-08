@@ -54,10 +54,22 @@ Moi sang mo trang `/admin`, ban se thay:
 ### Xem danh sach hoi vien
 - Truy cap: `/admin/hoi-vien`
 - Header hien thi: so slot da dung / tong slot (vd: 87/100)
-- 6 tab loc: Tat ca | Active | Sap het han | Het han | Cho kich hoat | Vo hieu hoa
+- 7 tab loc: Tat ca | Cho duyet | Active | Sap het han | Het han | Cho kich hoat | Vo hieu hoa
 - Tim kiem theo ten, email, hoac ten cong ty
 
-### Tao hoi vien moi
+### 2 loai tai khoan VIP
+| Loai | Mo ta | Quyen |
+|------|-------|-------|
+| **Doanh nghiep (BUSINESS)** | Dai dien cong ty tram huong | Day du: DN, SP, chung nhan, feed, tai lieu |
+| **Ca nhan / Chuyen gia (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan | Feed, ho so, tai lieu, gia han — KHONG co DN/SP/chung nhan |
+
+### Duyet don dang ky
+- Tab "Cho duyet" hien cac don tu trang /dang-ky
+- Moi don hien: ten, email, loai tai khoan (DN/Ca nhan), ly do
+- Click "Duyet" → chuyen role GUEST → VIP, gui email kich hoat
+- Click "Tu choi" → nhap ly do bat buoc, xoa tai khoan, gui email thong bao
+
+### Tao hoi vien moi (thu cong)
 1. Click "+ Tao hoi vien moi" (goc phai tren)
 2. Chon 1 trong 2 che do:
 

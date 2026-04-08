@@ -21,6 +21,11 @@ enum Role {
   ADMIN
 }
 
+enum AccountType {
+  BUSINESS     // doanh nghiệp — có company, SP, chứng nhận
+  INDIVIDUAL   // cá nhân/chuyên gia — chỉ feed, hồ sơ, tài liệu
+}
+
 enum MembershipStatus {
   ACTIVE
   EXPIRED
@@ -91,7 +96,8 @@ model User {
   phone             String?
   avatarUrl         String?
   passwordHash      String?   // null cho OAuth users
-  role              Role      @default(GUEST)
+  role              Role        @default(GUEST)
+  accountType       AccountType @default(BUSINESS)
 
   // Membership & ranking
   contributionTotal Int       @default(0) // tổng phí membership tích lũy (VND)
@@ -472,7 +478,7 @@ model News {
 
 model MediaOrder {
   id              String           @id @default(cuid())
-  requesterId     String           // userId đặt dịch vụ (có thể là guest)
+  requesterId     String?          // userId đặt dịch vụ (null nếu là guest)
   requesterName   String           // lưu lại tên lúc đặt
   requesterEmail  String
   requesterPhone  String
@@ -520,4 +526,50 @@ model SiteConfig {
   updatedAt   DateTime @updatedAt
 
   @@map("site_config")
+}
+
+// ============================================================
+// DOCUMENT MANAGEMENT — Công văn, tài liệu nội bộ
+// ============================================================
+
+enum DocumentCategory {
+  CONG_VAN_DEN    // công văn đến
+  CONG_VAN_DI     // công văn đi
+  BIEN_BAN_HOP    // biên bản họp
+  QUYET_DINH      // quyết định
+  HOP_DONG        // hợp đồng
+}
+
+model Document {
+  id                String            @id @default(cuid())
+  title             String
+  description       String?           @db.Text
+  category          DocumentCategory
+  documentNumber    String?           // số hiệu công văn (vd: CV-2026-001)
+  issuedDate        DateTime?         // ngày ban hành
+  isPublic          Boolean           @default(false) // VIP có thể xem?
+
+  // Google Drive
+  driveFileId       String            @unique
+  driveViewUrl      String
+  driveDownloadUrl  String
+  fileName          String
+  mimeType          String
+  fileSize          Int               // bytes
+
+  // AI extracted content
+  extractedText     String?           @db.Text
+  summary           String?           @db.Text
+
+  // Metadata
+  uploadedBy        String            // adminId
+  downloadCount     Int               @default(0)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([category])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("documents")
 }

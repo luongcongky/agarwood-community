@@ -103,7 +103,7 @@ const membershipStatusBadge: Record<string, { text: string; cls: string }> = {
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 py-2.5 border-b border-brand-100 last:border-0">
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 py-2.5 border-b border-brand-200 last:border-0">
       <span className="text-sm text-brand-400 sm:w-44 shrink-0">{label}</span>
       <span className="text-sm text-brand-900">{value ?? "—"}</span>
     </div>
@@ -118,12 +118,16 @@ export function MemberDetailTabs({
   payments,
   posts,
   certifications,
+  tierSilver,
+  tierGold,
 }: {
   user: User
   memberships: Membership[]
   payments: Payment[]
   posts: Post[]
   certifications: Cert[]
+  tierSilver?: number
+  tierGold?: number
 }) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>("membership")
@@ -169,7 +173,7 @@ export function MemberDetailTabs({
           onClick={handleToggleActive}
           disabled={actionLoading}
           className={cn(
-            "rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+            "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50",
             user.isActive
               ? "border-red-300 text-red-600 hover:bg-red-50"
               : "border-green-300 text-green-600 hover:bg-green-50",
@@ -181,7 +185,7 @@ export function MemberDetailTabs({
           <button
             onClick={handleResendInvite}
             disabled={actionLoading}
-            className="rounded-lg border border-blue-300 px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+            className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
           >
             Gửi lại email mời
           </button>
@@ -212,21 +216,21 @@ export function MemberDetailTabs({
         {activeTab === "membership" && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Tổng đóng góp</p>
                 <p className="text-lg font-bold text-brand-900">{fmtVND(user.contributionTotal)}</p>
               </div>
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Hạng</p>
                 <p className="text-lg font-bold text-brand-900">
-                  {user.contributionTotal >= 20_000_000 ? "Vàng" : user.contributionTotal >= 10_000_000 ? "Bạc" : "Cơ bản"}
+                  {user.contributionTotal >= (tierGold ?? 20_000_000) ? "Vàng" : user.contributionTotal >= (tierSilver ?? 10_000_000) ? "Bạc" : "Cơ bản"}
                 </p>
               </div>
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Ưu tiên</p>
                 <p className="text-lg font-bold text-brand-900">#{user.displayPriority}</p>
               </div>
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Còn lại</p>
                 <p className="text-lg font-bold text-brand-900">
                   {daysLeft > 0 ? `${daysLeft} ngày` : "Hết hạn"}
@@ -256,7 +260,7 @@ export function MemberDetailTabs({
                           <td className="py-3 pr-4 text-brand-600 whitespace-nowrap">{fmtDate(m.validFrom)} – {fmtDate(m.validTo)}</td>
                           <td className="py-3 pr-4 text-brand-900 font-medium">{fmtVND(m.amountPaid)}</td>
                           <td className="py-3">
-                            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", st.cls)}>{st.text}</span>
+                            <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-sm font-medium", st.cls)}>{st.text}</span>
                           </td>
                         </tr>
                       )
@@ -272,7 +276,7 @@ export function MemberDetailTabs({
         {activeTab === "payments" && (
           <div className="space-y-4">
             {/* Bank info */}
-            <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+            <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
               <p className="text-xs font-medium text-brand-400 uppercase tracking-wide mb-2">Thông tin ngân hàng hoàn tiền</p>
               {user.bankName ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
@@ -309,7 +313,7 @@ export function MemberDetailTabs({
                           <td className="py-3 pr-4 text-brand-900 font-medium">{fmtVND(p.amount)}</td>
                           <td className="py-3 pr-4 text-brand-400 text-xs font-mono">{p.payosOrderCode ?? "—"}</td>
                           <td className="py-3">
-                            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", st.cls)}>{st.text}</span>
+                            <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-sm font-medium", st.cls)}>{st.text}</span>
                           </td>
                         </tr>
                       )
@@ -345,7 +349,7 @@ export function MemberDetailTabs({
                         <td className="py-3 pr-4 text-brand-600">{p.viewCount}</td>
                         <td className="py-3">
                           <span className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                            "inline-flex items-center rounded-full px-2 py-1 text-sm font-medium",
                             p.status === "PUBLISHED" ? "bg-green-100 text-green-700" :
                             p.status === "LOCKED" ? "bg-red-100 text-red-700" :
                             "bg-gray-100 text-gray-600",
@@ -387,7 +391,7 @@ export function MemberDetailTabs({
                           <td className="py-3 pr-4 text-brand-600 whitespace-nowrap">{fmtDate(c.createdAt)}</td>
                           <td className="py-3 pr-4 text-brand-600 whitespace-nowrap">{c.approvedAt ? fmtDate(c.approvedAt) : "—"}</td>
                           <td className="py-3">
-                            <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", st.cls)}>{st.text}</span>
+                            <span className={cn("inline-flex items-center rounded-full px-2 py-1 text-sm font-medium", st.cls)}>{st.text}</span>
                           </td>
                         </tr>
                       )

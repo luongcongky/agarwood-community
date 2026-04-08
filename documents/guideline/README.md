@@ -10,6 +10,7 @@
 | 04 | [Technical Document](04-technical-document.md) | Developer | Codebase, ERD, auth, caching, deploy, testing |
 | 05 | [Architecture Decisions](05-architecture-decisions.md) | Developer | 10 ADR: Next.js, Supabase, JWT, manual CK, ranking, DOMPurify... |
 | 06 | [API Documentation](06-api-documentation.md) | Developer | 25+ endpoints, request/response format, error codes |
+| 07 | [Demo Flow Tests](../testing/demo-flow/README.md) | QA / Demo | 2 E2E test suite (VIP 16 buoc + Admin 12 buoc), ghi video tu dong |
 
 ## Ai doc gi
 
@@ -20,3 +21,4 @@
 | Developer moi | 04, 05, 06 |
 | Khi co tranh chap | 03 (muc 4, 9) |
 | Khi tich hop mobile/3rd party | 06 |
+| Khi can demo san pham / quay video | 07 |

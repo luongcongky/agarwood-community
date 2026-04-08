@@ -61,8 +61,13 @@ async function main() {
       { key: "bank_name",            value: "Vietcombank", description: "Ngân hàng nhận CK" },
       { key: "bank_account_number",  value: "0071001234567", description: "Số tài khoản" },
       { key: "bank_account_name",    value: "HOI TRAM HUONG VIET NAM", description: "Tên chủ TK" },
-      { key: "tier_silver_threshold", value: "10000000",   description: "Ngưỡng hạng Bạc (VND)" },
-      { key: "tier_gold_threshold",   value: "20000000",   description: "Ngưỡng hạng Vàng (VND)" },
+      { key: "tier_silver_threshold", value: "10000000",   description: "Ngưỡng hạng Bạc — Doanh nghiệp (VND)" },
+      { key: "tier_gold_threshold",   value: "20000000",   description: "Ngưỡng hạng Vàng — Doanh nghiệp (VND)" },
+      // Cá nhân / Chuyên gia
+      { key: "individual_fee_min",          value: "1000000",    description: "Phí hội viên Cá nhân tối thiểu (VND)" },
+      { key: "individual_fee_max",          value: "2000000",    description: "Phí hội viên Cá nhân tối đa (VND)" },
+      { key: "individual_tier_silver",      value: "3000000",    description: "Ngưỡng hạng Bạc — Cá nhân (VND)" },
+      { key: "individual_tier_gold",        value: "5000000",    description: "Ngưỡng hạng Vàng — Cá nhân (VND)" },
     ],
   })
   console.log("✅ Site config")
@@ -70,21 +75,34 @@ async function main() {
   // ============================================================
   // 2. ADMIN USER
   // ============================================================
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@hoitramhuong.vn" },
-    update: {},
-    create: {
-      email: "admin@hoitramhuong.vn",
-      name: "Ban Quản Trị Hội",
-      phone: "028 3820 1234",
-      role: Role.ADMIN,
-      isActive: true,
-      passwordHash,
-      contributionTotal: 0,
-      displayPriority: 999,
-      accounts: { create: { type: "credentials", provider: "credentials", providerAccountId: "admin@hoitramhuong.vn" } },
-    },
-  })
+  const adminEmail = "admin@hoitramhuong.vn"
+  let admin = await prisma.user.findUnique({ where: { email: adminEmail } })
+  
+  if (!admin) {
+    try {
+      admin = await prisma.user.create({
+        data: {
+          email: adminEmail,
+          name: "Ban Quản Trị Hội",
+          phone: "028 3820 1234",
+          role: Role.ADMIN,
+          isActive: true,
+          passwordHash,
+          contributionTotal: 0,
+          displayPriority: 999,
+          accounts: { create: { type: "credentials", provider: "credentials", providerAccountId: adminEmail } },
+        },
+      })
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'code' in e && e.code === 'P2002') {
+        admin = await prisma.user.findUnique({ where: { email: adminEmail } })
+      } else {
+        throw e
+      }
+    }
+  }
+
+  if (!admin) throw new Error("Failed to create or find admin user")
   console.log("✅ Admin:", admin.email)
 
   // ============================================================
@@ -303,7 +321,7 @@ async function main() {
         bankAccountName: userData.bankAccountName,
         bankAccountNumber: userData.bankAccountNumber,
         bankName: userData.bankName,
-        membershipExpires: membershipData[membershipData.length - 1]?.validTo ?? null,
+        membershipExpires: membershipData.reduce((max, m) => m.validTo > max ? m.validTo : max, membershipData[0]?.validTo ?? new Date()),
         accounts: { create: { type: "credentials", provider: "credentials", providerAccountId: userData.email } },
         company: {
           create: {

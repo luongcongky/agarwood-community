@@ -213,7 +213,7 @@ export default function NopDonPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-6">
-      <h1 className="text-2xl font-heading font-bold text-brand-900 mb-6 text-center">
+      <h1 className="text-2xl font-bold text-brand-900 mb-6 text-center">
         Nộp đơn chứng nhận sản phẩm
       </h1>
 
@@ -234,10 +234,10 @@ export default function NopDonPage() {
                 Bạn chưa có sản phẩm nào. Hãy thêm sản phẩm trước khi nộp đơn.
               </p>
               <Link
-                href="/company"
+                href="/san-pham/tao-moi"
                 className="inline-block bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-800 transition-colors"
               >
-                + Thêm sản phẩm
+                + Tạo sản phẩm mới
               </Link>
             </div>
           ) : (
@@ -250,7 +250,7 @@ export default function NopDonPage() {
                     className={cn(
                       "flex items-start gap-3 p-4 rounded-xl border-2 transition-all",
                       isBlocked
-                        ? "border-brand-100 bg-brand-50 opacity-60 cursor-not-allowed"
+                        ? "border-brand-200 bg-brand-50 opacity-60 cursor-not-allowed"
                         : selectedProductId === product.id
                         ? "border-brand-600 bg-brand-50 cursor-pointer"
                         : "border-brand-200 bg-white hover:border-brand-400 cursor-pointer"
@@ -270,7 +270,7 @@ export default function NopDonPage() {
                         {product.name}
                       </p>
                       {isBlocked ? (
-                        <p className="text-xs text-brand-400 mt-0.5">
+                        <p className="text-sm text-brand-500 mt-0.5">
                           Đang trong quá trình xét duyệt
                         </p>
                       ) : (
@@ -356,7 +356,7 @@ export default function NopDonPage() {
               accept=".pdf,.jpg,.jpeg,.png"
               className="block w-full text-sm text-brand-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-100 file:text-brand-700 file:font-medium hover:file:bg-brand-200 cursor-pointer"
             />
-            <p className="text-xs text-brand-400">
+            <p className="text-sm text-brand-500">
               Hỗ trợ: PDF, JPG, PNG (tối đa 10MB mỗi file)
             </p>
           </div>
@@ -537,19 +537,19 @@ export default function NopDonPage() {
               <h3 className="font-semibold text-brand-800">Hướng dẫn chuyển khoản phí xét duyệt</h3>
 
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b border-brand-100">
+                <div className="flex justify-between py-2 border-b border-brand-200">
                   <span className="text-brand-500">Ngân hàng</span>
                   <span className="font-semibold text-brand-900">{certBankInfo.bankName}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-brand-100">
+                <div className="flex justify-between py-2 border-b border-brand-200">
                   <span className="text-brand-500">Số tài khoản</span>
                   <span className="font-semibold text-brand-900 font-mono">{certBankInfo.accountNumber}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-brand-100">
+                <div className="flex justify-between py-2 border-b border-brand-200">
                   <span className="text-brand-500">Chủ tài khoản</span>
                   <span className="font-semibold text-brand-900">{certBankInfo.accountName}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-brand-100">
+                <div className="flex justify-between py-2 border-b border-brand-200">
                   <span className="text-brand-500">Số tiền</span>
                   <span className="font-bold text-brand-700 text-base">{formatVND(certBankInfo.amount)}</span>
                 </div>

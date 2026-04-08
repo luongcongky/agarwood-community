@@ -144,7 +144,7 @@ export default function DieuLePage() {
                   href={`#${ch.id}`}
                   className="flex items-baseline gap-3 text-sm text-brand-700 hover:text-brand-900 hover:underline underline-offset-2 transition-colors"
                 >
-                  <span className="flex-shrink-0 font-semibold text-brand-500">
+                  <span className="shrink-0 font-semibold text-brand-500">
                     Chương {ch.number}.
                   </span>
                   <span>{ch.title}</span>
@@ -160,12 +160,12 @@ export default function DieuLePage() {
             <section
               key={ch.id}
               id={ch.id}
-              className="scroll-mt-24 rounded-xl border border-brand-100 bg-white p-8 shadow-sm"
+              className="scroll-mt-24 rounded-xl border border-brand-200 bg-white p-8 shadow-sm"
             >
               <h2 className="text-xl font-bold text-brand-900 mb-1">
                 Chương {ch.number}
               </h2>
-              <h3 className="text-base font-semibold text-brand-700 mb-5 pb-4 border-b border-brand-100">
+              <h3 className="text-base font-semibold text-brand-700 mb-5 pb-4 border-b border-brand-200">
                 {ch.title}
               </h3>
               <div className="space-y-4">

@@ -75,11 +75,11 @@ describe("LoginPage — Render", () => {
     expect(btn).not.toBeDisabled()
   })
 
-  it("hiển thị gợi ý liên hệ ban quản trị (không có link đăng ký)", () => {
+  it("hiển thị link đăng ký hội viên", () => {
     renderLogin()
-    expect(screen.getByText(/liên hệ ban quản trị/i)).toBeInTheDocument()
-    // Không có link /register vì đây là trang nội bộ
-    expect(screen.queryByRole("link", { name: /đăng ký/i })).not.toBeInTheDocument()
+    const link = screen.getByRole("link", { name: /đăng ký hội viên/i })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute("href", "/dang-ky")
   })
 })
 

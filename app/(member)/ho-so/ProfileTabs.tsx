@@ -273,7 +273,7 @@ export function ProfileTabs({
 
             {/* Company link */}
             {user.company && (
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs font-medium text-brand-400 uppercase tracking-wide mb-1">Doanh nghiệp đại diện</p>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-brand-900">{user.company.name}</p>
@@ -389,15 +389,15 @@ export function ProfileTabs({
           <div className="space-y-5">
             {/* Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Tổng đóng góp</p>
                 <p className="text-lg font-bold text-brand-900">{formatVND(user.contributionTotal)}</p>
               </div>
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
                 <p className="text-xs text-brand-400 mb-1">Mức ưu tiên</p>
                 <p className="text-lg font-bold text-brand-900">{user.displayPriority}</p>
               </div>
-              <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-4 col-span-2 sm:col-span-1">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4 col-span-2 sm:col-span-1">
                 <p className="text-xs text-brand-400 mb-1">Còn lại</p>
                 <p className="text-lg font-bold text-brand-900">
                   {daysLeft > 0 ? `${daysLeft} ngày` : "Hết hạn"}

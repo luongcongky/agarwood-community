@@ -27,7 +27,7 @@ export function AdminMobileNav() {
             <div className="flex items-center gap-2">
               <span className="text-xl" aria-hidden>🌿</span>
               <div>
-                <SheetTitle className="text-sidebar-primary font-heading font-semibold text-sm leading-tight text-left">
+                <SheetTitle className="text-sidebar-primary font-semibold text-sm leading-tight text-left">
                   Hội Trầm Hương
                 </SheetTitle>
                 <p className="text-sidebar-foreground/60 text-xs">Quản trị viên</p>
@@ -39,7 +39,7 @@ export function AdminMobileNav() {
         </SheetContent>
       </Sheet>
 
-      <span className="text-sidebar-foreground font-heading font-semibold text-base">
+      <span className="text-sidebar-foreground font-semibold text-base">
         Quản trị
       </span>
     </header>

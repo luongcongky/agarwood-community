@@ -12,6 +12,7 @@ import {
   Flag,
   Newspaper,
   Settings,
+  FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone },
   { label: "Xác nhận CK",  href: "/admin/thanh-toan",  icon: BadgeCheck },
   { label: "Báo cáo",      href: "/admin/bao-cao",     icon: Flag },
+  { label: "Tài liệu",     href: "/admin/tai-lieu",    icon: FileText },
   { label: "Tin tức",      href: "/admin/tin-tuc",     icon: Newspaper },
   { label: "Cài đặt",      href: "/admin/cai-dat",     icon: Settings },
 ]
@@ -82,7 +84,7 @@ export function AdminSidebar() {
       <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
         <span className="text-xl" aria-hidden>🌿</span>
         <div>
-          <p className="text-sidebar-primary font-heading font-semibold text-sm leading-tight">
+          <p className="text-sidebar-primary font-semibold text-sm leading-tight">
             Hội Trầm Hương
           </p>
           <p className="text-sidebar-foreground/60 text-xs">Quản trị viên</p>

@@ -102,7 +102,7 @@ function SetPasswordForm() {
   if (!tokenValid) {
     return (
       <div className="bg-card rounded-xl shadow-lg p-8 space-y-4 text-center">
-        <h2 className="font-heading text-brand-800 text-xl font-semibold">Liên kết không hợp lệ</h2>
+        <h2 className="text-brand-800 text-xl font-semibold">Liên kết không hợp lệ</h2>
         <p className="text-sm text-muted-foreground">{error}</p>
         <p className="text-sm text-muted-foreground">
           Vui lòng liên hệ ban quản trị để nhận liên kết mới.
@@ -114,7 +114,7 @@ function SetPasswordForm() {
   return (
     <div className="bg-card rounded-xl shadow-lg p-8 space-y-6">
       <div>
-        <h2 className="font-heading text-brand-800 text-2xl font-semibold text-center">
+        <h2 className="text-brand-800 text-2xl font-semibold text-center">
           Đặt mật khẩu
         </h2>
         <p className="text-muted-foreground text-sm text-center mt-1">

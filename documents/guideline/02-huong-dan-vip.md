@@ -12,13 +12,30 @@
 1. [Dang nhap lan dau](#1-dang-nhap-lan-dau)
 2. [Tong quan Dashboard](#2-tong-quan-dashboard)
 3. [Cap nhat ho so ca nhan](#3-cap-nhat-ho-so-ca-nhan)
-4. [Quan ly doanh nghiep](#4-quan-ly-doanh-nghiep)
-5. [Quan ly san pham](#5-quan-ly-san-pham)
+4. [Quan ly doanh nghiep](#4-quan-ly-doanh-nghiep) *(chi Doanh nghiep)*
+5. [Quan ly san pham](#5-quan-ly-san-pham) *(chi Doanh nghiep)*
 6. [Dang bai tren Feed](#6-dang-bai-tren-feed)
-7. [Nop don chung nhan san pham](#7-nop-don-chung-nhan-san-pham)
+7. [Nop don chung nhan san pham](#7-nop-don-chung-nhan-san-pham) *(chi Doanh nghiep)*
 8. [Gia han membership](#8-gia-han-membership)
 9. [Dat dich vu truyen thong](#9-dat-dich-vu-truyen-thong)
 10. [Cau hoi thuong gap](#10-cau-hoi-thuong-gap)
+
+---
+
+## Hai loai tai khoan VIP
+
+He thong co 2 loai tai khoan hoi vien:
+
+| Loai | Danh cho | Menu hien thi |
+|------|---------|--------------|
+| **Doanh nghiep** | Chu doanh nghiep tram huong | Tong quan, Bang tin, Doanh nghiep, Chung nhan SP, Gia han, Ho so |
+| **Ca nhan / Chuyen gia** | Chuyen gia, nha nghien cuu, nghe nhan, nha suu tam | Tong quan, Bang tin, Tai lieu, Gia han, Ho so |
+
+**Tinh nang chung** (ca 2 loai): Dang bai feed, ho so ca nhan, gia han membership, lich su thanh toan, tai lieu Hoi, dich vu truyen thong.
+
+**Chi danh cho Doanh nghiep**: Quan ly doanh nghiep, tao san pham, nop don chung nhan SP.
+
+> Muc 4, 5, 7 trong tai lieu nay chi ap dung cho tai khoan **Doanh nghiep**.
 
 ---
 
@@ -85,7 +102,7 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 
 ---
 
-## 4. Quan ly doanh nghiep
+## 4. Quan ly doanh nghiep (CHI DOANH NGHIEP)
 
 ### Xem trang doanh nghiep
 - Trang cong khai: `/doanh-nghiep/[slug-cong-ty]`
@@ -105,7 +122,7 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 
 ---
 
-## 5. Quan ly san pham
+## 5. Quan ly san pham (CHI DOANH NGHIEP)
 
 ### Them san pham moi
 1. Vao trang doanh nghiep -> tab "San pham" -> click "+ Them san pham"
@@ -162,7 +179,7 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 
 ---
 
-## 7. Nop don chung nhan san pham
+## 7. Nop don chung nhan san pham (CHI DOANH NGHIEP)
 
 ### Dieu kien
 - Membership con hieu luc
@@ -274,6 +291,15 @@ A: Hien tai chung nhan khong co thoi han. Tuy nhien, hoi co the thay doi chinh s
 
 **Q: Toi muon them nhieu san pham, co gioi han khong?**
 A: Khong gioi han so luong san pham. Tuy nhien, moi don chung nhan can dong phi rieng.
+
+**Q: Toi la ca nhan / chuyen gia, toi co the lam gi tren he thong?**
+A: Ban co the: dang bai tren feed, xem tai lieu Hoi, gia han membership, dat dich vu truyen thong. Cac tinh nang doanh nghiep (tao SP, chung nhan) chi danh cho tai khoan Doanh nghiep.
+
+**Q: Toi muon chuyen tu tai khoan Ca nhan sang Doanh nghiep?**
+A: Lien he ban quan tri. Admin se cap nhat loai tai khoan va tao thong tin doanh nghiep cho ban.
+
+**Q: Tai sao toi khong thay menu "Doanh nghiep" va "Chung nhan SP"?**
+A: Cac menu nay chi hien thi cho tai khoan loai Doanh nghiep. Neu ban dang ky voi tu cach Ca nhan / Chuyen gia, ban se khong thay cac menu nay.
 
 ---
 

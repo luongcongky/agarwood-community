@@ -88,7 +88,7 @@ export default async function AdminReportsPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                      "inline-flex items-center rounded-full px-2 py-1 text-sm font-medium",
                       report.post.status === "PUBLISHED"
                         ? "bg-green-100 text-green-700"
                         : report.post.status === "LOCKED"
@@ -103,7 +103,7 @@ export default async function AdminReportsPage() {
                       : "Đã xoá"}
                   </span>
                   {report.post.reportCount > 1 && (
-                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    <span className="rounded-full bg-red-100 px-2 py-1 text-sm font-medium text-red-700">
                       {report.post.reportCount} báo cáo
                     </span>
                   )}

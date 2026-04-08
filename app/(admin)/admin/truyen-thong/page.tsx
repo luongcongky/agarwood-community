@@ -145,7 +145,7 @@ export default async function AdminMediaOrdersPage({
                     {STATUS_LABELS[o.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-brand-400 hidden sm:table-cell">
+                <td className="px-4 py-3 text-sm text-brand-500 hidden sm:table-cell">
                   {new Date(o.createdAt).toLocaleDateString("vi-VN")}
                 </td>
                 <td className="px-4 py-3 text-right">

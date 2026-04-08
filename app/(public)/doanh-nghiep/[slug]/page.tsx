@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier } from "@/lib/tier"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
@@ -64,11 +65,7 @@ export default async function CompanyProfilePage({ params }: Props) {
   const canEdit = isOwner || isAdmin
 
   // VIP tier
-  const contribution = company.owner.contributionTotal
-  const tier =
-    contribution >= 20_000_000 ? { label: "Hội viên Vàng", stars: 3 } :
-    contribution >= 10_000_000 ? { label: "Hội viên Bạc", stars: 2 } :
-                                 { label: "Hội viên", stars: 1 }
+  const tier = await getMemberTier(company.owner.contributionTotal, "BUSINESS")
 
   // Posts count for tab label
   const postCount = await prisma.post.count({
@@ -114,7 +111,7 @@ export default async function CompanyProfilePage({ params }: Props) {
       {/* Company info */}
       <div className="mt-14 sm:mt-16">
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-brand-900">{company.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-brand-900">{company.name}</h1>
           {company.isVerified && (
             <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
               ✓ Đã xác minh
@@ -127,10 +124,12 @@ export default async function CompanyProfilePage({ params }: Props) {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-brand-600">
-          {company.foundedYear && <span>Thành lập {company.foundedYear}</span>}
-          {company.address && <span>{company.address}</span>}
-          <span>{"★".repeat(tier.stars)} {tier.label}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">
+          {company.foundedYear && <span className="text-sm text-brand-700 font-medium">Thành lập {company.foundedYear}</span>}
+          {company.address && <span className="text-sm text-brand-600">{company.address}</span>}
+          <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm font-semibold px-2 py-0.5 rounded-full">
+            {"★".repeat(tier.stars)} {tier.label}
+          </span>
         </div>
 
         {/* Contact row */}

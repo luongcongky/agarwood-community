@@ -211,8 +211,30 @@ Xac nhan da hoan tien. Yeu cau: ADMIN. Chi cho cert status = REJECTED.
 
 ## 4. Users (Admin)
 
+### POST /api/auth/register
+Dang ky hoi vien (guest). **KHONG can auth.**
+
+**Body:**
+```json
+{
+  "accountType": "BUSINESS",
+  "name": "Nguyen Van D",
+  "email": "d@example.com",
+  "phone": "0901234567",
+  "companyName": "Tram Huong XYZ",
+  "companyField": "Tram tu nhien",
+  "reason": "Muon gia nhap..."
+}
+```
+accountType: `BUSINESS` (tao Company) | `INDIVIDUAL` (khong tao Company)
+
+### POST /api/admin/registrations/{id}
+Duyet/tu choi don dang ky. Yeu cau: ADMIN.
+
+**Body:** `{ "action": "approve" }` hoac `{ "action": "reject", "reason": "..." }`
+
 ### POST /api/admin/users
-Tao VIP moi. Yeu cau: ADMIN.
+Tao VIP moi (thu cong). Yeu cau: ADMIN.
 
 **Body:**
 ```json
@@ -224,10 +246,6 @@ Tao VIP moi. Yeu cau: ADMIN.
   "sendInvite": false
 }
 ```
-- Co `password`: tai khoan active ngay
-- Co `sendInvite: true` (khong co password): gui email moi, tai khoan inactive
-
-**Errors:** `409` — Email da ton tai
 
 ### POST /api/admin/users/{id}/toggle-active
 Bat / tat tai khoan VIP. Yeu cau: ADMIN.

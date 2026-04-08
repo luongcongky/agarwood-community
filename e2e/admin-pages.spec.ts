@@ -25,7 +25,7 @@ test.describe("Admin Pages", () => {
     await expect(page.locator("text=Quản lý Hội viên")).toBeVisible()
     await expect(page.locator("text=slot")).toBeVisible()
     // Should show member table
-    await expect(page.locator("text=Nguyễn Văn A")).toBeVisible()
+    await expect(page.locator("text=Trần Khánh Hòa")).toBeVisible()
   })
 
   test("TC-ADMIN-04: Hoi vien filter tabs hoat dong", async ({ page }) => {
@@ -65,14 +65,14 @@ test.describe("Admin Pages", () => {
   })
 
   test("TC-ADMIN-09: Chi tiet hoi vien /admin/hoi-vien/[id]", async ({ page }) => {
-    await page.goto("/admin/hoi-vien")
-    // Click first member detail
+    await page.goto("/admin/hoi-vien?status=active")
+    // Click first VIP member detail
     await page.click('a:has-text("Chi tiết")')
     await page.waitForURL(/\/admin\/hoi-vien\//)
     // Should show member detail with tabs
-    await expect(page.locator("text=Membership")).toBeVisible()
-    await expect(page.locator("text=Thanh toán")).toBeVisible()
-    await expect(page.locator("text=Thông tin")).toBeVisible()
+    await expect(page.locator("text=Membership").first()).toBeVisible()
+    await expect(page.locator("text=Thanh toán").first()).toBeVisible()
+    await expect(page.locator("text=Thông tin").first()).toBeVisible()
   })
 
   test("TC-ADMIN-10: Tao hoi vien moi page load", async ({ page }) => {

@@ -79,8 +79,28 @@ export default async function ProductDetailPage({ params }: Props) {
   const isOwner = session?.user?.id === product.company.ownerId
   const isAdmin = session?.user?.role === "ADMIN"
 
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description?.slice(0, 300),
+    image: imageUrls[0] ?? undefined,
+    category: product.category ?? undefined,
+    brand: { "@type": "Organization", name: product.company.name },
+    ...(product.certStatus === "APPROVED" && certDate ? {
+      certification: {
+        "@type": "Certification",
+        name: "Chứng nhận Hội Trầm Hương Việt Nam",
+        certificationStatus: "CertificationActive",
+        datePublished: approvedCert?.approvedAt ? new Date(approvedCert.approvedAt).toISOString() : undefined,
+        issuedBy: { "@type": "Organization", name: "Hội Trầm Hương Việt Nam" },
+      },
+    } : {}),
+  }
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-brand-500 mb-6 flex-wrap">
         <Link href="/" className="hover:text-brand-700">Trang chủ</Link>
@@ -104,7 +124,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* Right: info */}
         <div className="space-y-5">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-heading font-bold text-brand-900 leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-brand-900 leading-tight">
               {product.name}
             </h1>
             <div className="mt-2 flex items-center gap-2">
@@ -218,8 +238,8 @@ export default async function ProductDetailPage({ params }: Props) {
 
       {/* Related products */}
       {relatedProducts.length > 0 && (
-        <section className="border-t border-brand-100 pt-8">
-          <h2 className="font-heading text-xl font-semibold text-brand-900 mb-5">Sản phẩm liên quan</h2>
+        <section className="border-t border-brand-200 pt-8">
+          <h2 className="text-xl font-semibold text-brand-900 mb-5">Sản phẩm liên quan</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {relatedProducts.map((rp) => {
               const rpImages = rp.imageUrls as string[]
@@ -227,7 +247,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 <Link
                   key={rp.id}
                   href={`/san-pham/${rp.slug}`}
-                  className="group block bg-white border border-brand-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  className="group block bg-white border border-brand-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="relative aspect-square bg-brand-100">
                     {rpImages.length > 0 ? (

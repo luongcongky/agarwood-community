@@ -2,10 +2,10 @@
 
 import { useEditor, EditorContent } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
-import TiptapImage from "@tiptap/extension-image"
 import TiptapLink from "@tiptap/extension-link"
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { ResizableImage } from "@/components/editor/image-extension"
+import { Suspense, useState, useEffect, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
@@ -32,7 +32,7 @@ function ToolbarButton({
       }}
       title={title}
       className={cn(
-        "flex items-center justify-center size-8 rounded-md text-sm font-medium transition-colors",
+        "flex items-center justify-center size-9 rounded-md text-sm font-medium transition-colors",
         active
           ? "bg-brand-700 text-white"
           : "text-brand-700 hover:bg-brand-100"
@@ -45,28 +45,70 @@ function ToolbarButton({
 
 // ─── Page Component ──────────────────────────────────────────────────────────
 
-let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+/** Extract all Cloudinary image URLs from HTML string */
+function extractCloudinaryUrls(html: string): string[] {
+  const matches = html.match(/https:\/\/res\.cloudinary\.com\/[^"'\s)]+/g)
+  return matches ? [...new Set(matches)] : []
+}
+
+/** Delete orphaned Cloudinary images (present in before but not in after) */
+async function deleteOrphanedImages(beforeUrls: string[], afterHtml: string) {
+  const afterUrls = extractCloudinaryUrls(afterHtml)
+  const orphaned = beforeUrls.filter((url) => !afterUrls.includes(url))
+  for (const url of orphaned) {
+    try {
+      await fetch("/api/upload/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      })
+    } catch { /* ignore individual failures */ }
+  }
+}
 
 export default function TaoBaiPage() {
+  return (
+    <Suspense fallback={<div className="max-w-3xl mx-auto py-12 text-center text-brand-400">Đang tải...</div>}>
+      <TaoBaiContent />
+    </Suspense>
+  )
+}
+
+function TaoBaiContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editId = searchParams.get("edit")
   const [title, setTitle] = useState("")
   const [preview, setPreview] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [importingDocx, setImportingDocx] = useState(false)
+  const [editLoaded, setEditLoaded] = useState(false)
+  const [imageSelected, setImageSelected] = useState(false)
+  const [originalImages, setOriginalImages] = useState<string[]>([]) // images from loaded content (edit mode)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]) // images uploaded this session
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const docxInputRef = useRef<HTMLInputElement>(null)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editIdRef = useRef(editId)
+  editIdRef.current = editId
 
   const editor = useEditor({
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: false,
     extensions: [
       StarterKit,
-      TiptapImage.configure({ inline: false, allowBase64: false }),
+      ResizableImage.configure({ inline: false, allowBase64: false }),
       TiptapLink.configure({ openOnClick: false }),
     ],
     content: "",
     onUpdate: ({ editor }) => {
-      if (autoSaveTimer) clearTimeout(autoSaveTimer)
-      autoSaveTimer = setTimeout(() => {
+      // Only auto-save drafts for NEW posts, not when editing existing
+      if (editIdRef.current) return
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = setTimeout(() => {
         localStorage.setItem(
           "feed_draft",
           JSON.stringify({
@@ -78,29 +120,58 @@ export default function TaoBaiPage() {
         setDraftSavedAt(new Date().toLocaleTimeString("vi-VN"))
       }, 2000)
     },
+    onSelectionUpdate: ({ editor }) => {
+      setImageSelected(editor.isActive("image"))
+    },
   })
 
-  // Restore draft on mount
+  // Restore draft on mount — only for NEW posts (not edit mode)
   useEffect(() => {
-    if (!editor) return
+    if (!editor || editId) return
     const raw = localStorage.getItem("feed_draft")
     if (!raw) return
     try {
       const parsed = JSON.parse(raw)
       if (parsed.title) setTitle(parsed.title)
-      if (parsed.content) editor.commands.setContent(parsed.content)
+      if (parsed.content) {
+        editor.commands.setContent(parsed.content)
+        setOriginalImages(extractCloudinaryUrls(parsed.content))
+      }
       if (parsed.savedAt)
         setDraftSavedAt(new Date(parsed.savedAt).toLocaleTimeString("vi-VN"))
     } catch {
       // ignore corrupt draft
     }
-  }, [editor])
+  }, [editor, editId])
 
-  // Auto-save title when it changes
+  // Load post for editing
   useEffect(() => {
-    if (!editor) return
-    if (autoSaveTimer) clearTimeout(autoSaveTimer)
-    autoSaveTimer = setTimeout(() => {
+    if (!editor || !editId || editLoaded) return
+    // Clear draft so it doesn't pollute next "create new" session
+    localStorage.removeItem("feed_draft")
+    async function loadPost() {
+      try {
+        const res = await fetch(`/api/posts/${editId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.post) {
+          setTitle(data.post.title ?? "")
+          editor?.commands.setContent(data.post.content)
+          setOriginalImages(extractCloudinaryUrls(data.post.content))
+          setEditLoaded(true)
+        }
+      } catch {
+        setError("Không thể tải bài viết.")
+      }
+    }
+    loadPost()
+  }, [editor, editId, editLoaded])
+
+  // Auto-save title when it changes — only for NEW posts
+  useEffect(() => {
+    if (!editor || editId) return
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(() => {
       localStorage.setItem(
         "feed_draft",
         JSON.stringify({
@@ -121,8 +192,10 @@ export default function TaoBaiPage() {
       formData.append("file", file)
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (!res.ok) throw new Error("Upload failed")
-      const { url } = await res.json()
-      editor?.chain().focus().setImage({ src: url }).run()
+      const data = await res.json()
+      const imgUrl = data.secure_url ?? data.url
+      editor?.chain().focus().setImage({ src: imgUrl }).run()
+      setUploadedImages((prev) => [...prev, imgUrl])
     } catch {
       setError("Tải ảnh thất bại. Vui lòng thử lại.")
     } finally {
@@ -136,6 +209,51 @@ export default function TaoBaiPage() {
     editor?.chain().focus().setLink({ href: url }).run()
   }
 
+  async function handleDocxImport(file: File) {
+    if (!editor) return
+    setImportingDocx(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/upload/docx", { method: "POST", body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error ?? "Import thất bại")
+        return
+      }
+      const data = await res.json()
+      // Set title if extracted and current title is empty
+      if (data.title && !title) setTitle(data.title)
+      // Insert HTML into editor
+      editor.commands.setContent(data.html)
+      if (data.imageCount > 0) {
+        setError(null) // Clear any previous error
+      }
+    } catch {
+      setError("Import file DOCX thất bại. Vui lòng thử lại.")
+    } finally {
+      setImportingDocx(false)
+    }
+  }
+
+  async function handleCancel() {
+    // Delete only images uploaded THIS SESSION (not original content images)
+    // This handles both create (all uploads are new) and edit (only new uploads deleted)
+    for (const url of uploadedImages) {
+      try {
+        await fetch("/api/upload/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        })
+      } catch { /* ignore */ }
+    }
+
+    localStorage.removeItem("feed_draft")
+    router.push("/feed")
+  }
+
   async function handleSubmit() {
     if (!editor) return
     const text = editor.getText().trim()
@@ -146,12 +264,16 @@ export default function TaoBaiPage() {
     setError(null)
     setSubmitting(true)
     try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
+      const url = editId ? `/api/posts/${editId}` : "/api/posts"
+      const method = editId ? "PATCH" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title || undefined, content: editor.getHTML() }),
       })
       if (res.ok) {
+        // Cleanup orphaned Cloudinary images (deleted from editor but not from cloud)
+        await deleteOrphanedImages([...originalImages, ...uploadedImages], editor.getHTML())
         localStorage.removeItem("feed_draft")
         router.push("/feed")
       } else {
@@ -171,8 +293,8 @@ export default function TaoBaiPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/feed"
+        <button
+          onClick={handleCancel}
           className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-800 transition-colors"
         >
           <svg
@@ -185,14 +307,14 @@ export default function TaoBaiPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Quay lại feed
-        </Link>
-        <span className="text-brand-300">/</span>
-        <h1 className="font-heading font-semibold text-brand-900 text-lg">Tạo bài viết mới</h1>
+        </button>
+        <span className="text-brand-500">/</span>
+        <h1 className="font-semibold text-brand-900 text-lg">{editId ? "Chỉnh sửa bài viết" : "Tạo bài viết mới"}</h1>
       </div>
 
-      <div className="bg-white rounded-xl border border-brand-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-brand-200">
         {/* Title input */}
-        <div className="border-b border-brand-100 px-5 py-4">
+        <div className="border-b border-brand-200 px-5 py-4">
           <input
             type="text"
             placeholder="Tiêu đề bài viết (tùy chọn)"
@@ -202,9 +324,9 @@ export default function TaoBaiPage() {
           />
         </div>
 
-        {/* Toolbar */}
+        {/* Toolbar — sticky so it stays visible when scrolling long posts */}
         {!preview && (
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-brand-100 flex-wrap">
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-brand-200 flex-wrap sticky top-16 bg-white z-10 rounded-t-xl">
             <ToolbarButton
               onClick={() => editor?.chain().focus().toggleBold().run()}
               active={editor?.isActive("bold")}
@@ -274,10 +396,24 @@ export default function TaoBaiPage() {
             >
               <span className="text-xs font-bold">H2</span>
             </ToolbarButton>
+
+            <div className="w-px h-5 bg-brand-200 mx-1" />
+
+            <ToolbarButton
+              onClick={() => docxInputRef.current?.click()}
+              active={false}
+              title="Import từ file DOCX"
+            >
+              {importingDocx ? (
+                <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="text-xs font-bold">DOC</span>
+              )}
+            </ToolbarButton>
           </div>
         )}
 
-        {/* Hidden file input */}
+        {/* Hidden file inputs */}
         <input
           ref={fileInputRef}
           type="file"
@@ -289,6 +425,71 @@ export default function TaoBaiPage() {
             e.target.value = ""
           }}
         />
+        <input
+          ref={docxInputRef}
+          type="file"
+          accept=".doc,.docx"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) handleDocxImport(file)
+            e.target.value = ""
+          }}
+        />
+
+        {/* Image controls — show when image is selected, sticky below main toolbar */}
+        {!preview && imageSelected && editor && (
+          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-brand-200 bg-brand-50 flex-wrap sticky top-[105px] z-10">
+            <span className="text-sm text-brand-600 font-medium mr-1">Ảnh:</span>
+            {[
+              { label: "S", value: "25%" },
+              { label: "M", value: "50%" },
+              { label: "L", value: "75%" },
+              { label: "XL", value: "100%" },
+            ].map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => editor.chain().focus().updateAttributes("image", { width: s.value }).run()}
+                className={cn(
+                  "px-2.5 py-1.5 text-sm font-medium rounded-md transition-colors",
+                  editor.getAttributes("image").width === s.value ? "bg-brand-700 text-white" : "text-brand-700 hover:bg-brand-100",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+            <div className="w-px h-5 bg-brand-200 mx-1" />
+            {[
+              { label: "←", value: "left" },
+              { label: "↔", value: "center" },
+              { label: "→", value: "right" },
+            ].map((a) => (
+              <button
+                key={a.value}
+                type="button"
+                onClick={() => editor.chain().focus().updateAttributes("image", { textAlign: a.value }).run()}
+                className={cn(
+                  "px-2.5 py-1.5 text-sm font-medium rounded-md transition-colors",
+                  (editor.getAttributes("image").textAlign ?? "center") === a.value ? "bg-brand-700 text-white" : "text-brand-700 hover:bg-brand-100",
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+            <div className="w-px h-5 bg-brand-200 mx-1" />
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().deleteSelection().run()
+                setImageSelected(false)
+              }}
+              className="px-2.5 py-1.5 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors"
+            >
+              Xóa ảnh
+            </button>
+          </div>
+        )}
 
         {/* Editor or preview */}
         <div className="min-h-[300px]">
@@ -300,7 +501,7 @@ export default function TaoBaiPage() {
           ) : (
             <EditorContent
               editor={editor}
-              className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[300px] [&_.tiptap]:px-5 [&_.tiptap]:py-4 [&_.tiptap]:text-sm [&_.tiptap]:text-brand-800 [&_.tiptap_p]:mb-2 [&_.tiptap_h2]:text-base [&_.tiptap_h2]:font-semibold [&_.tiptap_h2]:text-brand-900 [&_.tiptap_h2]:mb-2 [&_.tiptap_ul]:list-disc [&_.tiptap_ul]:ml-4 [&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:ml-4 [&_.tiptap_a]:text-brand-600 [&_.tiptap_a]:underline [&_.tiptap_img]:rounded-lg [&_.tiptap_img]:max-w-full [&_.tiptap_p.is-empty::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-empty::before]:text-brand-300 [&_.tiptap_p.is-empty::before]:float-left [&_.tiptap_p.is-empty::before]:pointer-events-none"
+              className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[300px] [&_.tiptap]:px-5 [&_.tiptap]:py-4 [&_.tiptap]:text-sm [&_.tiptap]:text-brand-800 [&_.tiptap_p]:mb-2 [&_.tiptap_h2]:text-base [&_.tiptap_h2]:font-semibold [&_.tiptap_h2]:text-brand-900 [&_.tiptap_h2]:mb-2 [&_.tiptap_ul]:list-disc [&_.tiptap_ul]:ml-4 [&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:ml-4 [&_.tiptap_a]:text-brand-600 [&_.tiptap_a]:underline [&_.tiptap_img]:rounded-lg [&_.tiptap_img]:max-w-full [&_.tiptap_img]:cursor-pointer [&_.tiptap_img]:transition-shadow [&_.tiptap_img.ProseMirror-selectednode]:ring-2 [&_.tiptap_img.ProseMirror-selectednode]:ring-blue-500 [&_.tiptap_img.ProseMirror-selectednode]:shadow-lg [&_.tiptap_p.is-empty::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-empty::before]:text-brand-300 [&_.tiptap_p.is-empty::before]:float-left [&_.tiptap_p.is-empty::before]:pointer-events-none"
             />
           )}
         </div>
@@ -330,12 +531,13 @@ export default function TaoBaiPage() {
           >
             {preview ? "Chỉnh sửa" : "Xem trước"}
           </button>
-          <Link
-            href="/feed"
+          <button
+            type="button"
+            onClick={handleCancel}
             className="text-sm text-muted-foreground hover:text-brand-800 transition-colors"
           >
             Hủy
-          </Link>
+          </button>
           <button
             type="button"
             onClick={handleSubmit}
@@ -350,7 +552,7 @@ export default function TaoBaiPage() {
             {submitting && (
               <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            Đăng bài
+            {editId ? "Cập nhật" : "Đăng bài"}
           </button>
         </div>
       </div>

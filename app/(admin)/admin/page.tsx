@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { getTierThresholds } from "@/lib/tier"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DashboardChartsLoader } from "./DashboardChartsLoader"
@@ -89,12 +90,19 @@ export default async function AdminDashboardPage() {
   const monthRevenueTotal = monthRevenue._sum.amount ?? 0
   const yearRevenueTotal = yearRevenue._sum.amount ?? 0
 
-  // Tier distribution for PieChart
-  const allVIP = await prisma.user.findMany({ where: { role: "VIP" }, select: { contributionTotal: true } })
+  // Tier distribution for PieChart (respects accountType thresholds)
+  const allVIP = await prisma.user.findMany({ where: { role: "VIP" }, select: { contributionTotal: true, accountType: true } })
+  const [bizT, indT] = await Promise.all([getTierThresholds("BUSINESS"), getTierThresholds("INDIVIDUAL")])
+  function userTier(u: { contributionTotal: number; accountType: string }) {
+    const { silver, gold } = u.accountType === "INDIVIDUAL" ? indT : bizT
+    if (u.contributionTotal >= gold) return "gold"
+    if (u.contributionTotal >= silver) return "silver"
+    return "basic"
+  }
   const tierData = [
-    { name: "★ Cơ bản", value: allVIP.filter(u => u.contributionTotal < 10_000_000).length },
-    { name: "★★ Bạc", value: allVIP.filter(u => u.contributionTotal >= 10_000_000 && u.contributionTotal < 20_000_000).length },
-    { name: "★★★ Vàng", value: allVIP.filter(u => u.contributionTotal >= 20_000_000).length },
+    { name: "★ Cơ bản", value: allVIP.filter(u => userTier(u) === "basic").length },
+    { name: "★★ Bạc", value: allVIP.filter(u => userTier(u) === "silver").length },
+    { name: "★★★ Vàng", value: allVIP.filter(u => userTier(u) === "gold").length },
   ]
 
   // Revenue chart data (12 months)
@@ -153,7 +161,7 @@ export default async function AdminDashboardPage() {
   const totalVIP = allVIP.length
   alerts.push({ text: `Slot VIP: ${totalVIP}/${maxSlot}`, href: "/admin/hoi-vien", level: "gray" })
 
-  const alertColors = { red: "border-red-300 bg-red-50 text-red-800", yellow: "border-yellow-300 bg-yellow-50 text-yellow-800", gray: "border-brand-200 bg-brand-50 text-brand-600" }
+  const alertColors = { red: "border-red-300 bg-red-50 text-red-800", yellow: "border-yellow-300 bg-yellow-50 text-yellow-800", gray: "border-gray-300 bg-gray-50 text-gray-700" }
   const alertLabels = { red: "Cần xử lý ngay", yellow: "Cần chú ý", gray: "Thông tin" }
 
   return (
@@ -226,9 +234,9 @@ function KPI({ label, value, sub, highlight, alert, href }: {
       alert ? "border-red-300 bg-red-50" : "border-brand-200 bg-white",
       href && "hover:bg-brand-50 cursor-pointer",
     )}>
-      <p className="text-[11px] font-medium text-brand-400 uppercase tracking-wide">{label}</p>
-      <p className={cn("mt-1.5 text-2xl font-bold", alert ? "text-red-700" : highlight ? "text-green-700" : "text-brand-900")}>{value}</p>
-      {sub && <p className="text-xs text-brand-400 mt-0.5">{sub}</p>}
+      <p className="text-xs font-medium text-brand-400 uppercase tracking-wide">{label}</p>
+      <p className={cn("mt-1.5 text-3xl font-bold", alert ? "text-red-700" : highlight ? "text-green-700" : "text-brand-900")}>{value}</p>
+      {sub && <p className="text-sm text-brand-500 mt-0.5">{sub}</p>}
     </div>
   )
   return href ? <Link href={href}>{content}</Link> : content

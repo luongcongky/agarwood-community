@@ -2,15 +2,11 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier, getTierThresholds } from "@/lib/tier"
 import { MemberDetailTabs } from "./MemberDetailTabs"
 
 export const revalidate = 0
 
-function getMemberTier(c: number) {
-  if (c >= 20_000_000) return { label: "Hội viên Vàng", stars: 3 }
-  if (c >= 10_000_000) return { label: "Hội viên Bạc", stars: 2 }
-  return { label: "Hội viên", stars: 1 }
-}
 
 export default async function MemberDetailPage({
   params,
@@ -33,6 +29,7 @@ export default async function MemberDetailPage({
         avatarUrl: true,
         isActive: true,
         role: true,
+        accountType: true,
         contributionTotal: true,
         displayPriority: true,
         membershipExpires: true,
@@ -96,7 +93,8 @@ export default async function MemberDetailPage({
 
   if (!user) notFound()
 
-  const tier = getMemberTier(user.contributionTotal)
+  const tier = await getMemberTier(user.contributionTotal, user.accountType as "BUSINESS" | "INDIVIDUAL")
+  const { silver, gold } = await getTierThresholds(user.accountType as "BUSINESS" | "INDIVIDUAL")
   const daysLeft = user.membershipExpires
     ? Math.max(0, Math.ceil((new Date(user.membershipExpires).getTime() - Date.now()) / 86400000))
     : 0
@@ -148,8 +146,8 @@ export default async function MemberDetailPage({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-heading text-xl font-bold text-brand-900">{user.name}</h1>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${user.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+            <h1 className="text-xl font-bold text-brand-900">{user.name}</h1>
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-sm font-medium ${user.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
               {user.isActive ? "Active" : "Inactive"}
             </span>
           </div>
@@ -169,6 +167,8 @@ export default async function MemberDetailPage({
         payments={serialized.payments}
         posts={serialized.posts}
         certifications={serialized.certifications}
+        tierSilver={silver}
+        tierGold={gold}
       />
     </div>
   )

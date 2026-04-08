@@ -18,6 +18,7 @@ type BankInfo = {
 type Props = {
   name: string
   initials: string
+  accountType: string
   membershipExpires: string | null
   daysLeft: number
   contributionTotal: number
@@ -49,6 +50,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 export function RenewalClient({
   name,
   initials,
+  accountType,
   membershipExpires,
   daysLeft,
   contributionTotal,
@@ -75,21 +77,39 @@ export function RenewalClient({
     ? formatDate(membershipExpires)
     : "Chưa kích hoạt"
 
-  const feeOptions = [
-    {
-      amount: feeMin,
-      label: `${formatVND(feeMin)} / năm`,
-      benefits: ["Duy trì quyền VIP", "Ưu tiên feed cơ bản", `Hạng tùy tích lũy`],
-      recommended: false,
-    },
-    {
-      amount: feeMax,
-      label: `${formatVND(feeMax)} / năm`,
-      tag: "Được khuyến nghị",
-      benefits: ["Duy trì quyền VIP", "Ưu tiên feed cao hơn gấp đôi", "Thăng hạng nhanh hơn"],
-      recommended: true,
-    },
-  ]
+  const isIndividual = accountType === "INDIVIDUAL"
+
+  const feeOptions = isIndividual
+    ? [
+        {
+          amount: feeMin,
+          label: `${formatVND(feeMin)} / năm`,
+          benefits: ["Duy trì quyền hội viên", "Đăng bài trên Feed", "Truy cập tài liệu Hội"],
+          recommended: false,
+        },
+        {
+          amount: feeMax,
+          label: `${formatVND(feeMax)} / năm`,
+          tag: "Được khuyến nghị",
+          benefits: ["Duy trì quyền hội viên", "Ưu tiên feed cao hơn", "Thăng hạng nhanh hơn"],
+          recommended: true,
+        },
+      ]
+    : [
+        {
+          amount: feeMin,
+          label: `${formatVND(feeMin)} / năm`,
+          benefits: ["Duy trì quyền VIP", "Ưu tiên feed cơ bản", `Hạng tùy tích lũy`],
+          recommended: false,
+        },
+        {
+          amount: feeMax,
+          label: `${formatVND(feeMax)} / năm`,
+          tag: "Được khuyến nghị",
+          benefits: ["Duy trì quyền VIP", "Ưu tiên feed cao hơn gấp đôi", "Thăng hạng nhanh hơn"],
+          recommended: true,
+        },
+      ]
 
   // ── Step 1: Create payment request ─────────────────────────────────
 
@@ -146,7 +166,7 @@ export function RenewalClient({
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-brand-900">Gia hạn hội viên</h1>
+      <h1 className="text-2xl font-bold text-brand-900">Gia hạn hội viên</h1>
 
       {/* ── DONE state ────────────────────────────────────────────────── */}
       {step === "done" && (
@@ -334,7 +354,7 @@ export function RenewalClient({
               <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide">Lịch sử đóng phí</h2>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-brand-500 text-xs border-b border-brand-100">
+                  <tr className="text-brand-500 text-xs border-b border-brand-200">
                     <th className="text-left py-2 font-medium">Số tiền</th>
                     <th className="text-left py-2 font-medium">Hiệu lực</th>
                     <th className="text-left py-2 font-medium">Trạng thái</th>

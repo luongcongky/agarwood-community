@@ -13,23 +13,35 @@ export async function POST(request: Request) {
 
   const { amount } = await request.json()
 
-  // Validate amount against SiteConfig
+  // Fetch user with accountType to determine fee schedule
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true, email: true, accountType: true },
+  })
+  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  const isIndividual = user.accountType === "INDIVIDUAL"
+
+  // Validate amount against SiteConfig (different keys per account type)
+  const feeKeys = isIndividual
+    ? ["individual_fee_min", "individual_fee_max"]
+    : ["membership_fee_min", "membership_fee_max"]
+
   const feeConfigs = await prisma.siteConfig.findMany({
-    where: { key: { in: ["membership_fee_min", "membership_fee_max"] } },
+    where: { key: { in: feeKeys } },
   })
   const cfgMap = Object.fromEntries(feeConfigs.map((c) => [c.key, Number(c.value)]))
-  const feeMin = cfgMap.membership_fee_min ?? 5_000_000
-  const feeMax = cfgMap.membership_fee_max ?? 10_000_000
+
+  const feeMin = isIndividual
+    ? (cfgMap.individual_fee_min ?? 1_000_000)
+    : (cfgMap.membership_fee_min ?? 5_000_000)
+  const feeMax = isIndividual
+    ? (cfgMap.individual_fee_max ?? 2_000_000)
+    : (cfgMap.membership_fee_max ?? 10_000_000)
 
   if (amount !== feeMin && amount !== feeMax) {
     return NextResponse.json({ error: "Số tiền không hợp lệ" }, { status: 400 })
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { name: true, email: true },
-  })
-  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   // Idempotency: check for existing PENDING payment
   const existingPending = await prisma.payment.findFirst({

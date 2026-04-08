@@ -1,7 +1,5 @@
-export default function RegisterPage() {
-  return (
-    <div>
-      <h1>Đăng ký hội viên</h1>
-    </div>
-  )
+import { redirect } from "next/navigation"
+
+export default function RegisterRedirect() {
+  redirect("/dang-ky")
 }

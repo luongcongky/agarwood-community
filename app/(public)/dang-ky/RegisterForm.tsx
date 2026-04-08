@@ -1,0 +1,236 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { COMPANY_FIELDS } from "@/lib/constants/agarwood"
+
+type FormState = {
+  accountType: "BUSINESS" | "INDIVIDUAL"
+  name: string
+  email: string
+  phone: string
+  companyName: string
+  companyField: string
+  address: string
+  reason: string
+  honeypot: string
+}
+
+type FormErrors = Partial<Record<keyof FormState, string>>
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^(0|\+84)[0-9]{8,9}$/
+
+function validateField(name: keyof FormState, value: string, accountType?: string): string {
+  switch (name) {
+    case "name": return !value ? "Vui lòng nhập họ tên" : value.length < 2 ? "Tên tối thiểu 2 ký tự" : ""
+    case "email": return !value ? "Vui lòng nhập email" : !EMAIL_RE.test(value) ? "Email không hợp lệ" : ""
+    case "phone": return !value ? "Vui lòng nhập SĐT" : !PHONE_RE.test(value) ? "SĐT không hợp lệ" : ""
+    case "companyName": return accountType === "INDIVIDUAL" ? "" : !value ? "Vui lòng nhập tên doanh nghiệp" : ""
+    case "companyField": return accountType === "INDIVIDUAL" ? "" : !value ? "Vui lòng chọn lĩnh vực" : ""
+    case "reason": return !value ? "Vui lòng nhập lý do" : value.length < 10 ? "Tối thiểu 10 ký tự" : ""
+    default: return ""
+  }
+}
+
+export function RegisterForm() {
+  const [form, setForm] = useState<FormState>({
+    accountType: "BUSINESS",
+    name: "", email: "", phone: "", companyName: "",
+    companyField: "", address: "", reason: "", honeypot: "",
+  })
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [serverError, setServerError] = useState("")
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    const { name, value } = e.target
+    setForm(prev => ({ ...prev, [name]: value }))
+    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, form.accountType) }))
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    const { name, value } = e.target
+    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, form.accountType) }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setServerError("")
+
+    const required: (keyof FormState)[] = form.accountType === "BUSINESS"
+      ? ["name", "email", "phone", "companyName", "companyField", "reason"]
+      : ["name", "email", "phone", "reason"]
+    const newErrors: FormErrors = {}
+    let hasError = false
+    for (const field of required) {
+      const err = validateField(field, form[field], form.accountType)
+      if (err) { newErrors[field] = err; hasError = true }
+    }
+    if (hasError) { setErrors(newErrors); return }
+
+    setLoading(true)
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      if (res.ok) {
+        setSubmitted(true)
+      } else {
+        const data = await res.json()
+        setServerError(data.error ?? "Có lỗi xảy ra")
+      }
+    } catch {
+      setServerError("Không thể kết nối. Vui lòng thử lại.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-white rounded-2xl border border-brand-200 p-8 text-center space-y-4">
+        <div className="text-4xl">✅</div>
+        <h2 className="text-xl font-bold text-brand-900">Đã gửi đơn đăng ký!</h2>
+        <p className="text-sm text-brand-600">
+          Ban quản trị sẽ xem xét và phản hồi trong vòng <strong>3 ngày làm việc</strong>.
+        </p>
+        <p className="text-sm text-brand-500">
+          Email xác nhận đã được gửi đến <strong>{form.email}</strong>.
+        </p>
+        <Link href="/login" className="inline-block rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors">
+          Về trang đăng nhập
+        </Link>
+      </div>
+    )
+  }
+
+  const inputClass = "w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 placeholder:text-brand-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors"
+  const labelClass = "block text-sm font-medium text-brand-800 mb-1"
+  const errorClass = "text-xs text-red-600 mt-1"
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {serverError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{serverError}</div>
+      )}
+
+      {/* Account type selector */}
+      <div>
+        <p className={labelClass}>Bạn đăng ký với tư cách <span className="text-red-500">*</span></p>
+        <div className="grid grid-cols-2 gap-3 mt-1">
+          <button
+            type="button"
+            onClick={() => setForm(prev => ({ ...prev, accountType: "BUSINESS" }))}
+            className={cn(
+              "rounded-lg border-2 p-3 text-left transition-colors",
+              form.accountType === "BUSINESS" ? "border-brand-600 bg-brand-50" : "border-brand-200 hover:border-brand-400",
+            )}
+          >
+            <p className="font-semibold text-brand-900 text-sm">Doanh nghiệp</p>
+            <p className="text-xs text-brand-500 mt-0.5">Có công ty, sản phẩm, cần chứng nhận</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm(prev => ({ ...prev, accountType: "INDIVIDUAL" }))}
+            className={cn(
+              "rounded-lg border-2 p-3 text-left transition-colors",
+              form.accountType === "INDIVIDUAL" ? "border-brand-600 bg-brand-50" : "border-brand-200 hover:border-brand-400",
+            )}
+          >
+            <p className="font-semibold text-brand-900 text-sm">Cá nhân / Chuyên gia</p>
+            <p className="text-xs text-brand-500 mt-0.5">Kết nối, chia sẻ kinh nghiệm</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Honeypot */}
+      <input type="text" name="honeypot" value={form.honeypot} onChange={handleChange} className="hidden" tabIndex={-1} autoComplete="off" />
+
+      {/* Personal info */}
+      <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide">Thông tin cá nhân</p>
+
+      <div>
+        <label htmlFor="reg-name" className={labelClass}>Họ và tên <span className="text-red-500">*</span></label>
+        <input id="reg-name" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="Nguyễn Văn A" />
+        {errors.name && <p className={errorClass}>{errors.name}</p>}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="reg-email" className={labelClass}>Email <span className="text-red-500">*</span></label>
+          <input id="reg-email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="email@example.com" />
+          {errors.email && <p className={errorClass}>{errors.email}</p>}
+        </div>
+        <div>
+          <label htmlFor="reg-phone" className={labelClass}>Số điện thoại <span className="text-red-500">*</span></label>
+          <input id="reg-phone" name="phone" type="tel" value={form.phone} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="0901234567" />
+          {errors.phone && <p className={errorClass}>{errors.phone}</p>}
+        </div>
+      </div>
+
+      {/* Company info — only for BUSINESS */}
+      {form.accountType === "BUSINESS" && (
+        <>
+          <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide pt-2">Thông tin doanh nghiệp</p>
+
+          <div>
+            <label htmlFor="reg-companyName" className={labelClass}>Tên doanh nghiệp <span className="text-red-500">*</span></label>
+            <input id="reg-companyName" name="companyName" value={form.companyName} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="Trầm Hương ABC" />
+            {errors.companyName && <p className={errorClass}>{errors.companyName}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="reg-companyField" className={labelClass}>Lĩnh vực <span className="text-red-500">*</span></label>
+              <select id="reg-companyField" name="companyField" value={form.companyField} onChange={handleChange} onBlur={handleBlur} className={inputClass}>
+                <option value="">-- Chọn lĩnh vực --</option>
+                {COMPANY_FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              {errors.companyField && <p className={errorClass}>{errors.companyField}</p>}
+            </div>
+            <div>
+              <label htmlFor="reg-address" className={labelClass}>Địa chỉ</label>
+              <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Tỉnh / Thành phố" />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Expertise — only for INDIVIDUAL */}
+      {form.accountType === "INDIVIDUAL" && (
+        <div>
+          <label htmlFor="reg-address" className={labelClass}>Chuyên môn / Lĩnh vực quan tâm</label>
+          <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Ví dụ: Nghiên cứu trầm hương, Sưu tầm, Chế biến..." />
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="reg-reason" className={labelClass}>Lý do muốn gia nhập Hội <span className="text-red-500">*</span></label>
+        <textarea
+          id="reg-reason" name="reason" value={form.reason} onChange={handleChange} onBlur={handleBlur}
+          rows={3} className={cn(inputClass, "resize-none")}
+          placeholder="Chia sẻ lý do bạn muốn gia nhập và những đóng góp bạn mong muốn mang đến cho cộng đồng..."
+        />
+        {errors.reason && <p className={errorClass}>{errors.reason}</p>}
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full rounded-lg bg-brand-700 text-white font-semibold py-3 text-sm hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? "Đang gửi..." : "Nộp đơn đăng ký"}
+      </button>
+
+      <p className="text-center text-sm text-brand-500">
+        Đã có tài khoản?{" "}
+        <Link href="/login" className="text-brand-700 font-medium hover:underline">Đăng nhập</Link>
+      </p>
+    </form>
+  )
+}

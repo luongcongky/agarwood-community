@@ -26,8 +26,8 @@ test.describe("Public Pages", () => {
   })
 
   test("TC-PUB-05: Doanh nghiep profile /doanh-nghiep/[slug]", async ({ page }) => {
-    await page.goto("/doanh-nghiep/tram-huong-ha-noi")
-    await expect(page.getByRole("heading", { name: "Trầm Hương Hà Nội" })).toBeVisible()
+    await page.goto("/doanh-nghiep/tram-huong-khanh-hoa")
+    await expect(page.getByRole("heading", { name: "Trầm Hương Khánh Hòa" })).toBeVisible()
     // Tabs visible
     await expect(page.locator("text=Giới thiệu").first()).toBeVisible()
     await expect(page.locator("text=/Sản phẩm/").first()).toBeVisible()

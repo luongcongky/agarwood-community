@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier } from "@/lib/tier"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -24,11 +25,6 @@ function formatDate(d: Date) {
   return new Date(d).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
-function getMemberTier(c: number) {
-  if (c >= 20_000_000) return { label: "Hội viên Vàng", stars: 3, next: null, needMore: 0 }
-  if (c >= 10_000_000) return { label: "Hội viên Bạc", stars: 2, next: "Vàng", needMore: 20_000_000 - c }
-  return { label: "Hội viên", stars: 1, next: "Bạc", needMore: 10_000_000 - c }
-}
 
 export default async function PaymentHistoryPage() {
   const session = await auth()
@@ -54,12 +50,12 @@ export default async function PaymentHistoryPage() {
     }),
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { contributionTotal: true },
+      select: { contributionTotal: true, accountType: true },
     }),
   ])
 
   const contributionTotal = user?.contributionTotal ?? 0
-  const tier = getMemberTier(contributionTotal)
+  const tier = await getMemberTier(contributionTotal, (user?.accountType ?? "BUSINESS") as "BUSINESS" | "INDIVIDUAL")
   const totalPaid = payments
     .filter((p) => p.status === "SUCCESS")
     .reduce((sum, p) => sum + p.amount, 0)
@@ -72,7 +68,7 @@ export default async function PaymentHistoryPage() {
           ← Về trang gia hạn
         </Link>
       </div>
-      <h1 className="text-2xl font-heading font-bold text-brand-900">Lịch sử thanh toán</h1>
+      <h1 className="text-2xl font-bold text-brand-900">Lịch sử thanh toán</h1>
 
       {/* Payment list */}
       {payments.length === 0 ? (
@@ -156,7 +152,7 @@ export default async function PaymentHistoryPage() {
           <span className="text-sm font-semibold text-brand-900">{"★".repeat(tier.stars)} {tier.label}</span>
         </div>
         {tier.next && (
-          <p className="text-xs text-brand-400 pt-1 border-t border-brand-100">
+          <p className="text-xs text-brand-400 pt-1 border-t border-brand-200">
             Cần thêm <span className="font-semibold text-brand-700">{formatVND(tier.needMore)}</span> để đạt hạng ★{"★".repeat(tier.stars)} {tier.next}
           </p>
         )}

@@ -41,8 +41,18 @@ const SETTINGS_GROUPS = [
     ],
   },
   {
-    title: "Hạng hội viên",
-    description: "Ngưỡng đóng góp để thăng hạng",
+    title: "Phí & Hạng — Cá nhân / Chuyên gia",
+    description: "Áp dụng cho tài khoản loại Cá nhân (INDIVIDUAL)",
+    keys: [
+      { key: "individual_fee_min", label: "Phí tối thiểu (VND)", type: "number" },
+      { key: "individual_fee_max", label: "Phí tối đa (VND)", type: "number" },
+      { key: "individual_tier_silver", label: "Ngưỡng ★★ Bạc (VND)", type: "number" },
+      { key: "individual_tier_gold", label: "Ngưỡng ★★★ Vàng (VND)", type: "number" },
+    ],
+  },
+  {
+    title: "Hạng hội viên — Doanh nghiệp",
+    description: "Ngưỡng đóng góp để thăng hạng (tài khoản Doanh nghiệp)",
     keys: [
       { key: "tier_silver_threshold", label: "Ngưỡng ★★ Bạc (VND)", type: "number" },
       { key: "tier_gold_threshold", label: "Ngưỡng ★★★ Vàng (VND)", type: "number" },

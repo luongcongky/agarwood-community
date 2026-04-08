@@ -98,7 +98,7 @@ export default async function CertReviewPage({ params }: Props) {
                   Phương thức xét duyệt
                 </p>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${
                     cert.isOnlineReview
                       ? "bg-blue-100 text-blue-700"
                       : "bg-orange-100 text-orange-700"

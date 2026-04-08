@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMemberTier } from "@/lib/tier"
 import { redirect } from "next/navigation"
 import type { Metadata } from "next"
 import { RenewalClient } from "./RenewalClient"
@@ -14,6 +15,11 @@ export default async function GiaHanPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
+  const feeKeys = [
+    "membership_fee_min", "membership_fee_max",
+    "individual_fee_min", "individual_fee_max",
+  ]
+
   const [user, feeConfigs, totalVIP] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
@@ -21,6 +27,7 @@ export default async function GiaHanPage() {
         id: true,
         name: true,
         email: true,
+        accountType: true,
         membershipExpires: true,
         contributionTotal: true,
         displayPriority: true,
@@ -39,7 +46,7 @@ export default async function GiaHanPage() {
       },
     }),
     prisma.siteConfig.findMany({
-      where: { key: { in: ["membership_fee_min", "membership_fee_max"] } },
+      where: { key: { in: feeKeys } },
     }),
     prisma.user.count({ where: { role: "VIP" } }),
   ])
@@ -47,19 +54,21 @@ export default async function GiaHanPage() {
   if (!user) redirect("/login")
 
   const cfgMap = Object.fromEntries(feeConfigs.map((c) => [c.key, Number(c.value)]))
-  const feeMin = cfgMap.membership_fee_min ?? 5_000_000
-  const feeMax = cfgMap.membership_fee_max ?? 10_000_000
+
+  const isIndividual = user.accountType === "INDIVIDUAL"
+  const feeMin = isIndividual
+    ? (cfgMap.individual_fee_min ?? 1_000_000)
+    : (cfgMap.membership_fee_min ?? 5_000_000)
+  const feeMax = isIndividual
+    ? (cfgMap.individual_fee_max ?? 2_000_000)
+    : (cfgMap.membership_fee_max ?? 10_000_000)
 
   const daysLeft = user.membershipExpires
     ? Math.ceil((user.membershipExpires.getTime() - Date.now()) / 86400000)
     : 0
 
-  // Tier info
-  const contribution = user.contributionTotal
-  const tier =
-    contribution >= 20_000_000 ? { label: "Hội viên Vàng", stars: 3 } :
-    contribution >= 10_000_000 ? { label: "Hội viên Bạc", stars: 2 } :
-                                 { label: "Hội viên", stars: 1 }
+  // Tier info — pass accountType for correct thresholds
+  const tier = await getMemberTier(user.contributionTotal, user.accountType as "BUSINESS" | "INDIVIDUAL")
 
   // Generate initials for CK description
   const initials = user.name
@@ -72,6 +81,7 @@ export default async function GiaHanPage() {
     <RenewalClient
       name={user.name}
       initials={initials}
+      accountType={user.accountType}
       membershipExpires={user.membershipExpires?.toISOString() ?? null}
       daysLeft={daysLeft}
       contributionTotal={user.contributionTotal}

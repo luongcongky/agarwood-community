@@ -6,7 +6,7 @@ test.describe("VIP Pages", () => {
     await login(page, VIP_A.email, VIP_A.password)
     await page.goto("/tong-quan")
     // Should show greeting + name
-    await expect(page.getByRole("heading", { name: /Nguyễn Văn A/ })).toBeVisible()
+    await expect(page.getByRole("heading", { name: /Trần Khánh Hòa/ })).toBeVisible()
     // Should show stat cards
     await expect(page.locator("text=Membership")).toBeVisible()
     await expect(page.locator("text=Bài viết").first()).toBeVisible()
@@ -38,15 +38,15 @@ test.describe("VIP Pages", () => {
 
   test("TC-VIP-05: Doanh nghiep cua minh co nut Chinh sua", async ({ page }) => {
     await login(page, VIP_A.email, VIP_A.password)
-    await page.goto("/doanh-nghiep/tram-huong-ha-noi")
+    await page.goto("/doanh-nghiep/tram-huong-khanh-hoa")
     await expect(page.locator("text=Chỉnh sửa")).toBeVisible()
   })
 
   test("TC-VIP-06: Doanh nghiep cua nguoi khac KHONG co nut Chinh sua", async ({ page }) => {
     await login(page, VIP_A.email, VIP_A.password)
-    await page.goto("/doanh-nghiep/tram-huong-sai-gon")
+    await page.goto("/doanh-nghiep/tram-huong-quang-nam")
     // Page should load but no edit button in header
-    await expect(page.locator("text=Trầm Hương Sài Gòn")).toBeVisible()
+    await expect(page.locator("text=Trầm Hương Quảng Nam")).toBeVisible()
     const editButtons = page.locator('a:has-text("Chỉnh sửa")').filter({ hasText: "Chỉnh sửa" })
     await expect(editButtons).toHaveCount(0)
   })

@@ -31,7 +31,7 @@ export function NavMobile({ links, isLoggedIn }: NavMobileProps) {
       {/* w-full max-w-xs: full-width trên màn rất nhỏ, giới hạn 320px trở lên */}
       <SheetContent side="right" className="w-full max-w-xs bg-brand-900 border-brand-700 p-0">
         <SheetHeader className="px-6 py-5 border-b border-brand-700">
-          <SheetTitle className="text-brand-400 font-heading text-lg text-left">
+          <SheetTitle className="text-brand-400 text-lg text-left">
             Hội Trầm Hương VN
           </SheetTitle>
         </SheetHeader>
@@ -60,7 +60,7 @@ export function NavMobile({ links, isLoggedIn }: NavMobileProps) {
                 Đăng nhập
               </Link>
               <Link
-                href="/register"
+                href="/dang-ky"
                 onClick={() => setOpen(false)}
                 className="mt-1 px-4 py-3 rounded-md bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors text-base font-semibold text-center"
               >

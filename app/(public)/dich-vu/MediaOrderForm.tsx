@@ -205,7 +205,7 @@ export function MediaOrderForm() {
         <input id="order-targetKeywords" type="text" name="targetKeywords" value={form.targetKeywords} onChange={handleChange} placeholder="trầm hương tự nhiên, tinh dầu trầm hương..." className={inputClass} />
         <div className="flex flex-wrap gap-1.5 mt-2">
           {SEO_SUGGESTIONS.map((kw) => (
-            <button key={kw} type="button" onClick={() => addKeyword(kw)} className="text-xs bg-brand-50 text-brand-600 border border-brand-200 px-2 py-1 rounded-full hover:bg-brand-100 transition-colors">
+            <button key={kw} type="button" onClick={() => addKeyword(kw)} className="text-sm bg-brand-50 text-brand-600 border border-brand-200 px-3 py-1.5 rounded-full hover:bg-brand-100 transition-colors">
               + {kw}
             </button>
           ))}

@@ -160,7 +160,7 @@ export default async function AdminCertificationsPage({
                 <td className="px-4 py-3">
                   <span
                     className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      "inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium",
                       CERT_STATUS_CLASSES[cert.status]
                     )}
                   >
@@ -173,7 +173,7 @@ export default async function AdminCertificationsPage({
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/admin/chung-nhan/${cert.id}`}
-                    className="rounded-md border border-brand-300 px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+                    className="rounded-md border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
                   >
                     Xem xét
                   </Link>

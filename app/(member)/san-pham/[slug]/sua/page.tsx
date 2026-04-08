@@ -40,7 +40,7 @@ export default async function EditProductPage({
         <Link href={`/san-pham/${slug}`} className="text-brand-600 hover:text-brand-800 text-sm">
           ← Quay lại
         </Link>
-        <h1 className="text-2xl font-heading font-bold text-brand-900">Chỉnh sửa sản phẩm</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Chỉnh sửa sản phẩm</h1>
       </div>
       <ProductForm
         product={{

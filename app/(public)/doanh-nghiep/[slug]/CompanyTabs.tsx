@@ -108,7 +108,7 @@ export function CompanyTabs({
                   <Link
                     key={product.id}
                     href={`/san-pham/${product.slug}`}
-                    className="group block bg-white border border-brand-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    className="group block bg-white border border-brand-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                   >
                     <div className="relative aspect-square bg-brand-100">
                       {product.imageUrls.length > 0 ? (

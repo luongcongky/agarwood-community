@@ -11,7 +11,7 @@ export function Footer() {
           <div className="space-y-3 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
               <span className="text-2xl" aria-hidden>🌿</span>
-              <h3 className="font-heading text-brand-100 font-semibold text-lg">
+              <h3 className="text-brand-100 font-semibold text-lg">
                 Hội Trầm Hương Việt Nam
               </h3>
             </div>

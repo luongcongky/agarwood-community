@@ -177,7 +177,7 @@ export default async function AdminPaymentPage({
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <p className="font-semibold text-brand-900 text-sm">{p.user.name ?? "—"}</p>
-                    <p className="text-xs text-brand-400">{p.user.email}</p>
+                    <p className="text-sm text-brand-500">{p.user.email}</p>
                   </div>
                   <div className="text-right space-y-1">
                     <span className={cn("inline-flex text-xs font-semibold px-2.5 py-0.5 rounded-full", typeBadge.cls)}>
@@ -202,8 +202,8 @@ export default async function AdminPaymentPage({
                 )}
 
                 {/* Date + actions */}
-                <div className="flex items-end justify-between gap-3 pt-1 border-t border-brand-100 flex-wrap">
-                  <span className="text-xs text-brand-400">
+                <div className="flex items-end justify-between gap-3 pt-1 border-t border-brand-200 flex-wrap">
+                  <span className="text-sm text-brand-500">
                     Gửi: {formatDate(p.createdAt)} ({timeAgo(p.createdAt)})
                   </span>
                   <PaymentActionRow
@@ -231,7 +231,7 @@ export default async function AdminPaymentPage({
           <div className="bg-white border border-brand-200 rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-brand-100 text-xs text-brand-500 font-medium">
+                <tr className="border-b border-brand-200 text-xs text-brand-500 font-medium">
                   <th className="text-left px-4 py-3">Người dùng</th>
                   <th className="text-left px-4 py-3">Loại</th>
                   <th className="text-left px-4 py-3">Số tiền</th>
@@ -257,7 +257,7 @@ export default async function AdminPaymentPage({
                         <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", stBadge.cls)}>{stBadge.label}</span>
                         {p.failureReason && <p className="text-xs text-red-500 mt-1 max-w-xs truncate" title={p.failureReason}>Lý do: {p.failureReason}</p>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-brand-400 whitespace-nowrap">{formatDate(p.createdAt)}</td>
+                      <td className="px-4 py-3 text-sm text-brand-500 whitespace-nowrap">{formatDate(p.createdAt)}</td>
                     </tr>
                   )
                 })}

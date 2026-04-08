@@ -160,7 +160,7 @@ export default async function CertifiedProductsPage({
 
       {/* ── Tầng 1: Page Banner ──────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="font-heading text-3xl sm:text-4xl font-bold text-brand-100">
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
           Sản phẩm được Chứng nhận
         </h1>
         <p className="mt-2 text-brand-300 text-base">

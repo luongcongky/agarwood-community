@@ -26,6 +26,7 @@ export async function GET(request: Request) {
           name: true,
           avatarUrl: true,
           role: true,
+          accountType: true,
           contributionTotal: true,
           company: { select: { name: true, slug: true } },
         },

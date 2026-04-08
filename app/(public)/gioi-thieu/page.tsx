@@ -64,13 +64,6 @@ export default function GioiThieuPage() {
       {/* ── Hero ── */}
       <section className="bg-brand-800 text-white py-16">
         <div className="mx-auto max-w-4xl px-4">
-          <nav className="mb-4 text-sm text-brand-300" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-white">
-              Trang chủ
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-white">Giới thiệu</span>
-          </nav>
           <h1 className="text-3xl font-bold sm:text-4xl">
             Về Hội Trầm Hương Việt Nam
           </h1>
@@ -86,7 +79,7 @@ export default function GioiThieuPage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid gap-8 md:grid-cols-3">
             {/* Lịch sử */}
-            <div className="rounded-xl border border-brand-100 bg-brand-50 p-8">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">📜</div>
               <h2 className="text-lg font-bold text-brand-900">
                 Lịch sử hình thành
@@ -101,7 +94,7 @@ export default function GioiThieuPage() {
             </div>
 
             {/* Sứ mệnh */}
-            <div className="rounded-xl border border-brand-100 bg-brand-50 p-8">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">🎯</div>
               <h2 className="text-lg font-bold text-brand-900">Sứ mệnh</h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
@@ -114,7 +107,7 @@ export default function GioiThieuPage() {
             </div>
 
             {/* Tầm nhìn */}
-            <div className="rounded-xl border border-brand-100 bg-brand-50 p-8">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">🌏</div>
               <h2 className="text-lg font-bold text-brand-900">Tầm nhìn</h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
@@ -215,9 +208,9 @@ export default function GioiThieuPage() {
             ].map((benefit) => (
               <div
                 key={benefit.title}
-                className="flex gap-4 rounded-xl border border-brand-100 bg-brand-50 p-6"
+                className="flex gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6"
               >
-                <span className="flex-shrink-0 text-2xl">{benefit.icon}</span>
+                <span className="shrink-0 text-2xl">{benefit.icon}</span>
                 <div>
                   <h3 className="font-semibold text-brand-900">
                     {benefit.title}
@@ -282,7 +275,7 @@ export default function GioiThieuPage() {
           <h2 className="mb-8 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Địa chỉ trụ sở
           </h2>
-          <div className="overflow-hidden rounded-xl border border-brand-100 shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-brand-200 shadow-sm">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125411.87690118406!2d106.62966155!3d10.7544272!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f4670702e31%3A0xa25c43e2beaadca4!2zVFAuIEjhu5MgQ2jDrSBNaW5o!5e0!3m2!1svi!2svn!4v1700000000000"
               width="100%"
@@ -293,7 +286,7 @@ export default function GioiThieuPage() {
               title="Bản đồ Hội Trầm Hương Việt Nam"
             />
           </div>
-          <div className="mt-6 rounded-xl border border-brand-100 bg-brand-50 p-6">
+          <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-6">
             <p className="font-semibold text-brand-900">
               Hội Trầm Hương Việt Nam
             </p>
@@ -321,7 +314,7 @@ export default function GioiThieuPage() {
           </p>
           <div className="mt-6">
             <Link
-              href="/register"
+              href="/dang-ky"
               className={cn(
                 "inline-flex items-center justify-center rounded-md",
                 "bg-brand-400 px-8 py-3 text-base font-semibold text-brand-900",
