@@ -43,10 +43,21 @@
 | Chung nhan san pham | ✓ | — |
 
 ### 1.3 Quy trinh dang ky
-1. Nguoi dang ky dien form tai /dang-ky (chon loai: Doanh nghiep hoac Ca nhan)
+
+**Cach 1 — Dang ky bang Google (nhanh):**
+1. Click "Dang ky bang Google" tai /dang-ky
+2. Chon tai khoan Google -> cap quyen
+3. He thong tao don dang ky tu dong (trang thai cho duyet)
+4. Ban quan tri xet duyet trong 3 ngay lam viec
+5. Neu duoc duyet: tai khoan chuyen thanh VIP, dang nhap bang Google
+
+**Cach 2 — Dang ky bang form:**
+1. Dien form tai /dang-ky (chon loai: Doanh nghiep hoac Ca nhan)
 2. Ban quan tri xet duyet trong 3 ngay lam viec
 3. Neu duoc duyet: gui email kich hoat tai khoan
 4. Hoi vien dat mat khau va dang nhap
+
+**Sau khi duoc duyet (ca 2 cach):**
 5. Dong phi membership thong qua chuyen khoan ngan hang
 6. Admin xac nhan chuyen khoan -> membership kich hoat
 

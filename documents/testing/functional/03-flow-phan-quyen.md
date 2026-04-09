@@ -120,6 +120,30 @@
 3. Dien form + submit
 4. **Kiem tra**: User tao voi accountType = INDIVIDUAL, KHONG co Company
 
+### TC-AUTH-17: Dang nhap bang Google — user moi
+1. Truy cap /login -> click "Dang nhap bang Google"
+2. Chon tai khoan Google chua co trong DB
+3. **Kiem tra**: User tao voi role GUEST, isActive = false
+4. **Kiem tra**: Redirect den /cho-duyet (trang cho duyet)
+5. **Kiem tra**: Admin nhan email thong bao "[Dang ky moi qua Google]"
+
+### TC-AUTH-18: Dang nhap bang Google — user da co
+1. Truy cap /login -> click "Dang nhap bang Google"
+2. Chon tai khoan Google co email trung voi VIP da active trong DB
+3. **Kiem tra**: Auto-link Google account, login thanh cong
+4. **Kiem tra**: Redirect den /tong-quan
+
+### TC-AUTH-19: Dang ky bang Google tai /dang-ky
+1. Truy cap /dang-ky -> click "Dang ky bang Google"
+2. Chon tai khoan Google moi
+3. **Kiem tra**: User tao voi role GUEST, redirect /cho-duyet
+4. **Kiem tra**: Trang cho duyet hien thong bao "1-3 ngay lam viec"
+
+### TC-AUTH-20: GUEST (Google) truy cap member route
+1. Dang nhap Google voi account chua duoc duyet (GUEST)
+2. Truy cap /tong-quan
+3. **Kiem tra**: Redirect den /cho-duyet (khong phai /register)
+
 ## Ket qua bo sung
 - [ ] TC-AUTH-11: PASS / FAIL
 - [ ] TC-AUTH-12: PASS / FAIL
@@ -127,3 +151,7 @@
 - [ ] TC-AUTH-14: PASS / FAIL
 - [ ] TC-AUTH-15: PASS / FAIL
 - [ ] TC-AUTH-16: PASS / FAIL
+- [ ] TC-AUTH-17: PASS / FAIL
+- [ ] TC-AUTH-18: PASS / FAIL
+- [ ] TC-AUTH-19: PASS / FAIL
+- [ ] TC-AUTH-20: PASS / FAIL

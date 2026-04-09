@@ -64,8 +64,9 @@ Moi sang mo trang `/admin`, ban se thay:
 | **Ca nhan / Chuyen gia (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan | Feed, ho so, tai lieu, gia han — KHONG co DN/SP/chung nhan |
 
 ### Duyet don dang ky
-- Tab "Cho duyet" hien cac don tu trang /dang-ky
-- Moi don hien: ten, email, loai tai khoan (DN/Ca nhan), ly do
+- Tab "Cho duyet" hien cac don tu trang /dang-ky va dang ky qua Google
+- Moi don hien: ten, email, loai tai khoan (DN/Ca nhan), ly do (neu co)
+- Don dang ky qua Google: co avatar Google, khong co ly do (admin lien he truc tiep neu can)
 - Click "Duyet" → chuyen role GUEST → VIP, gui email kich hoat
 - Click "Tu choi" → nhap ly do bat buoc, xoa tai khoan, gui email thong bao
 

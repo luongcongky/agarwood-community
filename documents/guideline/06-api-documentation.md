@@ -10,10 +10,16 @@
 
 Tat ca API yeu cau auth su dung NextAuth session cookie. Gui cookie trong moi request.
 
+### Auth Providers
+| Provider | Endpoint | Ghi chu |
+|----------|---------|---------|
+| Google OAuth | `/api/auth/callback/google` | Dang nhap / dang ky nhanh, auto-link email trung |
+| Credentials | `/api/auth/callback/credentials` | Dang nhap bang email + mat khau |
+
 ### Roles
 | Role | Quyen |
 |------|------|
-| GUEST | Chi doc (han che) |
+| GUEST | Cho duyet — chua truy cap duoc cac tinh nang VIP |
 | VIP | Doc + ghi (bai viet, san pham, chung nhan) |
 | ADMIN | Toan quyen |
 

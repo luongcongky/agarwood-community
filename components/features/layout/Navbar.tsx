@@ -104,6 +104,7 @@ export async function Navbar() {
                 email={user.email}
                 image={user.image}
                 role={user.role}
+                accountType={accountType}
               />
             ) : (
               <div className="hidden md:flex items-center gap-2">

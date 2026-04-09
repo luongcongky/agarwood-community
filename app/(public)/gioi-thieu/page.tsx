@@ -250,20 +250,24 @@ export default function GioiThieuPage() {
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* Three departments */}
-            <div className="flex flex-col items-center gap-4 w-full sm:flex-row sm:justify-center sm:gap-8">
-              {[
-                "Ban kiểm tra",
-                "Ban thư ký",
-                "Các ban chuyên môn",
-              ].map((dept) => (
-                <div key={dept} className="flex flex-col items-center gap-0">
-                  <div className="h-8 w-px bg-brand-400" />
-                  <div className="rounded-lg border border-brand-300 bg-white px-5 py-2.5 text-center text-sm font-medium text-brand-800 shadow-sm">
-                    {dept}
+            {/* Three departments — always horizontal */}
+            <div className="relative w-full max-w-xl mx-auto">
+              {/* Horizontal connector line */}
+              <div
+                className="absolute top-0 h-0.5 bg-brand-400"
+                style={{ left: "calc(100% / 6)", right: "calc(100% / 6)" }}
+              />
+
+              <div className="grid grid-cols-3">
+                {["Ban kiểm tra", "Ban thư ký", "Các ban chuyên môn"].map((dept) => (
+                  <div key={dept} className="flex flex-col items-center">
+                    <div className="h-8 w-px bg-brand-400" />
+                    <div className="rounded-lg border border-brand-300 bg-white px-3 sm:px-5 py-2 sm:py-2.5 text-center text-xs sm:text-sm font-medium text-brand-800 shadow-sm">
+                      {dept}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>

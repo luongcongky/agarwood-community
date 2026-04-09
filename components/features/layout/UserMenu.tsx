@@ -21,6 +21,7 @@ interface UserMenuProps {
   email: string | null | undefined
   image: string | null | undefined
   role: Role
+  accountType?: string | null
 }
 
 const roleLabel: Record<Role, string> = {
@@ -35,7 +36,7 @@ const roleBadgeClass: Record<Role, string> = {
   ADMIN: "bg-primary text-primary-foreground",
 }
 
-export function UserMenu({ name, email, image, role }: UserMenuProps) {
+export function UserMenu({ name, email, image, role, accountType }: UserMenuProps) {
   const router = useRouter()
   const initials = name?.trim() 
     ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
@@ -68,13 +69,20 @@ export function UserMenu({ name, email, image, role }: UserMenuProps) {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={() => router.push("/company")}>
+        <DropdownMenuItem onClick={() => router.push("/ho-so")}>
           <User className="mr-2 h-4 w-4" />
-          Hồ sơ doanh nghiệp
+          Hồ sơ cá nhân
         </DropdownMenuItem>
 
+        {role === "VIP" && accountType === "BUSINESS" && (
+          <DropdownMenuItem onClick={() => router.push("/doanh-nghiep-cua-toi")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Hồ sơ doanh nghiệp
+          </DropdownMenuItem>
+        )}
+
         {role === "ADMIN" && (
-          <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+          <DropdownMenuItem onClick={() => router.push("/admin")}>
             <Settings className="mr-2 h-4 w-4" />
             Trang quản trị
           </DropdownMenuItem>

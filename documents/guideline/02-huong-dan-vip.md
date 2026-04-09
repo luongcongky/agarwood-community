@@ -39,9 +39,24 @@ He thong co 2 loai tai khoan hoi vien:
 
 ---
 
-## 1. Dang nhap lan dau
+## 1. Dang nhap
 
-### Neu ban nhan email moi:
+He thong ho tro 2 cach dang nhap:
+
+### Cach 1: Dang nhap bang Google (khuyen dung)
+1. Truy cap: `https://[domain]/login`
+2. Click "Dang nhap bang Google"
+3. Chon tai khoan Google cua ban -> cap quyen
+4. He thong tu dong dang nhap va dua ban den trang Tong quan
+
+> **Uu diem**: Khong can nho mat khau, bao mat hon (dung bao mat Google 2FA).
+
+### Cach 2: Dang nhap bang email + mat khau
+1. Truy cap: `https://[domain]/login`
+2. Nhap email va mat khau
+3. Click "Dang nhap"
+
+### Dang nhap lan dau (email moi tu admin):
 1. Mo email tu "Hoi Tram Huong Viet Nam"
 2. Click nut "Dat mat khau & Kich hoat tai khoan"
 3. He thong xac minh link — neu hop le, hien form dat mat khau
@@ -51,10 +66,12 @@ He thong co 2 loai tai khoan hoi vien:
 
 > **Luu y**: Link trong email chi co hieu luc 48 gio. Neu het han, lien he ban quan tri de gui lai.
 
-### Neu ban nhan mat khau tu admin:
+### Dang nhap lan dau (mat khau tu admin):
 1. Truy cap: `https://[domain]/login`
 2. Nhap email va mat khau duoc cung cap
 3. Sau khi dang nhap, nen doi mat khau tai trang Ho so
+
+> **Meo**: Sau khi co tai khoan, ban co the lien ket Google de dang nhap nhanh hon. Chi can click "Dang nhap bang Google" voi email trung voi tai khoan VIP.
 
 ---
 

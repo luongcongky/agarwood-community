@@ -19,7 +19,11 @@
       "Bash(grep -l \"POST\\\\|PATCH\\\\|PUT\" /c/DATA/Projects/agarwood-community/app/api/**/route.ts)",
       "Bash(grep -rL \"revalidate\" app/\\\\\\(public\\\\\\)/*/page.tsx app/\\\\\\(public\\\\\\)/*/*/page.tsx)",
       "Bash(npx playwright:*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(MIGRATE_TARGET=supabase npx prisma migrate deploy)",
+      "WebFetch(domain:skills.sh)",
+      "Bash(npx skills:*)",
+      "Bash(find app:*)"
     ]
   }
 }

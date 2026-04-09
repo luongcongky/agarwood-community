@@ -136,9 +136,29 @@ Document (Google Drive)
 
 ### JWT Strategy
 - `lib/auth.config.ts`: Edge-safe config dung trong proxy.ts
-- `lib/auth.ts`: Full config voi Prisma adapter + credentials provider
+- `lib/auth.ts`: Full config voi Prisma adapter + 2 providers
 - JWT chua: userId, role, membershipExpires
 - maxAge: 30 ngay
+
+### Auth Providers
+| Provider | Muc dich | Ghi chu |
+|----------|---------|---------|
+| Google OAuth | Dang nhap / Dang ky nhanh | Khong can nho mat khau, auto-link neu email trung |
+| Credentials | Dang nhap bang email + mat khau | Flow truyen thong, dung cho invite email + reset password |
+
+**Google OAuth flow:**
+1. User click "Dang nhap bang Google" → Google consent screen
+2. Email da ton tai trong DB → auto-link Google account → login OK
+3. Email moi → tao user GUEST (isActive: false) → email admin → redirect /cho-duyet
+4. Admin duyet → role GUEST → VIP → user login Google lan sau → /tong-quan
+
+**Env vars can thiet:**
+```
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxx
+```
+> Tao tai Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs.
+> Redirect URI: `https://[domain]/api/auth/callback/google`
 
 ### Route Protection (proxy.ts)
 ```
@@ -151,14 +171,15 @@ ADMIN_PREFIXES (chi ADMIN):
   /dashboard, /members, /certifications, /media-orders, /admin
 
 AUTH_PATHS (redirect neu da login):
-  /login, /register, /dat-mat-khau
+  /login, /register, /dat-mat-khau, /dang-ky, /cho-duyet
 ```
 
 ### Logic:
-- Guest truy cap MEMBER route -> redirect /login
+- Guest truy cap MEMBER route -> redirect /cho-duyet
+- GUEST da login truy cap auth route -> redirect /cho-duyet (tru /cho-duyet)
 - VIP truy cap ADMIN route -> redirect /
 - VIP membership het han truy cap MEMBER route -> redirect /membership-expired
-- Da login truy cap /login -> redirect /admin hoac /tong-quan
+- VIP/ADMIN da login truy cap /login -> redirect /admin hoac /tong-quan
 
 ---
 
@@ -206,6 +227,7 @@ MIGRATE_TARGET=supabase npx prisma migrate deploy  # Production
 | Admin tao VIP (invite) | VIP | Chao mung gia nhap |
 | Admin resend invite | VIP | Kich hoat tai khoan |
 | Admin reset password | VIP | Dat lai mat khau |
+| User dang ky qua Google | Admin | [Dang ky moi qua Google] Ten |
 | VIP xac nhan CK membership | Admin | [Hoi TH] Ten vua CK Xd |
 | Admin confirm payment | VIP | Membership da kich hoat |
 | Admin reject payment | VIP | CK bi tu choi + ly do |

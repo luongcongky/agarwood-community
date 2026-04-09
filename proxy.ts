@@ -35,7 +35,7 @@ const ADMIN_PREFIXES = [
 ]
 
 /** Redirect sang feed/dashboard nếu đã đăng nhập */
-const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau", "/dang-ky"]
+const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau", "/dang-ky", "/cho-duyet"]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +58,10 @@ export const proxy = auth((req) => {
   // ── 1. Auth routes: redirect nếu đã đăng nhập ──────────────────────────
   if (AUTH_PATHS.includes(pathname)) {
     if (session) {
+      // GUEST chờ duyệt — cho xem /cho-duyet, không redirect đi chỗ khác
+      if (role === "GUEST" && pathname === "/cho-duyet") return NextResponse.next()
+      if (role === "GUEST") return NextResponse.redirect(new URL("/cho-duyet", req.url))
+
       const dest = role === "ADMIN" ? "/admin" : "/tong-quan"
       return NextResponse.redirect(new URL(dest, req.url))
     }
@@ -81,8 +85,8 @@ export const proxy = auth((req) => {
       return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
     }
     if (role === "GUEST") {
-      // Đã đăng nhập nhưng chưa là hội viên
-      return NextResponse.redirect(new URL("/register", req.url))
+      // Đã đăng nhập nhưng chưa được duyệt — chờ admin approve
+      return NextResponse.redirect(new URL("/cho-duyet", req.url))
     }
     if (role === "VIP" && !isMembershipValid(membershipExpires)) {
       // Hội viên hết hạn — cần gia hạn

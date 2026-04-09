@@ -66,8 +66,9 @@ type FeedClientProps = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime()
+function timeAgo(dateStr: string, now: number): string {
+  if (now === 0) return "" // Return empty during SSR/hydration to avoid mismatch
+  const diffMs = now - new Date(dateStr).getTime()
   const mins = Math.floor(diffMs / 60000)
   if (mins < 1) return "Vừa xong"
   if (mins < 60) return `${mins} phút trước`
@@ -97,12 +98,6 @@ function getTierBadge(
   return { label: "★", cls: "bg-brand-200 text-brand-800" }
 }
 
-function formatContribution(amount: number) {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}k`
-  return String(amount)
-}
-
 const GUEST_VISIBLE_COUNT = 3
 
 // ── PostCard ─────────────────────────────────────────────────────────────────
@@ -112,6 +107,8 @@ function PostCard({
   currentUserId,
   currentUserRole,
   index,
+  isMounted,
+  now,
   onReact,
   onLock,
   onDelete,
@@ -131,6 +128,8 @@ function PostCard({
   tierGold?: number
   tierIndSilver?: number
   tierIndGold?: number
+  isMounted: boolean
+  now: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -138,8 +137,9 @@ function PostCard({
   const userHasReacted = post.reactions.some((r) => r.type === "LIKE")
   const isAuthor = currentUserId === post.authorId
   const isAdmin = currentUserRole === "ADMIN"
-  const isGuest = !currentUserRole
-  const isGuestBlurred = isGuest && index >= GUEST_VISIBLE_COUNT
+  const isGuest = !currentUserRole || currentUserRole === "GUEST"
+  // On server, always assume blurred for safety and to match initial client render
+  const isGuestBlurred = (!isMounted || isGuest) && index >= GUEST_VISIBLE_COUNT
 
   const tier = getTierBadge(post.author.contributionTotal, post.author.accountType, tierSilver, tierGold, tierIndSilver, tierIndGold)
 
@@ -210,7 +210,9 @@ function PostCard({
               <span className={cn("text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none", tier.cls)}>
                 {tier.label}
               </span>
-              <span className="text-xs text-brand-400">{timeAgo(post.createdAt)}</span>
+              <span className="text-xs text-brand-400" suppressHydrationWarning>
+                {timeAgo(post.createdAt, now)}
+              </span>
             </div>
           </div>
         </div>
@@ -259,7 +261,7 @@ function PostCard({
 
       {/* Content — blurred for guests after GUEST_VISIBLE_COUNT */}
       {isGuestBlurred ? (
-        <div className="relative mb-3">
+        <div className="relative mb-3" suppressHydrationWarning>
           <div className="line-clamp-3 text-sm text-brand-800 blur-sm select-none">{plainText}</div>
           <div className="absolute inset-0 flex items-center justify-center">
             <Link
@@ -273,7 +275,7 @@ function PostCard({
       ) : isLocked && !isAdmin ? (
         <p className="text-sm text-brand-400 italic mb-3">Nội dung đã bị ẩn do vi phạm quy định.</p>
       ) : (
-        <div className="mb-3">
+        <div className="mb-3" suppressHydrationWarning>
           <div
             className={cn(
               "text-sm text-brand-800 prose prose-sm max-w-none",
@@ -328,13 +330,13 @@ function PostCard({
 
 // ── Membership Card ──────────────────────────────────────────────────────────
 
-function MembershipCard({ info }: { info: MembershipInfo }) {
+function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
   const expires = info.expires ? new Date(info.expires) : null
-  const daysLeft = expires ? Math.max(0, Math.ceil((expires.getTime() - Date.now()) / 86400000)) : 0
-  const isActive = expires ? expires > new Date() : false
+  const daysLeft = expires && now ? Math.max(0, Math.ceil((expires.getTime() - now) / 86400000)) : 0
+  const isActive = expires && now ? expires.getTime() > now : false
 
   return (
-    <div className="bg-linear-to-br from-brand-800 to-brand-700 text-white rounded-xl p-4 space-y-3">
+    <div className="bg-linear-to-br from-brand-800 to-brand-700 text-white rounded-xl p-4 space-y-3" suppressHydrationWarning>
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-brand-200">Hội viên VIP</span>
         <span className={cn("text-xs font-semibold rounded-full px-2 py-0.5", isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300")}>
@@ -378,8 +380,15 @@ export function FeedClient({
   tierIndSilver,
   tierIndGold,
 }: FeedClientProps) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [hasMore, setHasMore] = useState(initialPosts.length >= 20)
+
+  useEffect(() => {
+    setNow(Date.now())
+    setIsMounted(true)
+  }, [])
   const [loading, setLoading] = useState(false)
   const observerRef = useRef<HTMLDivElement>(null)
   const cursorRef = useRef<string | null>(initialPosts.at(-1)?.id ?? null)
@@ -463,7 +472,8 @@ export function FeedClient({
   }
 
   const isLoggedIn = !!currentUserId
-  const canPost = currentUserRole === "VIP" || currentUserRole === "ADMIN"
+  const isMember = currentUserRole === "VIP" || currentUserRole === "ADMIN"
+  const canPost = isMember
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -510,6 +520,8 @@ export function FeedClient({
             tierGold={tierGold}
             tierIndSilver={tierIndSilver}
             tierIndGold={tierIndGold}
+            isMounted={isMounted}
+            now={now}
           />
         ))}
 
@@ -526,17 +538,23 @@ export function FeedClient({
 
       {/* ── Sidebar ────────────────────────────────────────────────────── */}
       <aside className="w-full lg:w-80 shrink-0 space-y-4 hidden lg:block">
-        {!isLoggedIn ? (
+        {!isMember ? (
           <div className="bg-white rounded-xl border border-brand-200 p-5 space-y-3">
             <h3 className="font-semibold text-brand-900 text-sm">Tham gia Hội Trầm Hương</h3>
-            <p className="text-xs text-brand-400">Đăng nhập để tương tác, đăng bài và nhận quyền lợi VIP.</p>
-            <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors">
-              Đăng nhập
-            </Link>
+            <p className="text-xs text-brand-400">
+              {isLoggedIn
+                ? "Tài khoản đang chờ duyệt. Bạn sẽ nhận email khi được phê duyệt."
+                : "Đăng nhập để tương tác, đăng bài và nhận quyền lợi VIP."}
+            </p>
+            {!isLoggedIn && (
+              <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors">
+                Đăng nhập
+              </Link>
+            )}
           </div>
         ) : (
           <>
-            {membershipInfo && <MembershipCard info={membershipInfo} />}
+            {membershipInfo && <MembershipCard info={membershipInfo} now={now} />}
             {canPost && (
               <Link
                 href="/feed/tao-bai"

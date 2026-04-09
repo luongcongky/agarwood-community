@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
@@ -13,12 +14,109 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig.callbacks,
 
     /**
+     * Control whether a sign-in is allowed.
+     * For OAuth (Google): allow sign-in, handle new users in jwt callback.
+     * For Credentials: handled in authorize().
+     */
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user?.email) {
+        // Check if user exists
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true, isActive: true, role: true },
+        })
+
+        if (dbUser) {
+          // Existing user — allow if active, or if GUEST (pending approval)
+          if (!dbUser.isActive && dbUser.role !== "GUEST") return false
+
+          // Link Google account to existing user if not already linked
+          const existingAccount = await prisma.account.findFirst({
+            where: { userId: dbUser.id, provider: "google" },
+          })
+          if (!existingAccount && account.providerAccountId) {
+            await prisma.account.create({
+              data: {
+                userId: dbUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            })
+          }
+          return true
+        }
+
+        // New user — create GUEST (pending admin approval)
+        const newUser = await prisma.user.create({
+          data: {
+            email: user.email,
+            name: user.name ?? user.email.split("@")[0],
+            avatarUrl: user.image ?? null,
+            role: "GUEST",
+            accountType: "BUSINESS",
+            isActive: false,
+            accounts: {
+              create: {
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token,
+                expires_at: account.expires_at,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+              },
+            },
+          },
+        })
+
+        // Notify admin
+        try {
+          const { Resend } = await import("resend")
+          const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
+          const adminEmail = (await prisma.siteConfig.findUnique({ where: { key: "association_email" } }))?.value ?? "admin@hoitramhuong.vn"
+          await resend.emails.send({
+            from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
+            to: adminEmail,
+            subject: `[Đăng ký mới qua Google] ${user.name ?? user.email}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:600px;">
+                <h3>Đơn đăng ký hội viên mới (Google)</h3>
+                <p><strong>Họ tên:</strong> ${user.name}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <p><strong>Avatar:</strong> <img src="${user.image}" width="40" height="40" style="border-radius:50%;" /></p>
+                <p style="color:#888;">Người dùng đăng ký qua Google OAuth. Cần duyệt tại trang quản lý hội viên.</p>
+                <p><a href="${process.env.NEXTAUTH_URL}/admin/hoi-vien?status=registration" style="display:inline-block;background:#1a5632;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Xem đơn đăng ký</a></p>
+              </div>
+            `,
+          })
+        } catch (err) {
+          console.error("Failed to send Google registration notification:", err)
+        }
+
+        // Override user.id so NextAuth links to our DB user, not create a new one
+        user.id = newUser.id
+        return true
+      }
+
+      return true // Credentials handled in authorize()
+    },
+
+    /**
      * Runs server-side on sign-in and on JWT refresh.
      * Embeds role + membershipExpires into the JWT so middleware
      * can check them without a DB round-trip (Edge-safe).
      */
-    async jwt({ token, user }) {
-      // `user` is only present on the first sign-in
+    async jwt({ token, user, account }) {
+      // On first sign-in (user is present)
       if (user?.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
@@ -29,6 +127,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
         }
       }
+
+      // For Google OAuth new users, ensure we use the DB user id
+      if (account?.provider === "google" && user?.email && !user.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true, role: true, membershipExpires: true },
+        })
+        if (dbUser) {
+          token.sub = dbUser.id
+          token.role = dbUser.role
+          token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+        }
+      }
+
       return token
     },
 
@@ -47,6 +159,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   providers: [
     ...authConfig.providers,
+
+    // Google OAuth
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
+          }),
+        ]
+      : []),
+
     Credentials({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
