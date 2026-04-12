@@ -1,8 +1,8 @@
 # Huong dan van hanh danh cho Admin
-## Hoi Tram Huong Viet Nam — Phien ban 2.0
+## Hoi Tram Huong Viet Nam — Phien ban 3.2
 
 > Tai lieu nay danh cho Ban Quan tri su dung he thong hang ngay.
-> Cap nhat lan cuoi: 04/2026
+> Cap nhat lan cuoi: 04/2026 (Phase 1-6 + Dieu le integration)
 
 ---
 
@@ -12,11 +12,15 @@
 2. [Quan ly hoi vien](#2-quan-ly-hoi-vien)
 3. [Xac nhan chuyen khoan](#3-xac-nhan-chuyen-khoan)
 4. [Xet duyet chung nhan san pham](#4-xet-duyet-chung-nhan-san-pham)
-5. [Xu ly bao cao vi pham](#5-xu-ly-bao-cao-vi-pham)
-6. [Quan ly tin tuc](#6-quan-ly-tin-tuc)
-7. [Quan ly don truyen thong](#7-quan-ly-don-truyen-thong)
-8. [Cai dat he thong](#8-cai-dat-he-thong)
-9. [Xu ly su co thuong gap](#9-xu-ly-su-co-thuong-gap)
+5. [Quan ly Tieu bieu — Top SP & DN (Phase 4)](#5-quan-ly-tieu-bieu-top-sp-va-dn-phase-4)
+6. [Xu ly bao cao vi pham](#6-xu-ly-bao-cao-vi-pham)
+7. [Quan ly tin tuc](#7-quan-ly-tin-tuc)
+8. [Quan ly don truyen thong](#8-quan-ly-don-truyen-thong)
+9. [Cai dat he thong](#9-cai-dat-he-thong)
+10. [Xu ly su co thuong gap](#10-xu-ly-su-co-thuong-gap)
+11. [Van ban phap quy (`/admin/phap-ly`)](#11-van-ban-phap-quy)
+12. [Don ket nap Hoi vien (`/admin/hoi-vien/don-ket-nap`)](#12-don-ket-nap-hoi-vien)
+13. [Che do xem (Public/Management mode)](#13-che-do-xem)
 
 ---
 
@@ -63,12 +67,15 @@ Moi sang mo trang `/admin`, ban se thay:
 | **Doanh nghiep (BUSINESS)** | Dai dien cong ty tram huong | Day du: DN, SP, chung nhan, feed, tai lieu |
 | **Ca nhan / Chuyen gia (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan | Feed, ho so, tai lieu, gia han — KHONG co DN/SP/chung nhan |
 
-### Duyet don dang ky
-- Tab "Cho duyet" hien cac don tu trang /dang-ky va dang ky qua Google
-- Moi don hien: ten, email, loai tai khoan (DN/Ca nhan), ly do (neu co)
-- Don dang ky qua Google: co avatar Google, khong co ly do (admin lien he truc tiep neu can)
-- Click "Duyet" → chuyen role GUEST → VIP, gui email kich hoat
-- Click "Tu choi" → nhap ly do bat buoc, xoa tai khoan, gui email thong bao
+### Tai khoan moi (Phase 2 — bo flow cho duyet)
+
+> **Quan trong**: Tu Phase 2, **khong con** tab "Cho duyet". User dang ky tu trang /dang-ky
+> hoac qua Google se duoc kich hoat tai khoan ngay (role GUEST), khong can admin can thiep.
+
+- User moi xuat hien o tab "Active" voi role GUEST
+- Admin van nhan email thong bao "[Dang ky moi]" de theo doi
+- Khi user dong phi membership → admin confirm CK → role tu dong nang len VIP
+- Vai tro admin: monitor + nang cap VIP, khong con la "gate keeper"
 
 ### Tao hoi vien moi (thu cong)
 1. Click "+ Tao hoi vien moi" (goc phai tren)
@@ -180,7 +187,54 @@ Moi sang mo trang `/admin`, ban se thay:
 
 ---
 
-## 5. Xu ly bao cao vi pham
+## 5. Quan ly Tieu bieu — Top SP va DN (Phase 4)
+
+Trang `/admin/tieu-bieu` cho phep admin chon (pin) cac san pham va doanh nghiep tieu bieu se hien thi
+o **trang chu** (carousel SP), **trang Quyen loi hoi vien** (top 10/20), va **trang San pham tieu bieu**.
+
+### Truy cap
+- Sidebar admin → "Tieu bieu" (icon ngoi sao)
+- Hoac URL: `/admin/tieu-bieu`
+
+### Stats card (dau trang)
+- "San pham tieu bieu: X / 20 da chon" — soft limit, public page chi render 20 dau tien
+- "Doanh nghiep tieu bieu: Y / 10 da chon"
+
+### Tab "San pham tieu bieu"
+Bang liet ke moi SP cua doanh nghiep VIP voi 5 cot:
+
+| Cot | Mo ta |
+|-----|-------|
+| Tieu bieu | Checkbox toggle pin/unpin (auto-save) |
+| Thu tu | Number input — nho hon = uu tien cao hon (1 = dau danh sach) |
+| San pham | Anh thumbnail + ten |
+| Doanh nghiep | Ten Company chu so huu |
+| Chung nhan | Badge "Da cap" neu cert APPROVED |
+
+**Cach pin san pham:**
+1. Tick checkbox "Tieu bieu" → row chuyen sang nen vang nhat, o "Thu tu" enable
+2. Nhap so thu tu (vd: 1, 2, 3...)
+3. Auto-save ngay (khong can click Luu)
+
+**Khi unpin** → tu dong xoa thu tu, row tro lai nen trang.
+
+### Tab "Doanh nghiep tieu bieu"
+Tuong tu, voi 5 cot: Tieu bieu / Thu tu / Doanh nghiep / Chu so huu / Xac minh.
+
+### Quy tac validation
+- **Chi pin SP/DN cua VIP**: Neu chu so huu khong phai VIP, API tra loi 400 va revert UI
+- Khi user bi downgrade tu VIP ve GUEST, cac SP/DN cua user do bi tu dong hide khoi public page (filter o query)
+
+### Cap nhat duoc nhin thay
+- Trang chu (`/`): carousel "San pham tieu bieu" cap nhat trong ~5 phut (cache invalidation)
+- Trang `/san-pham-tieu-bieu`: cap nhat trong ~10 phut
+- Trang `/landing`: top 10 DN va top 20 SP cap nhat trong ~10 phut
+
+> **Tip**: Pin nhung SP co anh dep va ten ngan goi de carousel trang chu nhin chuyen nghiep.
+
+---
+
+## 6. Xu ly bao cao vi pham
 
 ### Khi nao can xu ly
 - Dashboard hien canh bao khi co bao cao chua xu ly
@@ -203,24 +257,64 @@ Moi sang mo trang `/admin`, ban se thay:
 
 ---
 
-## 6. Quan ly tin tuc
+## 7. Quan ly tin tuc
 
 ### Dang tin tuc moi
 1. Truy cap: `/admin/tin-tuc`
 2. Click "+ Tao tin tuc"
 3. Dien: tieu de, slug (tu dong tao tu tieu de), tom tat, noi dung (rich text)
-4. Upload anh bia (tuy chon)
-5. Chon: Xuat ban ngay hoac Luu nhap
-6. Ghim tin quan trong len dau trang
+4. **Chon phan loai** (sidebar "Cai dat xuat ban"):
+   - **📰 Tin tuc** (`GENERAL`) → hien thi tren `/tin-tuc`
+   - **📚 Nghien cuu khoa hoc** (`RESEARCH`) → hien thi tren `/nghien-cuu`
+5. Upload anh bia (tuy chon)
+6. Chon: Xuat ban ngay hoac Luu nhap
+7. Ghim tin quan trong len dau trang
+
+### Editor TipTap — tinh nang moi (Phase 3.2)
+
+**Toolbar co dinh (sticky)**: Khi scroll bai dai, toolbar luon hien o top.
+
+**Text alignment**: 4 button ⇤ ⇔ ⇥ ☰ — canh trai/giua/phai/deu cho paragraph va heading.
+
+**Image actions**:
+1. **Click vao anh** → thay vien cam va 3 drag handles (phai, duoi, goc duoi-phai)
+2. **Drag handle** de resize:
+   - Handle phai: chi doi chieu ngang
+   - Handle duoi: chi doi chieu doc
+   - Handle goc: resize ca 2, giu ti le
+3. **Toolbar contextual** khi anh duoc chon:
+   - 🔗 **URL** — thay doi URL anh
+   - 📝 **Alt** — edit alt text (SEO + accessibility)
+   - 🗑 **Xoa anh**
+   - ↺ **Reset size** — ve kich thuoc goc
+4. **Canh anh** (⇤ ⇔ ⇥): chi thay hieu qua khi anh hep hon editor content area — neu anh full width, text-align khong co khong gian de dich chuyen
+
+### Import tu trang cu (chi chay 1 lan)
+
+Developer co the import data thuc tu `hoitramhuongvietnam.org` qua:
+```bash
+# News (48 bai bang-tin-hoi + 7 bai nghien cuu)
+npx tsx scripts/import-news-articles.ts
+npx tsx scripts/import-research-articles.ts
+npx tsx scripts/crawl-research-content.ts --category=GENERAL
+npx tsx scripts/crawl-research-content.ts --category=RESEARCH
+```
+Script crawl tu dong download images + upload Cloudinary + sanitize HTML.
 
 ### Chinh sua / Xoa tin tuc
 - Click "Chinh sua" tren tin can sua
-- Doi noi dung -> Luu
+- Doi noi dung + phan loai -> Luu
 - Click "Xoa" de xoa vinh vien (can than, khong the khoi phuc)
+
+### Filter theo phan loai
+Bo loc tren danh sach `/admin/tin-tuc`:
+- Tat ca (default)
+- 📰 Tin tuc (GENERAL)
+- 📚 Nghien cuu (RESEARCH)
 
 ---
 
-## 7. Quan ly don truyen thong
+## 8. Quan ly don truyen thong
 
 ### Tong quan CRM
 - Truy cap: `/admin/truyen-thong`
@@ -251,7 +345,7 @@ Moi sang mo trang `/admin`, ban se thay:
 
 ---
 
-## 8. Cai dat he thong
+## 9. Cai dat he thong
 
 ### Truy cap: `/admin/cai-dat`
 
@@ -259,6 +353,8 @@ Moi sang mo trang `/admin`, ban se thay:
 
 **Thong tin Hoi:**
 - Ten hoi, email, SDT, dia chi
+- **Link Facebook / Zalo OA** (Phase 1: hien icon FB tren navbar)
+- **Link kenh YouTube** (Phase 1: hien icon YT tren navbar)
 - Hien thi tren toan bo website, footer, email
 
 **Phi & Gioi han:**
@@ -279,7 +375,7 @@ Moi sang mo trang `/admin`, ban se thay:
 
 ---
 
-## 9. Xu ly su co thuong gap
+## 10. Xu ly su co thuong gap
 
 ### Hoi vien khong nhan duoc email moi
 1. Vao chi tiet hoi vien -> click "Gui lai email moi"
@@ -304,6 +400,149 @@ Moi sang mo trang `/admin`, ban se thay:
 ### Slot VIP day
 - Vao `/admin/cai-dat` -> tang "So slot VIP toi da"
 - Hoac vo hieu hoa tai khoan khong con hoat dong de giai phong slot
+
+### User phan nan "het quota khong dang bai duoc" (Phase 2)
+- Giai thich quota theo tier: GUEST 5 / VIP★ 15 / VIP★★ 30 / VIP★★★ ∞
+- Quota reset vao 0h ngay 1 hang thang
+- Khuyen user nang cap VIP de tang quota
+- Neu can override quota cho user cu the: chinh SiteConfig keys `quota_guest_monthly`, `quota_vip_1_monthly`, ... va luu
+
+### Trang chu khong thay san pham tieu bieu / DN tieu bieu
+- Vao `/admin/tieu-bieu` -> kiem tra so SP/DN da pin
+- Neu chua pin → trang chu se hien empty state
+- Neu da pin nhung trang chu chua cap nhat: doi ~5 phut (cache stale-while-revalidate)
+
+### Legacy user khong dang nhap duoc (loi AccessDenied)
+- Phase 2 auto-fix: legacy GUEST inactive (pre-Phase 2) se tu dong duoc kich hoat khi sign in lan dau
+- Neu user van bao loi: kiem tra `isActive` o `/admin/hoi-vien/[id]` -> click "Kich hoat"
+- Neu role la VIP/ADMIN va `isActive: false` → la admin chu dong vo hieu hoa, can kich hoat lai bang tay
+
+---
+
+---
+
+## 11. Van ban phap quy
+
+### Tong quan
+Trang `/admin/phap-ly` quan ly Dieu le, Quy che, Giay phep cua Hoi. File PDF
+luu Google Drive, metadata luu DB. Hien thi cong khai tai `/phap-ly`.
+
+### Bo cuc trang admin
+1. **Header** — link `/phap-ly` de xem cong khai
+2. **[1] Upload van ban moi** (collapse/expand) — form upload moi van ban:
+   - Phan loai: 📜 Dieu le / 📋 Quy che / 🏛️ Giay phep
+   - Thu tu hien thi (number)
+   - Tieu de (bat buoc)
+   - So van ban, Ngay ban hanh, Co quan ban hanh
+   - Mo ta ngan
+   - File PDF (max 20MB)
+3. **[2] Search bar** — tim theo ten hoac so hieu
+4. **[3-5] 3 section collapse** — Dieu le | Quy che | Giay phep:
+   - Moi card hien thi metadata + nut Xem/Sua/Xoa
+   - Sua inline (khong can reload)
+   - Xoa: ca Drive + DB
+
+### Them van ban moi
+1. Mo section "Upload van ban moi"
+2. Dien form day du
+3. Upload PDF
+4. He thong tu dong tao folder Drive neu chua co (VBPQ - Dieu le / Quy che / Giay phep)
+5. Tra ve URL Drive + luu vao DB
+
+### Sua van ban
+- Click "Sua" tren card → form inline hien ra
+- Doi metadata (title, documentNumber, issuedDate, issuer, description, sortOrder, isPublic)
+- Luu
+
+### Xoa van ban
+- Click "🗑" → confirm → xoa ca Drive + DB (best-effort Drive)
+
+### 8 van ban goc da duoc import
+Khi setup lan dau, admin chay:
+```bash
+npx tsx scripts/import-legal-documents.ts
+```
+Script tu dong download 8 PDF tu trang cu + upload Drive + tao records.
+Idempotent — chay lai se skip.
+
+> Giay phep Dai hoi khong co direct URL tren trang cu → admin upload thu cong.
+
+---
+
+## 12. Don ket nap Hoi vien
+
+### Tong quan
+Theo Dieu le, de duoc cong nhan la Hoi vien chinh thuc, user can nop don va
+duoc Ban Thuong vu xet duyet. Trang `/admin/hoi-vien/don-ket-nap` quan ly.
+
+### Sidebar — badge "Don ket nap"
+- Nav item co badge **do** hien so don chua duyet
+- 0 don pending → badge an
+
+### Bo cuc trang
+- **4 tabs**: Cho duyet | Da duyet | Tu choi | Tat ca
+- Tab "Cho duyet" hien badge count do ben canh
+- Moi don la 1 card full-width voi:
+  - Ten user + email + phone + company
+  - Loai tai khoan (Doanh nghiep/Ca nhan)
+  - Hang hien tai → Hang xin ket nap
+  - Nguoi dai dien (BUSINESS only)
+  - Ly do xin gia nhap (full text)
+  - Lich su: nop luc, duyet luc, reviewer
+
+### Duyet don (Approve)
+1. Click button "✓ Phe duyet"
+2. Form inline chon **finalCategory**:
+   - Chinh thuc (default, theo yeu cau user)
+   - Lien ket (override neu admin muon)
+   - Danh du
+3. Click "Xac nhan phe duyet"
+4. He thong:
+   - `user.memberCategory` cap nhat theo finalCategory
+   - Application → `APPROVED`
+   - Email chuc mung den user
+5. Don tu tab "Cho duyet" chuyen sang "Da duyet"
+
+### Tu choi don (Reject)
+1. Click button "✗ Tu choi"
+2. **Bat buoc** nhap ly do tu choi (textarea)
+3. Click "Xac nhan tu choi"
+4. He thong gui email voi ly do den user
+5. User co the nop lai don sau khi bo sung
+
+### Timeline theo Dieu le
+- Ban Thuong vu xet tai cuoc hop hang quy
+- Chu tich quyet dinh trong 30 ngay ke tu ngay nop day du
+- SLA: admin nen xu ly don PENDING trong **30 ngay**
+
+---
+
+## 13. Che do xem (Public/Management mode)
+
+### 2 che do xem
+He thong co 2 che do cho admin:
+
+| Che do | Menu hien thi | Khi nao |
+|--------|-------------|---------|
+| **Public** | Menu cong khai (Trang chu, Tin tuc, Nghien cuu, Doanh nghiep, San pham, Quyen loi) | Admin vao `/` hoac moi trang cong khai |
+| **Management** | Admin sidebar day du (Tong quan, Hoi vien, Chung nhan, Van ban phap quy, ...) | Admin vao `/admin/*` |
+
+### Chuyen giua 2 che do
+
+**Tu Public → Management**:
+1. O trang cong khai bat ky, click **avatar** (goc phai tren)
+2. Dropdown hien "**Vao trang quan tri**" → click → navigate `/admin`
+3. Sidebar hien ra, admin vao che do quan tri
+
+**Tu Management → Public**:
+1. O trang `/admin/*`, nhin sidebar trai
+2. O cuoi sidebar (sau Dang xuat) co nut **"Ve trang cong khai"** (highlighted)
+3. Click → navigate `/` → sidebar an, navbar cong khai hien
+
+### Tai sao 2 che do?
+- **Khong gay nham lan** — user cong khai thay menu nhu guest (trangki chu, tin tuc, ...)
+- **Admin co the xem website nhu khach** — de verify cong viec
+- **Khong bi khoa** — admin luon co the chuyen 2 chieu qua dropdown/sidebar
 
 ---
 

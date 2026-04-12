@@ -8,10 +8,15 @@ const { auth } = NextAuth(authConfig)
 
 // ── Route definitions ────────────────────────────────────────────────────────
 
-/** Chỉ VIP (còn hạn) + ADMIN mới vào được — /feed là public (guest xem blur) */
+/**
+ * Chỉ VIP (còn hạn) + ADMIN mới vào được.
+ *
+ * Phase 2: `/feed/tao-bai` đã được mở cho mọi user đăng nhập (kể cả GUEST).
+ * Quota tháng được enforce ở API layer (`POST /api/posts`), không phải proxy.
+ * Page tự check session và redirect /login nếu chưa đăng nhập.
+ */
 const MEMBER_PREFIXES = [
   "/tong-quan",
-  "/feed/tao-bai",
   "/company",
   "/doanh-nghiep-cua-toi",
   "/doanh-nghiep/chinh-sua",
@@ -23,6 +28,13 @@ const MEMBER_PREFIXES = [
   "/chung-nhan/lich-su",
   "/thanh-toan/lich-su",
   "/tai-lieu",
+]
+
+/** Routes mọi user đăng nhập đều vào được (kể cả GUEST), nhưng không cho khách lạ */
+const LOGGED_IN_PREFIXES = [
+  "/feed/tao-bai",
+  "/banner/dang-ky",   // Phase 6: mọi user đăng ký banner
+  "/banner/lich-su",   // Phase 6: xem lịch sử banner của mình
 ]
 
 /** Chỉ ADMIN mới vào được */
@@ -55,17 +67,28 @@ export const proxy = auth((req) => {
   const role = session?.user?.role as Role | undefined
   const membershipExpires = session?.user?.membershipExpires
 
+  // Attach pathname to response header để server component (Navbar)
+  // có thể đọc và quyết định mode
+  const passThrough = () => {
+    const res = NextResponse.next()
+    res.headers.set("x-pathname", pathname)
+    return res
+  }
+
   // ── 1. Auth routes: redirect nếu đã đăng nhập ──────────────────────────
   if (AUTH_PATHS.includes(pathname)) {
     if (session) {
-      // GUEST chờ duyệt — cho xem /cho-duyet, không redirect đi chỗ khác
-      if (role === "GUEST" && pathname === "/cho-duyet") return NextResponse.next()
-      if (role === "GUEST") return NextResponse.redirect(new URL("/cho-duyet", req.url))
+      // Phase 2: GUEST không còn bị "chờ duyệt" — họ là member tự do, post được ngay.
+      // /cho-duyet vẫn truy cập được nếu cần (legacy users), nhưng không bị force redirect.
+      if (pathname === "/cho-duyet") return NextResponse.next()
 
-      const dest = role === "ADMIN" ? "/admin" : "/tong-quan"
+      const dest =
+        role === "ADMIN" ? "/admin"
+        : role === "VIP" ? "/tong-quan"
+        : "/feed"
       return NextResponse.redirect(new URL(dest, req.url))
     }
-    return NextResponse.next()
+    return passThrough()
   }
 
   // ── 2. Admin routes: chỉ ADMIN ─────────────────────────────────────────
@@ -76,7 +99,7 @@ export const proxy = auth((req) => {
     if (role !== "ADMIN") {
       return NextResponse.redirect(new URL("/", req.url))
     }
-    return NextResponse.next()
+    return passThrough()
   }
 
   // ── 3. Member routes: VIP (còn hạn) + ADMIN ────────────────────────────
@@ -85,18 +108,26 @@ export const proxy = auth((req) => {
       return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
     }
     if (role === "GUEST") {
-      // Đã đăng nhập nhưng chưa được duyệt — chờ admin approve
-      return NextResponse.redirect(new URL("/cho-duyet", req.url))
+      // GUEST không có quyền vào VIP-only routes — hướng tới landing page nâng cấp VIP
+      return NextResponse.redirect(new URL("/landing", req.url))
     }
     if (role === "VIP" && !isMembershipValid(membershipExpires)) {
       // Hội viên hết hạn — cần gia hạn
       return NextResponse.redirect(new URL("/membership-expired", req.url))
     }
-    return NextResponse.next()
+    return passThrough()
   }
 
-  // ── 4. Public routes: cho qua ──────────────────────────────────────────
-  return NextResponse.next()
+  // ── 4. Logged-in routes: bất kỳ user đã đăng nhập (Phase 2: /feed/tao-bai) ─
+  if (matchesAny(pathname, LOGGED_IN_PREFIXES)) {
+    if (!session) {
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
+    }
+    return passThrough()
+  }
+
+  // ── 5. Public routes: cho qua ──────────────────────────────────────────
+  return passThrough()
 })
 
 export default proxy

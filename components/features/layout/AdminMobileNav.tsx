@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { AdminNavLinks } from "./AdminSidebar"
@@ -25,7 +26,13 @@ export function AdminMobileNav() {
         <SheetContent side="left" className="w-72 bg-sidebar border-sidebar-border p-0 flex flex-col">
           <SheetHeader className="px-5 py-5 border-b border-sidebar-border">
             <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden>🌿</span>
+              <Image
+                src="/logo.png"
+                alt="Hội Trầm Hương Việt Nam"
+                width={40}
+                height={40}
+                className="h-10 w-10 shrink-0"
+              />
               <div>
                 <SheetTitle className="text-sidebar-primary font-semibold text-sm leading-tight text-left">
                   Hội Trầm Hương

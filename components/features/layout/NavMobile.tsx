@@ -9,6 +9,10 @@ import { Separator } from "@/components/ui/separator"
 export interface NavLink {
   label: string
   href: string
+  /** Hiển thị nhãn "Sắp có" và disable click — dùng cho menu chưa publish */
+  comingSoon?: boolean
+  /** Hiển thị badge "MỚI" bên cạnh label */
+  isNew?: boolean
 }
 
 interface NavMobileProps {
@@ -37,17 +41,43 @@ export function NavMobile({ links, isLoggedIn }: NavMobileProps) {
         </SheetHeader>
 
         <nav className="flex flex-col gap-1 p-4">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              /* text-base = 16px — đúng chuẩn mobile tối thiểu */
-              className="px-4 py-3 rounded-md text-brand-100 hover:bg-brand-700 hover:text-brand-300 transition-colors text-base font-medium"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) =>
+            link.comingSoon ? (
+              <span
+                key={link.label}
+                title="Sắp có"
+                aria-disabled="true"
+                className="px-4 py-3 rounded-md text-brand-400 text-base font-medium cursor-not-allowed flex items-center justify-between"
+              >
+                {link.label}
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-700 text-brand-300">
+                  Sắp có
+                </span>
+              </span>
+            ) : (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                /* text-base = 16px — đúng chuẩn mobile tối thiểu */
+                className="px-4 py-3 rounded-md text-brand-100 hover:bg-brand-700 hover:text-brand-300 transition-colors text-base font-medium inline-flex items-start"
+              >
+                {link.label}
+                {link.isNew && (
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      lineHeight: 1,
+                      color: "#ef4444",
+                    }}
+                    className="font-bold uppercase"
+                  >
+                    News
+                  </span>
+                )}
+              </Link>
+            )
+          )}
 
           {!isLoggedIn && (
             <>

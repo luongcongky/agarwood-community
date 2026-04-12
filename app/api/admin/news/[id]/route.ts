@@ -37,6 +37,7 @@ export async function PATCH(
     excerpt,
     content,
     coverImageUrl,
+    category,
     isPublished,
     isPinned,
     publishedAt,
@@ -49,6 +50,7 @@ export async function PATCH(
   if (excerpt !== undefined) data.excerpt = excerpt
   if (content !== undefined) data.content = content
   if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl
+  if (category !== undefined) data.category = category === "RESEARCH" ? "RESEARCH" : "GENERAL"
   if (isPublished !== undefined) data.isPublished = isPublished
   if (isPinned !== undefined) data.isPinned = isPinned
   if (publishedAt !== undefined)

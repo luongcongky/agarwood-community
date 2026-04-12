@@ -37,7 +37,7 @@ type Post = {
   updatedAt: string
   author: PostAuthor
   reactions: { type: string }[]
-  _count: { reactions: number }
+  _count: { reactions: number; comments: number }
 }
 
 type TopContributor = {
@@ -254,9 +254,13 @@ function PostCard({
         <span className="inline-flex text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full mb-2">Ghim bởi admin</span>
       )}
 
-      {/* Title */}
+      {/* Title — clickable to detail */}
       {post.title && (
-        <h2 className="font-semibold text-brand-900 text-base mb-2 leading-snug">{post.title}</h2>
+        <h2 className="font-semibold text-brand-900 text-base mb-2 leading-snug">
+          <Link href={`/bai-viet/${post.id}`} className="hover:text-brand-700 transition-colors">
+            {post.title}
+          </Link>
+        </h2>
       )}
 
       {/* Content — blurred for guests after GUEST_VISIBLE_COUNT */}
@@ -320,6 +324,12 @@ function PostCard({
             ) : (
               <span className="text-sm text-brand-400">Hữu ích ({post._count.reactions})</span>
             )}
+            <Link
+              href={`/bai-viet/${post.id}`}
+              className="flex items-center gap-1.5 text-sm font-medium text-brand-400 hover:text-brand-700 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors"
+            >
+              💬 {post._count.comments > 0 ? post._count.comments : ""} Bình luận
+            </Link>
           </div>
           <span className="text-sm text-brand-500">{post.viewCount} lượt xem</span>
         </div>

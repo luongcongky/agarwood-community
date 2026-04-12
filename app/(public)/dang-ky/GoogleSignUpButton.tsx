@@ -28,8 +28,8 @@ export function GoogleSignUpButton() {
       </button>
 
       <p className="text-xs text-brand-400 text-center">
-        Tài khoản Google sẽ được tạo ở trạng thái chờ duyệt.
-        Ban quản trị sẽ xem xét trong 3 ngày làm việc.
+        Tài khoản Google sẽ được kích hoạt ngay sau khi đăng ký.
+        Bạn có thể bắt đầu chia sẻ bài viết trên cộng đồng ngay lập tức.
       </p>
     </div>
   )

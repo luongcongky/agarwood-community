@@ -314,6 +314,19 @@ export function RenewalClient({
             </div>
           )}
 
+          {/* Fee guidance note */}
+          <div className="rounded-lg border border-brand-200 bg-brand-50/70 px-4 py-3 text-xs text-brand-700 leading-relaxed">
+            <p>
+              <strong>Niên liễn tối thiểu</strong> theo Điều lệ Hội:{" "}
+              {isIndividual ? "1.000.000đ" : "2.000.000đ"}/năm. Mức đóng cao hơn
+              là tự nguyện, giúp tăng ưu tiên feed và thăng hạng nhanh hơn.
+              {" "}
+              <Link href="/dieu-le" className="underline font-medium hover:text-brand-900">
+                Xem Điều lệ Hội
+              </Link>
+            </p>
+          </div>
+
           {/* Fee selection cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {feeOptions.map((opt) => (

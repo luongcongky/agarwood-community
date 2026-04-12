@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 
 type Product = {
   id: string
@@ -115,9 +116,7 @@ export function CompanyTabs({
                       {product.imageUrls.length > 0 ? (
                         <Image src={product.imageUrls[0]} alt={product.name} fill className="object-cover" sizes="(max-width: 640px) 50vw, 33vw" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-brand-200 to-brand-300">
-                          <span className="text-3xl">🌿</span>
-                        </div>
+                        <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
                       )}
                       {product.certStatus === "APPROVED" && (
                         <span className="absolute top-2 right-2 inline-flex items-center gap-1 bg-brand-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">

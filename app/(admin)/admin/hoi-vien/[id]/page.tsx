@@ -31,6 +31,7 @@ export default async function MemberDetailPage({
         isActive: true,
         role: true,
         accountType: true,
+        memberCategory: true,
         contributionTotal: true,
         displayPriority: true,
         membershipExpires: true,
@@ -38,7 +39,15 @@ export default async function MemberDetailPage({
         bankAccountNumber: true,
         bankAccountName: true,
         createdAt: true,
-        company: { select: { id: true, name: true, slug: true } },
+        company: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            representativeName: true,
+            representativePosition: true,
+          },
+        },
       },
     }),
     prisma.membership.findMany({

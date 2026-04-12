@@ -1,7 +1,7 @@
 # Tai lieu Ky thuat — Hoi Tram Huong Viet Nam
 
 > Danh cho developer moi join hoac doi maintain he thong.
-> Cap nhat: 04/2026
+> Cap nhat: 04/2026 — Phase 1-6 + Dieu le integration + Van ban phap quy + TipTap v3 editor enhancements
 
 ---
 
@@ -39,6 +39,7 @@ agarwood-community/
 │   │       ├── hoi-vien/       # Quan ly hoi vien
 │   │       ├── thanh-toan/     # Xac nhan CK
 │   │       ├── chung-nhan/     # Xet duyet chung nhan
+│   │       ├── tieu-bieu/      # [Phase 4] Pin top 20 SP + top 10 DN
 │   │       ├── truyen-thong/   # CRM don truyen thong
 │   │       ├── tin-tuc/        # Quan ly tin tuc
 │   │       ├── bao-cao/        # Bao cao vi pham
@@ -54,14 +55,24 @@ agarwood-community/
 │   │   ├── doanh-nghiep/       # Chinh sua DN
 │   │   └── san-pham/           # Tao/sua san pham
 │   ├── (auth)/                 # Auth pages (login, register, dat mat khau)
-│   ├── (public)/               # Public pages (trang chu, tin tuc, SP, DN, dich vu)
+│   ├── (public)/               # Public pages
+│   │   ├── page.tsx            # [Phase 3] Trang chu bao chi 6 section
+│   │   ├── landing/            # [Phase 5] Landing page conversion VIP
+│   │   ├── san-pham-tieu-bieu/ # [Phase 4] Top 20 SP tieu bieu (admin pin)
+│   │   ├── tin-tuc/            # Tin tuc Hoi
+│   │   ├── san-pham-chung-nhan/# SP da chung nhan
+│   │   ├── doanh-nghiep/[slug] # Trang DN
+│   │   └── ... (gioi thieu, hoi vien, dich vu, dieu le, lien he)
 │   └── api/                    # API Routes
-│       ├── auth/               # NextAuth + verify-token + set-password
+│       ├── auth/               # NextAuth + verify-token + set-password + register
 │       ├── posts/              # Feed CRUD + react + report + lock
+│       │   └── quota/          # [Phase 2] GET quota thang user hien tai
 │       ├── admin/              # Admin-only endpoints
 │       │   ├── users/          # CRUD user + toggle + resend invite + reset password
 │       │   ├── payments/       # Confirm + reject CK
 │       │   ├── certifications/ # Approve + reject + refund
+│       │   ├── products/[id]/featured/   # [Phase 4] PATCH pin SP tieu bieu
+│       │   ├── companies/[id]/featured/  # [Phase 4] PATCH pin DN tieu bieu
 │       │   ├── media-orders/   # Update status
 │       │   ├── news/           # CRUD tin tuc
 │       │   ├── reports/        # Xu ly bao cao
@@ -72,12 +83,17 @@ agarwood-community/
 │       ├── upload/             # Cloudinary upload
 │       └── my-products/        # SP cua VIP
 ├── components/
-│   ├── features/layout/        # Navbar, Footer, AdminSidebar, UserMenu
+│   ├── features/
+│   │   ├── layout/             # Navbar, Footer, AdminSidebar, UserMenu, SocialLinks (Phase 1)
+│   │   └── homepage/           # [Phase 3] PostCard, MemberNewsRail, CertifiedProductsCarousel, HomepageBannerSlot
 │   └── ui/                     # Shared UI (Avatar, Button, Sheet, etc.)
 ├── lib/
 │   ├── auth.ts                 # NextAuth full config (Prisma adapter)
 │   ├── auth.config.ts          # Edge-safe config (cho proxy/middleware)
 │   ├── prisma.ts               # Prisma singleton + connection pool
+│   ├── tier.ts                 # Tier helpers (Bac/Vang thresholds)
+│   ├── quota.ts                # [Phase 2] Monthly post quota helper (5/15/30/-1)
+│   ├── homepage.ts             # [Phase 3] Cached data fetchers + rotation logic
 │   ├── utils.ts                # cn() utility
 │   └── constants/
 │       ├── banks.ts            # 21 ngan hang VN
@@ -120,15 +136,53 @@ Document (Google Drive)
 ### Models chinh:
 | Model | Records du kien | Ghi chu |
 |-------|----------------|---------|
-| User | ~100 VIP + 1 Admin | accountType: BUSINESS hoac INDIVIDUAL |
-| Company | ~70-80 (chi BUSINESS VIP) | 0..1 voi User |
+| User | ~100 VIP + 1 Admin | accountType + **memberCategory** (OFFICIAL/AFFILIATE/HONORARY) |
+| Company | ~70-80 (chi BUSINESS VIP) | 0..1 voi User, **representativeName/Position** (Dieu 7.2c) |
 | Product | ~500 | ~5 SP/DN |
 | Post | ~5000/nam | ~50 bai/thang |
 | Payment | ~200/nam | Membership + cert fee |
 | Certification | ~100/nam | |
 | MediaOrder | ~50/nam | |
-| News | ~100/nam | |
-| SiteConfig | ~20 keys | Config he thong |
+| News | ~100-200 (admin nhap + crawled) | **category** (GENERAL/RESEARCH), **sourceUrl**, **originalAuthor** |
+| **MembershipApplication** | ~50-100 | Don ket nap (Dieu 11) — status + reviewer + reject reason |
+| Document | ~20 legal + N tai lieu | **DIEU_LE/QUY_CHE/GIAY_PHEP** + issuer + sortOrder |
+| SiteConfig | ~25 keys | Config he thong (them `join_fee_*`) |
+
+### Enums moi (Dieu le integration):
+```prisma
+enum MemberCategory {
+  OFFICIAL     // Hoi vien chinh thuc (day du quyen)
+  AFFILIATE    // Lien ket (DN khong du tieu chuan hoac FDI)
+  HONORARY     // Danh du (uy tin, dong gop)
+}
+
+enum ApplicationStatus {
+  PENDING      // da nop, cho Ban Thuong vu xet
+  APPROVED     // Chu tich ky quyet dinh cong nhan
+  REJECTED     // bi tu choi
+}
+
+enum NewsCategory {
+  GENERAL      // tin tuc — /tin-tuc
+  RESEARCH     // nghien cuu khoa hoc — /nghien-cuu
+}
+
+// DocumentCategory: them 3 gia tri
+enum DocumentCategory {
+  CONG_VAN_DEN, CONG_VAN_DI, BIEN_BAN_HOP, QUYET_DINH, HOP_DONG,
+  DIEU_LE      // Dieu le Hoi (public o /phap-ly tab 1)
+  QUY_CHE      // Quy che noi bo (public o /phap-ly tab 2)
+  GIAY_PHEP    // Giay phep dai hoi (public o /phap-ly tab 3)
+}
+```
+
+### Migrations gan day (Phase Dieu le):
+- `add_member_category_and_representative` — `MemberCategory` + `Company.representativeName/Position`
+- `add_membership_application` — model mới cho don ket nap
+- `add_news_category` — `News.category` (`NewsCategory` enum)
+- `add_news_source_url` — `News.sourceUrl` (crawl reference)
+- `add_news_original_author` — `News.originalAuthor`
+- `add_legal_doc_categories` — `DocumentCategory` them 3 enum values + `Document.issuer` + `Document.sortOrder`
 
 ---
 
@@ -146,11 +200,16 @@ Document (Google Drive)
 | Google OAuth | Dang nhap / Dang ky nhanh | Khong can nho mat khau, auto-link neu email trung |
 | Credentials | Dang nhap bang email + mat khau | Flow truyen thong, dung cho invite email + reset password |
 
-**Google OAuth flow:**
+**Google OAuth flow (Phase 2 — bo flow cho duyet):**
 1. User click "Dang nhap bang Google" → Google consent screen
-2. Email da ton tai trong DB → auto-link Google account → login OK
-3. Email moi → tao user GUEST (isActive: false) → email admin → redirect /cho-duyet
-4. Admin duyet → role GUEST → VIP → user login Google lan sau → /tong-quan
+2. Email da ton tai → auto-link Google account → login OK
+3. Email moi → tao user GUEST voi `isActive: true` → email admin notification → redirect `/feed`
+4. Legacy user (`isActive: false` + role GUEST tu pre-Phase 2) → auto-activate khi sign in → cho login
+
+**Role semantics (Phase 2):**
+- `GUEST` = free tier — dang ky xong dung duoc ngay, post duoc voi quota thap (5 bai/thang)
+- `VIP` = hoi vien dong phi — quota cao + uu tien hien thi trang chu
+- `ADMIN` = ban quan tri — toan quyen + quota khong gioi han
 
 **Env vars can thiet:**
 ```
@@ -160,12 +219,15 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxx
 > Tao tai Google Cloud Console > APIs & Services > Credentials > OAuth 2.0 Client IDs.
 > Redirect URI: `https://[domain]/api/auth/callback/google`
 
-### Route Protection (proxy.ts)
+### Route Protection (proxy.ts) — updated Phase 2 + Phase 5
 ```
-MEMBER_PREFIXES (VIP + ADMIN):
-  /tong-quan, /feed/tao-bai, /company, /certification,
-  /gia-han, /ho-so, /chung-nhan, /thanh-toan/lich-su,
-  /doanh-nghiep/chinh-sua, /san-pham/tao-moi
+MEMBER_PREFIXES (VIP + ADMIN, han membership):
+  /tong-quan, /company, /certification, /gia-han, /ho-so,
+  /chung-nhan, /thanh-toan/lich-su, /doanh-nghiep/chinh-sua,
+  /san-pham/tao-moi, /tai-lieu
+
+LOGGED_IN_PREFIXES (bat ky user dang nhap, ke ca GUEST):
+  /feed/tao-bai     # Phase 2: open posting cho moi user
 
 ADMIN_PREFIXES (chi ADMIN):
   /dashboard, /members, /certifications, /media-orders, /admin
@@ -175,11 +237,13 @@ AUTH_PATHS (redirect neu da login):
 ```
 
 ### Logic:
-- Guest truy cap MEMBER route -> redirect /cho-duyet
-- GUEST da login truy cap auth route -> redirect /cho-duyet (tru /cho-duyet)
+- Khach (chua login) truy cap MEMBER route -> redirect /login?callbackUrl=...
+- GUEST truy cap MEMBER route -> redirect **/landing** (Phase 5: gioi thieu nang cap VIP)
+- Guest/GUEST truy cap LOGGED_IN route -> can login truoc, sau do co the dung
 - VIP truy cap ADMIN route -> redirect /
 - VIP membership het han truy cap MEMBER route -> redirect /membership-expired
 - VIP/ADMIN da login truy cap /login -> redirect /admin hoac /tong-quan
+- GUEST da login truy cap /login -> redirect /feed (khong con bi force /cho-duyet)
 
 ---
 
@@ -200,10 +264,49 @@ MIGRATE_TARGET=supabase npx prisma migrate deploy  # Production
 
 ### Indexes
 - User: role, contributionTotal, displayPriority
-- Post: authorPriority+createdAt (composite), createdAt, status, isPremium
+- Post: authorPriority+createdAt, createdAt, status, isPremium, **category+createdAt**, **category+isPremium+authorPriority** (Phase 2)
 - Payment: userId, type, status, payosOrderCode, createdAt
-- Product: companyId, certStatus, slug
+- Product: companyId, certStatus, slug, **isFeatured+featuredOrder** (Phase 2)
+- Company: slug, isPublished, **isFeatured+featuredOrder** (Phase 2)
 - Certification: productId, applicantId, status
+
+### Schema changes Phase 2 (migration `phase2_post_category_featured_flags`)
+```prisma
+enum PostCategory {
+  GENERAL   // bai feed thuong (default)
+  NEWS      // tin tuc doanh nghiep — section 5 trang chu
+  PRODUCT   // tin san pham — section 6 trang chu
+}
+
+model Post {
+  category PostCategory @default(GENERAL)
+  // ... existing fields
+}
+
+model Company {
+  isFeatured    Boolean @default(false)  // admin pin top 10 DN
+  featuredOrder Int?                     // null = chua pin
+  // ...
+}
+
+model Product {
+  isFeatured    Boolean @default(false)  // admin pin top 20 SP
+  featuredOrder Int?
+  // ...
+}
+```
+
+### Quota system (lib/quota.ts) — Phase 2
+| Role | Default quota/thang | SiteConfig key |
+|------|---------------------|----------------|
+| GUEST | 5 | `quota_guest_monthly` |
+| VIP ★ (1 sao) | 15 | `quota_vip_1_monthly` |
+| VIP ★★ Bac | 30 | `quota_vip_2_monthly` |
+| VIP ★★★ Vang | -1 (unlimited) | `quota_vip_3_monthly` |
+| ADMIN | -1 (hardcoded) | — |
+
+- Cache 60s, fallback defaults neu config keys khong ton tai
+- Check khi POST /api/posts; bo dem bai DELETED de tranh gian lan
 
 ---
 
@@ -214,8 +317,33 @@ MIGRATE_TARGET=supabase npx prisma migrate deploy  # Production
 | Admin tat ca | 0 (realtime) | Can data moi nhat |
 | Admin dashboard | 60s | Alert refresh 1 phut |
 | VIP realtime | 0 | Feed, profile, thanh toan |
-| Public listing | 3600s (1h) | Trang chu, tin tuc, SP |
+| **Trang chu (Phase 3)** | **300s** | Newspaper layout, rotating slots refresh 5 min |
+| **/landing (Phase 5)** | **600s** | Marketing page, doi data 10 phut |
+| **/san-pham-tieu-bieu (Phase 4)** | **600s** | Pin list it thay doi |
+| Public listing | 3600s (1h) | Tin tuc, SP, DN |
 | Public detail | 1800-3600s | Chi tiet tin, SP, DN |
+
+### Phase 3 — Trang chu Newspaper Layout
+6 section, query chia trong `lib/homepage.ts` voi `unstable_cache`:
+
+| Section | Data fetcher | Cache | Filter chinh |
+|---------|-------------|-------|-------------|
+| 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished, sort isPinned + publishedAt |
+| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (5 rotating) | 300s | isPremium=true (top), bao gom non-VIP (rotate) |
+| 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP |
+| 4. Banner quang cao | placeholder | — | Phase 6: Banner model |
+| 5. Tin DN moi nhat | `getLatestPostsByCategory("NEWS")` | 300s | isPremium=true, category=NEWS |
+| 6. Tin SP moi nhat | `getLatestPostsByCategory("PRODUCT")` | 300s | isPremium=true, category=PRODUCT |
+
+**Rotating slots algorithm** (right rail):
+- Pool 50 bai, exclude top VIP da hien thi
+- Weighted random: `score = (authorPriority + 1) * (0.5 + rng())`
+- Seed = `Math.floor(Date.now() / 300_000)` (5-min bucket) → deterministic trong 5 phut
+- Mulberry32 PRNG inline (~8 dong code)
+
+**Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`
+- Admin pin/unpin → `revalidateTag("homepage", "max")` + tag tuong ung
+- Next 16 yeu cau profile arg thu 2 — dung `"max"` cho stale-while-revalidate dai nhat
 
 ---
 
@@ -353,7 +481,83 @@ RESEND_API_KEY=re_xxx
 CLOUDINARY_CLOUD_NAME=xxx
 CLOUDINARY_API_KEY=xxx
 CLOUDINARY_API_SECRET=xxx
+CRON_SECRET=xxx (>32 chars, for Phase 6 banner-expire cron)
+
+# Google Drive OAuth — for /admin/cai-dat PDF upload
+# Reuse GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET của NextAuth,
+# hoặc tạo riêng GOOGLE_DRIVE_CLIENT_ID / GOOGLE_DRIVE_CLIENT_SECRET
+GOOGLE_DRIVE_REFRESH_TOKEN=1//xxx  (lấy 1 lần qua OAuth Playground, xem guide)
+GOOGLE_DRIVE_ROOT_FOLDER_ID=xxx    (folder ID trên My Drive của user OAuth)
 ```
+
+### Google Drive Setup (OAuth delegation)
+
+**Vì sao OAuth thay vì Service Account?** Google disabled service account storage
+quota từ 04/2024. Service account không thể upload vào "My Drive" nữa, bắt buộc
+phải dùng Shared Drive (Workspace paid) hoặc OAuth delegation (Gmail cá nhân được).
+
+**Setup 1 lần — lấy refresh token qua OAuth Playground:**
+
+1. Đảm bảo OAuth client trong Google Cloud Console đã add redirect URI:
+   `https://developers.google.com/oauthplayground`
+   (Cloud Console → APIs & Services → Credentials → Edit OAuth 2.0 Client ID → Add URI)
+
+2. Mở https://developers.google.com/oauthplayground
+
+3. Click icon ⚙ (góc trên phải) → check **"Use your own OAuth credentials"**
+   - Paste `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` từ .env.local
+   - Close gear menu
+
+4. Panel trái "Select & authorize APIs":
+   - Scroll tìm **"Drive API v3"**
+   - Check scope: `https://www.googleapis.com/auth/drive`
+   - Click **Authorize APIs** (nút xanh)
+
+5. Google consent screen hiện ra:
+   - Chọn account sẽ upload file (vd: hoitramhuongvietnam2010@gmail.com)
+   - Click "Advanced" nếu cảnh báo → "Go to [app] (unsafe)" → Allow
+
+6. Quay lại Playground, bước 2 "Exchange authorization code for tokens":
+   - Click **Exchange authorization code for tokens**
+   - Response hiện bên phải có `refresh_token` — **copy giá trị này**
+
+7. Paste vào `.env.local`:
+   ```
+   GOOGLE_DRIVE_REFRESH_TOKEN=1//0xxxxxxxxxxxxxxxxxxxx
+   ```
+
+8. Lấy `GOOGLE_DRIVE_ROOT_FOLDER_ID`:
+   - Vào drive.google.com với account vừa OAuth
+   - Tạo folder mới (vd "Hội Trầm Hương — Tài liệu")
+   - Mở folder → URL có dạng `https://drive.google.com/drive/folders/1AbC...`
+   - Copy phần ID sau `/folders/`
+   - Paste vào `.env.local`: `GOOGLE_DRIVE_ROOT_FOLDER_ID=1AbC...`
+
+9. Restart dev server (`Ctrl+C` → `npm run dev`) để load env mới.
+
+10. Test upload: `/admin/cai-dat` → section "Điều lệ Hội" → upload PDF.
+
+**Nếu refresh token expire sau 7 ngày** (OAuth app đang ở trạng thái Testing):
+- Cloud Console → APIs & Services → OAuth consent screen → **Publishing status**
+- Click **PUBLISH APP** (status "In production" — refresh token không expire nữa)
+- Hoặc add account đang dùng làm **Test user** để giữ 7 ngày
+
+### Cron Jobs (Phase 6)
+Dinh nghia trong `vercel.json`:
+- `/api/cron/banner-expire` — chay 0h hang ngay (UTC)
+  - Expire banner ACTIVE co `endDate < now` → set `EXPIRED`
+  - Gui email warning cho banner sap het han (< 7 ngay)
+
+**Auth**: Vercel Cron tu dong gui header `Authorization: Bearer ${CRON_SECRET}`.
+Endpoint check header va tra 401 neu sai.
+
+**Test manual**:
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/banner-expire
+```
+
+**Alternative scheduler** (ngoai Vercel): cai `cronjob.org`, `crontab-guru` external,
+hoac Windows Task Scheduler goi curl theo lich.
 
 ### Build & Start:
 ```bash
@@ -377,6 +581,85 @@ npm start             # Start production server
 
 ---
 
+## 10.5 Navbar mode detection (pathname-based)
+
+**Van de**: Truoc day Navbar chon menu theo `session.user.role` — VIP on public
+pages van thay menu member. User muon public menu cho *moi user* tru khi vao
+area quan tri.
+
+**Giai phap**: Navbar chon menu theo **pathname**, khong theo role.
+
+**Luong**:
+1. `proxy.ts` set header `x-pathname` vao moi response qua helper `passThrough()`
+2. `Navbar` (server component) doc qua `headers()` API
+3. `detectMode(pathname)`:
+   - `/admin/*` → `admin` mode (nhung admin layout dung sidebar, khong render Navbar)
+   - `/tong-quan`, `/gia-han`, `/ho-so`, `/chung-nhan`, `/doanh-nghiep-cua-toi`, `/thanh-toan`, `/ket-nap`, `/tai-lieu` → `member` mode
+   - Moi pathname khac → `public` mode (bao gom `/feed`, `/tin-tuc`, `/nghien-cuu`, `/san-pham-doanh-nghiep`...)
+4. `Navbar` render `PUBLIC_LINKS` / `BUSINESS_LINKS` / `INDIVIDUAL_LINKS` theo mode + accountType
+5. `UserMenu` dropdown them item mode-based:
+   - Public mode + VIP → "Vao khu vuc quan tri" → `/tong-quan`
+   - Public mode + ADMIN → "Vao trang quan tri" → `/admin`
+   - Member/admin mode → "Ve trang cong khai" → `/`
+
+**Admin sidebar** van co link "Ve trang cong khai" o cuoi nav (sau Dang xuat)
+voi styling accent nen de phat hien.
+
+---
+
+## 10.6 TipTap v3 editor (/admin/tin-tuc/[id])
+
+### Editor config
+```tsx
+useEditor({
+  extensions: [
+    StarterKit,
+    ResizableImage.configure({ inline: false, HTMLAttributes: { class: "editor-image" } }),
+    TextAlign.configure({ types: ["heading", "paragraph", "image"], alignments: ["left","center","right","justify"] }),
+  ],
+  immediatelyRender: true,           // Client-only component — tranh SSR hydration race voi NodeView
+  shouldRerenderOnTransaction: false, // Tranh flushSync-in-lifecycle voi React 19
+})
+```
+
+### ResizableImage extension — Custom NodeView
+
+File: `app/(admin)/admin/tin-tuc/[id]/ResizableImageView.tsx`
+
+Wrapper 2-layer:
+- **Outer**: `block w-full` + `style.textAlign` tu `node.attrs.textAlign` → quyet dinh vi tri ngang
+- **Inner**: `relative inline-block` → container cho img + drag handles
+
+3 drag handles (absolute positioned):
+- **E** (phai-giua): drag ngang → resize width
+- **S** (duoi-giua): drag doc → resize height
+- **SE** (goc duoi-phai): drag → resize ca 2, giu aspect ratio
+
+Pattern: mousemove update `lastSizeRef` + inline style; mouseup commit qua `updateAttributes` wrapped trong `queueMicrotask` (tranh flushSync).
+
+### React 19 + TipTap 3 — flushSync fix
+
+**Van de**: TipTap's `ReactNodeViewRenderer` dung `flushSync` noi bo khi NodeView update. React 19 strict hon, throw khi flushSync call trong lifecycle/render.
+
+**3 fix layer**:
+1. `shouldRerenderOnTransaction: false` + `useEditorState` hook cho toolbar state (useSyncExternalStore — safe pattern)
+2. `immediatelyRender: true` tranh race voi NodeView mount
+3. `queueMicrotask` wrap moi `editor.chain().updateAttributes()` call trong event handlers
+
+### Sticky toolbar
+- Container `.rounded-xl border bg-white shadow-sm` (khong overflow-hidden)
+- Toolbar div: `sticky top-0 z-20 rounded-t-xl bg-brand-50/95 backdrop-blur`
+- Phai fix admin layout `h-screen overflow-hidden` de `<main overflow-auto>` thuc su co scroll → sticky track main thay vi window
+
+### CSS override
+```ts
+// Ghi de prose plugin's img max-width
+className="... max-w-none!"
+// Tailwind v4 important modifier: "class!" (khong phai "!class")
+```
+
+---
+
 ## 11. Conventions & Patterns
 
 ### File naming
@@ -397,3 +680,71 @@ npm start             # Start production server
 - Input: Zod validation cho Server Actions, manual validation cho API routes
 - Slug: Regex /^[a-z0-9-]+$/
 - Password: bcryptjs cost 12
+
+---
+
+## 12. Import/Migration scripts
+
+Thu muc `scripts/` chua cac one-shot scripts cho migration data tu website cu
+`hoitramhuongvietnam.org`. Tat ca dung chung pattern load `.env.local` → use
+Prisma client → TLS workaround cho legacy site.
+
+### Partners (9 DN)
+- `scripts/seed-partners.ts` — tao 9 Hoi vien doi tac thuc te voi VIP Bac
+- Logo upload Cloudinary folder `agarwood-community/members/`
+- Idempotent: check Cloudinary resource trước upload
+- `scripts/fix-cloudinary-double-prefix.ts` — migration fix URL co double prefix
+
+### Van ban phap quy (8 PDF legal docs)
+- `scripts/import-legal-documents.ts` — download 8 PDF tu trang cu + upload Google Drive
+- Tao records Document voi category DIEU_LE/QUY_CHE
+- `CATEGORY_FOLDERS` map category → Drive folder (VBPQ - *)
+
+### News content (Research + General)
+- `scripts/import-research-articles.ts` — metadata 7 bai nghien cuu (step 1)
+- `scripts/import-news-articles.ts` — metadata 48 bai tin tuc tu JSON
+- `scripts/crawl-research-content.ts` — step 2: crawl full HTML + image migration
+  - Cho phep `--category=GENERAL|RESEARCH` flag
+  - `--force` re-crawl all, `--slug=xxx` crawl 1 bai
+  - DOM parse voi `jsdom` + `.single-post` selector (template chung cua trang cu)
+  - Image pipeline: download → upload Cloudinary folder `agarwood-community/research/{slug}/` → rewrite src
+  - Semantic clean via DOMPurify voi `ALLOWED_TAGS` whitelist
+  - Empty detection: text < 100 ky tu va khong co ảnh → giữ placeholder
+
+### Common patterns
+- Load env manually (tsx khong auto-load .env.local):
+  ```ts
+  function loadEnvLocal() { /* parse .env.local + set process.env */ }
+  loadEnvLocal()
+  // Sau do dynamic-require prisma + cloudinary
+  ```
+- TLS workaround: `process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"` (legacy site cert)
+- Idempotency: check DB slug/public_id truoc khi tao/upload
+
+---
+
+## 13. AgarwoodPlaceholder component
+
+File: `components/ui/AgarwoodPlaceholder.tsx`
+
+Component chung cho **tat ca fallback** (thieu avatar, thieu logo, thieu ảnh san pham, thieu cover tin tuc...). Icon mac dinh: **🌿** (la tram).
+
+**Props**:
+- `size`: xs | sm | md | lg | xl
+- `shape`: square | rounded | full
+- `tone`: brand | light | dark
+- `className`: custom (thuong `w-X h-Y`)
+
+**Vi du**:
+```tsx
+// Logo fallback trong /hoi-vien card
+<AgarwoodPlaceholder className="w-16 h-16" shape="full" size="sm" />
+
+// Thumbnail san pham khi khong co anh
+<AgarwoodPlaceholder className="w-full h-full" size="lg" shape="square" />
+
+// Cover tin tuc hero
+<AgarwoodPlaceholder className="h-full w-full" size="xl" shape="square" tone="dark" />
+```
+
+Da thay cho 11 location fallback (hoi-vien, page home, san-pham-doanh-nghiep, tin-tuc, nghien-cuu, san-pham-chung-nhan, san-pham/[slug], doanh-nghiep/[slug], CertifiedProductsCarousel, PostCard, v.v.).

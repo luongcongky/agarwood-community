@@ -63,6 +63,7 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
       for (const file of Array.from(files)) {
         const formData = new FormData()
         formData.append("file", file)
+        formData.append("folder", "san-pham")
         const res = await fetch("/api/upload", { method: "POST", body: formData })
         if (res.ok) {
           const data = await res.json()

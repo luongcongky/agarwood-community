@@ -3,6 +3,7 @@ import Image from "next/image"
 import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductFilters } from "./ProductFilters"
 
 export const revalidate = 3600
@@ -197,7 +198,7 @@ export default async function CertifiedProductsPage({
 
         {total === 0 ? (
           <div className="py-24 text-center">
-            <div className="text-5xl mb-4">🌿</div>
+            <AgarwoodPlaceholder className="w-20 h-20 mx-auto mb-4" size="lg" shape="full" tone="light" />
             <p className="text-brand-600 text-lg font-medium">Không tìm thấy sản phẩm phù hợp</p>
             <p className="text-brand-400 text-sm mt-2">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm</p>
             <Link href="/san-pham-chung-nhan" className="mt-4 inline-block text-brand-700 underline text-sm">
@@ -220,9 +221,7 @@ export default async function CertifiedProductsPage({
                     {firstImage ? (
                       <Image src={firstImage} alt={product.name} fill className="object-cover" sizes="64px" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-brand-700">
-                        <span className="text-lg">🌿</span>
-                      </div>
+                      <AgarwoodPlaceholder className="w-full h-full" size="xs" shape="square" />
                     )}
                   </div>
 
@@ -269,9 +268,7 @@ export default async function CertifiedProductsPage({
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-4xl">🌿</span>
-                      </div>
+                      <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
                     )}
                     {/* Cert badge */}
                     <div className="absolute top-2.5 right-2.5 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">

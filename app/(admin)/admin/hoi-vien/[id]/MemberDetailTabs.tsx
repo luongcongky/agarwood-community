@@ -12,6 +12,8 @@ type User = {
   email: string
   phone: string | null
   isActive: boolean
+  accountType: string
+  memberCategory: string
   contributionTotal: number
   displayPriority: number
   membershipExpires: string | null
@@ -19,7 +21,13 @@ type User = {
   bankAccountNumber: string | null
   bankAccountName: string | null
   createdAt: string
-  company: { id: string; name: string; slug: string } | null
+  company: {
+    id: string
+    name: string
+    slug: string
+    representativeName: string | null
+    representativePosition: string | null
+  } | null
 }
 
 type Membership = {
@@ -433,7 +441,27 @@ export function MemberDetailTabs({
             <InfoRow label="Họ tên" value={user.name} />
             <InfoRow label="Email" value={user.email} />
             <InfoRow label="Số điện thoại" value={user.phone} />
+            <InfoRow
+              label="Loại tài khoản"
+              value={user.accountType === "INDIVIDUAL" ? "Cá nhân" : "Doanh nghiệp"}
+            />
+            <InfoRow
+              label="Hạng Hội viên (Điều lệ)"
+              value={
+                user.memberCategory === "OFFICIAL"
+                  ? "Chính thức"
+                  : user.memberCategory === "AFFILIATE"
+                    ? "Liên kết"
+                    : "Danh dự"
+              }
+            />
             <InfoRow label="Doanh nghiệp" value={user.company?.name} />
+            {user.company && (
+              <>
+                <InfoRow label="Người đại diện" value={user.company.representativeName} />
+                <InfoRow label="Chức vụ" value={user.company.representativePosition} />
+              </>
+            )}
             <InfoRow label="Ngày tạo tài khoản" value={fmtDate(user.createdAt)} />
             <InfoRow
               label="Hết hạn membership"

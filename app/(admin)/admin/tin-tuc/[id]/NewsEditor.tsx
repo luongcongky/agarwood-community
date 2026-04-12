@@ -1,23 +1,14 @@
 "use client"
 
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import TiptapImage from "@tiptap/extension-image"
-import { useState, useEffect, use } from "react"
+import { useState, useEffect, useRef, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import {
+  RichTextEditor,
+  type RichTextEditorHandle,
+} from "@/components/editor/RichTextEditor"
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-}
+import { slugify } from "@/lib/utils"
 
 interface NewsData {
   title: string
@@ -25,6 +16,7 @@ interface NewsData {
   excerpt: string
   coverImageUrl: string
   content: string
+  category: "GENERAL" | "RESEARCH"
   isPublished: boolean
   isPinned: boolean
   publishedAt: string
@@ -43,26 +35,21 @@ export default function NewsEditorPage({
   const [slug, setSlug] = useState("")
   const [excerpt, setExcerpt] = useState("")
   const [coverImageUrl, setCoverImageUrl] = useState("")
+  const [category, setCategory] = useState<"GENERAL" | "RESEARCH">("GENERAL")
   const [isPublished, setIsPublished] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
   const [publishedAt, setPublishedAt] = useState("")
+  const [initialContent, setInitialContent] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TiptapImage,
-    ],
-    content: "",
-    immediatelyRender: false,
-  })
+  const editorRef = useRef<RichTextEditorHandle>(null)
 
-  // Load existing news
+  // Load existing news — resolve initialContent before mounting editor
   useEffect(() => {
-    if (isNew || !editor) return
+    if (isNew) return
 
     async function fetchNews() {
       try {
@@ -73,6 +60,7 @@ export default function NewsEditorPage({
         setSlug(news.slug)
         setExcerpt(news.excerpt ?? "")
         setCoverImageUrl(news.coverImageUrl ?? "")
+        setCategory(news.category ?? "GENERAL")
         setIsPublished(news.isPublished)
         setIsPinned(news.isPinned)
         setPublishedAt(
@@ -80,15 +68,14 @@ export default function NewsEditorPage({
             ? new Date(news.publishedAt).toISOString().slice(0, 16)
             : ""
         )
-        editor?.commands.setContent(news.content ?? "")
+        setInitialContent(news.content ?? "")
       } finally {
         setFetching(false)
       }
     }
 
     fetchNews()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNew, id, editor])
+  }, [isNew, id])
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -103,7 +90,7 @@ export default function NewsEditorPage({
     setError("")
     setSaved(false)
 
-    const content = editor?.getHTML() ?? ""
+    const content = editorRef.current?.getHTML() ?? ""
 
     const body = {
       title,
@@ -111,6 +98,7 @@ export default function NewsEditorPage({
       excerpt,
       coverImageUrl,
       content,
+      category,
       isPublished,
       isPinned,
       publishedAt: publishedAt || null,
@@ -236,118 +224,32 @@ export default function NewsEditorPage({
               </div>
             </div>
 
-            {/* TipTap Editor */}
-            <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
-              <div className="border-b bg-brand-50 px-4 py-2 flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => editor?.chain().focus().toggleBold().run()}
-                  className={`rounded px-2 py-1 text-xs font-bold transition-colors ${
-                    editor?.isActive("bold")
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  B
-                </button>
-                <button
-                  type="button"
-                  onClick={() => editor?.chain().focus().toggleItalic().run()}
-                  className={`rounded px-2 py-1 text-xs italic transition-colors ${
-                    editor?.isActive("italic")
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  I
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleHeading({ level: 2 }).run()
-                  }
-                  className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
-                    editor?.isActive("heading", { level: 2 })
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  H2
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleHeading({ level: 3 }).run()
-                  }
-                  className={`rounded px-2 py-1 text-xs font-semibold transition-colors ${
-                    editor?.isActive("heading", { level: 3 })
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  H3
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleBulletList().run()
-                  }
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    editor?.isActive("bulletList")
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  • List
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleOrderedList().run()
-                  }
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    editor?.isActive("orderedList")
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  1. List
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleBlockquote().run()
-                  }
-                  className={`rounded px-2 py-1 text-xs transition-colors ${
-                    editor?.isActive("blockquote")
-                      ? "bg-brand-700 text-white"
-                      : "hover:bg-brand-100 text-brand-800"
-                  }`}
-                >
-                  &ldquo; Quote
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = window.prompt("Nhập URL hình ảnh:")
-                    if (url) editor?.chain().focus().setImage({ src: url }).run()
-                  }}
-                  className="rounded px-2 py-1 text-xs hover:bg-brand-100 text-brand-800 transition-colors"
-                >
-                  Ảnh
-                </button>
-              </div>
-              <EditorContent
-                editor={editor}
-                className="prose prose-sm max-w-none min-h-[300px] p-4 focus-within:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[300px]"
-              />
-            </div>
+            {/* Rich text editor */}
+            <RichTextEditor ref={editorRef} initialContent={initialContent} />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
             <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
               <h2 className="text-sm font-bold text-brand-900">Cài đặt xuất bản</h2>
+
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-medium text-brand-800 mb-1">
+                  Phân loại bài
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as "GENERAL" | "RESEARCH")}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                >
+                  <option value="GENERAL">📰 Tin tức (/tin-tuc)</option>
+                  <option value="RESEARCH">📚 Nghiên cứu khoa học (/nghien-cuu)</option>
+                </select>
+                <p className="mt-1 text-[11px] text-brand-400 leading-snug">
+                  Tin tức hiển thị ở trang /tin-tuc. Nghiên cứu khoa học hiển thị ở trang /nghien-cuu.
+                </p>
+              </div>
 
               {/* Published toggle */}
               <label className="flex items-center gap-3 cursor-pointer">

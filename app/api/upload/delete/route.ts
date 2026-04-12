@@ -27,7 +27,8 @@ export async function POST(request: Request) {
   // Extract public_id from Cloudinary URL
   // URL format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{folder}/{filename}.{ext}
   try {
-    const match = url.match(/\/upload\/(?:v\d+\/)?(agarwood\/.+)\.\w+$/)
+    // Support both old pattern (agarwood/...) and new pattern (tin-tuc/04-2026/...)
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/)
     if (!match) {
       return NextResponse.json({ error: "Invalid Cloudinary URL" }, { status: 400 })
     }

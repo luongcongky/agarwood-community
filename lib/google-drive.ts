@@ -3,15 +3,34 @@ import { Readable } from "stream"
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
+/**
+ * OAuth 2.0 delegation flow — upload file bằng quota của user thật, không
+ * phải service account (Google disabled service account storage quota 04/2024).
+ *
+ * Yêu cầu env vars:
+ *  - GOOGLE_DRIVE_CLIENT_ID       (reuse GOOGLE_CLIENT_ID của NextAuth)
+ *  - GOOGLE_DRIVE_CLIENT_SECRET   (reuse GOOGLE_CLIENT_SECRET)
+ *  - GOOGLE_DRIVE_REFRESH_TOKEN   (lấy 1 lần qua OAuth Playground, xem docs)
+ *
+ * Refresh token cho phép server tự động lấy access token mới khi cần,
+ * không cần user login lại.
+ */
 function getAuth() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!
-  const key = process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, "\n")
+  const clientId =
+    process.env.GOOGLE_DRIVE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID
+  const clientSecret =
+    process.env.GOOGLE_DRIVE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET
+  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN
 
-  return new google.auth.JWT({
-    email,
-    key,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  })
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "Google Drive OAuth chưa cấu hình. Cần GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN trong .env.local. Xem hướng dẫn tại documents/guideline/04-technical-document.md.",
+    )
+  }
+
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+  return oauth2Client
 }
 
 function getDrive() {
@@ -22,13 +41,17 @@ const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!
 
 // ── Folder structure ─────────────────────────────────────────────────────────
 
-// Map category to Drive folder name
+// Map category to Drive folder name (flat — findOrCreateFolder không hỗ trợ nested path)
 const CATEGORY_FOLDERS: Record<string, string> = {
   CONG_VAN_DEN: "Công văn đến",
   CONG_VAN_DI: "Công văn đi",
   BIEN_BAN_HOP: "Biên bản họp",
   QUYET_DINH: "Quyết định",
   HOP_DONG: "Hợp đồng",
+  // Văn bản pháp quy (public)
+  DIEU_LE: "VBPQ - Điều lệ",
+  QUY_CHE: "VBPQ - Quy chế",
+  GIAY_PHEP: "VBPQ - Giấy phép",
 }
 
 /**

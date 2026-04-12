@@ -11,20 +11,33 @@ const orgJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Hội Trầm Hương Việt Nam",
+  alternateName: "VAWA — Vietnam Agarwood Association",
   url: "https://hoitramhuong.vn",
   logo: "https://hoitramhuong.vn/logo.png",
+  foundingDate: "2010-01-11",
   description:
     "Tổ chức xã hội nghề nghiệp kết nối, phát triển cộng đồng doanh nghiệp trầm hương Việt Nam.",
   address: {
     "@type": "PostalAddress",
-    addressLocality: "TP. Hồ Chí Minh",
+    streetAddress: "Số 150, Đường Lý Chính Thắng, Phường Xuân Hòa",
+    addressLocality: "Thành phố Hồ Chí Minh",
+    postalCode: "700000",
     addressCountry: "VN",
   },
-  contactPoint: {
-    "@type": "ContactPoint",
-    telephone: "+84-28-1234-5678",
-    contactType: "customer service",
-  },
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      telephone: "+84-913-810-060",
+      contactType: "Chủ tịch Hội",
+      email: "hoitramhuongvietnam2010@gmail.com",
+    },
+    {
+      "@type": "ContactPoint",
+      telephone: "+84-938-334-647",
+      contactType: "Phó Chủ tịch Hội",
+    },
+  ],
+  sameAs: ["https://www.facebook.com/hoitramhuongvietnam.org"],
 }
 
 function InitialsAvatar({
@@ -85,11 +98,17 @@ export default function GioiThieuPage() {
                 Lịch sử hình thành
               </h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                Hội Trầm Hương Việt Nam được thành lập năm 2010 bởi nhóm các
-                doanh nhân và nhà nghiên cứu có tâm huyết với ngành trầm hương
-                Việt Nam. Trải qua hơn 15 năm hình thành và phát triển, Hội đã
-                không ngừng mở rộng mạng lưới hội viên, xây dựng tiêu chuẩn
-                ngành và đưa trầm hương Việt Nam vươn ra thị trường quốc tế.
+                Hội Trầm Hương Việt Nam (tên viết tắt: <strong>VAWA</strong>{" "}
+                — Vietnam Agarwood Association) được thành lập ngày{" "}
+                <strong>11/01/2010</strong> theo Quyết định số{" "}
+                <strong>23/QĐ-BNV</strong> của Bộ Nội vụ. Điều lệ Hội được Bộ
+                Nội vụ phê duyệt theo Quyết định số{" "}
+                <strong>688/QĐ-BNV ngày 23/06/2010</strong>, và sửa đổi, bổ
+                sung theo Quyết định số{" "}
+                <strong>1086/QĐ-BNV ngày 29/12/2023</strong>. Hội hiện hoạt
+                động theo nhiệm kỳ III (2023–2028), không ngừng mở rộng mạng
+                lưới hội viên, xây dựng tiêu chuẩn ngành và đưa trầm hương Việt
+                Nam vươn ra thị trường quốc tế.
               </p>
             </div>
 
@@ -128,22 +147,17 @@ export default function GioiThieuPage() {
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Ban lãnh đạo
           </h2>
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2 max-w-3xl mx-auto">
             {[
               {
-                name: "Nguyễn Văn Minh",
-                title: "Chủ tịch Hội đồng",
-                bio: "Hơn 25 năm kinh nghiệm trong ngành trầm hương, người sáng lập và định hướng chiến lược phát triển của Hội.",
+                name: "Phạm Văn Du",
+                title: "Chủ tịch Hội",
+                bio: "Lãnh đạo cao nhất của Hội Trầm Hương Việt Nam, định hướng chiến lược phát triển và đại diện Hội trong các hoạt động đối nội, đối ngoại.",
               },
               {
-                name: "Trần Thị Lan",
-                title: "Phó Chủ tịch",
-                bio: "Chuyên gia về tiêu chuẩn chất lượng và chứng nhận sản phẩm, phụ trách mảng quan hệ đối ngoại và hợp tác quốc tế.",
-              },
-              {
-                name: "Lê Hoàng Nam",
-                title: "Tổng Thư ký",
-                bio: "Phụ trách điều hành hoạt động thường nhật của Hội, kết nối và hỗ trợ hội viên giải quyết các vấn đề phát sinh.",
+                name: "Nguyễn Văn Hùng",
+                title: "Phó Chủ tịch Hội",
+                bio: "Hỗ trợ Chủ tịch điều hành các hoạt động chuyên môn, phụ trách kết nối hội viên và phát triển mạng lưới doanh nghiệp trầm hương toàn quốc.",
               },
             ].map((leader) => (
               <div
@@ -228,41 +242,48 @@ export default function GioiThieuPage() {
       {/* ── Organization Chart ── */}
       <section className="bg-brand-50 py-20">
         <div className="mx-auto max-w-4xl px-4">
-          <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
+          <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Cơ cấu tổ chức
           </h2>
+          <p className="mb-10 text-center text-sm text-brand-500">
+            Theo Điều 12 Điều lệ Hội (sửa đổi, bổ sung) 2023
+          </p>
           <div className="flex flex-col items-center gap-0">
-            {/* Top: Đại hội hội viên */}
+            {/* Top: Đại hội */}
             <div className="rounded-lg border-2 border-brand-600 bg-brand-700 px-8 py-3 text-center text-white font-semibold shadow">
-              Đại hội hội viên
+              Đại hội
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
             {/* Ban chấp hành */}
             <div className="rounded-lg border-2 border-brand-500 bg-brand-600 px-8 py-3 text-center text-white font-semibold shadow">
-              Ban chấp hành
+              Ban Chấp hành
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* Hội đồng */}
+            {/* Ban Thường vụ */}
             <div className="rounded-lg border-2 border-brand-400 bg-brand-500 px-8 py-3 text-center text-white font-semibold shadow">
-              Hội đồng chủ tịch
+              Ban Thường vụ
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* Three departments — always horizontal */}
-            <div className="relative w-full max-w-xl mx-auto">
+            {/* 3 units: Ban Kiểm tra / Văn phòng & ban chuyên môn / Tổ chức trực thuộc */}
+            <div className="relative w-full max-w-3xl mx-auto">
               {/* Horizontal connector line */}
               <div
                 className="absolute top-0 h-0.5 bg-brand-400"
                 style={{ left: "calc(100% / 6)", right: "calc(100% / 6)" }}
               />
 
-              <div className="grid grid-cols-3">
-                {["Ban kiểm tra", "Ban thư ký", "Các ban chuyên môn"].map((dept) => (
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  "Ban Kiểm tra",
+                  "Văn phòng & các ban chuyên môn",
+                  "Tổ chức trực thuộc",
+                ].map((dept) => (
                   <div key={dept} className="flex flex-col items-center">
                     <div className="h-8 w-px bg-brand-400" />
-                    <div className="rounded-lg border border-brand-300 bg-white px-3 sm:px-5 py-2 sm:py-2.5 text-center text-xs sm:text-sm font-medium text-brand-800 shadow-sm">
+                    <div className="rounded-lg border border-brand-300 bg-white px-2 sm:px-4 py-2 sm:py-2.5 text-center text-xs sm:text-sm font-medium text-brand-800 shadow-sm min-h-12 flex items-center justify-center">
                       {dept}
                     </div>
                   </div>
@@ -292,14 +313,19 @@ export default function GioiThieuPage() {
           </div>
           <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-6">
             <p className="font-semibold text-brand-900">
-              Hội Trầm Hương Việt Nam
+              Hội Trầm Hương Việt Nam (VAWA)
             </p>
             <p className="mt-1 text-brand-700">
-              📍 123 Đường Trầm Hương, Quận 1, TP. Hồ Chí Minh
+              📍 Số 150, Đường Lý Chính Thắng, Phường Xuân Hòa, TP. Hồ Chí Minh
             </p>
-            <p className="mt-1 text-brand-700">📞 028 1234 5678</p>
             <p className="mt-1 text-brand-700">
-              📧 hoitramhuong@vietnam.vn
+              📞 0913 810 060 (Chủ tịch) · 0938 334 647 (Phó Chủ tịch)
+            </p>
+            <p className="mt-1 text-brand-700">
+              📧 hoitramhuongvietnam2010@gmail.com
+            </p>
+            <p className="mt-1 text-brand-700">
+              🌐 hoitramhuong.vn
             </p>
             <p className="mt-1 text-brand-700">
               🕐 Thứ 2 - Thứ 6: 8:00 - 17:00

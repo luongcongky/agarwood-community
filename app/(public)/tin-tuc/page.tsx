@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -52,6 +53,7 @@ export default async function NewsPage({
 
   const where = {
     isPublished: true,
+    category: "GENERAL" as const,
     ...(q && {
       OR: [
         { title: { contains: q, mode: "insensitive" as const } },
@@ -80,7 +82,7 @@ export default async function NewsPage({
     }),
     // Sidebar: latest 6 pinned or most recent (always fresh regardless of page/search)
     prisma.news.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, category: "GENERAL" },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
       select: { id: true, title: true, slug: true, publishedAt: true, isPinned: true },
@@ -161,9 +163,7 @@ export default async function NewsPage({
                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-7xl opacity-30">🌿</span>
-                    </div>
+                    <AgarwoodPlaceholder className="w-full h-full" size="xl" shape="square" tone="dark" />
                   )}
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-linear-to-t from-brand-950/90 via-brand-950/30 to-transparent" />
@@ -206,9 +206,7 @@ export default async function NewsPage({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-brand-700">
-                            <span className="text-xl">🌿</span>
-                          </div>
+                          <AgarwoodPlaceholder className="w-full h-full" size="sm" shape="square" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -269,9 +267,7 @@ export default async function NewsPage({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-brand-700">
-                          <span className="text-2xl">🌿</span>
-                        </div>
+                        <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" />
                       )}
                     </div>
 

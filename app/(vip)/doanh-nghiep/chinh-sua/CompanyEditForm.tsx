@@ -66,6 +66,7 @@ export function CompanyEditForm({ company }: { company: Company }) {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("folder", "doanh-nghiep")
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (!res.ok) { setMsg({ type: "error", text: "Upload that bai" }); return }
       const data = await res.json()

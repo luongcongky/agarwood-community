@@ -24,8 +24,10 @@ export async function POST(
       type: true,
       amount: true,
       status: true,
+      description: true,
       membershipId: true,
       certificationId: true,
+      bannerId: true,
       user: { select: { name: true, email: true } },
     },
   })
@@ -85,7 +87,6 @@ export async function POST(
 
     // Email VIP — outside transaction (non-critical)
     try {
-      const newExpiry = new Date()
       const user = await prisma.user.findUnique({
         where: { id: payment.userId },
         select: { membershipExpires: true },
@@ -135,6 +136,72 @@ export async function POST(
       })
     } catch (err) {
       console.error("Failed to send cert confirmation email:", err)
+    }
+  } else if (payment.type === "BANNER_FEE" && payment.bannerId) {
+    // Phase 6: Confirm CK cho banner đăng ký mới hoặc gia hạn
+    // Phân biệt 2 case dựa trên description (chứa "RENEW" = gia hạn)
+    const isRenew = payment.description?.includes("Gia hạn banner") ?? false
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({ where: { id }, data: { status: "SUCCESS" } })
+
+      const banner = await tx.banner.findUnique({
+        where: { id: payment.bannerId! },
+        select: { id: true, status: true, endDate: true },
+      })
+      if (!banner) return
+
+      if (isRenew) {
+        // Gia hạn — extend endDate, KHÔNG đổi status (vẫn ACTIVE/EXPIRED)
+        // Tính số tháng gia hạn từ amount / banner_price_per_month
+        const pricePerMonth = 1_000_000 // TODO: đọc từ SiteConfig nếu cần dynamic
+        const monthsRenewed = Math.round(payment.amount / pricePerMonth)
+        const baseDate = banner.endDate > new Date() ? banner.endDate : new Date()
+        const newEndDate = new Date(baseDate)
+        newEndDate.setMonth(newEndDate.getMonth() + monthsRenewed)
+
+        await tx.banner.update({
+          where: { id: banner.id },
+          data: {
+            endDate: newEndDate,
+            // Nếu banner đang EXPIRED → chuyển lại ACTIVE (đã gia hạn)
+            ...(banner.status === "EXPIRED" && { status: "ACTIVE" }),
+          },
+        })
+      } else {
+        // Đăng ký mới — chuyển sang PENDING_APPROVAL để admin duyệt content
+        await tx.banner.update({
+          where: { id: banner.id },
+          data: { status: "PENDING_APPROVAL" },
+        })
+      }
+    })
+
+    // Email user
+    try {
+      await resend.emails.send({
+        from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
+        to: payment.user.email,
+        subject: isRenew
+          ? "Gia hạn banner thành công - Hội Trầm Hương Việt Nam"
+          : "Banner đang chờ duyệt - Hội Trầm Hương Việt Nam",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px;">
+            <h2>Xin chào ${payment.user.name},</h2>
+            <p>Chuyển khoản <strong>${payment.amount.toLocaleString("vi-VN")}đ</strong> ${
+              isRenew ? "gia hạn banner" : "đăng ký banner mới"
+            } đã được xác nhận.</p>
+            ${
+              isRenew
+                ? "<p>Banner của bạn đã được gia hạn và tiếp tục hiển thị trên trang chủ.</p>"
+                : "<p>Banner đang chờ Ban quản trị duyệt nội dung. Bạn sẽ nhận email ngay khi banner được duyệt.</p>"
+            }
+            <p><a href="${process.env.NEXTAUTH_URL}/banner/lich-su" style="display:inline-block;background:#1a5632;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Xem banner</a></p>
+          </div>
+        `,
+      })
+    } catch (err) {
+      console.error("Failed to send banner confirmation email:", err)
     }
   } else {
     // Generic payment (MEDIA_SERVICE etc.)

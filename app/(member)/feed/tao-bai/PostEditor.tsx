@@ -72,11 +72,22 @@ export default function TaoBaiPage() {
   )
 }
 
+type PostCategoryClient = "GENERAL" | "NEWS" | "PRODUCT"
+
+const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
+  { value: "GENERAL", label: "Bài viết chung", hint: "Hiển thị ở Bản tin hội viên" },
+  { value: "NEWS",    label: "Tin doanh nghiệp", hint: "Có thể lên section tin DN trang chủ (nếu là VIP)" },
+  { value: "PRODUCT", label: "Tin sản phẩm", hint: "Giới thiệu / chứng nhận SP — có thể lên trang chủ (nếu là VIP)" },
+]
+
+type QuotaInfo = { used: number; limit: number; remaining: number; resetAt: string }
+
 function TaoBaiContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("edit")
   const [title, setTitle] = useState("")
+  const [category, setCategory] = useState<PostCategoryClient>("GENERAL")
   const [preview, setPreview] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -87,11 +98,25 @@ function TaoBaiContent() {
   const [imageSelected, setImageSelected] = useState(false)
   const [originalImages, setOriginalImages] = useState<string[]>([]) // images from loaded content (edit mode)
   const [uploadedImages, setUploadedImages] = useState<string[]>([]) // images uploaded this session
+  const [quota, setQuota] = useState<QuotaInfo | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const docxInputRef = useRef<HTMLInputElement>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editIdRef = useRef(editId)
   editIdRef.current = editId
+
+  // Fetch quota tháng hiện tại — chỉ cần khi tạo bài mới (edit không tính quota)
+  useEffect(() => {
+    if (editId) return
+    let cancelled = false
+    fetch("/api/posts/quota")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setQuota(data)
+      })
+      .catch(() => { /* ignore — UI vẫn hoạt động khi không lấy được */ })
+    return () => { cancelled = true }
+  }, [editId])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -187,6 +212,7 @@ function TaoBaiContent() {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("folder", "bai-viet")
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (!res.ok) throw new Error("Upload failed")
       const data = await res.json()
@@ -266,7 +292,12 @@ function TaoBaiContent() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title || undefined, content: editor.getHTML() }),
+        body: JSON.stringify({
+          title: title || undefined,
+          content: editor.getHTML(),
+          // category chỉ gửi khi tạo mới — edit giữ nguyên category cũ
+          ...(editId ? {} : { category }),
+        }),
       })
       if (res.ok) {
         // Cleanup orphaned Cloudinary images (deleted from editor but not from cloud)
@@ -289,7 +320,7 @@ function TaoBaiContent() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={handleCancel}
           className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-800 transition-colors"
@@ -307,9 +338,57 @@ function TaoBaiContent() {
         </button>
         <span className="text-brand-500">/</span>
         <h1 className="font-semibold text-brand-900 text-lg">{editId ? "Chỉnh sửa bài viết" : "Tạo bài viết mới"}</h1>
+
+        {/* Quota chip — chỉ hiển thị khi tạo mới */}
+        {!editId && quota && (
+          <span
+            className={cn(
+              "ml-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+              quota.limit === -1
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : quota.remaining === 0
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : quota.remaining <= 2
+                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                    : "bg-brand-50 text-brand-700 border border-brand-200"
+            )}
+            title={
+              quota.limit === -1
+                ? "Bạn có hạn mức không giới hạn"
+                : `Hạn mức sẽ làm mới vào ${new Date(quota.resetAt).toLocaleDateString("vi-VN")}`
+            }
+          >
+            {quota.limit === -1
+              ? "Hạn mức: ∞"
+              : `Đã dùng ${quota.used}/${quota.limit} bài tháng này`}
+          </span>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-brand-200">
+        {/* Category selector — chỉ khi tạo mới */}
+        {!editId && (
+          <div className="border-b border-brand-200 px-5 py-3 flex items-center gap-2 flex-wrap">
+            <label className="text-xs font-medium text-brand-600 mr-1">Loại bài:</label>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCategory(opt.value)}
+                title={opt.hint}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                  category === opt.value
+                    ? "bg-brand-700 text-white border-brand-700"
+                    : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Title input */}
         <div className="border-b border-brand-200 px-5 py-4">
           <input
@@ -538,13 +617,18 @@ function TaoBaiContent() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || (!editId && quota?.limit !== -1 && quota?.remaining === 0)}
             className={cn(
               "flex items-center gap-2 rounded-lg bg-brand-700 px-5 py-2 text-sm font-semibold text-white transition-colors",
-              submitting
+              submitting || (!editId && quota?.remaining === 0)
                 ? "opacity-60 cursor-not-allowed"
                 : "hover:bg-brand-800"
             )}
+            title={
+              !editId && quota?.remaining === 0
+                ? "Đã hết hạn mức tháng này — nâng cấp VIP để tăng hạn mức"
+                : undefined
+            }
           >
             {submitting && (
               <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -3,7 +3,7 @@
 
 > Tai lieu nay quy dinh cac quy trinh nghiep vu chinh thuc cua he thong.
 > Ap dung cho Ban quan tri va toan the hoi vien.
-> Phien ban: 2.0 | Cap nhat: 04/2026
+> Phien ban: 3.2 | Cap nhat: 04/2026 — Phase 1-6 + Điều lệ integration + Văn bản pháp quy + Member application workflow
 
 ---
 
@@ -24,11 +24,32 @@
 
 ## 1. Quy trinh dang ky hoi vien
 
-### 1.1 Hai loai tai khoan
+### 1.0 Phan loai theo Dieu le Hoi (Chuong II, Dieu 7)
+
+Theo **Dieu le Hoi (sua doi, bo sung) 2023** — QD 1086/QD-BNV 29/12/2023,
+hoi vien duoc chia thanh 3 hang:
+
+| Hang | Mo ta | Quyen bieu quyet | Quyen ung cu |
+|------|-------|:---:|:---:|
+| **Chinh thuc (OFFICIAL)** | Hoi vien day du, gom Hoi vien to chuc + ca nhan | ✓ | ✓ |
+| **Lien ket (AFFILIATE)** | DN khong du tieu chuan chinh thuc, DN FDI | — | — |
+| **Danh du (HONORARY)** | Ca nhan/to chuc uy tin, dong gop cho Hoi | — | — |
+
+> Hang nay (field `User.memberCategory`) doc lap voi *tier* Bac/Vang (field
+> `contributionTotal`). Mot VIP co the la "Chinh thuc" voi tier "Bac" dong thoi.
+
+### 1.1 Hai loai tai khoan (ky thuat)
 | Loai | Doi tuong | Dieu kien |
 |------|---------|-----------|
 | **Doanh nghiep (BUSINESS)** | Cong ty, ho kinh doanh trong nganh tram huong | Co giay DKKD hop le |
 | **Ca nhan (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan, nha suu tam | Hoat dong lien quan tram huong |
+
+### 1.1.1 Nguoi dai dien to chuc (Dieu 7, Khoan 2c)
+Hoi vien to chuc phai chi dinh **01 (mot) nguoi dai dien** lam dau moi tham
+gia cac hoat dong cua Hoi:
+- Luu tai `Company.representativeName` + `Company.representativePosition`
+- Thay doi nguoi dai dien: thong bao Ban Thuong vu trong **5 ngay**
+- Field xuat hien tren `/admin/hoi-vien/[id]` tab Thong tin
 
 ### 1.2 Quyen theo loai tai khoan
 | Tinh nang | Doanh nghiep | Ca nhan |
@@ -42,28 +63,74 @@
 | Tao san pham | ✓ | — |
 | Chung nhan san pham | ✓ | — |
 
-### 1.3 Quy trinh dang ky
+### 1.3 Quy trinh dang ky (Phase 2 — bo cho duyet)
 
 **Cach 1 — Dang ky bang Google (nhanh):**
 1. Click "Dang ky bang Google" tai /dang-ky
 2. Chon tai khoan Google -> cap quyen
-3. He thong tao don dang ky tu dong (trang thai cho duyet)
-4. Ban quan tri xet duyet trong 3 ngay lam viec
-5. Neu duoc duyet: tai khoan chuyen thanh VIP, dang nhap bang Google
+3. He thong tao tai khoan **kich hoat ngay** (role GUEST, free tier)
+4. Tu dong dang nhap, dua den /feed
 
 **Cach 2 — Dang ky bang form:**
 1. Dien form tai /dang-ky (chon loai: Doanh nghiep hoac Ca nhan)
-2. Ban quan tri xet duyet trong 3 ngay lam viec
-3. Neu duoc duyet: gui email kich hoat tai khoan
+2. He thong tao tai khoan kich hoat ngay
+3. Email confirmation co link dang nhap
 4. Hoi vien dat mat khau va dang nhap
 
-**Sau khi duoc duyet (ca 2 cach):**
-5. Dong phi membership thong qua chuyen khoan ngan hang
-6. Admin xac nhan chuyen khoan -> membership kich hoat
+**Nang cap len VIP (tuy chon, sau khi co tai khoan):**
+5. Dong phi membership thong qua chuyen khoan ngan hang (xem muc 2)
+6. Admin xac nhan chuyen khoan -> tai khoan tro thanh VIP
+7. Quota bai viet tang, bai len trang chu, mo khoa cac tinh nang VIP
+
+> **Phase 2 thay doi quan trong**: Khong con flow "ban quan tri xet duyet 3 ngay" cho user moi.
+> Bat ky ai cung dang ky va dung he thong duoc ngay. VIP la nang cap thuong, khong la gate.
+
+### 1.3.1 Don ket nap Hoi vien chinh thuc (Dieu le, Dieu 11)
+
+**Tai sao co 2 flow?** Flow dang ky o tren (1.3) chi tao *tai khoan ky thuat*.
+Theo Dieu le Hoi, de duoc cong nhan la **Hoi vien chinh thuc**, user phai nop
+don rieng va duoc Ban Thuong vu xet duyet — day la yeu cau phap ly cua hoi
+xa hoi nghe nghiep.
+
+**Quy trinh**:
+1. User dang nhap → click avatar → "Don ket nap Hoi vien" (hoac vao `/ket-nap`)
+2. Dien form:
+   - Hang xin ket nap: Chinh thuc / Lien ket / Danh du
+   - Ly do xin gia nhap (min 20 ky tu)
+   - Nguoi dai dien + chuc vu (neu la to chuc BUSINESS)
+3. Submit → tao `MembershipApplication` voi status `PENDING`
+4. Admin xem tai `/admin/hoi-vien/don-ket-nap`:
+   - Tab "Cho duyet" co badge count do
+   - Click card → Approve (chon hang cuoi) hoac Reject (nhap ly do)
+5. He thong tu dong gui email cho applicant:
+   - Approved → User.memberCategory cap nhat + email "Chuc mung duoc cong nhan"
+   - Rejected → email voi ly do tu choi
+
+**SLA**: Ban Thuong vu xet duyet tai cac cuoc hop **hang quy**; Chu tich quyet
+dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
+- `PENDING` — da nop, cho BCH xet
+- `APPROVED` — Chu tich da ky quyet dinh cong nhan
+- `REJECTED` — bi tu choi (co the nop lai sau)
+
+**Idempotency**: user khong the nop don thu 2 khi dang co don `PENDING`.
 
 ### 1.4 Gioi han
-- Toi da 100 hoi vien VIP (co the dieu chinh boi ban quan tri)
+- **Tai khoan free (GUEST)**: khong gioi han so luong dang ky
+- **Hoi vien VIP**: toi da 100 hoi vien VIP (slot enforce o flow nang cap, khong o dang ky)
 - Moi hoi vien dai dien cho 1 doanh nghiep (1 tai khoan = 1 cong ty)
+
+### 1.5 Cac tinh nang theo trang thai tai khoan
+
+| Tinh nang | Khach (chua login) | GUEST | VIP★ | VIP★★ Bac | VIP★★★ Vang |
+|-----------|:---:|:---:|:---:|:---:|:---:|
+| Xem trang chu, tin tuc | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Xem feed (3 bai dau) | ✓ blur | ✓ | ✓ | ✓ | ✓ |
+| Dang bai feed | — | 5/thang | 15/thang | 30/thang | ∞ |
+| Bai len trang chu | — | — | ✓ | ✓ | ✓ |
+| Chung nhan SP | — | — | ✓ BUSINESS | ✓ | ✓ |
+| **Banner QC** (Phase 6) | — | **1 mau/thang** | **5 mau/thang** | **10 mau/thang** | **20 mau/thang** |
+| Tai lieu Hoi | — | — | ✓ | ✓ | ✓ |
+| Dich vu truyen thong | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ---
 
@@ -203,10 +270,25 @@
 
 ### 6.2 Noi dung CAM
 - Thong tin sai lech, gia mao
-- Spam, quang cao qua muc (qua 3 bai/ngay)
+- Spam — quota thang chong spam (xem 6.5)
 - Noi dung khong lien quan den nganh tram huong
 - Ngon ngu thieu ton trong, pham phap
 - Noi dung xam pham ban quyen
+
+### 6.5 Quota dang bai theo thang (Phase 2)
+
+| Trang thai | Quota/thang |
+|-----------|------------|
+| GUEST (free tier) | 5 bai |
+| VIP ★ (1 sao) | 15 bai |
+| VIP ★★ Bac (2 sao) | 30 bai |
+| VIP ★★★ Vang (3 sao) | Khong gioi han |
+
+- Reset vao 0h ngay 1 hang thang
+- Bai bi xoa khong duoc tinh lai quota (chong gian lan)
+- Het quota -> nut "Dang bai" disable + thong bao "Da dung X/Y bai thang nay"
+- Bai dang voi `category: NEWS` hoac `PRODUCT` cua VIP co the len trang chu (section 5/6)
+- Bai cua GUEST khong len trang chu, chi hien o /feed
 
 ### 6.3 Xu ly vi pham
 | Muc do | Hanh dong | Ai xu ly |
@@ -301,14 +383,45 @@
 
 ## 10. Phu luc
 
-### 10.1 Bieu phi hien hanh
+### 10.1 Bieu phi hien hanh (theo Dieu le Hoi)
+
+**Phi gia nhap** (1 lan khi ket nap — Dieu le, Dieu 11):
+
+| Hoi vien | Phi gia nhap |
+|----------|-------------|
+| Ca nhan | 1.000.000 VND |
+| To chuc / Lien ket | 2.000.000 VND |
+
+**Nien lien hang nam** (toi thieu):
+
+| Hoi vien | Nien lien toi thieu | Duy tri quyen |
+|----------|---------------------|----------------|
+| Ca nhan | **1.000.000 VND/nam** | Quyen hoi vien co ban |
+| To chuc | **2.000.000 VND/nam** | Quyen hoi vien day du |
+
+**Muc dong gop tu nguyen** (cao hon toi thieu — de len tier):
+
 | Hang muc | So tien | Ghi chu |
 |---------|---------|---------|
-| Phi membership toi thieu | 5.000.000 VND/nam | Duy tri quyen VIP |
-| Phi membership toi da | 10.000.000 VND/nam | Uu tien feed cao |
+| Dong gop tu nguyen to chuc (khuyen nghi) | 10.000.000 VND/nam | Tier Bac (10tr) hoac Vang (20tr) |
+| Dong gop tu nguyen ca nhan (khuyen nghi) | 2.000.000 VND/nam | Tier Bac (3tr) hoac Vang (5tr) |
 | Phi chung nhan SP | 5.000.000 VND/don | Hoan neu tu choi |
+| **Banner QC (Phase 6)** | **1.000.000 VND/mau/thang** | **Flat, khong discount theo tier** |
 
-> Bieu phi co the thay doi. Ban quan tri cap nhat tai `/admin/cai-dat`.
+**SiteConfig keys** (admin chinh tai `/admin/cai-dat`):
+- `join_fee_individual`, `join_fee_organization` — phi gia nhap 1 lan
+- `membership_fee_min` (default 2tr to chuc), `membership_fee_max` (10tr)
+- `individual_fee_min` (1tr ca nhan), `individual_fee_max` (2tr)
+
+**Tai khoan chuyen khoan chinh thuc** (theo Dieu le):
+- Ngan hang: Vietinbank
+- STK: 116000060707
+- Chu TK: HOI TRAM HUONG VIET NAM
+- Noi dung CK: `[ten hoi vien] - nop phi gia nhap hoi vien` (lan dau)
+  hoac `[ten hoi vien] - nop hoi phi` (nien lien)
+
+> **Luu y**: Theo Dieu le, phi chinh thuc la muc toi thieu. Bieu phi chi tiet
+> co the thay doi. Ban quan tri cap nhat tai `/admin/cai-dat`.
 
 ### 10.2 Thong tin lien he
 - Ten hoi: Hoi Tram Huong Viet Nam
@@ -321,6 +434,120 @@
 |-----------|------|------------------|
 | 1.0 | 03/2026 | Tao tai lieu dau tien |
 | 2.0 | 04/2026 | Cap nhat toan bo theo he thong moi |
+| 3.0 | 04/2026 | Phase 1-5: Open posting (bo cho duyet), quota thang, top 10 DN + top 20 SP tieu bieu, landing page Quyen loi hoi vien, trang chu newspaper layout |
+| 3.1 | 04/2026 | Phase 6 (SPEC): chot business rules cho banner quang cao — 1tr/mau/thang, quota 1/5/10/20 theo tier, gia han duoc, hien thi rotate 5s top 20 slot |
+| **3.2** | **04/2026** | **Dieu le Hoi integration**: 3 hang hoi vien (Chinh thuc / Lien ket / Danh du), phi dung Dieu le (gia nhap + nien lien), Don ket nap (/ket-nap + admin review), Van ban phap quy (/phap-ly voi 3 tabs), Nguoi dai dien to chuc, Hoi vien doi tac thuc te (9 DN VIP Bac), menu restructure (Trang chu / Tin tuc / Nghien cuu / Doanh nghiep / San pham / Quyen loi) |
+
+---
+
+## 11. Banner quang cao (Phase 6 — du kien)
+
+> **Status**: Phase 6 chua duoc trien khai. Day la business rules da chot voi khach 04/2026.
+> Khi implement, doc them dac ta ky thuat tai `documents/testing/functional/08-flow-banner-quang-cao.md`.
+
+### 11.1 Doi tuong su dung
+- **Moi user dang nhap** deu co the dang ky banner (kha c voi cac dich vu khac chi cho VIP)
+- Quota theo tier — GUEST cung dung duoc nhung quota thap
+
+### 11.2 Bieu phi va quota
+| Tier | Quota mau/thang | Gia 1 mau |
+|------|----------------|----------|
+| Khach (chua dang ky) | 0 (khong dung duoc) | — |
+| GUEST (free tier) | **1 mau/thang** | 1.000.000 VND/thang |
+| VIP ★ (1 sao) | **5 mau/thang** | 1.000.000 VND/thang |
+| VIP ★★ Bac | **10 mau/thang** | 1.000.000 VND/thang |
+| VIP ★★★ Vang | **20 mau/thang** | 1.000.000 VND/thang |
+| ADMIN | Khong gioi han | — |
+
+- Gia FLAT 1tr/mau/thang, **khong discount** theo tier
+- Quota dem so banner ACTIVE trong cung 1 thang (hoa don dau thang)
+- Tinh phi theo so thang dang ky (vi du: 3 thang = 3.000.000 VND)
+
+### 11.3 Quy trinh dang ky banner
+1. User vao `/banner/dang-ky` (yeu cau dang nhap)
+2. Step 1: Chon thoi gian (toi thieu 1 thang) -> he thong tinh tong tien
+3. Step 2: Upload anh banner (jpg/png, ti le 16:9 hoac 3:1, max 2MB) + nhap title + targetUrl
+4. Step 3: Hien thong tin chuyen khoan -> user CK -> click "Da chuyen khoan"
+5. He thong tao banner voi status `PENDING_APPROVAL`
+6. Admin xac nhan CK + duyet noi dung -> banner -> `ACTIVE`
+7. Banner xuat hien tren homepage Section 4 trong khoang `startDate <= now <= endDate`
+
+### 11.4 Hien thi banner tren homepage
+- Vi tri: Section 4 trang chu (giua Carousel SP va Tin DN)
+- Width: trong max-w-7xl (nhat quan voi cac section khac)
+- **Toi da 20 slot rotate** trong cung mot lan load trang
+- **Auto-rotate moi 5 giay** -> banner ke tiep
+- Pause khi user hover
+
+### 11.5 Quy tac chon 20 slot khi co > 20 banner ACTIVE
+- Uu tien theo tier: VIP★★★ Vang -> VIP★★ Bac -> VIP★ -> GUEST
+- Trong cung tier: random hoac theo `createdAt DESC`
+- Thay doi moi page load (de fair share)
+
+### 11.6 Gia han banner
+- User co the gia han banner ACTIVE sap het han (< 7 ngay)
+- Phi gia han = 1.000.000 VND × so thang gia han them
+- **KHONG dem vao quota thang** moi (khong tao banner moi)
+- **KHONG can admin duyet noi dung lai** (chi confirm CK)
+- He thong tu dong gui email "sap het han, gia han ngay" 7 ngay truoc khi expire
+
+### 11.7 Quy dinh noi dung banner
+- Lien quan den nganh tram huong (san pham, dich vu, su kien)
+- Khong gay hieu lam, khong sai lech
+- targetUrl phai la link nguon goc cua user (khong link doi thu)
+- Anh ro net, dung ti le, khong vo lieu
+- Vi pham -> admin tu choi + hoan tien (xem 11.8)
+
+### 11.8 Tu choi va hoan tien
+- Admin tu choi banner -> tu dong hoan tien 100% qua TK ngan hang cua user
+- Quy trinh hoan tien giong nhu chung nhan SP (xem section 4)
+- Thoi han: 5-7 ngay lam viec
+
+### 11.9 Het han va xoa banner
+- Banner het han (`endDate < now`) -> tu dong chuyen sang `EXPIRED` (cron daily)
+- Banner EXPIRED khong hien thi tren homepage nhung van luu trong DB de tham khao
+- User co the dang ky banner moi (KHONG la gia han) sau khi banner cu het han
+- Admin co quyen xoa banner bat ky luc nao
+
+---
+
+---
+
+## 12. Van ban phap quy cua Hoi
+
+### 12.1 Danh sach van ban (trang `/phap-ly`)
+
+Trang `/phap-ly` hien thi cong khai 3 tabs:
+
+**Tab 1 — Dieu le Hoi**:
+- Dieu le (sua doi, bo sung) 2023 — QD 1086/QD-BNV ngay 29/12/2023 — Bo Noi vu
+
+**Tab 2 — Quy che noi bo** (7 van ban, Chu tich VAWA ban hanh):
+1. Quy che hoat dong cua Ban Chap hanh Hoi (QD 48/QD-VAWA)
+2. Quy che quan ly tai chinh cua Hoi (QD 49/QD-VAWA)
+3. Quy che hoat dong cua Ban Thuong vu Hoi (QD 50/QD-VAWA)
+4. Quy che hoat dong cua Ban Kiem tra Hoi (QD 52/QD-VAWA)
+5. Quy che quan ly va su dung con dau (QD 54/QD-VAWA)
+6. Quy che Hoi vien (QD 56/QD-VAWA)
+7. Quy che hoat dong Van phong (QD 58/QD-VAWA)
+
+**Tab 3 — Giay phep** (du kien):
+- Giay phep Dai hoi (Bo Noi vu)
+
+### 12.2 Luu tru van ban
+- File PDF goc luu tren **Google Drive** cua Hoi (folder `VBPQ - *`)
+- Admin upload/edit tai `/admin/phap-ly` — collapsible form
+- Public trang `/phap-ly` dung `Document` model voi `category` in (DIEU_LE, QUY_CHE, GIAY_PHEP) + `isPublic: true`
+
+### 12.3 Cap nhat van ban moi
+Admin upload tai `/admin/phap-ly` voi thong tin:
+- Phan loai (Dieu le / Quy che / Giay phep)
+- Tieu de, so van ban, ngay ban hanh, co quan ban hanh
+- Mo ta ngan
+- Thu tu hien thi (sort order)
+- File PDF (toi da 20MB)
+
+He thong tu dong upload len Google Drive + luu metadata vao DB.
 
 ---
 

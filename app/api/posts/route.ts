@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getQuotaUsage } from "@/lib/quota"
 import DOMPurify from "isomorphic-dompurify"
+import type { PostCategory } from "@prisma/client"
+
+const VALID_CATEGORIES: PostCategory[] = ["GENERAL", "NEWS", "PRODUCT"]
 
 // GET /api/posts?cursor=<postId>
 export async function GET(request: Request) {
@@ -70,24 +74,26 @@ export async function GET(request: Request) {
 // POST /api/posts
 export async function POST(request: Request) {
   const session = await auth()
-  if (!session?.user || session.user.role === "GUEST") {
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { title, content } = await request.json()
+  const { title, content, category } = await request.json()
   if (!content || content.trim().length < 50) {
     return NextResponse.json({ error: "Nội dung quá ngắn (tối thiểu 50 ký tự)" }, { status: 400 })
   }
 
-  // Anti-spam: max 3 posts per day
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayPostCount = await prisma.post.count({
-    where: { authorId: session.user.id, createdAt: { gte: todayStart } },
-  })
-  if (todayPostCount >= 3) {
+  // Validate category — default GENERAL nếu không truyền
+  const cat: PostCategory = VALID_CATEGORIES.includes(category) ? category : "GENERAL"
+
+  // Quota tháng — thay thế anti-spam 3 bài/ngày cũ
+  const usage = await getQuotaUsage(session.user.id)
+  if (usage.limit !== -1 && usage.used >= usage.limit) {
     return NextResponse.json(
-      { error: "Bạn đã đăng 3 bài hôm nay. Hẹn gặp lại bạn vào ngày mai nhé!" },
+      {
+        error: `Bạn đã đăng ${usage.used}/${usage.limit} bài tháng này. Hạn mức sẽ được làm mới vào đầu tháng sau. Nâng cấp VIP để tăng hạn mức.`,
+        quota: usage,
+      },
       { status: 429 },
     )
   }
@@ -105,6 +111,7 @@ export async function POST(request: Request) {
       title: title || null,
       content: sanitizedContent,
       imageUrls: [],
+      category: cat,
       isPremium: session.user.role === "VIP",
       authorPriority: user?.displayPriority ?? 0,
     },

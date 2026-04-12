@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     excerpt,
     content,
     coverImageUrl,
+    category,
     isPublished,
     isPinned,
     publishedAt,
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
     )
   }
 
+  const validCategory = category === "RESEARCH" ? "RESEARCH" : "GENERAL"
+
   const news = await prisma.news.create({
     data: {
       title,
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
       excerpt: excerpt ?? null,
       content: content ? DOMPurify.sanitize(content) : "",
       coverImageUrl: coverImageUrl ?? null,
+      category: validCategory,
       isPublished: isPublished ?? false,
       isPinned: isPinned ?? false,
       publishedAt: publishedAt ? new Date(publishedAt) : null,

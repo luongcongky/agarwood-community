@@ -62,8 +62,10 @@ export async function POST(request: Request) {
             const contentType = image.contentType || "image/png"
             const base64 = `data:${contentType};base64,${imageBuffer.toString("base64")}`
 
+            const now = new Date()
+            const monthFolder = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`
             const uploaded = await cloudinary.uploader.upload(base64, {
-              folder: "agarwood/posts",
+              folder: `bai-viet/${monthFolder}`,
               resource_type: "image",
               format: "webp",
               quality: "auto",

@@ -33,8 +33,12 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(arrayBuffer)
   const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
 
-  // Determine folder based on context
-  const folder = (formData.get("folder") as string) || "agarwood/posts"
+  // Folder structure: {menu}/{MM-YYYY}
+  // menu from request (e.g. "bai-viet", "tin-tuc", "san-pham", "doanh-nghiep")
+  const menu = (formData.get("folder") as string) || "bai-viet"
+  const now = new Date()
+  const monthFolder = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`
+  const folder = `${menu}/${monthFolder}`
 
   const result = await cloudinary.uploader.upload(base64, {
     folder,

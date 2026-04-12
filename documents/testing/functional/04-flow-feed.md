@@ -1,9 +1,15 @@
 # Flow Feed cong dong
 
 ## Tai khoan test
-- Guest: khong dang nhap
+- Khach: khong dang nhap
+- GUEST (free tier): user moi dang ky tu /dang-ky
 - VIP: nguyen.van.a@tramhuong-hn.vn / 123456
 - Admin: admin@hoi-tram-huong.vn / 123456
+
+## Phase 2 changes
+- Bo flow "cho duyet" — dang ky xong la post duoc ngay (free tier 5 bai/thang)
+- Quota thang thay the rule "3 bai/ngay" cu (TC-FEED-05 cap nhat)
+- Bai co `category` (GENERAL/NEWS/PRODUCT) — chi VIP voi NEWS/PRODUCT moi len trang chu
 
 ## Kich ban
 
@@ -42,12 +48,29 @@
 5. Login Admin -> xem bai bat ky
 6. Click menu "..." -> **Kiem tra**: Co "Khoa bai" + "Xoa bai"
 
-### TC-FEED-05: Anti-spam 3 bai/ngay
-1. Login VIP -> dang bai 1 -> thanh cong
-2. Dang bai 2 -> thanh cong
-3. Dang bai 3 -> thanh cong
-4. Dang bai 4
-5. **Kiem tra**: Server tra loi 429 "Ban da dang 3 bai hom nay. Hen gap lai ban vao ngay mai nhe!"
+### TC-FEED-05: Quota thang theo tier (Phase 2 — thay anti-spam 3/ngay cu)
+1. Login GUEST (free tier) -> /feed/tao-bai
+2. **Kiem tra**: Chip "Da dung 0/5 bai thang nay" hien o header
+3. Dang 5 bai trong thang
+4. **Kiem tra**: Sau bai thu 5, chip thanh "5/5", nut "Dang bai" disable
+5. Co gang POST /api/posts -> **Kiem tra**: Server tra 429 + message "Ban da dang 5/5 bai thang nay..."
+6. Login VIP★★ Vang -> /feed/tao-bai
+7. **Kiem tra**: Chip "Han muc: ∞", khong gioi han
+
+### TC-FEED-12: Phan loai bai viet (category — Phase 2)
+1. Login VIP -> /feed/tao-bai
+2. **Kiem tra**: Hien 3 chip chon loai: "Bai viet chung" (default) | "Tin doanh nghiep" | "Tin san pham"
+3. Chon "Tin doanh nghiep" -> nhap noi dung -> Dang bai
+4. Vao trang chu / -> **Kiem tra**: Bai vua post xuat hien o section "Tin doanh nghiep moi nhat"
+5. Tao bai voi loai "Tin san pham"
+6. **Kiem tra**: Bai xuat hien o section "Tin san pham moi nhat"
+
+### TC-FEED-13: Bai cua GUEST khong len trang chu
+1. Login GUEST -> /feed/tao-bai -> chon "Tin doanh nghiep"
+2. Submit bai
+3. Vao trang chu / -> section "Tin doanh nghiep moi nhat"
+4. **Kiem tra**: Bai cua GUEST KHONG hien o section nay (chi VIP)
+5. Vao /feed -> **Kiem tra**: Bai van hien binh thuong
 
 ### TC-FEED-06: Reaction "Huu ich" voi optimistic update
 1. Login VIP -> click "Huu ich" tren 1 bai
@@ -106,3 +129,5 @@
 - [ ] TC-FEED-09: PASS / FAIL
 - [ ] TC-FEED-10: PASS / FAIL
 - [ ] TC-FEED-11: PASS / FAIL
+- [ ] TC-FEED-12: PASS / FAIL
+- [ ] TC-FEED-13: PASS / FAIL

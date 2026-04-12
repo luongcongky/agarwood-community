@@ -23,7 +23,25 @@
       "Bash(MIGRATE_TARGET=supabase npx prisma migrate deploy)",
       "WebFetch(domain:skills.sh)",
       "Bash(npx skills:*)",
-      "Bash(find app:*)"
+      "Bash(find app:*)",
+      "WebFetch(domain:hoitramhuongvietnam.org)",
+      "Bash(curl -sI \"http://hoitramhuongvietnam.org/file/Giấy phép Đại hội.pdf\")",
+      "Bash(curl -sI \"http://hoitramhuongvietnam.org/file/Giấy phép Đại Hội.pdf\")",
+      "Bash(npx eslint:*)",
+      "Bash(npx tsx:*)",
+      "Bash(python scripts/playwright/test-resize-full.py)",
+      "Bash(python scripts/playwright/test_editor_toolbar.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(python .claude/skills/webapp-testing/scripts/with_server.py --server \"npm run dev\" --port 3000 --timeout 180 -- python scripts/playwright/test_phase1_vip_layout.py)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:123456@localhost:5432/agarwood\" npx tsx scripts/crawl-news.ts --slug=loi-cam-on-chung-tay-ho-tro-dong-bao-mien-trung-tay-nguyen-khac-phuc-bao-lu)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:123456@localhost:5432/agarwood\" npx tsx scripts/crawl-research.ts --force)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:123456@localhost:5432/agarwood\" npx tsx scripts/crawl-news.ts --force)",
+      "Bash(export PGPASSWORD=123456)",
+      "Bash('/c/Program Files/PostgreSQL/17/bin/pg_dump.exe' -h localhost -p 5432 -U postgres -d agarwood --clean --if-exists --no-owner --no-privileges --exclude-table=_prisma_migrations -f scripts/local-full-dump.sql)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash('/c/Program Files/PostgreSQL/17/bin/psql.exe' postgresql://postgres.zkhxgczjgpbedxroyygf:ma4SZqmHLsymHFye@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres -f scripts/local-full-dump.sql)",
+      "Bash('/c/Program Files/PostgreSQL/17/bin/psql.exe' postgresql://postgres.zkhxgczjgpbedxroyygf:ma4SZqmHLsymHFye@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres -c ':*)",
+      "Bash(git status:*)"
     ]
   }
 }

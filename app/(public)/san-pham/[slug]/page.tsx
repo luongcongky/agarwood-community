@@ -4,7 +4,9 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductGallery } from "./ProductGallery"
+import { CommentsSection } from "@/components/features/comments/CommentsSection"
 
 export const revalidate = 3600
 
@@ -237,6 +239,15 @@ export default async function ProductDetailPage({ params }: Props) {
         </div>
       </div>
 
+      {/* Comments / Discussion section */}
+      <CommentsSection
+        productId={product.id}
+        currentUserId={session?.user?.id ?? null}
+        currentUserRole={session?.user?.role}
+        currentUserName={session?.user?.name}
+        currentUserAvatar={session?.user?.image}
+      />
+
       {/* Related products */}
       {relatedProducts.length > 0 && (
         <section className="border-t border-brand-200 pt-8">
@@ -254,9 +265,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     {rpImages.length > 0 ? (
                       <Image src={rpImages[0]} alt={rp.name} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-brand-200 to-brand-300">
-                        <span className="text-3xl">🌿</span>
-                      </div>
+                      <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
                     )}
                     {rp.certStatus === "APPROVED" && (
                       <span className="absolute top-2 right-2 bg-brand-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full shadow">✓</span>

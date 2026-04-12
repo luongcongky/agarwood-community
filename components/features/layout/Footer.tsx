@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Separator } from "@/components/ui/separator"
 
 export function Footer() {
@@ -9,8 +10,14 @@ export function Footer() {
 
           {/* Brand */}
           <div className="space-y-3 sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl" aria-hidden>🌿</span>
+            <div className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Hội Trầm Hương Việt Nam"
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0"
+              />
               <h3 className="text-brand-100 font-semibold text-lg">
                 Hội Trầm Hương Việt Nam
               </h3>
@@ -27,11 +34,15 @@ export function Footer() {
             <h4 className="text-brand-100 font-semibold text-sm uppercase tracking-wider">
               Liên kết nhanh
             </h4>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
               {[
-                { label: "Trang chủ",        href: "/" },
-                { label: "Liên hệ",          href: "/lien-he" },
-                { label: "Điều lệ Hội",      href: "/dieu-le" },
+                { label: "Trang chủ",         href: "/" },
+                { label: "Giới thiệu",        href: "/gioi-thieu" },
+                { label: "Hội viên",          href: "/hoi-vien" },
+                { label: "Dịch vụ",           href: "/dich-vu" },
+                { label: "Điều lệ Hội",       href: "/dieu-le" },
+                { label: "Liên hệ",           href: "/lien-he" },
+                { label: "Văn bản pháp quy",  href: "/phap-ly" },
               ].map((l) => (
                 <li key={l.href}>
                   {/* py-1 tăng vùng tap trên mobile */}
@@ -52,9 +63,10 @@ export function Footer() {
               Liên hệ
             </h4>
             <ul className="space-y-2 text-base sm:text-sm text-brand-300">
-              <li>📧 hoitramhuong@vietnam.vn</li>
-              <li>📞 (028) 1234 5678</li>
-              <li>📍 TP. Hồ Chí Minh, Việt Nam</li>
+              <li>📧 hoitramhuongvietnam2010@gmail.com</li>
+              <li>📞 0913 810 060 · 0938 334 647</li>
+              <li>📍 Số 150, Lý Chính Thắng, P. Xuân Hòa, TP.HCM</li>
+              <li>🌐 hoitramhuong.vn</li>
             </ul>
           </div>
 

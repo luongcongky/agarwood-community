@@ -44,19 +44,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email nay da duoc su dung" }, { status: 409 })
     }
 
-    // Check slot limit
-    const maxCfg = await prisma.siteConfig.findUnique({ where: { key: "max_vip_accounts" } })
-    const maxSlot = Number(maxCfg?.value ?? 100)
-    const currentVIP = await prisma.user.count({ where: { role: "VIP" } })
-    const pendingGuests = await prisma.user.count({ where: { role: "GUEST", isActive: false } })
-    if (currentVIP + pendingGuests >= maxSlot) {
-      return NextResponse.json(
-        { error: "Hoi hien dang day slot. Vui long lien he ban quan tri." },
-        { status: 400 },
-      )
-    }
+    // Phase 2: bỏ slot limit cho GUEST — GUEST là free tier, đăng ký không giới hạn.
+    // `max_vip_accounts` chỉ enforce ở flow nâng cấp lên VIP (đóng phí), không ở đây.
 
-    // Create GUEST user (inactive, pending admin approval)
+    // Phase 2: tạo user kích hoạt ngay (isActive=true). Mọi account đều post được,
+    // điểm khác biệt chỉ là quota tháng + ưu tiên hiển thị (xem lib/quota.ts).
+    // Account vẫn ở role GUEST cho tới khi đóng phí membership → ADMIN nâng lên VIP.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userData: any = {
       email,
@@ -64,7 +57,7 @@ export async function POST(request: Request) {
       phone,
       role: "GUEST",
       accountType,
-      isActive: false,
+      isActive: true,
       accounts: {
         create: {
           type: "credentials",
@@ -129,13 +122,16 @@ export async function POST(request: Request) {
       await resend.emails.send({
         from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
         to: email,
-        subject: "Đã nhận đơn đăng ký — Hội Trầm Hương Việt Nam",
+        subject: "Chào mừng đến với Hội Trầm Hương Việt Nam",
         html: `
           <div style="font-family:sans-serif;max-width:600px;">
             <h2>Xin chào ${name},</h2>
-            <p>Chúng tôi đã nhận được đơn đăng ký hội viên của bạn.</p>
-            <p>Ban quản trị sẽ xem xét và phản hồi trong vòng <strong>3 ngày làm việc</strong>.</p>
-            <p>Nếu được chấp thuận, bạn sẽ nhận email hướng dẫn kích hoạt tài khoản và đóng phí hội viên.</p>
+            <p>Tài khoản của bạn đã được tạo thành công và <strong>kích hoạt ngay</strong>.</p>
+            <p>Bạn có thể đăng nhập và bắt đầu chia sẻ bài viết trên cộng đồng ngay lập tức.</p>
+            <p>
+              <a href="${process.env.NEXTAUTH_URL}/login" style="display:inline-block;background:#1a5632;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Đăng nhập ngay</a>
+            </p>
+            <p style="margin-top:20px;">Để hưởng các quyền lợi nâng cao (hạn mức bài viết cao hơn, ưu tiên hiển thị trang chủ, chứng nhận sản phẩm...), bạn có thể nâng cấp lên hội viên VIP.</p>
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
             <p style="color:#888;font-size:12px;">Hội Trầm Hương Việt Nam</p>
           </div>

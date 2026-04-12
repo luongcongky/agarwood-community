@@ -1,9 +1,15 @@
-# Huong dan su dung danh cho Hoi vien VIP
-## Hoi Tram Huong Viet Nam — Phien ban 2.0
+# Huong dan su dung danh cho Hoi vien
+## Hoi Tram Huong Viet Nam — Phien ban 3.2
 
 > Chao mung ban gia nhap cong dong Hoi Tram Huong Viet Nam!
 > Tai lieu nay huong dan ban su dung day du cac tinh nang cua he thong.
-> Cap nhat lan cuoi: 04/2026
+> Cap nhat lan cuoi: 04/2026 (Phase 1-6 + Dieu le Hoi)
+>
+> **Phase 2**: Tu phien ban moi, **bat ky ai** dang ky tai khoan cung su dung duoc ngay
+> (free tier — 5 bai/thang). Nang cap len **VIP** de tang quota va xuat hien tren trang chu.
+>
+> **Phase 3.2**: Theo Dieu le Hoi, de duoc cong nhan **Hoi vien chinh thuc** can nop
+> don ket nap va duoc Ban Thuong vu xet duyet (xem [muc 11](#11-don-ket-nap-hoi-vien-chinh-thuc)).
 
 ---
 
@@ -19,6 +25,8 @@
 8. [Gia han membership](#8-gia-han-membership)
 9. [Dat dich vu truyen thong](#9-dat-dich-vu-truyen-thong)
 10. [Cau hoi thuong gap](#10-cau-hoi-thuong-gap)
+11. [Don ket nap Hoi vien chinh thuc](#11-don-ket-nap-hoi-vien-chinh-thuc)
+12. [Che do xem Cong khai / Quan tri](#12-che-do-xem-cong-khai-quan-tri)
 
 ---
 
@@ -184,10 +192,34 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 - Click "Xem truoc" de xem bai nhu khi hien thi tren feed
 - Click "Dang bai" de xuat ban
 
-### Quy dinh dang bai
-- Toi da 3 bai/ngay
-- Noi dung phai lien quan den nganh tram huong
-- Cam spam, quang cao qua muc, thong tin sai lech
+### Quy dinh dang bai (Phase 2 — quota theo thang)
+
+**Hạn mức bài viết theo trang thai tai khoan:**
+
+| Trạng thái | Hạn mức / tháng |
+|------------|----------------|
+| Khách (chưa nâng cấp) | 5 bài |
+| VIP ★ (1 sao) | 15 bài |
+| VIP ★★ Bạc | 30 bài |
+| VIP ★★★ Vàng | Không giới hạn |
+
+- Hạn mức **reset vào 0h ngày 1 hằng tháng**
+- Bài bị xóa **không** trả lại slot
+- Khi tao bai, ban se thay chip "Da dung X/Y bai thang nay" o dau trang
+- Het quota → nut "Dang bai" disable, can doi sang thang sau hoac nang cap
+
+### Phan loai bai viet (Phase 2)
+Khi tao bai moi, chon **loai bai**:
+- **Bai viet chung** (default): hien thi o /feed
+- **Tin doanh nghiep**: tin tuc cua DN — neu ban la VIP, bai co the len section "Tin DN moi nhat" tren trang chu
+- **Tin san pham**: gioi thieu / chung nhan SP — neu VIP, bai co the len section "Tin SP moi nhat"
+
+> Bai cua user **chua VIP** chi hien o /feed, KHONG len trang chu.
+
+### Noi dung khong duoc phep
+- Noi dung khong lien quan den nganh tram huong
+- Spam, quang cao qua muc
+- Thong tin sai lech
 - Bai vi pham se bi admin khoa
 
 ### Tuong tac
@@ -293,6 +325,21 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 **Q: Toi quen mat khau, lam sao?**
 A: Lien he ban quan tri. Admin se gui email dat lai mat khau voi link co hieu luc 48 gio. Click link de dat mat khau moi va tu dong dang nhap.
 
+**Q: Toi moi dang ky, tai sao van dang bai duoc khong can cho duyet?**
+A: Tu Phase 2 (04/2026), he thong khong con flow "cho duyet 3 ngay". Tai khoan kich hoat ngay sau khi dang ky, ban co the post 5 bai/thang voi tu cach Khach (free tier). Nang cap len VIP de tang quota va co bai len trang chu.
+
+**Q: Lam sao de bai cua toi xuat hien tren trang chu?**
+A: Phai dat 2 dieu kien:
+1. Tai khoan dang la VIP (da nang cap qua membership fee)
+2. Bai dat loai "Tin doanh nghiep" (NEWS) hoac "Tin san pham" (PRODUCT) khi tao
+Bai loai "chung" (GENERAL) chi hien o /feed.
+
+**Q: Toi het quota thang nay, lam sao?**
+A: Co 2 cach:
+1. Doi sang thang sau (quota reset 0h ngay 1)
+2. Nang cap VIP de tang quota — VIP★ 15 bai, VIP★★ 30 bai, VIP★★★ khong gioi han
+Vao trang `/landing` (Quyen loi hoi vien) de xem chi tiet.
+
 **Q: Toi muon doi email dang nhap?**
 A: Email khong the tu doi. Lien he admin de ho tro.
 
@@ -318,7 +365,82 @@ A: Ban co the: dang bai tren feed, xem tai lieu Hoi, gia han membership, dat dic
 A: Lien he ban quan tri. Admin se cap nhat loai tai khoan va tao thong tin doanh nghiep cho ban.
 
 **Q: Tai sao toi khong thay menu "Doanh nghiep" va "Chung nhan SP"?**
-A: Cac menu nay chi hien thi cho tai khoan loai Doanh nghiep. Neu ban dang ky voi tu cach Ca nhan / Chuyen gia, ban se khong thay cac menu nay.
+A: Cac menu nay chi hien thi cho tai khoan loai Doanh nghiep (va chi khi ban o che do quan tri). Neu ban dang ky voi tu cach Ca nhan / Chuyen gia, ban se khong thay cac menu nay.
+
+---
+
+## 11. Don ket nap Hoi vien chinh thuc
+
+### Tai sao can nop don nay?
+Theo **Dieu le Hoi (Chuong II, Dieu 11)**, dang ky tai khoan o `/dang-ky` chi
+la tao tai khoan ky thuat. De duoc cong nhan **Hoi vien chinh thuc** — voi quyen
+bieu quyet va ung cu trong Hoi — ban can nop don ket nap rieng va duoc
+**Ban Thuong vu Hoi** xet duyet.
+
+### 3 hang hoi vien theo Dieu le
+| Hang | Mo ta | Quyen |
+|------|-------|-------|
+| **Chinh thuc** (OFFICIAL) | Hoi vien day du | Bieu quyet, ung cu, bau cu |
+| **Lien ket** (AFFILIATE) | DN khong du tieu chuan chinh thuc, DN FDI | Tham gia hoat dong, KHONG bieu quyet |
+| **Danh du** (HONORARY) | Ca nhan/to chuc uy tin, co dong gop | Tuong tu Lien ket |
+
+### Cach nop don
+1. Dang nhap → click **avatar** (goc phai tren) → dropdown hien **"Don ket nap Hoi vien"**
+2. Hoac truy cap truc tiep `/ket-nap`
+3. Trang se hien:
+   - Hang hien tai cua ban (neu co)
+   - Don dang cho xet duyet (neu co)
+   - Form nop don moi (neu khong co don pending)
+
+4. Form nop don:
+   - **Hang xin ket nap**: Chinh thuc / Lien ket / Danh du (default: Chinh thuc)
+   - **Nguoi dai dien tổ chức** (chỉ Doanh nghiep): ho ten + chuc vu — bat buoc theo Dieu 7.2c
+   - **Ly do xin gia nhap** (min 20 ky tu): gioi thieu ban than / to chuc, kinh nghiem nganh tram huong, mong muon dong gop
+
+5. Click **"Nop don ket nap"**
+
+### Quy trinh xet duyet
+1. Don ban vua nop o trang thai `PENDING` (cho duyet)
+2. **Ban Thuong vu Hoi** xet don tai cac cuoc hop hang quy
+3. **Chu tich Hoi** quyet dinh cong nhan trong **30 ngay** ke tu ngay nop day du
+4. Ban nhan email thong bao ket qua:
+   - **Duoc cong nhan** — chuc mung, ban la Hoi vien chinh thuc
+   - **Tu choi** — email co ly do cu the → ban co the bo sung ho so va nop lai
+
+### Xem lich su don
+Trang `/ket-nap` hien thi lich su 10 don gan nhat cua ban voi status va ly do (neu tu choi).
+
+### Luu y
+- Chi co the nop 1 don `PENDING` tai mot thoi diem
+- Sau khi bi tu choi, co the bo sung ho so + nop lai (khong bi ban)
+- Phi gia nhap (1tr ca nhan / 2tr to chuc) chuyen khoan sau khi duoc duyet
+
+---
+
+## 12. Che do xem Cong khai / Quan tri
+
+### 2 che do xem
+He thong co 2 che do hien thi menu khac nhau:
+
+| Che do | Trang | Menu hien thi |
+|--------|-------|--------------|
+| **Public** (default) | `/`, `/tin-tuc`, `/nghien-cuu`, `/feed`, `/san-pham-doanh-nghiep`, `/landing`... | Trang chu / Tin tuc / Nghien cuu / Doanh nghiep / San pham / Quyen loi |
+| **Quan tri** | `/tong-quan`, `/gia-han`, `/ho-so`, `/chung-nhan`, `/doanh-nghiep-cua-toi`, `/tai-lieu` | Tong quan / Bang tin / (Doanh nghiep nếu BUSINESS) / Chung nhan SP / Gia han / Ho so |
+
+### Vao che do quan tri
+1. Tu bat ky trang cong khai nao, click **avatar** (goc phai tren)
+2. Dropdown hien **"Vao khu vuc quan tri"** → click → navigate `/tong-quan`
+3. Navbar tu dong chuyen sang menu quan tri
+
+### Ve trang cong khai
+1. Tu bat ky trang quan tri nao, click **avatar** lai
+2. Dropdown hien **"Ve trang cong khai"** → click → navigate `/`
+3. Navbar tu dong chuyen ve menu cong khai
+
+### Tai sao co 2 che do?
+- **Khong gay nham lan** — khi xem trang cong khai, ban thay giong nhu khach vieng tham
+- **Truy cap nhanh khu vuc quan tri** — khi can gia han, xem lich su thanh toan, ban chuyen sang che do quan tri ngay
+- **Khong bi khoa** — 2 chieu chuyen qua avatar dropdown
 
 ---
 

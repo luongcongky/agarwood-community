@@ -50,7 +50,7 @@ export default async function FeedPage() {
         where: { userId: userId ?? "none" },
         select: { type: true },
       },
-      _count: { select: { reactions: true } },
+      _count: { select: { reactions: true, comments: { where: { deletedAt: null } } } },
     },
   })
 

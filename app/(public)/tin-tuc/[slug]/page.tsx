@@ -1,8 +1,11 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { prisma } from "@/lib/prisma"
+import { slugify } from "@/lib/utils"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { CopyLinkButton } from "./CopyLinkButton"
 
 export const revalidate = 1800
@@ -11,8 +14,8 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const news = await prisma.news.findUnique({
-    where: { slug },
+  const news = await prisma.news.findFirst({
+    where: { slug, category: "GENERAL" },
     select: {
       title: true,
       excerpt: true,
@@ -38,14 +41,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NewsDetailPage({ params }: Props) {
   const { slug } = await params
 
-  const news = await prisma.news.findUnique({
-    where: { slug, isPublished: true },
+  const news = await prisma.news.findFirst({
+    where: { slug, isPublished: true, category: "GENERAL" },
   })
+
+  // If not found, try slugifying the input
+  if (!news) {
+    const normalizedSlug = slugify(slug)
+    if (normalizedSlug !== slug) {
+      const redirectedNews = await prisma.news.findFirst({
+        where: { slug: normalizedSlug, isPublished: true, category: "GENERAL" },
+      })
+      if (redirectedNews) {
+        redirect(`/tin-tuc/${normalizedSlug}`)
+      }
+    }
+  }
+
   if (!news) notFound()
 
   // Fetch related articles (excluding current slug)
   const related = await prisma.news.findMany({
-    where: { isPublished: true, slug: { not: slug } },
+    where: { isPublished: true, category: "GENERAL", slug: { not: slug } },
     orderBy: { publishedAt: "desc" },
     take: 3,
     select: {
@@ -105,11 +122,16 @@ export default async function NewsDetailPage({ params }: Props) {
           </p>
         )}
         {news.coverImageUrl && (
-          <img
-            src={news.coverImageUrl}
-            alt={news.title}
-            className="w-full max-h-96 object-cover rounded-xl"
-          />
+          <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted">
+            <Image
+              src={news.coverImageUrl}
+              alt={news.title}
+              fill
+              className="object-cover"
+              priority
+              sizes="(max-width: 896px) 100vw, 896px"
+            />
+          </div>
         )}
       </header>
 
@@ -159,15 +181,17 @@ export default async function NewsDetailPage({ params }: Props) {
                 className="group block bg-card rounded-xl overflow-hidden border border-border hover:shadow-md transition-shadow"
               >
                 {item.coverImageUrl ? (
-                  <img
-                    src={item.coverImageUrl}
-                    alt={item.title}
-                    className="w-full h-36 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-36 bg-brand-700 flex items-center justify-center">
-                    <span className="text-3xl">🌿</span>
+                  <div className="relative w-full h-36">
+                    <Image
+                      src={item.coverImageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, 33vw"
+                    />
                   </div>
+                ) : (
+                  <AgarwoodPlaceholder className="w-full h-36" size="md" shape="square" />
                 )}
                 <div className="p-3 space-y-1">
                   <h3 className="text-sm font-semibold text-foreground group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">

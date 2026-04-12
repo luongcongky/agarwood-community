@@ -27,8 +27,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (dbUser) {
-          // Existing user — allow if active, or if GUEST (pending approval)
-          if (!dbUser.isActive && dbUser.role !== "GUEST") return false
+          if (!dbUser.isActive) {
+            // VIP/ADMIN inactive = admin chủ động disable → block
+            if (dbUser.role !== "GUEST") return false
+            // GUEST inactive = legacy pre-Phase 2 (chờ duyệt) → auto-activate
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { isActive: true },
+            })
+          }
 
           // Link Google account to existing user if not already linked
           const existingAccount = await prisma.account.findFirst({
@@ -53,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return true
         }
 
-        // New user — create GUEST (pending admin approval)
+        // Phase 2: tạo user kích hoạt ngay (free tier — post được nhưng quota thấp).
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
@@ -61,7 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             avatarUrl: user.image ?? null,
             role: "GUEST",
             accountType: "BUSINESS",
-            isActive: false,
+            isActive: true,
             accounts: {
               create: {
                 type: account.type,
@@ -184,16 +191,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             avatarUrl: true,
             passwordHash: true,
             isActive: true,
+            role: true,
           },
         })
 
-        if (!user?.passwordHash || !user.isActive) return null
+        if (!user?.passwordHash) return null
 
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
         )
         if (!valid) return null
+
+        // Phase 2: auto-activate legacy GUEST users (pre-Phase 2 inactive state)
+        if (!user.isActive) {
+          if (user.role !== "GUEST") return null // VIP/ADMIN inactive = admin disabled
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { isActive: true },
+          })
+        }
 
         return { id: user.id, name: user.name, email: user.email, image: user.avatarUrl }
       },

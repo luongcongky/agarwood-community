@@ -7,7 +7,9 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen">
+    // h-screen (thay cho min-h-screen) để main thực sự scroll bên trong,
+    // không cho phép outer container grow theo content → sticky toolbar hoạt động
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar: ẩn mobile, hiện từ md+ */}
       <AdminSidebar />
 

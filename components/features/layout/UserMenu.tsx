@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { LogOut, User, Settings } from "lucide-react"
+import { LogOut, User, Settings, FileCheck, LayoutDashboard, Globe } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -16,12 +16,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import type { Role } from "@prisma/client"
 
+export type NavMode = "public" | "vip-admin" | "admin"
+
 interface UserMenuProps {
   name: string | null | undefined
   email: string | null | undefined
   image: string | null | undefined
   role: Role
   accountType?: string | null
+  /** Mode hiện tại của Navbar — quyết định menu item "Vào khu vực quản trị" / "Về trang công khai" */
+  mode?: NavMode
 }
 
 const roleLabel: Record<Role, string> = {
@@ -36,11 +40,17 @@ const roleBadgeClass: Record<Role, string> = {
   ADMIN: "bg-primary text-primary-foreground",
 }
 
-export function UserMenu({ name, email, image, role, accountType }: UserMenuProps) {
+export function UserMenu({ name, email, image, role, accountType, mode = "public" }: UserMenuProps) {
   const router = useRouter()
-  const initials = name?.trim() 
+  const initials = name?.trim()
     ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
     : "?"
+
+  // Quyết định destination cho "Vào khu vực quản trị" / "Trang quản lý"
+  const managementHref = role === "ADMIN" ? "/admin" : "/tong-quan"
+  const managementLabel = role === "ADMIN" ? "Vào trang quản trị" : "Trang quản lý"
+  const showEnterManagement = mode === "public" && (role === "VIP" || role === "ADMIN")
+  const showExitToPublic = mode === "vip-admin" || mode === "admin"
 
   return (
     <DropdownMenu>
@@ -74,18 +84,46 @@ export function UserMenu({ name, email, image, role, accountType }: UserMenuProp
           Hồ sơ cá nhân
         </DropdownMenuItem>
 
-        {role === "VIP" && accountType === "BUSINESS" && (
+        {mode === "vip-admin" && role === "VIP" && accountType === "BUSINESS" && (
           <DropdownMenuItem onClick={() => router.push("/doanh-nghiep-cua-toi")}>
             <Settings className="mr-2 h-4 w-4" />
             Hồ sơ doanh nghiệp
           </DropdownMenuItem>
         )}
 
-        {role === "ADMIN" && (
-          <DropdownMenuItem onClick={() => router.push("/admin")}>
-            <Settings className="mr-2 h-4 w-4" />
-            Trang quản trị
+        {(role === "GUEST" || role === "VIP") && (
+          <DropdownMenuItem onClick={() => router.push("/ket-nap")}>
+            <FileCheck className="mr-2 h-4 w-4" />
+            Đơn kết nạp Hội viên
           </DropdownMenuItem>
+        )}
+
+        {/* Public mode: VIP/ADMIN thấy option vào khu vực quản trị */}
+        {showEnterManagement && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push(managementHref)}
+              className="font-semibold text-brand-700 focus:text-brand-800"
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              {managementLabel}
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {/* Member/admin mode: option về trang công khai */}
+        {showExitToPublic && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push("/")}
+              className="font-semibold text-brand-700 focus:text-brand-800"
+            >
+              <Globe className="mr-2 h-4 w-4" />
+              Về trang công khai
+            </DropdownMenuItem>
+          </>
         )}
 
         <DropdownMenuSeparator />

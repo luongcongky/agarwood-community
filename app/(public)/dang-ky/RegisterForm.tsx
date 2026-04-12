@@ -95,15 +95,15 @@ export function RegisterForm() {
     return (
       <div className="bg-white rounded-2xl border border-brand-200 p-8 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-bold text-brand-900">Đã gửi đơn đăng ký!</h2>
+        <h2 className="text-xl font-bold text-brand-900">Đăng ký thành công!</h2>
         <p className="text-sm text-brand-600">
-          Ban quản trị sẽ xem xét và phản hồi trong vòng <strong>3 ngày làm việc</strong>.
+          Tài khoản của bạn đã được <strong>kích hoạt ngay</strong>. Bạn có thể đăng nhập và bắt đầu chia sẻ bài viết.
         </p>
         <p className="text-sm text-brand-500">
           Email xác nhận đã được gửi đến <strong>{form.email}</strong>.
         </p>
         <Link href="/login" className="inline-block rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors">
-          Về trang đăng nhập
+          Đăng nhập ngay
         </Link>
       </div>
     )

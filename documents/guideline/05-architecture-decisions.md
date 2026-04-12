@@ -230,7 +230,200 @@ Dung isomorphic-dompurify de sanitize HTML o CA server lan client.
 
 ---
 
-## ADR-010: Recharts Dynamic Import
+## ADR-011: Open Posting (Phase 2) — Bo flow "GUEST cho duyet"
+
+### Boi canh
+Phien ban truoc: User dang ky -> tao voi `isActive: false` -> admin duyet -> thanh VIP -> moi post duoc.
+Khach hang yeu cau: "Account nao cung dang ky va dang bai duoc, khac biet la VIP co quota cao + uu tien hien thi."
+
+### Quyet dinh
+1. User dang ky -> `isActive: true` ngay -> dang nhap va post duoc
+2. Role `GUEST` la free tier (post 5 bai/thang, khong len trang chu)
+3. Role `VIP` la nang cap qua membership fee (post 15-30-∞ bai/thang + uu tien)
+4. Auto-activate legacy GUEST inactive (pre-Phase 2 user) khi sign in lan dau
+
+### Trade-offs
+- (+) Conversion funnel ngan hon — user thay duoc gia tri ngay
+- (+) Khong can admin xu ly hang ngay
+- (+) Spam pressure thap (quota 5/thang giu vung)
+- (-) Khong screen duoc spam account ngay tu dau (chap nhan, quota la phong tuyen)
+- (-) Mat khai niem "ban quan tri xet duyet" (khach hang dong y)
+
+### Migration
+- Schema khong doi
+- Auth callback: them auto-activate cho legacy `isActive: false` + `role: GUEST`
+- Register API: doi `isActive: false` -> `true`
+- proxy.ts: bo redirect GUEST -> /cho-duyet, them LOGGED_IN_PREFIXES cho /feed/tao-bai
+
+---
+
+## ADR-012: Quota System (Phase 2) — Per-tier monthly limits
+
+### Boi canh
+Sau khi mo posting cho moi user, can chong spam va tao dong luc nang cap VIP. Yeu cau: hard cap theo thang, dem reset dau thang sau.
+
+### Quyet dinh
+- 4 tier: GUEST 5 / VIP★ 15 / VIP★★ 30 / VIP★★★ ∞
+- Quota luu o SiteConfig key-value, fallback defaults trong `lib/quota.ts`
+- Cache 60s o server, check khi POST /api/posts
+- Bo dem bai DELETED -> chong gian lan xoa-rebuild
+
+### Khong dung
+- Token bucket / sliding window — qua phuc tap cho usecase nho
+- Per-day limit (3/ngay cu) — user post don gian gap kho cuoi ngay
+- Redis rate limiter — them dependency, ham y deploy phuc tap
+
+### Cach hoat dong
+```ts
+const usage = await getQuotaUsage(userId)
+if (usage.limit !== -1 && usage.used >= usage.limit) return 429
+```
+GET /api/posts/quota tra quota cho UI chip "Da dung 3/5 bai thang nay".
+
+---
+
+## ADR-013: Newspaper Homepage (Phase 3) — 6 sections + cached rotation
+
+### Boi canh
+Khach hang muon trang chu kieu bao chi, khong phai marketing landing. Co sections rieng cho tin Hoi, ban tin hoi vien, SP chung nhan, banner quang cao, tin DN, tin SP.
+
+### Quyet dinh
+- 6 section: Tin Hoi (S1) / Ban tin hoi vien (S2 right rail) / Carousel SP (S3) / Banner placeholder (S4) / Tin DN (S5) / Tin SP (S6)
+- Layout grid: S1+S2 cung row (2/3 + 1/3), S3-S6 full width
+- `lib/homepage.ts` chua tat ca data fetcher voi `unstable_cache(revalidate: 300, tags)`
+- Section 5+6 phan biet boi `Post.category` (NEWS / PRODUCT) — schema mới Phase 2
+- Section 5+6 chi show bai cua VIP (`isPremium=true`); Section 2 rotating slots cho phep ca non-VIP
+
+### Section 2 — rotating algorithm
+- 3 slot top: VIP cao nhat theo `authorPriority desc` (sticky)
+- 5 slot rotate: weighted random tu pool 50, refresh moi 5 phut
+- Seed = 5-min bucket → mọi user trong cung window thay cung ket qua (deterministic)
+- Mulberry32 PRNG inline 8 dong code, khong dep moi
+
+### Carousel S3 — CSS-only marquee
+- 60s loop, hover pause, fade mask 2 dau
+- Khong dung JS — server-rendered, accessible, khong layout shift
+- Inline `<style>` block cho keyframes (khong phu thuoc global CSS)
+
+---
+
+## ADR-014: Featured Pin (Phase 4) — Manual curation thay vi auto-rank
+
+### Boi canh
+Khach hang duoc hoi: top 10 DN va top 20 SP duoc rank tu dong (theo metric) hay admin chon tay? Tra loi: **admin chon tay**.
+
+### Quyet dinh
+- Schema: `Company.isFeatured + featuredOrder`, `Product.isFeatured + featuredOrder`
+- Admin UI tai `/admin/tieu-bieu` voi 2 tab (SP / DN), toggle + number input cho thu tu
+- Auto-save voi optimistic UI + rollback khi API fail
+- Validate VIP-only o API layer (`owner.role === "VIP"`) — chong gian lan
+- Khi unfeatured, tu dong clear `featuredOrder = null`
+
+### Tai sao khong auto-rank
+- Khach muon kiem soat content tren landing page (co the curate theo chien dich)
+- Khong co metric "trending" san sang trong DB
+- Don gian hoa logic — admin xu ly bang tay it lan trong nam
+
+### Cache invalidation
+- Sau khi admin pin/unpin: `revalidateTag("homepage", "max")` va `revalidateTag("products"/"companies", "max")`
+- Trang chu va landing page se thay doi sau ~5 phut (stale-while-revalidate window)
+
+---
+
+## ADR-015: Landing Page (Phase 5) — Conversion page tach roi trang chu
+
+### Boi canh
+Khach hang muon **2 trang khac nhau**: trang chu (newspaper, daily news) va landing (conversion to VIP).
+
+### Quyet dinh
+- Route `/landing` rieng (khong la `/`)
+- Menu navbar them "Quyen loi hoi vien" → /landing (label dich tu "Landing page" cho friendly hon)
+- 6 section: Hero / Stats / Top 10 DN / Top 20 SP hot trend / Tier comparison / Final CTA
+- Tier comparison 4 cot (Khach / VIP★ / VIP★★ Bac / VIP★★★ Vang) voi badge "Pho bien nhat" o tier giua
+- proxy.ts: GUEST hit MEMBER_PREFIXES → redirect /landing (Phase 2 truoc do redirect /, Phase 5 sua)
+
+### Why "Landing page" → "Quyen loi hoi vien"
+- "Landing page" la thuat ngu ky thuat, khong phu hop end-user 40-60 tuoi
+- Match dung intent (gioi thieu benefit), distinct voi `/hoi-vien` (directory)
+- SEO friendly keyword
+
+### SEO + conversion
+- JSON-LD `Organization` schema voi member count dong
+- Meta description + Open Graph + Twitter Card
+- 3 CTA primary "Dang ky VIP" rai khap page (Hero, Tier card x4, Final CTA)
+- Trust signal: "Dang ky mien phi • Khong can the tin dung • Kich hoat ngay"
+
+---
+
+## ADR-017: Banner Quang cao (Phase 6 — SPEC) — Gia flat + quota theo tier
+
+### Boi canh
+Khach hang yeu cau co flow tu dang ky banner quang cao. Phase 5 da tao placeholder o
+Section 4 trang chu. Phase 6 can chot business rules truoc khi code.
+
+### Quyet dinh (chot 04/2026)
+
+**1. Doi tuong su dung — moi user dang nhap (KHONG VIP-only)**
+- Khac voi cac tinh nang VIP khac (chung nhan SP, gia han, ho so)
+- Ly do: Banner la nguon doanh thu, mo rong cho ca GUEST de tang revenue + lower friction
+- GUEST tu nhien co quota thap (1 mau/thang) -> dong luc nang cap
+
+**2. Gia FLAT 1tr/mau/thang — KHONG discount theo tier**
+- Da xem xet phuong an "discount theo tier" (Phase 5 ban dau de placeholder 10%/25%)
+- Khach chot: gia bang nhau de don gian + minh bach
+- Khac biet giua tier nam o **quota** (so mau), khong phai gia tien
+
+**3. Quota theo tier — chong spam + dong luc nang cap VIP**
+| Tier | Quota |
+|------|------|
+| GUEST | 1 mau/thang |
+| VIP★ | 5 mau/thang |
+| VIP★★ Bac | 10 mau/thang |
+| VIP★★★ Vang | 20 mau/thang |
+
+- Quota dem so banner ACTIVE trong cung 1 thang lich
+- Reset 0h ngay 1 hang thang (giong quota bai post)
+- Gia han KHONG dem vao quota moi
+
+**4. Hien thi: max 20 slot rotate, 5 giay/banner**
+- Khac voi tu duy thuong (1 banner co dinh): banner rotate giua nhieu user
+- Ly do: cong bang giua cac user dong tien, tao "live wall" cho hoi cong dong
+- 5 giay = du de doc title + click neu quan tam, khong qua nhanh
+
+**5. Priority chon 20 slot khi co > 20 banner ACTIVE**
+- VIP★★★ Vang -> VIP★★ Bac -> VIP★ -> GUEST
+- Trong cung tier: random hoac newest first
+- Tao incentive ro rang: dong tien VIP cao hon -> co kha nang xuat hien chac chan hon
+
+**6. Cho phep gia han banner**
+- User co the gia han banner ACTIVE sap het han (< 7 ngay)
+- Phi gia han = 1tr × so thang gia han them
+- KHONG can admin duyet noi dung lai (chi confirm CK)
+- KHONG dem vao quota thang moi
+- Ly do: giam friction cho user da co banner duoc duyet, tang retention
+
+### Trade-offs
+- (+) Mo cho GUEST -> tang doanh thu, conversion
+- (+) Quota la phong tuyen chong spam, khong can moderation phuc tap
+- (+) Rotation 5s tao "live ad wall" — fair share giua cac user
+- (-) Khong thay duoc 1 banner co dinh — co the giam CTR cho moi banner rieng le
+- (-) Priority co the gay tranh chap (VIP it duoc hien hon GUEST nhieu hon)
+- (-) 1tr flat la gia thap — lai theo doanh thu it nhung volume cao
+
+### Quyet dinh tuong lai (chua chot)
+- Tang ky thuat hien thi (vd 7s thay vi 5s neu can doc nhieu)
+- Phi cao hon cho slot dac biet (vd: top fold, hero banner)
+- Analytics: track impression + CTR cho moi banner
+
+### Implementation note
+- Schema can: `Banner` model + `BannerStatus` enum + `PaymentType.BANNER_FEE`
+- Bo `BannerPosition` (chot Phase 6: chi 1 vi tri HOMEPAGE_MAIN)
+- Helper `lib/bannerQuota.ts` tuong tu `lib/quota.ts` cho post quota
+- Component `<HomepageBannerSlot />` rewrite — fetch top 20 + auto-rotate (client component voi `setInterval`)
+
+---
+
+## ADR-016: Recharts Dynamic Import
 
 ### Boi canh
 Recharts library ~200KB. Chi dung tren trang /admin (dashboard charts).
@@ -248,3 +441,201 @@ Dynamic import voi ssr:false qua wrapper component (DashboardChartsLoader).
 page.tsx (Server) -> DashboardChartsLoader (Client, dynamic import)
                      -> DashboardCharts (Recharts components)
 ```
+
+---
+
+## ADR-017: Navbar mode detection qua pathname (khong qua role)
+
+### Boi canh
+Ban dau Navbar chon menu theo `session.user.role`: VIP → menu member, ADMIN → menu admin, GUEST → menu public. Khach hang yeu cau **moi user** (bao gom VIP/ADMIN) khi xem trang cong khai deu thay menu cong khai giong nhu guest, de tranh nham lan.
+
+### Quyet dinh
+Chon menu Navbar theo **pathname**, khong theo role. `proxy.ts` set header `x-pathname` vao moi response. Navbar (server component) doc header va detect mode:
+
+```ts
+const MEMBER_PATH_PREFIXES = ["/tong-quan", "/gia-han", "/ho-so", "/chung-nhan",
+  "/doanh-nghiep-cua-toi", "/thanh-toan", "/ket-nap", "/tai-lieu"]
+const ADMIN_PATH_PREFIXES = ["/admin"]
+
+function detectMode(pathname: string): "public" | "member" | "admin" {
+  if (ADMIN_PATH_PREFIXES.some(p => pathname.startsWith(p))) return "admin"
+  if (MEMBER_PATH_PREFIXES.some(p => pathname.startsWith(p))) return "member"
+  return "public"
+}
+```
+
+### Ly do
+- **Khong gay nham lan**: Admin tren `/` van thay menu cong khai → giong nhu khach → verify duoc UX cong khai
+- **Tach biet intent**: User phai *co y* vao khu vuc quan tri (qua dropdown) → khong vo tinh bi dua vao trang member
+- **/feed la public**: Ngay ca VIP vao `/feed` cung thay menu cong khai (vi `/feed` khong o trong MEMBER_PATH_PREFIXES)
+
+### UserMenu bo sung 2 item mode-based
+- **Public mode + VIP/ADMIN**: "Vao khu vuc quan tri" / "Vao trang quan tri" → navigate `/tong-quan` hoac `/admin`
+- **Member/admin mode**: "Ve trang cong khai" → navigate `/`
+
+### Admin sidebar co link "Ve trang cong khai"
+Vi admin layout khong dung Navbar (dung AdminSidebar thay), can nut rieng trong sidebar — positioned sau Dang xuat, styling accent nen noi bat.
+
+### Implementation
+- `proxy.ts`: helper `passThrough()` goi `NextResponse.next()` + set `x-pathname`
+- `Navbar.tsx`: `const [session, headersList] = await Promise.all([auth(), headers()])` → `pathname = headersList.get("x-pathname") ?? "/"`
+- `UserMenu.tsx`: nhan `mode` prop tu Navbar
+
+---
+
+## ADR-018: TipTap v3 + React 19 — flushSync patterns
+
+### Boi canh
+Editor `/admin/tin-tuc/[id]` dung `@tiptap/react@3.22` voi custom NodeView
+(`ResizableImageView` co drag handles). React 19 strict hon ve flushSync, throw
+loi `flushSync was called from inside a lifecycle method` trong 3 tinh huong:
+
+1. Load page voi nhieu images → Tiptap's `ReactNodeViewRenderer` goi flushSync khi mount cac NodeView song song
+2. Goi `editor.chain().updateAttributes(...)` trong onClick handler → transaction trigger NodeView re-render → flushSync khi React dang trong lifecycle
+3. Su dung state tu `useEditor` bang cach goi `editor.isActive("bold")` trong JSX render → cantrigger chain re-render
+
+### Quyet dinh
+Ap dung 3 lop fix:
+
+**1. `shouldRerenderOnTransaction: false` + `useEditorState` hook**
+```ts
+const editor = useEditor({
+  extensions: [...],
+  immediatelyRender: true,        // Tranh SSR race — file la "use client" roi
+  shouldRerenderOnTransaction: false, // Tat auto-rerender tren moi transaction
+})
+
+const editorState = useEditorState({
+  editor,
+  selector: ({ editor }) => ({
+    isBold: editor?.isActive("bold"),
+    isImage: editor?.isActive("image"),
+    isAlignCenter: editor?.isActive({ textAlign: "center" }),
+    // ... subscribe tung piece state can thiet cho toolbar
+  }),
+})
+```
+`useEditorState` dung `useSyncExternalStore` noi bo → safe pattern, khong flushSync.
+
+**2. `queueMicrotask` wrap editor mutations trong event handlers**
+```ts
+onClick={() => {
+  const newSrc = window.prompt("URL:")
+  if (newSrc) {
+    // Defer ra khoi React lifecycle hien tai
+    queueMicrotask(() => {
+      editor.chain().focus().updateAttributes("image", { src: newSrc }).run()
+    })
+  }
+}}
+```
+
+**3. Drag-resize commit o NodeView cung queueMicrotask**
+Trong `onMouseUp` cua ResizableImageView, wrap `updateAttributes` de tranh conflict voi React re-render khi selection change.
+
+### Trade-offs
+- (+) 0 flushSync errors (verified via Playwright)
+- (+) Toolbar state van responsive (useEditorState)
+- (+) UX khong bi cham (microtask ~0.1ms delay, unnoticeable)
+- (-) Code them boilerplate (queueMicrotask wrap moi editor mutation)
+- (-) `useEditorState` can list ALL state pieces upfront — khong auto
+
+### Testing
+Playwright headless test 7 action points: load / click Bold / click Image / click Reset size / click URL (prompt) / drag SE handle / click align Center. Tat ca → 0 errors.
+
+---
+
+## ADR-019: TipTap Custom NodeView cho drag-resize + text-align image
+
+### Boi canh
+Can nang cap editor cho admin phep: resize anh bang drag (thay vi input px), align anh trai/giua/phai, va preserve ra HTML output.
+
+### Quyet dinh
+Tao `ResizableImage` extension — extend `@tiptap/extension-image` voi:
+
+1. **`addAttributes`**: Them `width` + `height` attributes. Render HTML voi inline `style="width: X; height: Y"` de preserve khi render `/tin-tuc/[slug]` cong khai.
+
+2. **`addNodeView`**: `ReactNodeViewRenderer(ResizableImageView)` — custom React component de ve drag handles + hien ring khi selected.
+
+### ResizableImageView layout (2 lop wrap)
+```tsx
+<NodeViewWrapper className="block w-full" style={{ textAlign }}>
+  <div className="relative inline-block">
+    <img style={{ width, height }} />
+    {selected && <>{3 handles}</>}
+  </div>
+</NodeViewWrapper>
+```
+
+- **Outer**: block + `text-align` tu `node.attrs.textAlign` (TipTap `TextAlign` extension set) → vi tri anh trong row
+- **Inner**: relative inline-block → context cho handles position absolute
+
+### Drag math
+3 handles: E (phai-giua), S (duoi-giua), SE (goc duoi-phai).
+- Mousedown: capture start position + start size + aspect ratio
+- Mousemove: compute delta → update img.style directly (realtime, smooth)
+- `lastSizeRef` luu gia tri intended (khong phai rendered — rendered co the bi cap boi CSS `max-width`)
+- Mouseup: commit `lastSizeRef` vao node attrs qua `updateAttributes` (wrapped trong queueMicrotask — xem ADR-018)
+
+### CSS traps
+- Tailwind `prose` plugin default set `img { max-width: 100% }` → override bang `max-w-none!` (important modifier Tailwind v4)
+- Wrapper `inline-block` khong respect parent's `text-align` (chi respect cho *children*) → dung `block w-full` outer de text-align co khong gian
+
+### Trade-offs
+- (+) UX tuong tu Google Docs — intuitive
+- (+) Text align preserve trong HTML output
+- (-) NodeView them ~200 LOC
+- (-) Phai debug nhiev CSS trap (max-width, prose, sticky)
+- (-) Tang compile time cho page editor (them React component)
+
+### Why not a package?
+Co 3rd-party packages cho drag-resize (vd `tiptap-imagresize`) nhung:
+- Chua update len TipTap 3.22
+- Khong ho tro text-align integration
+- Chi 200 LOC custom → maintain de hon la depend vao package ngoai tam kiem soat
+
+---
+
+## ADR-020: Import scripts + Legacy site crawling
+
+### Boi canh
+Khach hang co mot website cu `hoitramhuongvietnam.org` voi data that: 9 doanh nghiep doi tac + 8 van ban phap quy + 7 bai nghien cuu + 48 bai tin tuc. Can import vao platform moi ma khong can nhap tay.
+
+### Quyet dinh
+Viet **scripts tu dong** voi pattern 2 step:
+
+**Step 1 — Import metadata**:
+- `scripts/import-research-articles.ts` — 7 bai nghien cuu (hardcoded list)
+- `scripts/import-news-articles.ts` — 48 bai tu JSON file
+- Chi tao News record voi placeholder content + thumbnail Cloudinary
+
+**Step 2 — Crawl full content**:
+- `scripts/crawl-research-content.ts` — flag `--category=GENERAL|RESEARCH`
+- Doc `News.sourceUrl` tu DB → fetch HTML → parse `.single-post` container → extract images → upload Cloudinary → rewrite src → sanitize DOMPurify → update `News.content`
+
+### Ly do tach 2 step
+- **Step 1 nhanh**, cho user thay data ngay tren UI (thumbnail + title + source link)
+- **Step 2 cham** (network + Cloudinary), co the chay lai voi idempotent check (skip da crawl via placeholder marker)
+- Failure isolation: neu 1 bai fail, khac khong bi anh huong
+
+### Common patterns o all scripts
+1. Load env manually (tsx khong auto-load `.env.local`)
+2. Dynamic require Prisma/Cloudinary sau khi env loaded
+3. TLS workaround: `NODE_TLS_REJECT_UNAUTHORIZED=0` (legacy cert)
+4. Idempotent: check existing record truoc khi create/update
+5. Batched error handling: log + tiep tuc (khong abort)
+
+### Legacy site DOM pattern
+Sau khi inspect, xac dinh trang cu dung template chung voi main content o `.single-post > .blog_details`. Selectors:
+- Title: first `<h4>` in `.single-post`
+- Content: `.blog_details` innerHTML
+- Images: `<img>` bat dau voi `../images/` (relative) hoac `images/` (broken relative → fallback root)
+- Related posts: `.media.post_item` (strip)
+- Iframes: whitelist YouTube + Vimeo, strip others
+
+### Trade-offs
+- (+) Data that import nhanh — ~1 phut cho toan bo 55 bai (7 research + 48 news)
+- (+) Images luu Cloudinary → khong phu thuoc trang cu
+- (+) Scripts idempotent → safe chay nhieu lan
+- (-) Legacy site template thay doi se break scripts
+- (-) Scripts la one-shot, khong phai cron — chi chay khi setup

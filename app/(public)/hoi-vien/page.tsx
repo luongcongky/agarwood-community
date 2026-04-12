@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
+import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -11,14 +12,9 @@ export const metadata: Metadata = {
 
 export const revalidate = 3600
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
+/** Strip "https://" + trailing slash để hiển thị gọn */
+function displayWebsite(url: string): string {
+  return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
 }
 
 export default async function MembersPage({
@@ -48,6 +44,7 @@ export default async function MembersPage({
       description: true,
       address: true,
       phone: true,
+      website: true,
       isVerified: true,
       owner: {
         select: { contributionTotal: true },
@@ -122,9 +119,11 @@ export default async function MembersPage({
                       />
                     </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-brand-700 text-brand-100 flex items-center justify-center text-xl font-bold shrink-0">
-                      {getInitials(company.name)}
-                    </div>
+                    <AgarwoodPlaceholder
+                      className="w-16 h-16"
+                      shape="full"
+                      size="sm"
+                    />
                   )}
                   <div className="min-w-0">
                     <h2 className="font-bold text-foreground text-base leading-tight">
@@ -159,14 +158,36 @@ export default async function MembersPage({
                   </p>
                 )}
 
+                {/* Website */}
+                {company.website && (
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand-700 hover:text-brand-800 hover:underline flex items-center gap-1 truncate"
+                  >
+                    🌐 {displayWebsite(company.website)}
+                  </a>
+                )}
+
                 {/* CTA */}
-                <div className="mt-auto pt-2">
+                <div className="mt-auto pt-2 flex items-center justify-between gap-2">
                   <Link
                     href={`/hoi-vien/${company.slug}`}
                     className="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors"
                   >
                     Xem chi tiết →
                   </Link>
+                  {company.website && (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+                    >
+                      ↗ Ghé website
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

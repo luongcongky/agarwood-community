@@ -58,7 +58,7 @@ export default async function GiaHanPage() {
   const isIndividual = user.accountType === "INDIVIDUAL"
   const feeMin = isIndividual
     ? (cfgMap.individual_fee_min ?? 1_000_000)
-    : (cfgMap.membership_fee_min ?? 5_000_000)
+    : (cfgMap.membership_fee_min ?? 2_000_000)
   const feeMax = isIndividual
     ? (cfgMap.individual_fee_max ?? 2_000_000)
     : (cfgMap.membership_fee_max ?? 10_000_000)

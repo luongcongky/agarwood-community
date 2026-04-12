@@ -234,11 +234,19 @@ export default function LienHePage() {
                       Điện thoại
                     </p>
                     <a
-                      href="tel:+842812345678"
-                      className="text-brand-800 font-medium hover:text-brand-600 hover:underline"
+                      href="tel:+84913810060"
+                      className="block text-brand-800 font-medium hover:text-brand-600 hover:underline"
                     >
-                      028 1234 5678
+                      0913 810 060
                     </a>
+                    <p className="text-xs text-brand-500">Ông Phạm Văn Du — Chủ tịch Hội</p>
+                    <a
+                      href="tel:+84938334647"
+                      className="mt-1 block text-brand-800 font-medium hover:text-brand-600 hover:underline"
+                    >
+                      0938 334 647
+                    </a>
+                    <p className="text-xs text-brand-500">Ông Nguyễn Văn Hùng — Phó Chủ tịch Hội</p>
                   </div>
                 </li>
 
@@ -249,10 +257,10 @@ export default function LienHePage() {
                       Email
                     </p>
                     <a
-                      href="mailto:hoitramhuong@vietnam.vn"
+                      href="mailto:hoitramhuongvietnam2010@gmail.com"
                       className="text-brand-800 font-medium hover:text-brand-600 hover:underline break-all"
                     >
-                      hoitramhuong@vietnam.vn
+                      hoitramhuongvietnam2010@gmail.com
                     </a>
                   </div>
                 </li>
@@ -264,10 +272,27 @@ export default function LienHePage() {
                       Địa chỉ
                     </p>
                     <p className="text-brand-800 font-medium">
-                      123 Đường Trầm Hương, Quận 1,
+                      Số 150, Đường Lý Chính Thắng,
                       <br />
-                      TP. Hồ Chí Minh
+                      Phường Xuân Hòa, TP. Hồ Chí Minh
                     </p>
+                  </div>
+                </li>
+
+                <li className="flex items-start gap-4">
+                  <span className="mt-0.5 shrink-0 text-xl">🌐</span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-500 mb-0.5">
+                      Website
+                    </p>
+                    <a
+                      href="https://hoitramhuong.vn"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-800 font-medium hover:text-brand-600 hover:underline"
+                    >
+                      hoitramhuong.vn
+                    </a>
                   </div>
                 </li>
 
@@ -291,7 +316,7 @@ export default function LienHePage() {
                 </p>
                 <div className="flex gap-3">
                   <a
-                    href="https://facebook.com"
+                    href="https://www.facebook.com/hoitramhuongvietnam.org"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
@@ -300,17 +325,6 @@ export default function LienHePage() {
                     )}
                   >
                     Facebook
-                  </a>
-                  <a
-                    href="https://zalo.me"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-lg border border-brand-200 bg-white",
-                      "px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 transition-colors"
-                    )}
-                  >
-                    Zalo
                   </a>
                 </div>
               </div>
