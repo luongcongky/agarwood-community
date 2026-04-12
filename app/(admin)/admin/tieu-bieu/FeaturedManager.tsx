@@ -167,7 +167,7 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
         <div className="rounded-xl border border-brand-200 bg-white overflow-hidden">
           {products.length === 0 ? (
             <p className="p-12 text-center text-brand-500 italic">
-              Chưa có sản phẩm nào từ doanh nghiệp VIP.
+              Chưa có sản phẩm nào từ doanh nghiệp hội viên.
             </p>
           ) : (
             <table className="w-full text-sm">
@@ -241,7 +241,7 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
         <div className="rounded-xl border border-brand-200 bg-white overflow-hidden">
           {companies.length === 0 ? (
             <p className="p-12 text-center text-brand-500 italic">
-              Chưa có doanh nghiệp VIP nào.
+              Chưa có doanh nghiệp hội viên nào.
             </p>
           ) : (
             <table className="w-full text-sm">

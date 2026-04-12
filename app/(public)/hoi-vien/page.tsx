@@ -7,9 +7,9 @@ import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Hội viên VIP",
+  title: "Danh sách Hội viên",
   description:
-    "Danh sách hội viên VIP đang hoạt động — Hội Trầm Hương Việt Nam.",
+    "Danh sách hội viên đang hoạt động — Hội Trầm Hương Việt Nam.",
   alternates: { canonical: "/hoi-vien" },
 }
 
@@ -91,10 +91,10 @@ export default async function VipMembersPage({
       {/* Page Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Hội viên VIP
+          Danh sách Hội viên
         </h1>
         <p className="mt-2 text-brand-300 text-lg">
-          {members.length} hội viên VIP đang hoạt động
+          {members.length} hội viên đang hoạt động
         </p>
       </section>
 
@@ -129,7 +129,7 @@ export default async function VipMembersPage({
             <p className="mt-2 text-muted-foreground text-sm">
               {q
                 ? `Không có kết quả cho "${q}". Thử từ khóa khác nhé.`
-                : "Chưa có hội viên VIP nào."}
+                : "Chưa có hội viên nào."}
             </p>
             {q && (
               <Link

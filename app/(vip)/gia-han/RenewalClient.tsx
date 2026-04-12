@@ -99,14 +99,14 @@ export function RenewalClient({
         {
           amount: feeMin,
           label: `${formatVND(feeMin)} / năm`,
-          benefits: ["Duy trì quyền VIP", "Ưu tiên feed cơ bản", `Hạng tùy tích lũy`],
+          benefits: ["Duy trì quyền hội viên", "Ưu tiên feed cơ bản", `Hạng tùy tích lũy`],
           recommended: false,
         },
         {
           amount: feeMax,
           label: `${formatVND(feeMax)} / năm`,
           tag: "Được khuyến nghị",
-          benefits: ["Duy trì quyền VIP", "Ưu tiên feed cao hơn gấp đôi", "Thăng hạng nhanh hơn"],
+          benefits: ["Duy trì quyền hội viên", "Ưu tiên feed cao hơn gấp đôi", "Thăng hạng nhanh hơn"],
           recommended: true,
         },
       ]

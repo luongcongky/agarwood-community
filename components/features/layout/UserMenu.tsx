@@ -98,7 +98,7 @@ export function UserMenu({ name, email, image, role, accountType, mode = "public
           </DropdownMenuItem>
         )}
 
-        {/* Public mode: VIP/ADMIN thấy option vào khu vực quản trị */}
+        {/* Public mode: Hội viên/ADMIN thấy option vào khu vực quản trị */}
         {showEnterManagement && (
           <>
             <DropdownMenuSeparator />

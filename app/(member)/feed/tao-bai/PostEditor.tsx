@@ -43,8 +43,8 @@ type PostCategoryClient = "GENERAL" | "NEWS" | "PRODUCT"
 
 const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
   { value: "GENERAL", label: "Bài viết chung", hint: "Hiển thị ở Bản tin hội viên" },
-  { value: "NEWS",    label: "Tin doanh nghiệp", hint: "Có thể lên section tin DN trang chủ (nếu là VIP)" },
-  { value: "PRODUCT", label: "Tin sản phẩm", hint: "Giới thiệu / chứng nhận SP — có thể lên trang chủ (nếu là VIP)" },
+  { value: "NEWS",    label: "Tin doanh nghiệp", hint: "Có thể lên section tin DN trang chủ (nếu là Hội viên)" },
+  { value: "PRODUCT", label: "Tin sản phẩm", hint: "Giới thiệu / chứng nhận SP — có thể lên trang chủ (nếu là Hội viên)" },
 ]
 
 type QuotaInfo = { used: number; limit: number; remaining: number; resetAt: string }
@@ -458,7 +458,7 @@ function TaoBaiContent() {
             )}
             title={
               !editId && quota?.remaining === 0
-                ? "Đã hết hạn mức tháng này — nâng cấp VIP để tăng hạn mức"
+                ? "Đã hết hạn mức tháng này — nâng cấp Hội viên để tăng hạn mức"
                 : undefined
             }
           >

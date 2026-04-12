@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { VipNavLinks } from "./MemberSidebar"
 
 /**
- * Top bar + Sheet drawer dành cho khu vực quản lý VIP trên mobile (< md / 768px).
+ * Top bar + Sheet drawer dành cho khu vực quản lý Hội viên trên mobile (< md / 768px).
  * Ẩn hoàn toàn trên tablet/desktop — MemberSidebar đảm nhiệm thay.
  */
 export function MemberMobileNav({

@@ -250,7 +250,7 @@ export function BannerRegisterForm() {
                 ⚠ Bạn đã đạt quota {quota!.limit} mẫu tháng này. Quota sẽ reset vào{" "}
                 <strong>{new Date(quota!.resetAt).toLocaleDateString("vi-VN")}</strong>. Hoặc{" "}
                 <Link href="/landing" className="underline font-semibold">
-                  nâng cấp VIP
+                  nâng cấp Hội viên
                 </Link>{" "}
                 để tăng quota.
               </div>

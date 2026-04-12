@@ -4,7 +4,7 @@ import { MemberSidebar } from "@/components/features/layout/MemberSidebar"
 import { MemberMobileNav } from "@/components/features/layout/MemberMobileNav"
 
 /**
- * Layout cho khu vực quản lý VIP — hiển thị sidebar cố định bên trái, giống
+ * Layout cho khu vực quản lý Hội viên — hiển thị sidebar cố định bên trái, giống
  * admin layout. Auth guard được xử lý ở proxy.ts theo pathname (không phụ thuộc
  * route group), nên layout này chỉ lo render.
  */

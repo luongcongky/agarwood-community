@@ -132,7 +132,7 @@ export default async function HomePage() {
       {/* ── Section 5: Tin doanh nghiệp mới nhất ── */}
       <LatestPostsSection
         title="Tin doanh nghiệp mới nhất"
-        subtitle="Tin tức từ các doanh nghiệp hội viên VIP"
+        subtitle="Tin tức từ các doanh nghiệp hội viên"
         posts={businessPosts}
         emptyText="Chưa có tin tức nào từ doanh nghiệp hội viên."
         bgClass="bg-white"

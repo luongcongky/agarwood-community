@@ -25,7 +25,7 @@ export async function CertifiedProductsCarousel() {
               Sản phẩm tiêu biểu
             </h2>
             <p className="text-sm text-brand-500 mt-1">
-              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp VIP
+              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
             </p>
           </header>
           <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
@@ -48,7 +48,7 @@ export async function CertifiedProductsCarousel() {
               Sản phẩm tiêu biểu
             </h2>
             <p className="text-sm text-brand-500 mt-0.5">
-              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp VIP
+              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
             </p>
           </div>
           <Link

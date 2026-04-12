@@ -110,7 +110,7 @@ export function DocumentUploadButton() {
 
               <div className="flex items-center gap-2">
                 <input type="checkbox" name="isPublic" value="true" id="isPublic" className="rounded accent-brand-600" />
-                <label htmlFor="isPublic" className="text-sm text-brand-800">Cho phép hội viên VIP xem</label>
+                <label htmlFor="isPublic" className="text-sm text-brand-800">Cho phép hội viên xem</label>
               </div>
 
               {/* Progress bar */}

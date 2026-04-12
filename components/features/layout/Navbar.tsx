@@ -9,7 +9,7 @@ import { SocialLinks } from "./SocialLinks"
 
 // ── Mode detection ────────────────────────────────────────────────────────────
 
-/** Routes thuộc khu vực quản lý VIP — Navbar này KHÔNG render trên các route này
+/** Routes thuộc khu vực quản lý Hội viên — Navbar này KHÔNG render trên các route này
  *  (có sidebar riêng ở app/(vip)/layout.tsx). Dùng để hide social icons nếu vô
  *  tình render, và để UserMenu biết đang ở đâu. */
 const VIP_ADMIN_PREFIXES = [
@@ -43,7 +43,7 @@ function detectMode(pathname: string): NavMode {
 // ── Nav links ─────────────────────────────────────────────────────────────────
 
 /**
- * Menu công khai — VIP, ADMIN và guest đều thấy giống nhau. Việc vào khu vực
+ * Menu công khai — Hội viên, ADMIN và guest đều thấy giống nhau. Việc vào khu vực
  * quản lý riêng được thực hiện qua UserMenu ("Vào khu vực quản trị").
  */
 const PUBLIC_LINKS: NavLink[] = [

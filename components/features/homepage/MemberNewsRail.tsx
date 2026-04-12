@@ -6,10 +6,10 @@ import { PostCard } from "./PostCard"
  * Section 2 — Bản tin hội viên (right rail).
  *
  * Layout:
- *  - Top 5: bài VIP top theo authorPriority (sticky 5 phút)
+ *  - Top 5: bài Hội viên top theo authorPriority (sticky 5 phút)
  *  - Sau đó: 8 slot rotate (weighted random theo authorPriority + 1, refresh mỗi 5 phút)
  *
- * Khác với các section khác: rotating slots cho phép hiển thị bài non-VIP nữa.
+ * Khác với các section khác: rotating slots cho phép hiển thị bài tài khoản cơ bản nữa.
  */
 export async function MemberNewsRail() {
   const topPosts = await getTopVipMemberPosts()
@@ -33,7 +33,7 @@ export async function MemberNewsRail() {
         <p className="text-xs text-brand-500 mt-0.5">Cập nhật từ doanh nghiệp & cá nhân</p>
       </div>
 
-      {/* Top VIP slots — horizontal cards */}
+      {/* Top Hội viên slots — horizontal cards */}
       {topPosts.length > 0 && (
         <div className="p-3 space-y-2 bg-amber-50/30">
           {topPosts.map((post) => (

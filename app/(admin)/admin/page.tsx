@@ -156,13 +156,13 @@ export default async function AdminDashboardPage() {
   // YELLOW alerts
   if (expiringMembersWeek > 0) alerts.push({ text: `${expiringMembersWeek} membership sắp hết hạn trong 7 ngày`, href: "/admin/hoi-vien?status=expiring", level: "yellow" })
   if (newMediaUnconfirmed48h > 0) alerts.push({ text: `${newMediaUnconfirmed48h} đơn truyền thông NEW chưa confirm quá 48h`, href: "/admin/truyen-thong?status=NEW", level: "yellow" })
-  if (pendingVIPActivation > 0) alerts.push({ text: `${pendingVIPActivation} tài khoản VIP chờ kích hoạt`, href: "/admin/hoi-vien?status=pending", level: "yellow" })
+  if (pendingVIPActivation > 0) alerts.push({ text: `${pendingVIPActivation} tài khoản hội viên chờ kích hoạt`, href: "/admin/hoi-vien?status=pending", level: "yellow" })
 
   // GRAY alerts
   if (newActivatedVIP.length > 0) alerts.push({ text: `${newActivatedVIP.length} hội viên mới được kích hoạt tuần này`, href: "/admin/hoi-vien", level: "gray" })
   if (certApprovedRecent.length > 0) alerts.push({ text: `${certApprovedRecent.length} SP vừa được chứng nhận tuần này`, href: "/admin/chung-nhan", level: "gray" })
   const totalVIP = totalVIPCount
-  alerts.push({ text: `Slot VIP: ${totalVIP}/${maxSlot}`, href: "/admin/hoi-vien", level: "gray" })
+  alerts.push({ text: `Slot hội viên: ${totalVIP}/${maxSlot}`, href: "/admin/hoi-vien", level: "gray" })
 
   const alertColors = { red: "border-red-300 bg-red-50 text-red-800", yellow: "border-yellow-300 bg-yellow-50 text-yellow-800", gray: "border-gray-300 bg-gray-50 text-gray-700" }
   const alertLabels = { red: "Cần xử lý ngay", yellow: "Cần chú ý", gray: "Thông tin" }

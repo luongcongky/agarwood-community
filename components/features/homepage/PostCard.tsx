@@ -59,7 +59,7 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
   }
 
   if (variant === "horizontal") {
-    // Dùng cho top VIP slots ở MemberNewsRail — có ảnh + excerpt
+    // Dùng cho top Hội viên slots ở MemberNewsRail — có ảnh + excerpt
     return (
       <Link
         href={href}
@@ -77,7 +77,7 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
             {post.title || excerpt.slice(0, 80)}
           </h4>
           <p className="mt-1 text-xs text-brand-500 truncate">
-            <span className="font-medium text-amber-600">★ VIP</span>
+            <span className="font-medium text-amber-600">★ Hội viên</span>
             <span className="mx-1">·</span>
             {authorName}
           </p>
@@ -106,7 +106,7 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
         )}
         {post.isPremium && (
           <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
-            ★ VIP
+            ★ Hội viên
           </span>
         )}
       </div>

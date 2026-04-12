@@ -103,7 +103,7 @@ interface MemberSidebarProps {
 }
 
 /**
- * Sidebar cố định cho khu vực quản lý VIP — chỉ hiển thị từ md (768px) trở lên.
+ * Sidebar cố định cho khu vực quản lý Hội viên — chỉ hiển thị từ md (768px) trở lên.
  * Mobile dùng MemberMobileNav.
  */
 export function MemberSidebar({ accountType }: MemberSidebarProps) {

@@ -24,7 +24,7 @@ const BENEFITS = [
 const STEPS = [
   { step: 1, title: "Đăng ký", desc: "Điền form với thông tin cá nhân hoặc doanh nghiệp" },
   { step: 2, title: "Đăng nhập", desc: "Tài khoản kích hoạt ngay — chia sẻ bài viết miễn phí" },
-  { step: 3, title: "Nâng cấp VIP", desc: "Đóng phí hội viên để tăng hạn mức bài viết và ưu tiên trang chủ" },
+  { step: 3, title: "Nâng cấp Hội viên", desc: "Đóng phí hội viên để tăng hạn mức bài viết và ưu tiên trang chủ" },
   { step: 4, title: "Hưởng quyền lợi", desc: "Chứng nhận sản phẩm, banner quảng cáo, dịch vụ truyền thông" },
 ]
 

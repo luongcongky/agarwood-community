@@ -602,7 +602,7 @@ function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
   return (
     <div className="bg-linear-to-br from-brand-800 to-brand-700 text-white rounded-xl p-4 space-y-3" suppressHydrationWarning>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-brand-200">Hội viên VIP</span>
+        <span className="text-sm font-semibold text-brand-200">Hội viên</span>
         <span className={cn("text-xs font-semibold rounded-full px-2 py-0.5", isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300")}>
           {isActive ? "Đang hoạt động" : "Hết hạn"}
         </span>
@@ -811,7 +811,7 @@ export function FeedClient({
             <p className="text-xs text-brand-400">
               {isLoggedIn
                 ? "Tài khoản đang chờ duyệt. Bạn sẽ nhận email khi được phê duyệt."
-                : "Đăng nhập để tương tác, đăng bài và nhận quyền lợi VIP."}
+                : "Đăng nhập để tương tác, đăng bài và nhận quyền lợi hội viên."}
             </p>
             {!isLoggedIn && (
               <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors">

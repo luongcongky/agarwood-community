@@ -109,7 +109,7 @@ export default async function LandingPage() {
     member: {
       "@type": "QuantitativeValue",
       value: vipCount,
-      unitText: "doanh nghiệp hội viên VIP",
+      unitText: "doanh nghiệp hội viên",
     },
   }
 
@@ -242,7 +242,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {[
-              { value: vipCount, label: "Hội viên VIP", icon: "👥", href: "/hoi-vien" },
+              { value: vipCount, label: "Hội viên", icon: "👥", href: "/hoi-vien" },
               { value: companyCount, label: "Doanh nghiệp", icon: "🏢", href: "/doanh-nghiep" },
               { value: productCount, label: "SP đã chứng nhận", icon: "✓", href: "/san-pham-chung-nhan" },
               { value: researchCount, label: "Nghiên cứu khoa học", icon: "📰", href: "/nghien-cuu" },
@@ -549,7 +549,7 @@ export default async function LandingPage() {
           </h2>
           <p className="mt-4 text-brand-200 text-lg">
             Đăng ký miễn phí ngay hôm nay. Không cần thẻ tín dụng.
-            Bạn có thể nâng cấp lên VIP bất cứ lúc nào.
+            Bạn có thể nâng cấp lên Hội viên bất cứ lúc nào.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link

@@ -64,7 +64,7 @@ export default async function AdminFeaturedPage() {
         <h1 className="text-2xl font-bold text-brand-900">Quản lý Tiêu biểu</h1>
         <p className="mt-1 text-sm text-brand-500">
           Chọn các sản phẩm và doanh nghiệp xuất hiện ở trang Sản phẩm tiêu biểu
-          và Landing page. Chỉ áp dụng cho hội viên VIP.
+          và Landing page. Chỉ áp dụng cho hội viên.
         </p>
       </header>
 
