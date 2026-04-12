@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import DOMPurify from "isomorphic-dompurify"
 import {
   RichTextEditor,
   type RichTextEditorHandle,
@@ -35,6 +36,8 @@ export default function NewsEditorPage({
   const [slug, setSlug] = useState("")
   const [excerpt, setExcerpt] = useState("")
   const [coverImageUrl, setCoverImageUrl] = useState("")
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState("")
   const [category, setCategory] = useState<"GENERAL" | "RESEARCH">("GENERAL")
   const [isPublished, setIsPublished] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
@@ -44,10 +47,12 @@ export default function NewsEditorPage({
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   const editorRef = useRef<RichTextEditorHandle>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
-  // Load existing news — resolve initialContent before mounting editor
+  // Load existing news
   useEffect(() => {
     if (isNew) return
 
@@ -60,6 +65,7 @@ export default function NewsEditorPage({
         setSlug(news.slug)
         setExcerpt(news.excerpt ?? "")
         setCoverImageUrl(news.coverImageUrl ?? "")
+        setCoverPreview(news.coverImageUrl ?? "")
         setCategory(news.category ?? "GENERAL")
         setIsPublished(news.isPublished)
         setIsPinned(news.isPinned)
@@ -84,29 +90,73 @@ export default function NewsEditorPage({
     }
   }
 
+  function handleCoverSelect(file: File) {
+    setCoverFile(file)
+    const blobUrl = URL.createObjectURL(file)
+    setCoverPreview(blobUrl)
+  }
+
+  function handleCoverRemove() {
+    if (coverPreview && coverPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(coverPreview)
+    }
+    setCoverFile(null)
+    setCoverPreview("")
+    setCoverImageUrl("")
+    if (coverInputRef.current) coverInputRef.current.value = ""
+  }
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (coverPreview && coverPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPreview)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError("")
     setSaved(false)
 
-    // Upload pending local images to Cloudinary before saving
-    await editorRef.current?.processImages()
-    const content = editorRef.current?.getHTML() ?? ""
-
-    const body = {
-      title,
-      slug,
-      excerpt,
-      coverImageUrl,
-      content,
-      category,
-      isPublished,
-      isPinned,
-      publishedAt: publishedAt || null,
-    }
-
     try {
+      // Upload cover image if a new file was selected
+      let finalCoverUrl = coverImageUrl
+      if (coverFile) {
+        const formData = new FormData()
+        formData.append("file", coverFile)
+        formData.append("folder", "tin-tuc")
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
+        if (!uploadRes.ok) {
+          setError("Tải ảnh bìa thất bại. Vui lòng thử lại.")
+          setLoading(false)
+          return
+        }
+        const uploadData = await uploadRes.json()
+        finalCoverUrl = uploadData.secure_url ?? uploadData.url
+        setCoverImageUrl(finalCoverUrl)
+        setCoverFile(null)
+      }
+
+      // Upload pending editor images
+      await editorRef.current?.processImages()
+      const content = editorRef.current?.getHTML() ?? ""
+
+      const body = {
+        title,
+        slug,
+        excerpt,
+        coverImageUrl: finalCoverUrl,
+        content,
+        category,
+        isPublished,
+        isPinned,
+        publishedAt: publishedAt || null,
+      }
+
       const res = await fetch(
         isNew ? "/api/admin/news" : `/api/admin/news/${id}`,
         {
@@ -144,6 +194,9 @@ export default function NewsEditorPage({
     )
   }
 
+  const previewContent = editorRef.current?.getHTML() ?? ""
+  const displayCover = coverPreview || coverImageUrl
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -156,6 +209,17 @@ export default function NewsEditorPage({
         <h1 className="text-2xl font-bold text-brand-900">
           {isNew ? "Tạo tin tức mới" : "Chỉnh sửa tin tức"}
         </h1>
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="ml-auto flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+        >
+          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          Xem trước
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -203,25 +267,62 @@ export default function NewsEditorPage({
                 />
               </div>
 
-              {/* Cover image */}
+              {/* Cover image — file picker */}
               <div>
                 <label className="block text-sm font-medium text-brand-800 mb-1">
-                  Ảnh bìa (URL)
+                  Ảnh bìa
                 </label>
                 <input
-                  type="url"
-                  value={coverImageUrl}
-                  onChange={(e) => setCoverImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCoverSelect(file)
+                  }}
                 />
-                {coverImageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={coverImageUrl}
-                    alt="Cover preview"
-                    className="mt-2 h-32 w-full rounded-lg object-cover"
-                  />
+                {displayCover ? (
+                  <div className="relative group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayCover}
+                      alt="Cover preview"
+                      className="w-full h-40 rounded-lg object-cover border border-brand-200"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-brand-800 shadow hover:bg-brand-50 transition-colors"
+                      >
+                        Đổi ảnh
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCoverRemove}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow hover:bg-red-700 transition-colors"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                    {coverFile && (
+                      <span className="absolute top-2 right-2 bg-amber-500 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                        Chưa upload
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="w-full h-32 rounded-lg border-2 border-dashed border-brand-300 hover:border-brand-500 transition-colors flex flex-col items-center justify-center gap-2 text-brand-400 hover:text-brand-600"
+                  >
+                    <svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    <span className="text-xs font-medium">Chọn ảnh bìa</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -245,8 +346,8 @@ export default function NewsEditorPage({
                   onChange={(e) => setCategory(e.target.value as "GENERAL" | "RESEARCH")}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                 >
-                  <option value="GENERAL">📰 Tin tức (/tin-tuc)</option>
-                  <option value="RESEARCH">📚 Nghiên cứu khoa học (/nghien-cuu)</option>
+                  <option value="GENERAL">Tin tức (/tin-tuc)</option>
+                  <option value="RESEARCH">Nghiên cứu khoa học (/nghien-cuu)</option>
                 </select>
                 <p className="mt-1 text-[11px] text-brand-400 leading-snug">
                   Tin tức hiển thị ở trang /tin-tuc. Nghiên cứu khoa học hiển thị ở trang /nghien-cuu.
@@ -324,9 +425,157 @@ export default function NewsEditorPage({
                 ? "Tạo tin tức"
                 : "Lưu thay đổi"}
             </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              className="w-full rounded-lg border border-brand-300 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+            >
+              Xem trước bài viết
+            </button>
           </div>
         </div>
       </form>
+
+      {/* ── Full-page Preview ── */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
+          {/* Simulated Navbar */}
+          <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md shrink-0">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Logo" className="h-11 w-11 shrink-0" />
+                  <span className="text-brand-100 font-semibold text-lg hidden sm:block">
+                    Hội Trầm Hương
+                    <span className="text-brand-400 text-xs font-normal tracking-widest uppercase block">
+                      Việt Nam
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    CHẾ ĐỘ XEM TRƯỚC
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(false)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors"
+                  >
+                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Article content — exactly like /tin-tuc/[slug] */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto px-4 py-10">
+              {/* Breadcrumb */}
+              <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
+                <span className="hover:text-brand-700 cursor-default">Trang chủ</span>
+                <span>/</span>
+                <span className="hover:text-brand-700 cursor-default">
+                  {category === "RESEARCH" ? "Nghiên cứu" : "Tin tức"}
+                </span>
+                <span>/</span>
+                <span className="text-foreground font-medium line-clamp-1">
+                  {title || "..."}
+                </span>
+              </nav>
+
+              {/* Article Header */}
+              <header className="mb-8 space-y-4">
+                <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
+                  {title || <span className="text-brand-300 italic">Chưa có tiêu đề</span>}
+                </h1>
+                {publishedAt && (
+                  <p className="text-muted-foreground text-sm">
+                    Ngày đăng:{" "}
+                    {new Date(publishedAt).toLocaleDateString("vi-VN", {
+                      weekday: "long",
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+                {displayCover && (
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayCover}
+                      alt={title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </header>
+
+              {/* Article Body */}
+              <article className="mb-10">
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(
+                      previewContent || "<p class='text-brand-300 italic'>Chưa có nội dung...</p>"
+                    ),
+                  }}
+                />
+              </article>
+
+              {/* Share Buttons (visual only) */}
+              <div className="border-t border-border pt-6 mb-10">
+                <p className="text-sm font-medium text-foreground mb-3">Chia sẻ bài viết:</p>
+                <div className="flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium opacity-60 cursor-default">
+                    Facebook
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-medium opacity-60 cursor-default">
+                    Zalo
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-100 text-brand-700 text-sm font-medium opacity-60 cursor-default">
+                    Sao chép liên kết
+                  </span>
+                </div>
+              </div>
+
+              {/* Related Articles placeholder */}
+              <section>
+                <h2 className="text-xl font-semibold text-foreground mb-5">Tin tức liên quan</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card rounded-xl overflow-hidden border border-border">
+                      <div className="w-full h-36 bg-brand-100 flex items-center justify-center text-brand-300 text-sm">
+                        Ảnh bài viết
+                      </div>
+                      <div className="p-3 space-y-1">
+                        <div className="h-4 bg-brand-100 rounded w-3/4" />
+                        <div className="h-3 bg-brand-50 rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* Simulated Footer */}
+            <footer className="bg-brand-900 text-brand-300 mt-10">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="text-center text-sm">
+                  <p className="text-brand-400">Hội Trầm Hương Việt Nam</p>
+                  <p className="text-brand-500 text-xs mt-1">Xem trước — Nội dung chưa được xuất bản</p>
+                </div>
+              </div>
+            </footer>
+          </main>
+        </div>
+      )}
     </div>
   )
 }
