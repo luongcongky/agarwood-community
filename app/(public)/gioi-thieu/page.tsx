@@ -1,5 +1,9 @@
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { prisma } from "@/lib/prisma"
+
+export const revalidate = 600
 
 export const metadata = {
   title: "Giới thiệu — Hội Trầm Hương Việt Nam",
@@ -65,7 +69,25 @@ function InitialsAvatar({
   )
 }
 
-export default function GioiThieuPage() {
+export default async function GioiThieuPage() {
+  // Only show Ban Thường vụ on this page — full list at /ban-lanh-dao
+  const btvLeaders = await prisma.leader.findMany({
+    where: { isActive: true, category: "BTV" },
+    orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      title: true,
+      workTitle: true,
+      photoUrl: true,
+      term: true,
+    },
+  })
+
+  // Show the most recent term's BTV
+  const currentTerm = btvLeaders[0]?.term ?? null
+  const currentBtv = btvLeaders.filter((l) => l.term === currentTerm)
+
   return (
     <>
       {/* JSON-LD */}
@@ -141,42 +163,66 @@ export default function GioiThieuPage() {
         </div>
       </section>
 
-      {/* ── Leadership ── */}
+      {/* ── Leadership (Ban Thường vụ only) ── */}
       <section className="bg-brand-50 py-20">
         <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Ban lãnh đạo
+          <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
+            Ban Thường vụ
           </h2>
-          <div className="grid gap-8 sm:grid-cols-2 max-w-3xl mx-auto">
-            {[
-              {
-                name: "Phạm Văn Du",
-                title: "Chủ tịch Hội",
-                bio: "Lãnh đạo cao nhất của Hội Trầm Hương Việt Nam, định hướng chiến lược phát triển và đại diện Hội trong các hoạt động đối nội, đối ngoại.",
-              },
-              {
-                name: "Nguyễn Văn Hùng",
-                title: "Phó Chủ tịch Hội",
-                bio: "Hỗ trợ Chủ tịch điều hành các hoạt động chuyên môn, phụ trách kết nối hội viên và phát triển mạng lưới doanh nghiệp trầm hương toàn quốc.",
-              },
-            ].map((leader) => (
-              <div
-                key={leader.name}
-                className="flex flex-col items-center rounded-xl border border-brand-200 bg-white p-8 text-center shadow-sm"
-              >
-                <InitialsAvatar
-                  name={leader.name}
-                  className="h-20 w-20 text-xl mb-4"
-                />
-                <h3 className="font-bold text-brand-900">{leader.name}</h3>
-                <p className="mt-1 text-sm font-medium text-brand-500">
-                  {leader.title}
-                </p>
-                <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                  {leader.bio}
-                </p>
-              </div>
-            ))}
+          {currentTerm && (
+            <p className="mb-10 text-center text-sm text-brand-500">
+              {currentTerm}
+            </p>
+          )}
+
+          {currentBtv.length === 0 ? (
+            <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
+              Thông tin ban lãnh đạo sẽ được cập nhật sớm.
+            </div>
+          ) : (
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+              {currentBtv.map((leader) => (
+                <div
+                  key={leader.id}
+                  className="flex flex-col items-center rounded-xl border border-brand-200 bg-white p-8 text-center shadow-sm"
+                >
+                  {leader.photoUrl ? (
+                    <div className="relative h-20 w-20 rounded-full overflow-hidden mb-4">
+                      <Image
+                        src={leader.photoUrl}
+                        alt={leader.name}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    </div>
+                  ) : (
+                    <InitialsAvatar
+                      name={leader.name}
+                      className="h-20 w-20 text-xl mb-4"
+                    />
+                  )}
+                  <h3 className="font-bold text-brand-900">{leader.name}</h3>
+                  <p className="mt-1 text-sm font-medium text-amber-700">
+                    {leader.title}
+                  </p>
+                  {leader.workTitle && (
+                    <p className="mt-2 text-xs text-brand-500 leading-relaxed">
+                      {leader.workTitle}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8 text-center">
+            <Link
+              href="/ban-lanh-dao"
+              className="inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-4"
+            >
+              Xem toàn bộ Ban Chấp hành, Ban Kiểm tra →
+            </Link>
           </div>
         </div>
       </section>

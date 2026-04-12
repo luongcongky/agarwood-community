@@ -19,12 +19,14 @@ import {
   FileCheck,
   Scale,
   Globe,
+  Crown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const ADMIN_NAV_ITEMS = [
   { label: "Tổng quan",    href: "/admin",             icon: LayoutDashboard },
   { label: "Hội viên",     href: "/admin/hoi-vien",    icon: Users },
+  { label: "Ban lãnh đạo",  href: "/admin/ban-lanh-dao", icon: Crown },
   { label: "Đơn kết nạp",  href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck },
   { label: "Chứng nhận",   href: "/admin/chung-nhan",  icon: BadgeCheck },
   { label: "Tiêu biểu",    href: "/admin/tieu-bieu",   icon: Star },

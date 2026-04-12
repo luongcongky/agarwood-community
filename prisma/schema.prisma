@@ -155,6 +155,7 @@ model User {
   accounts          Account[]
   sessions          Session[]
   memberships       Membership[]
+  leaderPositions   Leader[]
   company           Company?
   products          Product[]       @relation("ProductOwner")
   posts             Post[]
@@ -749,6 +750,44 @@ model Document {
   @@index([isPublic])
   @@index([createdAt])
   @@map("documents")
+}
+
+// ============================================================
+// MEMBERSHIP APPLICATION — Đơn xin kết nạp Hội viên
+// Theo Điều lệ Hội, Điều 11: BCH xét hồ sơ → Chủ tịch quyết định trong 30 ngày
+// ============================================================
+
+// ============================================================
+// LEADER — Ban lãnh đạo theo nhiệm kỳ
+// ============================================================
+
+model Leader {
+  id        String         @id @default(cuid())
+  name      String
+  title     String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
+  category  LeaderCategory @default(BCH) // nhóm chính hiển thị
+  workTitle String?        // chức vụ đơn vị công tác
+  bio       String?        @db.Text
+  photoUrl  String?
+  term      String         // "Nhiệm kỳ III (2023–2028)"
+  sortOrder Int            @default(0)
+  isActive  Boolean        @default(true)
+
+  userId    String?
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([isActive, category, sortOrder])
+  @@index([term])
+  @@map("leaders")
+}
+
+enum LeaderCategory {
+  BTV // Ban Thường vụ
+  BCH // Ủy viên Ban Chấp hành
+  BKT // Ban Kiểm tra
 }
 
 // ============================================================

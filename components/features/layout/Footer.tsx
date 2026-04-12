@@ -38,7 +38,7 @@ export function Footer() {
               {[
                 { label: "Trang chủ",         href: "/" },
                 { label: "Giới thiệu",        href: "/gioi-thieu" },
-                { label: "Hội viên",          href: "/hoi-vien" },
+                { label: "Doanh nghiệp",      href: "/doanh-nghiep" },
                 { label: "Dịch vụ",           href: "/dich-vu" },
                 { label: "Điều lệ Hội",       href: "/dieu-le" },
                 { label: "Liên hệ",           href: "/lien-he" },

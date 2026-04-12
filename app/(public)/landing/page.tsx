@@ -43,7 +43,7 @@ export default async function LandingPage() {
     vipCount,
     productCount,
     companyCount,
-    newsCount,
+    researchCount,
     featuredCompanies,
     featuredProducts,
     businessThresholds,
@@ -51,7 +51,7 @@ export default async function LandingPage() {
     prisma.user.count({ where: { role: "VIP", isActive: true } }),
     prisma.product.count({ where: { certStatus: "APPROVED" } }),
     prisma.company.count({ where: { isPublished: true } }),
-    prisma.news.count({ where: { isPublished: true } }),
+    prisma.news.count({ where: { isPublished: true, category: "RESEARCH" } }),
     prisma.company.findMany({
       where: {
         isFeatured: true,
@@ -240,18 +240,18 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
             {[
-              { value: vipCount, label: "Hội viên VIP", icon: "👥" },
-              { value: companyCount, label: "Doanh nghiệp", icon: "🏢" },
-              { value: productCount, label: "SP đã chứng nhận", icon: "✓" },
-              { value: newsCount, label: "Tin tức ngành", icon: "📰" },
-            ].map(({ value, label, icon }) => (
-              <div key={label} className="text-center">
+              { value: vipCount, label: "Hội viên VIP", icon: "👥", href: "/hoi-vien" },
+              { value: companyCount, label: "Doanh nghiệp", icon: "🏢", href: "/doanh-nghiep" },
+              { value: productCount, label: "SP đã chứng nhận", icon: "✓", href: "/san-pham-chung-nhan" },
+              { value: researchCount, label: "Nghiên cứu khoa học", icon: "📰", href: "/nghien-cuu" },
+            ].map(({ value, label, icon, href }) => (
+              <Link key={label} href={href} className="text-center group cursor-pointer transition-transform hover:scale-105">
                 <div className="text-3xl mb-1">{icon}</div>
-                <p className="text-3xl font-bold text-brand-900 sm:text-4xl">
+                <p className="text-3xl font-bold text-brand-900 sm:text-4xl group-hover:text-brand-700 transition-colors">
                   {value.toLocaleString("vi-VN")}+
                 </p>
-                <p className="mt-1 text-sm font-medium text-brand-500">{label}</p>
-              </div>
+                <p className="mt-1 text-sm font-medium text-brand-500 group-hover:text-brand-700 transition-colors">{label}</p>
+              </Link>
             ))}
           </div>
         </div>
