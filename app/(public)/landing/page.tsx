@@ -211,7 +211,7 @@ export default async function LandingPage() {
             <span className="text-brand-700">vươn tầm quốc gia</span>
           </h2>
           <p className="mt-4 mx-auto max-w-2xl text-base sm:text-lg text-brand-600">
-            Tham gia cộng đồng <strong className="text-brand-900">{vipCount}+ doanh nghiệp</strong>{" "}
+            Tham gia cộng đồng <strong className="text-brand-900">{vipCount}+ hội viên</strong>{" "}
             trầm hương uy tín nhất Việt Nam. Hiển thị trang chủ, chứng nhận sản phẩm,
             banner quảng cáo và mạng lưới đối tác toàn quốc.
           </p>
