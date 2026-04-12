@@ -13,7 +13,7 @@ type ProductRow = {
   certStatus: string
   isFeatured: boolean
   featuredOrder: number | null
-  company: { name: string; slug: string }
+  company: { name: string; slug: string } | null
 }
 
 type CompanyRow = {
@@ -217,7 +217,7 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                           <span className="font-medium text-brand-900">{p.name}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-brand-600">{p.company.name}</td>
+                      <td className="px-4 py-3 text-brand-600">{p.company?.name ?? "Cá nhân"}</td>
                       <td className="px-4 py-3">
                         {p.certStatus === "APPROVED" ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">

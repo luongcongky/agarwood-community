@@ -86,6 +86,7 @@ export default async function CertifiedProductsPage({
   const baseWhere = {
     certStatus: "APPROVED" as const,
     isPublished: true,
+    companyId: { not: null },  // Chứng nhận yêu cầu doanh nghiệp — safety net
     ...(loai && { category: { contains: loai, mode: "insensitive" as const } }),
     ...(vung && { company: { address: { contains: vung, mode: "insensitive" as const } } }),
     ...(q && {
@@ -236,9 +237,9 @@ export default async function CertifiedProductsPage({
                       </span>
                     </div>
                     <p className="text-xs text-brand-500 mt-1">
-                      {product.company.name}
+                      {product.company!.name}
                       {product.category && ` · ${product.category}`}
-                      {product.company.address && ` · ${product.company.address.split(",").at(-1)?.trim()}`}
+                      {product.company!.address && ` · ${product.company!.address.split(",").at(-1)?.trim()}`}
                       {product.certApprovedAt && ` · Cấp: ${new Date(product.certApprovedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`}
                     </p>
                   </div>
@@ -285,15 +286,15 @@ export default async function CertifiedProductsPage({
                     {/* Company */}
                     <div className="flex items-center gap-1.5">
                       <div className="relative w-5 h-5 rounded-full overflow-hidden bg-brand-700 shrink-0 flex items-center justify-center">
-                        {product.company.logoUrl ? (
-                          <Image src={product.company.logoUrl} alt="" fill className="object-cover" sizes="20px" />
+                        {product.company!.logoUrl ? (
+                          <Image src={product.company!.logoUrl} alt="" fill className="object-cover" sizes="20px" />
                         ) : (
-                          <span className="text-[9px] font-bold text-brand-100">{product.company.name[0]}</span>
+                          <span className="text-[9px] font-bold text-brand-100">{product.company!.name[0]}</span>
                         )}
                       </div>
                       <span className="text-xs text-brand-500 line-clamp-1">
-                        {product.company.name}
-                        {product.company.isVerified && <span className="text-green-600 ml-0.5">✓</span>}
+                        {product.company!.name}
+                        {product.company!.isVerified && <span className="text-green-600 ml-0.5">✓</span>}
                       </span>
                     </div>
 

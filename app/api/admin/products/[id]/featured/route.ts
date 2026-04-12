@@ -25,18 +25,18 @@ export async function PATCH(
     featuredOrder?: number | null
   }
 
-  // Khi bật featured, validate owner phải là VIP
+  // Khi bật featured, validate owner phải là VIP hoặc ADMIN
   if (isFeatured === true) {
     const product = await prisma.product.findUnique({
       where: { id },
-      select: { company: { select: { owner: { select: { role: true } } } } },
+      select: { owner: { select: { role: true } } },
     })
     if (!product) {
       return NextResponse.json({ error: "Sản phẩm không tồn tại" }, { status: 404 })
     }
-    if (product.company.owner.role !== "VIP") {
+    if (product.owner.role !== "VIP" && product.owner.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Chỉ có thể chọn sản phẩm tiêu biểu từ doanh nghiệp VIP" },
+        { error: "Chỉ có thể chọn sản phẩm tiêu biểu từ hội viên VIP" },
         { status: 400 },
       )
     }

@@ -508,6 +508,10 @@ async function main() {
       { key: "banner_quota_vip_1",     value: "5",       description: "Quota banner / tháng — VIP ★" },
       { key: "banner_quota_vip_2",     value: "10",      description: "Quota banner / tháng — VIP ★★ Bạc" },
       { key: "banner_quota_vip_3",     value: "20",      description: "Quota banner / tháng — VIP ★★★ Vàng" },
+      { key: "product_quota_guest_monthly",  value: "3",   description: "Quota sản phẩm / tháng — GUEST" },
+      { key: "product_quota_vip_1_monthly",  value: "10",  description: "Quota sản phẩm / tháng — VIP ★" },
+      { key: "product_quota_vip_2_monthly",  value: "25",  description: "Quota sản phẩm / tháng — VIP ★★ Bạc" },
+      { key: "product_quota_vip_3_monthly",  value: "-1",  description: "Quota sản phẩm / tháng — VIP ★★★ Vàng (unlimited)" },
     ],
   })
   console.log("✅ Site config")

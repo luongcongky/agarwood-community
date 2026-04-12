@@ -25,12 +25,13 @@ export default async function EditProductPage({
       priceRange: true,
       imageUrls: true,
       isPublished: true,
-      company: { select: { ownerId: true, slug: true } },
+      ownerId: true,
+      company: { select: { slug: true } },
     },
   })
 
   if (!product) notFound()
-  if (product.company.ownerId !== session.user.id && session.user.role !== "ADMIN") {
+  if (product.ownerId !== session.user.id && session.user.role !== "ADMIN") {
     redirect("/")
   }
 
@@ -53,7 +54,7 @@ export default async function EditProductPage({
           imageUrls: product.imageUrls as string[],
           isPublished: product.isPublished,
         }}
-        companySlug={product.company.slug}
+        companySlug={product.company?.slug}
       />
     </div>
   )

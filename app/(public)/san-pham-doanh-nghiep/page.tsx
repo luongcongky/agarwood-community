@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
-import { Role } from "@prisma/client"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -9,21 +9,20 @@ import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: "Sản phẩm Doanh nghiệp | Hội Trầm Hương Việt Nam",
+  title: "Chợ Sản phẩm Trầm Hương | Hội Trầm Hương Việt Nam",
   description:
-    "Khám phá các sản phẩm trầm hương từ doanh nghiệp Hội viên Hội Trầm Hương Việt Nam. Sản phẩm được chứng nhận có badge nổi bật.",
+    "Chợ sản phẩm trầm hương — nơi hội viên và doanh nghiệp đăng sản phẩm, quảng bá thương hiệu. Sản phẩm chứng nhận được ưu tiên hiển thị.",
   alternates: { canonical: "/san-pham-doanh-nghiep" },
   openGraph: {
-    title: "Sản phẩm Doanh nghiệp | Hội Trầm Hương Việt Nam",
+    title: "Chợ Sản phẩm Trầm Hương | Hội Trầm Hương Việt Nam",
     description:
-      "Sản phẩm trầm hương từ doanh nghiệp Hội viên — ưu tiên hiển thị sản phẩm đã được Hội chứng nhận.",
+      "Mua bán, quảng bá sản phẩm trầm hương từ hội viên và doanh nghiệp — ưu tiên sản phẩm đã được Hội chứng nhận.",
     type: "website",
   },
 }
 
 const PAGE_SIZE = 24
 
-// Danh mục sản phẩm — icon + label + filter value
 const CATEGORIES = [
   { label: "Trầm tự nhiên",   icon: "🌿", value: "Trầm tự nhiên" },
   { label: "Trầm nuôi cấy",   icon: "🌱", value: "Trầm nuôi cấy" },
@@ -35,7 +34,9 @@ const CATEGORIES = [
   { label: "Thực phẩm",        icon: "🍵", value: "Thực phẩm" },
 ]
 
-function buildUrl(p: number, filter: string, category?: string) {
+type SourceFilter = "all" | "certified" | "business" | "individual"
+
+function buildUrl(p: number, filter: SourceFilter, category?: string) {
   const params = new URLSearchParams()
   if (p > 1) params.set("page", String(p))
   if (filter && filter !== "all") params.set("filter", filter)
@@ -44,47 +45,46 @@ function buildUrl(p: number, filter: string, category?: string) {
   return `/san-pham-doanh-nghiep${qs ? `?${qs}` : ""}`
 }
 
-export default async function BusinessProductsPage({
+export default async function MarketplacePage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string; filter?: string; category?: string }>
 }) {
-  const params = await searchParams
+  const [params, session] = await Promise.all([searchParams, auth()])
   const page = Math.max(1, Number(params.page ?? 1))
-  const filter = params.filter ?? "all" // all | certified
+  const filter = (params.filter ?? "all") as SourceFilter
   const categoryFilter = params.category ?? ""
 
-  const where = {
+  // Base where — all published products from active users
+  const baseWhere = {
     isPublished: true,
-    company: {
-      isPublished: true,
-      owner: { role: { in: [Role.VIP, Role.ADMIN] } },
-    },
-    ...(filter === "certified" && { certStatus: "APPROVED" as const }),
+    owner: { isActive: true },
     ...(categoryFilter && { category: categoryFilter }),
   }
 
-  // Sort logic: certified products first, then featured, then newest
-  // Using multiple orderBy keys
-  const [total, certifiedCount, products] = await Promise.all([
-    prisma.product.count({ where }),
-    prisma.product.count({
-      where: {
-        isPublished: true,
-        certStatus: "APPROVED",
-        company: {
-          isPublished: true,
-          owner: { role: { in: [Role.VIP, Role.ADMIN] } },
-        },
-      },
-    }),
+  // Additional filter by source type
+  const sourceWhere = (() => {
+    switch (filter) {
+      case "certified":
+        return { ...baseWhere, certStatus: "APPROVED" as const }
+      case "business":
+        return { ...baseWhere, companyId: { not: null } as any }
+      case "individual":
+        return { ...baseWhere, companyId: null }
+      default:
+        return baseWhere
+    }
+  })()
+
+  const [total, certifiedCount, businessCount, products] = await Promise.all([
+    prisma.product.count({ where: baseWhere }),
+    prisma.product.count({ where: { ...baseWhere, certStatus: "APPROVED" } }),
+    prisma.product.count({ where: { ...baseWhere, companyId: { not: null } } }),
     prisma.product.findMany({
-      where,
-      // Certified first (APPROVED sorts before others alphabetically? no — use raw priority)
-      // Workaround: sort by composite — since certStatus is enum, we sort by isFeatured + featuredOrder + createdAt
-      // Then split client-side is impossible without fetching all — instead fetch all in priority buckets
+      where: sourceWhere,
       orderBy: [
         { isFeatured: "desc" },
+        { ownerPriority: "desc" },
         { featuredOrder: "asc" },
         { createdAt: "desc" },
       ],
@@ -100,14 +100,17 @@ export default async function BusinessProductsPage({
         certStatus: true,
         isFeatured: true,
         featuredOrder: true,
+        companyId: true,
         createdAt: true,
+        owner: {
+          select: { name: true, avatarUrl: true },
+        },
         company: {
           select: {
             name: true,
             slug: true,
             logoUrl: true,
             isVerified: true,
-            owner: { select: { name: true } },
           },
         },
         _count: { select: { comments: { where: { deletedAt: null } } } },
@@ -115,50 +118,58 @@ export default async function BusinessProductsPage({
     }),
   ])
 
-  // Sort certified products to the top within the page results
+  // Sort certified products to the top within page results
   const sortedProducts = [...products].sort((a, b) => {
-    const aCertified = a.certStatus === "APPROVED" ? 0 : 1
-    const bCertified = b.certStatus === "APPROVED" ? 0 : 1
-    if (aCertified !== bCertified) return aCertified - bCertified
-    // Within same certification bucket, featured first
-    const aFeatured = a.isFeatured ? 0 : 1
-    const bFeatured = b.isFeatured ? 0 : 1
-    if (aFeatured !== bFeatured) return aFeatured - bFeatured
-    // Then by featuredOrder
+    const aCert = a.certStatus === "APPROVED" ? 0 : 1
+    const bCert = b.certStatus === "APPROVED" ? 0 : 1
+    if (aCert !== bCert) return aCert - bCert
+    const aFeat = a.isFeatured ? 0 : 1
+    const bFeat = b.isFeatured ? 0 : 1
+    if (aFeat !== bFeat) return aFeat - bFeat
     if (a.featuredOrder !== null && b.featuredOrder !== null) {
       return a.featuredOrder - b.featuredOrder
     }
-    // Finally by date
     return b.createdAt.getTime() - a.createdAt.getTime()
   })
 
-  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const totalFiltered = await prisma.product.count({ where: sourceWhere })
+  const totalPages = Math.ceil(totalFiltered / PAGE_SIZE)
+  const individualCount = total - businessCount
+  const isLoggedIn = !!session?.user
 
   return (
     <div className="min-h-screen bg-brand-50">
-      {/* ── Page Banner ─────────────────────────────────────────────────── */}
+      {/* ── Page Banner ─────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Sản phẩm Doanh nghiệp
+          Chợ Sản phẩm Trầm Hương
         </h1>
         <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
-          Khám phá sản phẩm trầm hương từ các doanh nghiệp Hội viên.
-          Sản phẩm có biểu tượng{" "}
+          Nơi hội viên và doanh nghiệp đăng sản phẩm quảng bá.
+          Sản phẩm có{" "}
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-bold text-white align-middle">
             ✓ Chứng nhận
           </span>{" "}
           đã được Hội thẩm định chất lượng.
         </p>
+        {isLoggedIn && (
+          <Link
+            href="/san-pham/tao-moi"
+            className="mt-5 inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-2.5 hover:bg-brand-300 transition-colors text-sm"
+          >
+            + Đăng sản phẩm
+          </Link>
+        )}
       </div>
 
-      {/* ── Filter tabs ──────────────────────────────────────────────────── */}
+      {/* ── Filter tabs ──────────────────────────────────────────────── */}
       <div className="border-b border-brand-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center gap-2 flex-wrap">
           <Link
-            href={buildUrl(1, "all")}
+            href={buildUrl(1, "all", categoryFilter)}
             className={cn(
               "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-              filter === "all" && !categoryFilter
+              filter === "all"
                 ? "bg-brand-800 text-white border-brand-800"
                 : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50",
             )}
@@ -166,7 +177,7 @@ export default async function BusinessProductsPage({
             Tất cả ({total})
           </Link>
           <Link
-            href={buildUrl(1, "certified")}
+            href={buildUrl(1, "certified", categoryFilter)}
             className={cn(
               "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
               filter === "certified"
@@ -176,10 +187,32 @@ export default async function BusinessProductsPage({
           >
             ✓ Chứng nhận ({certifiedCount})
           </Link>
+          <Link
+            href={buildUrl(1, "business", categoryFilter)}
+            className={cn(
+              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
+              filter === "business"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-blue-700 border-blue-200 hover:bg-blue-50",
+            )}
+          >
+            Doanh nghiệp ({businessCount})
+          </Link>
+          <Link
+            href={buildUrl(1, "individual", categoryFilter)}
+            className={cn(
+              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
+              filter === "individual"
+                ? "bg-amber-600 text-white border-amber-600"
+                : "bg-white text-amber-700 border-amber-200 hover:bg-amber-50",
+            )}
+          >
+            Cá nhân ({individualCount})
+          </Link>
         </div>
       </div>
 
-      {/* ── Categories grid — like Vatgia ──────────────────────────────── */}
+      {/* ── Categories grid ──────────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 pt-8">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {CATEGORIES.map((cat) => (
@@ -213,7 +246,7 @@ export default async function BusinessProductsPage({
         )}
       </div>
 
-      {/* ── Grid ──────────────────────────────────────────────────────────── */}
+      {/* ── Grid ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 py-10">
         {sortedProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-brand-200 p-16 text-center">
@@ -224,14 +257,23 @@ export default async function BusinessProductsPage({
                 : "Chưa có sản phẩm nào được công bố"}
             </p>
             <p className="text-brand-500 text-sm mt-2">
-              Doanh nghiệp Hội viên sẽ sớm cập nhật sản phẩm của mình.
+              Hãy là người đầu tiên đăng sản phẩm trên chợ trầm hương!
             </p>
+            {isLoggedIn && (
+              <Link
+                href="/san-pham/tao-moi"
+                className="mt-4 inline-flex items-center rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
+              >
+                + Đăng sản phẩm
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedProducts.map((product) => {
               const cover = product.imageUrls[0] ?? null
               const isCertified = product.certStatus === "APPROVED"
+              const isBusinessProduct = !!product.companyId && !!product.company
               return (
                 <Link
                   key={product.id}
@@ -260,17 +302,17 @@ export default async function BusinessProductsPage({
                       <AgarwoodPlaceholder className="w-full h-full" size="lg" shape="square" />
                     )}
 
-                    {/* Certified badge — prominent */}
+                    {/* Certified badge */}
                     {isCertified && (
                       <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-lg ring-2 ring-white">
                         ✓ Chứng nhận
                       </span>
                     )}
 
-                    {/* Featured badge — secondary */}
+                    {/* Featured badge */}
                     {product.isFeatured && !isCertified && (
                       <span className="absolute top-3 right-3 inline-flex items-center rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow">
-                        ⭐ Nổi bật
+                        Nổi bật
                       </span>
                     )}
                   </div>
@@ -288,29 +330,54 @@ export default async function BusinessProductsPage({
                       {product.name}
                     </h2>
 
-                    {/* Company */}
+                    {/* Seller info */}
                     <div className="flex items-center gap-1.5">
-                      <div className="relative w-5 h-5 rounded-full overflow-hidden bg-brand-700 shrink-0 flex items-center justify-center">
-                        {product.company.logoUrl ? (
-                          <Image
-                            src={product.company.logoUrl}
-                            alt=""
-                            fill
-                            className="object-cover"
-                            sizes="20px"
-                          />
-                        ) : (
-                          <span className="text-[9px] font-bold text-brand-100">
-                            {product.company.name[0]}
+                      {isBusinessProduct ? (
+                        <>
+                          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-brand-700 shrink-0 flex items-center justify-center">
+                            {product.company!.logoUrl ? (
+                              <Image
+                                src={product.company!.logoUrl}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                sizes="20px"
+                              />
+                            ) : (
+                              <span className="text-[9px] font-bold text-brand-100">
+                                {product.company!.name[0]}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-brand-500 line-clamp-1">
+                            {product.company!.name}
+                            {product.company!.isVerified && (
+                              <span className="text-green-600 ml-0.5">✓</span>
+                            )}
                           </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-brand-500 line-clamp-1">
-                        {product.company.name}
-                        {product.company.isVerified && (
-                          <span className="text-green-600 ml-0.5">✓</span>
-                        )}
-                      </span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="relative w-5 h-5 rounded-full overflow-hidden bg-brand-200 shrink-0 flex items-center justify-center">
+                            {product.owner.avatarUrl ? (
+                              <Image
+                                src={product.owner.avatarUrl}
+                                alt=""
+                                fill
+                                className="object-cover"
+                                sizes="20px"
+                              />
+                            ) : (
+                              <span className="text-[9px] font-bold text-brand-600">
+                                {product.owner.name[0]}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-brand-400 line-clamp-1">
+                            {product.owner.name}
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {/* Meta */}
@@ -320,7 +387,7 @@ export default async function BusinessProductsPage({
                           <span className="text-brand-500">{product.category}</span>
                         )}
                         {product._count.comments > 0 && (
-                          <span className="text-brand-400">💬 {product._count.comments}</span>
+                          <span className="text-brand-400">{product._count.comments} bình luận</span>
                         )}
                       </div>
                       {product.priceRange && (
@@ -349,7 +416,7 @@ export default async function BusinessProductsPage({
                 href={buildUrl(page - 1, filter, categoryFilter)}
                 className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50"
               >
-                ← Trước
+                Trước
               </Link>
             )}
             <span className="px-4 py-2 text-sm text-brand-600">
@@ -360,24 +427,40 @@ export default async function BusinessProductsPage({
                 href={buildUrl(page + 1, filter, categoryFilter)}
                 className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50"
               >
-                Tiếp →
+                Tiếp
               </Link>
             )}
           </div>
         )}
       </div>
 
-      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      {/* ── CTA ──────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-12 text-center text-white">
-        <p className="text-brand-200 mb-4 text-sm">
-          Doanh nghiệp của bạn muốn giới thiệu sản phẩm trên trang này?
-        </p>
-        <Link
-          href="/dang-ky"
-          className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
-        >
-          Đăng ký hội viên
-        </Link>
+        {isLoggedIn ? (
+          <>
+            <p className="text-brand-200 mb-4 text-sm">
+              Bạn có sản phẩm trầm hương muốn quảng bá?
+            </p>
+            <Link
+              href="/san-pham/tao-moi"
+              className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
+            >
+              + Đăng sản phẩm ngay
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="text-brand-200 mb-4 text-sm">
+              Đăng nhập để đăng sản phẩm trên chợ trầm hương. Nâng cấp hội viên để được ưu tiên hiển thị.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
+            >
+              Đăng nhập
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )

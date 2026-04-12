@@ -72,7 +72,7 @@ export default async function LandingPage() {
       where: {
         isFeatured: true,
         isPublished: true,
-        company: { owner: { role: "VIP" } },
+        owner: { role: { in: ["VIP", "ADMIN"] } },
       },
       orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
       take: 20,
@@ -83,6 +83,7 @@ export default async function LandingPage() {
         imageUrls: true,
         priceRange: true,
         certStatus: true,
+        owner: { select: { name: true } },
         company: { select: { name: true } },
       },
     }),
@@ -371,7 +372,7 @@ export default async function LandingPage() {
                         {product.name}
                       </h3>
                       <p className="mt-0.5 text-xs text-brand-500 line-clamp-1">
-                        {product.company.name}
+                        {product.company?.name ?? product.owner.name}
                       </p>
                       {product.priceRange && (
                         <p className="mt-1 text-xs font-bold text-brand-700">{product.priceRange}</p>

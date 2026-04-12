@@ -102,7 +102,7 @@ export async function CertifiedProductsCarousel() {
                     {product.name}
                   </h3>
                   <p className="line-clamp-1 text-xs text-brand-500 mt-0.5">
-                    {product.company.name}
+                    {product.company?.name ?? product.owner.name}
                   </p>
                   {product.priceRange && (
                     <p className="text-xs text-brand-700 font-medium mt-0.5">

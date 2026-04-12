@@ -143,7 +143,7 @@ export const getFeaturedProductsForHomepage = unstable_cache(
       where: {
         isFeatured: true,
         isPublished: true,
-        company: { owner: { role: "VIP" } },
+        owner: { role: { in: ["VIP", "ADMIN"] } },
       },
       orderBy: [
         { featuredOrder: "asc" },
@@ -158,6 +158,7 @@ export const getFeaturedProductsForHomepage = unstable_cache(
         priceRange: true,
         category: true,
         certStatus: true,
+        owner: { select: { name: true } },
         company: { select: { name: true, slug: true } },
       },
     })

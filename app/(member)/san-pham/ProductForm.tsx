@@ -33,7 +33,7 @@ function slugify(str: string) {
     .replace(/^-|-$/g, "")
 }
 
-export function ProductForm({ product, companySlug }: { product?: ProductData; companySlug: string }) {
+export function ProductForm({ product, companySlug }: { product?: ProductData; companySlug?: string }) {
   const router = useRouter()
   const isEdit = !!product
   const [loading, setLoading] = useState(false)
@@ -226,7 +226,7 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
           {loading ? "Đang lưu..." : isEdit ? "Cập nhật sản phẩm" : "Tạo sản phẩm"}
         </button>
         <Link
-          href={`/doanh-nghiep/${companySlug}`}
+          href={companySlug ? `/doanh-nghiep/${companySlug}` : "/san-pham-doanh-nghiep"}
           className="rounded-lg border border-brand-300 px-6 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
         >
           Huỷ

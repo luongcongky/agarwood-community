@@ -38,6 +38,12 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await prisma.product.findUnique({
     where: { slug, isPublished: true },
     include: {
+      owner: {
+        select: {
+          id: true, name: true, avatarUrl: true, phone: true,
+          role: true, contributionTotal: true,
+        },
+      },
       company: {
         select: {
           name: true, slug: true, logoUrl: true, isVerified: true,
@@ -54,14 +60,15 @@ export default async function ProductDetailPage({ params }: Props) {
   })
   if (!product) notFound()
 
-  // Related products: same category OR same company, cert products first
+  // Related products: same category OR same company/owner, cert products first
   const relatedProducts = await prisma.product.findMany({
     where: {
       isPublished: true,
       slug: { not: slug },
       OR: [
         { category: product.category },
-        { companyId: product.companyId },
+        ...(product.companyId ? [{ companyId: product.companyId }] : []),
+        { ownerId: product.ownerId },
       ],
     },
     take: 3,
@@ -80,8 +87,9 @@ export default async function ProductDetailPage({ params }: Props) {
     : null
 
   // Role-based CTA logic
-  const isOwner = session?.user?.id === product.company.ownerId
+  const isOwner = session?.user?.id === product.owner.id
   const isAdmin = session?.user?.role === "ADMIN"
+  const hasCompany = !!product.company
 
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -90,7 +98,9 @@ export default async function ProductDetailPage({ params }: Props) {
     description: product.description?.slice(0, 300),
     image: imageUrls[0] ?? undefined,
     category: product.category ?? undefined,
-    brand: { "@type": "Organization", name: product.company.name },
+    brand: product.company
+      ? { "@type": "Organization", name: product.company.name }
+      : { "@type": "Person", name: product.owner.name },
     ...(product.certStatus === "APPROVED" && certDate ? {
       certification: {
         "@type": "Certification",
@@ -132,20 +142,40 @@ export default async function ProductDetailPage({ params }: Props) {
               {product.name}
             </h1>
             <div className="mt-2 flex items-center gap-2">
-              <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
-                {product.company.logoUrl ? (
-                  <Image src={product.company.logoUrl} alt={product.company.name} fill className="object-cover" sizes="24px" />
-                ) : (
-                  <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
-                    {product.company.name[0]}
-                  </span>
-                )}
-              </div>
-              <Link href={`/doanh-nghiep/${product.company.slug}`} className="text-sm text-brand-600 hover:text-brand-800">
-                {product.company.name}
-              </Link>
-              {product.company.isVerified && (
-                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">✓ Đã xác minh</span>
+              {hasCompany ? (
+                <>
+                  <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
+                    {product.company!.logoUrl ? (
+                      <Image src={product.company!.logoUrl} alt={product.company!.name} fill className="object-cover" sizes="24px" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
+                        {product.company!.name[0]}
+                      </span>
+                    )}
+                  </div>
+                  <Link href={`/doanh-nghiep/${product.company!.slug}`} className="text-sm text-brand-600 hover:text-brand-800">
+                    {product.company!.name}
+                  </Link>
+                  {product.company!.isVerified && (
+                    <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">✓ Đã xác minh</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
+                    {product.owner.avatarUrl ? (
+                      <Image src={product.owner.avatarUrl} alt={product.owner.name} fill className="object-cover" sizes="24px" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
+                        {product.owner.name[0]}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-sm text-brand-600">{product.owner.name}</span>
+                  {product.owner.role === "VIP" && (
+                    <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Hội viên</span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -229,13 +259,21 @@ export default async function ProductDetailPage({ params }: Props) {
                 Chỉnh sửa
               </Link>
             )}
-            {!isOwner && !isAdmin && (
+            {!isOwner && !isAdmin && hasCompany && (
               <Link
-                href={`/doanh-nghiep/${product.company.slug}`}
+                href={`/doanh-nghiep/${product.company!.slug}`}
                 className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
               >
                 Liên hệ doanh nghiệp
               </Link>
+            )}
+            {!isOwner && !isAdmin && !hasCompany && product.owner.phone && (
+              <a
+                href={`tel:${product.owner.phone}`}
+                className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
+              >
+                Gọi: {product.owner.phone}
+              </a>
             )}
           </div>
         </div>
@@ -275,7 +313,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   </div>
                   <div className="p-3 space-y-0.5">
                     <p className="text-sm font-semibold text-brand-900 group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">{rp.name}</p>
-                    <p className="text-xs text-brand-500">{rp.company.name}</p>
+                    <p className="text-xs text-brand-500">{rp.company?.name ?? ""}</p>
                     {rp.category && <p className="text-xs text-brand-400">{rp.category}</p>}
                   </div>
                 </Link>

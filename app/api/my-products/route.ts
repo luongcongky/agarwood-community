@@ -8,22 +8,16 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const company = await prisma.company.findUnique({
-    where: { ownerId: session.user.id },
-    select: { id: true },
-  })
-  if (!company) {
-    return NextResponse.json({ products: [] })
-  }
-
   const products = await prisma.product.findMany({
-    where: { companyId: company.id },
+    where: { ownerId: session.user.id },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,
       slug: true,
       certStatus: true,
       imageUrls: true,
+      companyId: true,
     },
   })
 

@@ -110,8 +110,8 @@ export default async function VerifyPage({ params }: Props) {
           </div>
           <div className="flex justify-between py-1.5 border-b border-amber-200">
             <span className="text-amber-700">Doanh nghiệp</span>
-            <Link href={`/doanh-nghiep/${product.company.slug}`} className="font-semibold text-amber-900 hover:underline">
-              {product.company.name}
+            <Link href={`/doanh-nghiep/${product.company!.slug}`} className="font-semibold text-amber-900 hover:underline">
+              {product.company!.name}
             </Link>
           </div>
           <div className="flex justify-between py-1.5 border-b border-amber-200">

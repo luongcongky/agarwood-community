@@ -156,6 +156,7 @@ model User {
   sessions          Session[]
   memberships       Membership[]
   company           Company?
+  products          Product[]       @relation("ProductOwner")
   posts             Post[]
   reports           Report[]        @relation("ReporterRelation")
   certifications    Certification[]
@@ -321,7 +322,8 @@ model Company {
 
 model Product {
   id              String      @id @default(cuid())
-  companyId       String
+  ownerId         String      // userId — ai đăng sản phẩm
+  companyId       String?     // optional — chỉ có nếu owner có company (VIP)
   name            String
   slug            String      @unique
   description     String?     @db.Text
@@ -338,21 +340,26 @@ model Product {
   certExpiredAt   DateTime?   // badge có thể có hạn sử dụng — future use
 
   // Featured (admin pin) — dùng cho menu "Sản phẩm tiêu biểu" + landing page "Top SP hot trend"
-  // Chỉ enable cho SP của owner VIP (validate ở UI/API)
   isFeatured      Boolean     @default(false)
   featuredOrder   Int?        // null = chưa pin, số nhỏ = ưu tiên cao
+
+  // Ranking — denormalized từ owner.displayPriority tại thời điểm đăng
+  ownerPriority   Int         @default(0)
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  owner           User        @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  company         Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
   certifications  Certification[]
   comments        Comment[]
 
+  @@index([ownerId])
   @@index([companyId])
   @@index([certStatus])
   @@index([slug])
   @@index([isFeatured, featuredOrder])
+  @@index([ownerPriority])
   @@map("products")
 }
 

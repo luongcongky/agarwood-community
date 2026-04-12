@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { getProductQuotaUsage } from "@/lib/product-quota"
 
 const productSchema = z.object({
   name: z.string().min(2, "Ten san pham toi thieu 2 ky tu"),
@@ -22,20 +23,32 @@ export async function createProduct(formData: Record<string, unknown>) {
   const parsed = productSchema.safeParse(formData)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  // Get company
-  const company = await prisma.company.findUnique({
-    where: { ownerId: session.user.id },
-    select: { id: true },
-  })
-  if (!company) return { error: "Ban chua co doanh nghiep" }
+  // Check product quota
+  const quota = await getProductQuotaUsage(session.user.id)
+  if (quota.limit !== -1 && quota.remaining <= 0) {
+    return { error: `Ban da dat gioi han ${quota.limit} san pham/thang. Vui long doi den ${quota.resetAt.toLocaleDateString("vi-VN")}.` }
+  }
 
   // Check slug uniqueness
   const slugExists = await prisma.product.findUnique({ where: { slug: parsed.data.slug } })
   if (slugExists) return { error: "Slug da duoc su dung" }
 
+  // Get company if user has one (VIP)
+  const company = await prisma.company.findUnique({
+    where: { ownerId: session.user.id },
+    select: { id: true },
+  })
+
+  // Get user displayPriority for denormalized ownerPriority
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { displayPriority: true },
+  })
+
   const product = await prisma.product.create({
     data: {
-      companyId: company.id,
+      ownerId: session.user.id,
+      companyId: company?.id ?? null,
       name: parsed.data.name,
       slug: parsed.data.slug,
       description: parsed.data.description || null,
@@ -43,9 +56,11 @@ export async function createProduct(formData: Record<string, unknown>) {
       priceRange: parsed.data.priceRange || null,
       imageUrls: parsed.data.imageUrls ?? [],
       isPublished: parsed.data.isPublished ?? true,
+      ownerPriority: user?.displayPriority ?? 0,
     },
   })
 
+  revalidatePath("/san-pham-doanh-nghiep")
   revalidatePath("/san-pham-chung-nhan")
   return { success: true, slug: product.slug }
 }
@@ -57,12 +72,12 @@ export async function updateProduct(productId: string, formData: Record<string, 
   const parsed = productSchema.safeParse(formData)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  // Verify ownership
+  // Verify ownership via ownerId
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, slug: true, company: { select: { ownerId: true } } },
+    select: { id: true, slug: true, ownerId: true },
   })
-  if (!product || product.company.ownerId !== session.user.id) {
+  if (!product || product.ownerId !== session.user.id) {
     return { error: "Khong co quyen chinh sua" }
   }
 
@@ -88,6 +103,7 @@ export async function updateProduct(productId: string, formData: Record<string, 
   })
 
   revalidatePath("/san-pham/" + parsed.data.slug)
+  revalidatePath("/san-pham-doanh-nghiep")
   revalidatePath("/san-pham-chung-nhan")
   return { success: true, slug: parsed.data.slug }
 }
