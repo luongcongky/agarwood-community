@@ -9,12 +9,12 @@ export const revalidate = 600
 export const metadata: Metadata = {
   title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
   description:
-    "Quyền lợi độc quyền dành cho hội viên VIP: hiển thị nổi bật trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới doanh nghiệp trầm hương toàn quốc.",
+    "Quyền lợi dành cho hội viên: hiển thị nổi bật trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới doanh nghiệp trầm hương toàn quốc.",
   alternates: { canonical: "/landing" },
   openGraph: {
     title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
     description:
-      "Hơn 100 doanh nghiệp trầm hương đã tham gia. Hiển thị trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới đối tác toàn quốc.",
+      "Hơn 100 doanh nghiệp trầm hương đã tham gia. Hiển thị trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới đối tác toàn quốc. Quyền lợi bổ sung trên nền tảng số cho hội viên.",
     type: "website",
     images: [
       {
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
     description:
-      "Quyền lợi độc quyền dành cho hội viên VIP: hiển thị nổi bật trang chủ, chứng nhận sản phẩm và nhiều ưu đãi khác.",
+      "Quyền lợi dành cho hội viên: hiển thị nổi bật trang chủ, chứng nhận sản phẩm và nhiều ưu đãi khác trên nền tảng số.",
   },
 }
 
@@ -113,27 +113,29 @@ export default async function LandingPage() {
     },
   }
 
+  // Tài khoản cơ bản — tách biệt khỏi các gói hội viên
+  const basicAccount = {
+    name: "Tài khoản cơ bản",
+    stars: "—",
+    price: "Miễn phí",
+    color: "border-brand-200 bg-white",
+    features: {
+      quota: "5 bài/tháng",
+      homepage: false,
+      certification: false,
+      bannerQuota: "1 mẫu/tháng",
+      prioritySupport: false,
+      verifiedBadge: false,
+    },
+    cta: { label: "Đăng ký tài khoản ngay", href: "/dang-ky" },
+  }
+
   // Tier comparison data — quota từ Phase 2 + Phase 6 banner quota
   const tiers = [
     {
-      name: "Khách",
-      stars: "—",
-      price: "Miễn phí",
-      color: "border-brand-200 bg-white",
-      features: {
-        quota: "5 bài/tháng",
-        homepage: false,
-        certification: false,
-        bannerQuota: "1 mẫu/tháng",
-        prioritySupport: false,
-        verifiedBadge: false,
-      },
-      cta: { label: "Đăng ký miễn phí", href: "/dang-ky" },
-    },
-    {
-      name: "VIP ★",
+      name: "Hội viên ★",
       stars: "★",
-      price: "Cơ bản",
+      price: "Hội phí cơ bản",
       color: "border-brand-300 bg-brand-50",
       features: {
         quota: "15 bài/tháng",
@@ -143,12 +145,12 @@ export default async function LandingPage() {
         prioritySupport: false,
         verifiedBadge: true,
       },
-      cta: { label: "Đăng ký VIP", href: "/dang-ky" },
+      cta: { label: "Đăng ký Hội viên", href: "/dang-ky" },
     },
     {
-      name: "VIP ★★ Bạc",
+      name: "Hội viên ★★ Bạc",
       stars: "★★",
-      price: `Đóng góp ${formatVnd(businessThresholds.silver)}đ`,
+      price: `Tổng đóng góp từ ${formatVnd(businessThresholds.silver)}đ`,
       color: "border-amber-300 bg-amber-50 ring-2 ring-amber-200",
       popular: true,
       features: {
@@ -159,12 +161,12 @@ export default async function LandingPage() {
         prioritySupport: true,
         verifiedBadge: true,
       },
-      cta: { label: "Đăng ký VIP Bạc", href: "/dang-ky" },
+      cta: { label: "Đăng ký Hội viên Bạc", href: "/dang-ky" },
     },
     {
-      name: "VIP ★★★ Vàng",
+      name: "Hội viên ★★★ Vàng",
       stars: "★★★",
-      price: `Đóng góp ${formatVnd(businessThresholds.gold)}đ`,
+      price: `Tổng đóng góp từ ${formatVnd(businessThresholds.gold)}đ`,
       color: "border-yellow-400 bg-yellow-50",
       features: {
         quota: "Không giới hạn",
@@ -174,7 +176,7 @@ export default async function LandingPage() {
         prioritySupport: true,
         verifiedBadge: true,
       },
-      cta: { label: "Đăng ký VIP Vàng", href: "/dang-ky" },
+      cta: { label: "Đăng ký Hội viên Vàng", href: "/dang-ky" },
     },
   ] as const
 
@@ -219,7 +221,7 @@ export default async function LandingPage() {
               href="/dang-ky"
               className="inline-flex items-center justify-center rounded-lg bg-brand-700 px-8 py-5 text-base font-bold text-white shadow-sm transition-all hover:bg-brand-800 hover:shadow-md hover:-translate-y-0.5"
             >
-              Đăng ký Hội viên VIP →
+              Đăng ký Hội viên →
             </Link>
             <Link
               href="#tier-comparison"
@@ -230,7 +232,7 @@ export default async function LandingPage() {
           </div>
 
           <p className="mt-5 text-xs text-brand-500">
-            Đăng ký miễn phí • Không cần thẻ tín dụng • Kích hoạt ngay
+            Đăng ký tài khoản ngay • Miễn phí • Không cần thẻ tín dụng
           </p>
         </div>
       </section>
@@ -328,7 +330,7 @@ export default async function LandingPage() {
               Sản phẩm hot trend
             </h2>
             <p className="mt-2 text-brand-600 max-w-2xl mx-auto">
-              Bộ sưu tập sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp VIP
+              Bộ sưu tập sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
             </p>
           </header>
 
@@ -395,30 +397,82 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Tier Comparison ──────────────────────────────────────────────── */}
+      {/* ── Tài khoản cơ bản ──────────────────────────────────────────── */}
+      <section className="bg-white py-16 lg:py-20 border-b border-brand-100">
+        <div className="mx-auto max-w-md px-4">
+          <header className="text-center mb-8">
+            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
+              Bắt đầu
+            </p>
+            <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
+              Tài khoản cơ bản
+            </h2>
+            <p className="mt-3 text-brand-600">
+              Tạo tài khoản miễn phí để khám phá nền tảng và kết nối với cộng đồng trầm hương.
+            </p>
+          </header>
+
+          <div className={`relative flex flex-col rounded-2xl border-2 p-6 shadow-sm ${basicAccount.color}`}>
+            <div className="text-center mb-5">
+              <h3 className="text-lg font-bold text-brand-900">{basicAccount.name}</h3>
+              <p className="mt-1 text-sm text-brand-600">{basicAccount.price}</p>
+            </div>
+
+            <ul className="flex-1 space-y-3 text-sm border-t border-brand-200 pt-5">
+              <FeatureRow label="Hạn mức bài viết">
+                <span className="font-semibold text-brand-900">{basicAccount.features.quota}</span>
+              </FeatureRow>
+              <FeatureRow label="Hiển thị trang chủ">
+                <FeatureCheck on={basicAccount.features.homepage} />
+              </FeatureRow>
+              <FeatureRow label="Chứng nhận sản phẩm">
+                <FeatureCheck on={basicAccount.features.certification} />
+              </FeatureRow>
+              <FeatureRow label="Badge xác minh">
+                <FeatureCheck on={basicAccount.features.verifiedBadge} />
+              </FeatureRow>
+              <FeatureRow label="Banner quảng cáo">
+                <span className="text-xs font-semibold text-brand-900">
+                  {basicAccount.features.bannerQuota}
+                </span>
+              </FeatureRow>
+              <FeatureRow label="Hỗ trợ ưu tiên">
+                <FeatureCheck on={basicAccount.features.prioritySupport} />
+              </FeatureRow>
+            </ul>
+
+            <Link
+              href={basicAccount.cta.href}
+              className="mt-6 inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-colors bg-brand-700 text-white hover:bg-brand-800"
+            >
+              {basicAccount.cta.label}
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Tier Comparison — Gói hội viên ─────────────────────────────── */}
       <section id="tier-comparison" className="bg-linear-to-b from-brand-50 to-white py-16 lg:py-24 scroll-mt-20">
-        <div className="mx-auto max-w-7xl px-4">
+        <div className="mx-auto max-w-6xl px-4">
           <header className="text-center mb-12">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Quyền lợi
+              Quyền lợi hội viên
             </p>
             <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">
               Chọn gói hội viên phù hợp
             </h2>
             <p className="mt-3 text-brand-600 max-w-2xl mx-auto">
-              Hội viên VIP được ưu tiên hiển thị trang chủ, hạn mức bài viết cao hơn
-              và nhiều quyền lợi độc quyền.
+              Hội viên được ưu tiên hiển thị trang chủ, hạn mức bài viết cao hơn
+              và nhiều quyền lợi trên nền tảng số.
             </p>
           </header>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {tiers.map((tier) => (
               <div
                 key={tier.name}
                 className={`relative flex flex-col rounded-2xl border-2 p-6 shadow-sm ${tier.color}`}
               >
-                {/*  popular badge — top-right corner, half above / half inside the card
-                    Contrast: amber-500 bg + brand-900 text ≈ 9:1 (WCAG AAA)  */}
                 {"popular" in tier && tier.popular && (
                   <span className="absolute top-0 right-4 -translate-y-1/2 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-bold text-brand-900 shadow-lg ring-2 ring-white z-10">
                     ⭐ Phổ biến nhất
@@ -465,9 +519,16 @@ export default async function LandingPage() {
             ))}
           </div>
 
-          <p className="mt-8 text-center text-xs text-brand-500">
-            * Hạng tự động nâng cấp khi tổng đóng góp đạt ngưỡng tương ứng. Liên hệ Ban quản trị để biết chi tiết.
-          </p>
+          <div className="mt-8 mx-auto max-w-2xl rounded-xl border border-brand-200 bg-brand-50/50 px-5 py-4 text-center text-xs text-brand-500 leading-relaxed">
+            <p>
+              * Hạng hội viên trên nền tảng số được xác định dựa trên tổng đóng góp tài chính
+              và tự động nâng cấp khi đạt ngưỡng tương ứng. Đây là quyền lợi bổ sung trên
+              nền tảng số, không thay thế quyền và nghĩa vụ hội viên theo{" "}
+              <Link href="/dieu-le" className="underline underline-offset-2 text-brand-700 hover:text-brand-900">
+                Điều lệ Hội Trầm Hương Việt Nam
+              </Link>.
+            </p>
+          </div>
         </div>
       </section>
 
