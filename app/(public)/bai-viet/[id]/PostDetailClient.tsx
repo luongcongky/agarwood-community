@@ -409,7 +409,7 @@ function CommentItem({
               <span className="text-[10px] font-bold bg-brand-700 text-white rounded-full px-1.5 py-0.5">Admin</span>
             )}
           </div>
-          <p className="text-sm text-brand-800 whitespace-pre-wrap break-words">{comment.content}</p>
+          <p className="text-sm text-brand-800 whitespace-pre-wrap wrap-break-word">{comment.content}</p>
         </div>
         <div className="flex items-center gap-3 mt-1 px-1">
           <span className="text-xs text-brand-400" suppressHydrationWarning>

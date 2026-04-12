@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { PRODUCT_CATEGORIES, AGARWOOD_REGIONS } from "@/lib/constants/agarwood"
 import { createProduct, updateProduct } from "./_actions"
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
 
 type ProductData = {
   id: string
@@ -41,7 +42,7 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
 
   const [name, setName] = useState(product?.name ?? "")
   const [slug, setSlug] = useState(product?.slug ?? "")
-  const [description, setDescription] = useState(product?.description ?? "")
+  const descriptionRef = useRef<RichTextEditorHandle>(null)
   const [category, setCategory] = useState(product?.category ?? "")
   const [priceRange, setPriceRange] = useState(product?.priceRange ?? "")
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? [])
@@ -86,6 +87,8 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
     setLoading(true)
     setMsg(null)
 
+    await descriptionRef.current?.processImages()
+    const description = descriptionRef.current?.getHTML() ?? ""
     const data = { name, slug, description, category, priceRange, imageUrls, isPublished }
 
     try {
@@ -154,15 +157,12 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-brand-800">Mô tả chi tiết</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={3000}
-            rows={6}
-            className={cn(inputClass, "resize-none")}
-            placeholder="Mô tả nguồn gốc, đặc điểm hương thơm, cách bảo quản và sử dụng..."
+          <RichTextEditor
+            ref={descriptionRef}
+            initialContent={product?.description ?? ""}
+            minHeight={200}
+            uploadFolder="san-pham"
           />
-          <p className="text-xs text-brand-400">{description.length}/3000 ký tự</p>
         </div>
 
         <div className="flex items-center gap-2">

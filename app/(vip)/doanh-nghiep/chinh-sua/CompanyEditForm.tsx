@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { EMPLOYEE_COUNTS, PROVINCES } from "@/lib/constants/agarwood"
 import { updateCompany } from "./_actions"
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
 
 type Company = {
   id: string
@@ -44,7 +45,7 @@ export function CompanyEditForm({ company }: { company: Company }) {
   // Form state
   const [name, setName] = useState(company.name)
   const [slug, setSlug] = useState(company.slug)
-  const [description, setDescription] = useState(company.description ?? "")
+  const descriptionRef = useRef<RichTextEditorHandle>(null)
   const [foundedYear, setFoundedYear] = useState(company.foundedYear?.toString() ?? "")
   const [employeeCount, setEmployeeCount] = useState(company.employeeCount ?? "")
   const [businessLicense, setBusinessLicense] = useState(company.businessLicense ?? "")
@@ -84,6 +85,8 @@ export function CompanyEditForm({ company }: { company: Company }) {
     setLoading(true)
     setMsg(null)
     try {
+      await descriptionRef.current?.processImages()
+      const description = descriptionRef.current?.getHTML() ?? ""
       const result = await updateCompany({
         name,
         slug,
@@ -171,15 +174,12 @@ export function CompanyEditForm({ company }: { company: Company }) {
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-brand-800">Mô tả công ty</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={2000}
-            rows={5}
-            className={cn(inputClass, "resize-none")}
-            placeholder="Giới thiệu về công ty, lịch sử phát triển, thế mạnh sản phẩm..."
+          <RichTextEditor
+            ref={descriptionRef}
+            initialContent={company.description ?? ""}
+            minHeight={200}
+            uploadFolder="doanh-nghiep"
           />
-          <p className="text-xs text-brand-400">{description.length}/2000 ký tự</p>
         </div>
 
         <div className="space-y-1.5">

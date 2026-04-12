@@ -8,7 +8,7 @@ import { z } from "zod"
 const productSchema = z.object({
   name: z.string().min(2, "Ten san pham toi thieu 2 ky tu"),
   slug: z.string().regex(/^[a-z0-9-]+$/, "Slug chi chua a-z, 0-9, dau gach ngang").min(2),
-  description: z.string().max(3000).optional().or(z.literal("")),
+  description: z.string().max(15000).optional().or(z.literal("")),
   category: z.string().optional().or(z.literal("")),
   priceRange: z.string().optional().or(z.literal("")),
   imageUrls: z.array(z.string()).optional(),

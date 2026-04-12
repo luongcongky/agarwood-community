@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
+import DOMPurify from "isomorphic-dompurify"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductGallery } from "./ProductGallery"
 import { CommentsSection } from "@/components/features/comments/CommentsSection"
@@ -161,9 +162,10 @@ export default async function ProductDetailPage({ params }: Props) {
 
           {/* Description */}
           {product.description && (
-            <div className="prose prose-sm max-w-none text-brand-700 leading-relaxed">
-              <p className="whitespace-pre-wrap">{product.description}</p>
-            </div>
+            <div
+              className="prose prose-sm max-w-none text-brand-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+            />
           )}
 
           {/* ── Certification section (most prominent) ────────────────── */}

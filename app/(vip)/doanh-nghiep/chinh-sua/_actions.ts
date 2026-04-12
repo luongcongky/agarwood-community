@@ -8,7 +8,7 @@ import { z } from "zod"
 const companySchema = z.object({
   name: z.string().min(2, "Ten cong ty toi thieu 2 ky tu"),
   slug: z.string().regex(/^[a-z0-9-]+$/, "Slug chi chua a-z, 0-9, dau gach ngang").min(2),
-  description: z.string().max(2000).optional().or(z.literal("")),
+  description: z.string().max(10000).optional().or(z.literal("")),
   foundedYear: z.number().min(1900).max(2030).optional().nullable(),
   employeeCount: z.string().optional().or(z.literal("")),
   businessLicense: z.string().optional().or(z.literal("")),

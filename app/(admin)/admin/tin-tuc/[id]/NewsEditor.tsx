@@ -90,6 +90,8 @@ export default function NewsEditorPage({
     setError("")
     setSaved(false)
 
+    // Upload pending local images to Cloudinary before saving
+    await editorRef.current?.processImages()
     const content = editorRef.current?.getHTML() ?? ""
 
     const body = {
@@ -225,7 +227,7 @@ export default function NewsEditorPage({
             </div>
 
             {/* Rich text editor */}
-            <RichTextEditor ref={editorRef} initialContent={initialContent} />
+            <RichTextEditor ref={editorRef} initialContent={initialContent} uploadFolder="tin-tuc" />
           </div>
 
           {/* Sidebar */}

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 
@@ -81,7 +82,7 @@ export function CompanyTabs({
         {activeTab === "intro" && (
           <div className="prose max-w-none text-brand-800 leading-relaxed">
             {description ? (
-              <p className="whitespace-pre-wrap">{description}</p>
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description) }} />
             ) : (
               <p className="text-brand-400 italic">Chưa có mô tả</p>
             )}

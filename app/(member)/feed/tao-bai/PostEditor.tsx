@@ -1,47 +1,12 @@
 "use client"
 
-import { useEditor, EditorContent } from "@tiptap/react"
-import StarterKit from "@tiptap/starter-kit"
-import { ResizableImage } from "@/components/editor/image-extension"
-import { Suspense, useState, useEffect, useRef } from "react"
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
+import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 
-// ─── Toolbar Button ──────────────────────────────────────────────────────────
-
-function ToolbarButton({
-  onClick,
-  active,
-  title,
-  children,
-}: {
-  onClick: () => void
-  active?: boolean
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onMouseDown={(e) => {
-        e.preventDefault()
-        onClick()
-      }}
-      title={title}
-      className={cn(
-        "flex items-center justify-center size-9 rounded-md text-sm font-medium transition-colors",
-        active
-          ? "bg-brand-700 text-white"
-          : "text-brand-700 hover:bg-brand-100"
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
-// ─── Page Component ──────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Extract all Cloudinary image URLs from HTML string */
 function extractCloudinaryUrls(html: string): string[] {
@@ -63,6 +28,8 @@ async function deleteOrphanedImages(beforeUrls: string[], afterHtml: string) {
     } catch { /* ignore individual failures */ }
   }
 }
+
+// ─── Page Component ──────────────────────────────────────────────────────────
 
 export default function TaoBaiPage() {
   return (
@@ -86,6 +53,7 @@ function TaoBaiContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("edit")
+  const editorRef = useRef<RichTextEditorHandle>(null)
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState<PostCategoryClient>("GENERAL")
   const [preview, setPreview] = useState(false)
@@ -95,9 +63,8 @@ function TaoBaiContent() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [importingDocx, setImportingDocx] = useState(false)
   const [editLoaded, setEditLoaded] = useState(false)
-  const [imageSelected, setImageSelected] = useState(false)
-  const [originalImages, setOriginalImages] = useState<string[]>([]) // images from loaded content (edit mode)
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]) // images uploaded this session
+  const [originalImages, setOriginalImages] = useState<string[]>([])
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const docxInputRef = useRef<HTMLInputElement>(null)
@@ -105,7 +72,7 @@ function TaoBaiContent() {
   const editIdRef = useRef(editId)
   editIdRef.current = editId
 
-  // Fetch quota tháng hiện tại — chỉ cần khi tạo bài mới (edit không tính quota)
+  // Fetch quota — chỉ khi tạo mới
   useEffect(() => {
     if (editId) return
     let cancelled = false
@@ -114,20 +81,15 @@ function TaoBaiContent() {
       .then((data) => {
         if (!cancelled && data) setQuota(data)
       })
-      .catch(() => { /* ignore — UI vẫn hoạt động khi không lấy được */ })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [editId])
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
-    extensions: [
-      StarterKit,
-      ResizableImage.configure({ inline: false, allowBase64: false }),
-    ],
-    content: "",
-    onUpdate: ({ editor }) => {
-      // Only auto-save drafts for NEW posts, not when editing existing
+  // Auto-save draft — hook into editor's onUpdate via editor instance
+  useEffect(() => {
+    const editor = editorRef.current?.editor
+    if (!editor) return
+    const handler = () => {
       if (editIdRef.current) return
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
       autoSaveTimerRef.current = setTimeout(() => {
@@ -141,22 +103,21 @@ function TaoBaiContent() {
         )
         setDraftSavedAt(new Date().toLocaleTimeString("vi-VN"))
       }, 2000)
-    },
-    onSelectionUpdate: ({ editor }) => {
-      setImageSelected(editor.isActive("image"))
-    },
-  })
+    }
+    editor.on("update", handler)
+    return () => { editor.off("update", handler) }
+  }, [editorRef.current?.editor, title])
 
-  // Restore draft on mount — only for NEW posts (not edit mode)
+  // Restore draft on mount — only for NEW posts
   useEffect(() => {
-    if (!editor || editId) return
+    if (editId) return
     const raw = localStorage.getItem("feed_draft")
     if (!raw) return
     try {
       const parsed = JSON.parse(raw)
       if (parsed.title) setTitle(parsed.title)
       if (parsed.content) {
-        editor.commands.setContent(parsed.content)
+        editorRef.current?.setContent(parsed.content)
         setOriginalImages(extractCloudinaryUrls(parsed.content))
       }
       if (parsed.savedAt)
@@ -164,12 +125,12 @@ function TaoBaiContent() {
     } catch {
       // ignore corrupt draft
     }
-  }, [editor, editId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, editorRef.current?.editor])
 
   // Load post for editing
   useEffect(() => {
-    if (!editor || !editId || editLoaded) return
-    // Clear draft so it doesn't pollute next "create new" session
+    if (!editId || editLoaded) return
     localStorage.removeItem("feed_draft")
     async function loadPost() {
       try {
@@ -178,7 +139,7 @@ function TaoBaiContent() {
         const data = await res.json()
         if (data.post) {
           setTitle(data.post.title ?? "")
-          editor?.commands.setContent(data.post.content)
+          editorRef.current?.setContent(data.post.content)
           setOriginalImages(extractCloudinaryUrls(data.post.content))
           setEditLoaded(true)
         }
@@ -187,10 +148,12 @@ function TaoBaiContent() {
       }
     }
     loadPost()
-  }, [editor, editId, editLoaded])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, editLoaded, editorRef.current?.editor])
 
-  // Auto-save title when it changes — only for NEW posts
+  // Auto-save title changes
   useEffect(() => {
+    const editor = editorRef.current?.editor
     if (!editor || editId) return
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     autoSaveTimerRef.current = setTimeout(() => {
@@ -207,7 +170,9 @@ function TaoBaiContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title])
 
-  async function handleImageUpload(file: File) {
+  const handleImageUpload = useCallback(async (file: File) => {
+    const editor = editorRef.current?.editor
+    if (!editor) return
     setUploadingImage(true)
     try {
       const formData = new FormData()
@@ -217,22 +182,17 @@ function TaoBaiContent() {
       if (!res.ok) throw new Error("Upload failed")
       const data = await res.json()
       const imgUrl = data.secure_url ?? data.url
-      editor?.chain().focus().setImage({ src: imgUrl }).run()
+      editor.chain().focus().setImage({ src: imgUrl }).run()
       setUploadedImages((prev) => [...prev, imgUrl])
     } catch {
       setError("Tải ảnh thất bại. Vui lòng thử lại.")
     } finally {
       setUploadingImage(false)
     }
-  }
+  }, [])
 
-  function handleInsertLink() {
-    const url = window.prompt("Nhập URL liên kết:")
-    if (!url) return
-    editor?.chain().focus().setLink({ href: url }).run()
-  }
-
-  async function handleDocxImport(file: File) {
+  const handleDocxImport = useCallback(async (file: File) => {
+    const editor = editorRef.current?.editor
     if (!editor) return
     setImportingDocx(true)
     setError(null)
@@ -246,23 +206,16 @@ function TaoBaiContent() {
         return
       }
       const data = await res.json()
-      // Set title if extracted and current title is empty
       if (data.title && !title) setTitle(data.title)
-      // Insert HTML into editor
       editor.commands.setContent(data.html)
-      if (data.imageCount > 0) {
-        setError(null) // Clear any previous error
-      }
     } catch {
       setError("Import file DOCX thất bại. Vui lòng thử lại.")
     } finally {
       setImportingDocx(false)
     }
-  }
+  }, [title])
 
   async function handleCancel() {
-    // Delete only images uploaded THIS SESSION (not original content images)
-    // This handles both create (all uploads are new) and edit (only new uploads deleted)
     for (const url of uploadedImages) {
       try {
         await fetch("/api/upload/delete", {
@@ -272,14 +225,12 @@ function TaoBaiContent() {
         })
       } catch { /* ignore */ }
     }
-
     localStorage.removeItem("feed_draft")
     router.push("/feed")
   }
 
   async function handleSubmit() {
-    if (!editor) return
-    const text = editor.getText().trim()
+    const text = editorRef.current?.getText()?.trim() ?? ""
     if (text.length < 50) {
       setError("Nội dung cần ít nhất 50 ký tự")
       return
@@ -287,6 +238,10 @@ function TaoBaiContent() {
     setError(null)
     setSubmitting(true)
     try {
+      // Upload pending local images to Cloudinary
+      const newUploads = await editorRef.current?.processImages() ?? []
+      setUploadedImages((prev) => [...prev, ...newUploads])
+      const html = editorRef.current?.getHTML() ?? ""
       const url = editId ? `/api/posts/${editId}` : "/api/posts"
       const method = editId ? "PATCH" : "POST"
       const res = await fetch(url, {
@@ -294,14 +249,12 @@ function TaoBaiContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title || undefined,
-          content: editor.getHTML(),
-          // category chỉ gửi khi tạo mới — edit giữ nguyên category cũ
+          content: html,
           ...(editId ? {} : { category }),
         }),
       })
       if (res.ok) {
-        // Cleanup orphaned Cloudinary images (deleted from editor but not from cloud)
-        await deleteOrphanedImages([...originalImages, ...uploadedImages], editor.getHTML())
+        await deleteOrphanedImages([...originalImages, ...uploadedImages], html)
         localStorage.removeItem("feed_draft")
         router.push("/feed")
       } else {
@@ -315,7 +268,7 @@ function TaoBaiContent() {
     }
   }
 
-  const previewHtml = editor?.getHTML() ?? ""
+  const previewHtml = editorRef.current?.getHTML() ?? ""
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -325,13 +278,7 @@ function TaoBaiContent() {
           onClick={handleCancel}
           className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-800 transition-colors"
         >
-          <svg
-            className="size-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
+          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Quay lại feed
@@ -339,7 +286,6 @@ function TaoBaiContent() {
         <span className="text-brand-500">/</span>
         <h1 className="font-semibold text-brand-900 text-lg">{editId ? "Chỉnh sửa bài viết" : "Tạo bài viết mới"}</h1>
 
-        {/* Quota chip — chỉ hiển thị khi tạo mới */}
         {!editId && quota && (
           <span
             className={cn(
@@ -365,223 +311,109 @@ function TaoBaiContent() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-brand-200">
-        {/* Category selector — chỉ khi tạo mới */}
-        {!editId && (
-          <div className="border-b border-brand-200 px-5 py-3 flex items-center gap-2 flex-wrap">
-            <label className="text-xs font-medium text-brand-600 mr-1">Loại bài:</label>
-            {CATEGORY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setCategory(opt.value)}
-                title={opt.hint}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-                  category === opt.value
-                    ? "bg-brand-700 text-white border-brand-700"
-                    : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50"
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Category selector — chỉ khi tạo mới */}
+      {!editId && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-xs font-medium text-brand-600 mr-1">Loại bài:</label>
+          {CATEGORY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setCategory(opt.value)}
+              title={opt.hint}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                category === opt.value
+                  ? "bg-brand-700 text-white border-brand-700"
+                  : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Title input */}
-        <div className="border-b border-brand-200 px-5 py-4">
-          <input
-            type="text"
-            placeholder="Tiêu đề bài viết (tùy chọn)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full text-lg font-semibold text-brand-900 placeholder:text-brand-300 bg-transparent outline-none"
+      {/* Title */}
+      <div className="bg-white rounded-xl border border-brand-200 px-5 py-4">
+        <input
+          type="text"
+          placeholder="Tiêu đề bài viết (tùy chọn)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full text-lg font-semibold text-brand-900 placeholder:text-brand-300 bg-transparent outline-none"
+        />
+      </div>
+
+      {/* Extra action buttons: Cloudinary upload + DOCX import */}
+      {!preview && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage}
+            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-60"
+          >
+            {uploadingImage ? (
+              <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            )}
+            Upload ảnh
+          </button>
+          <button
+            type="button"
+            onClick={() => docxInputRef.current?.click()}
+            disabled={importingDocx}
+            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-60"
+          >
+            {importingDocx ? (
+              <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <span className="text-xs font-bold">DOC</span>
+            )}
+            Import DOCX
+          </button>
+        </div>
+      )}
+
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleImageUpload(file)
+          e.target.value = ""
+        }}
+      />
+      <input
+        ref={docxInputRef}
+        type="file"
+        accept=".doc,.docx"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleDocxImport(file)
+          e.target.value = ""
+        }}
+      />
+
+      {/* Editor or preview */}
+      {preview ? (
+        <div className="bg-white rounded-xl border border-brand-200 min-h-[300px]">
+          <div
+            className="px-5 py-4 min-h-[300px] prose prose-sm max-w-none text-brand-800"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml || "<p class='text-muted-foreground italic'>Chưa có nội dung...</p>") }}
           />
         </div>
-
-        {/* Toolbar — sticky so it stays visible when scrolling long posts */}
-        {!preview && (
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-brand-200 flex-wrap sticky top-16 bg-white z-10 rounded-t-xl">
-            <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleBold().run()}
-              active={editor?.isActive("bold")}
-              title="In đậm"
-            >
-              <strong>B</strong>
-            </ToolbarButton>
-
-            <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
-              active={editor?.isActive("italic")}
-              title="In nghiêng"
-            >
-              <em>I</em>
-            </ToolbarButton>
-
-            <ToolbarButton
-              onClick={handleInsertLink}
-              active={editor?.isActive("link")}
-              title="Chèn liên kết"
-            >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </ToolbarButton>
-
-            <ToolbarButton
-              onClick={() => fileInputRef.current?.click()}
-              active={false}
-              title="Chèn ảnh"
-            >
-              {uploadingImage ? (
-                <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              )}
-            </ToolbarButton>
-
-            <div className="w-px h-5 bg-brand-200 mx-1" />
-
-            <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              active={editor?.isActive("bulletList")}
-              title="Danh sách gạch đầu dòng"
-            >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-            </ToolbarButton>
-
-            <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              active={editor?.isActive("orderedList")}
-              title="Danh sách đánh số"
-            >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 20h14M7 12h14M7 4h14M3 20v-2a1 1 0 011-1h0a1 1 0 011 1v2M3 12v-2a1 1 0 011-1h0a1 1 0 011 1v2M3 4V2a1 1 0 011-1h0a1 1 0 011 1v2" />
-              </svg>
-            </ToolbarButton>
-
-            <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-              active={editor?.isActive("heading", { level: 2 })}
-              title="Tiêu đề H2"
-            >
-              <span className="text-xs font-bold">H2</span>
-            </ToolbarButton>
-
-            <div className="w-px h-5 bg-brand-200 mx-1" />
-
-            <ToolbarButton
-              onClick={() => docxInputRef.current?.click()}
-              active={false}
-              title="Import từ file DOCX"
-            >
-              {importingDocx ? (
-                <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span className="text-xs font-bold">DOC</span>
-              )}
-            </ToolbarButton>
-          </div>
-        )}
-
-        {/* Hidden file inputs */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) handleImageUpload(file)
-            e.target.value = ""
-          }}
-        />
-        <input
-          ref={docxInputRef}
-          type="file"
-          accept=".doc,.docx"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) handleDocxImport(file)
-            e.target.value = ""
-          }}
-        />
-
-        {/* Image controls — show when image is selected, sticky below main toolbar */}
-        {!preview && imageSelected && editor && (
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-brand-200 bg-brand-50 flex-wrap sticky top-[105px] z-10">
-            <span className="text-sm text-brand-600 font-medium mr-1">Ảnh:</span>
-            {[
-              { label: "S", value: "25%" },
-              { label: "M", value: "50%" },
-              { label: "L", value: "75%" },
-              { label: "XL", value: "100%" },
-            ].map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => editor.chain().focus().updateAttributes("image", { width: s.value }).run()}
-                className={cn(
-                  "px-2.5 py-1.5 text-sm font-medium rounded-md transition-colors",
-                  editor.getAttributes("image").width === s.value ? "bg-brand-700 text-white" : "text-brand-700 hover:bg-brand-100",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-            <div className="w-px h-5 bg-brand-200 mx-1" />
-            {[
-              { label: "←", value: "left" },
-              { label: "↔", value: "center" },
-              { label: "→", value: "right" },
-            ].map((a) => (
-              <button
-                key={a.value}
-                type="button"
-                onClick={() => editor.chain().focus().updateAttributes("image", { textAlign: a.value }).run()}
-                className={cn(
-                  "px-2.5 py-1.5 text-sm font-medium rounded-md transition-colors",
-                  (editor.getAttributes("image").textAlign ?? "center") === a.value ? "bg-brand-700 text-white" : "text-brand-700 hover:bg-brand-100",
-                )}
-              >
-                {a.label}
-              </button>
-            ))}
-            <div className="w-px h-5 bg-brand-200 mx-1" />
-            <button
-              type="button"
-              onClick={() => {
-                editor.chain().focus().deleteSelection().run()
-                setImageSelected(false)
-              }}
-              className="px-2.5 py-1.5 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors"
-            >
-              Xóa ảnh
-            </button>
-          </div>
-        )}
-
-        {/* Editor or preview */}
-        <div className="min-h-[300px]">
-          {preview ? (
-            <div
-              className="px-5 py-4 min-h-[300px] prose prose-sm max-w-none text-brand-800"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml || "<p class='text-muted-foreground italic'>Chưa có nội dung...</p>") }}
-            />
-          ) : (
-            <EditorContent
-              editor={editor}
-              className="[&_.tiptap]:outline-none [&_.tiptap]:min-h-[300px] [&_.tiptap]:px-5 [&_.tiptap]:py-4 [&_.tiptap]:text-sm [&_.tiptap]:text-brand-800 [&_.tiptap_p]:mb-2 [&_.tiptap_h2]:text-base [&_.tiptap_h2]:font-semibold [&_.tiptap_h2]:text-brand-900 [&_.tiptap_h2]:mb-2 [&_.tiptap_ul]:list-disc [&_.tiptap_ul]:ml-4 [&_.tiptap_ol]:list-decimal [&_.tiptap_ol]:ml-4 [&_.tiptap_a]:text-brand-600 [&_.tiptap_a]:underline [&_.tiptap_img]:rounded-lg [&_.tiptap_img]:max-w-full [&_.tiptap_img]:cursor-pointer [&_.tiptap_img]:transition-shadow [&_.tiptap_img.ProseMirror-selectednode]:ring-2 [&_.tiptap_img.ProseMirror-selectednode]:ring-blue-500 [&_.tiptap_img.ProseMirror-selectednode]:shadow-lg [&_.tiptap_p.is-empty::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-empty::before]:text-brand-300 [&_.tiptap_p.is-empty::before]:float-left [&_.tiptap_p.is-empty::before]:pointer-events-none"
-            />
-          )}
-        </div>
-      </div>
+      ) : (
+        <RichTextEditor ref={editorRef} minHeight={300} uploadFolder="bai-viet" />
+      )}
 
       {/* Error */}
       {error && (
