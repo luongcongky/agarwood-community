@@ -44,9 +44,9 @@ agarwood-community/
 │   │       ├── tin-tuc/        # Quan ly tin tuc
 │   │       ├── bao-cao/        # Bao cao vi pham
 │   │       └── cai-dat/        # Cai dat he thong
-│   ├── (member)/               # Layout VIP (navbar)
+│   ├── (member)/               # Layout Hoi vien (navbar)
 │   │   ├── layout.tsx
-│   │   ├── tong-quan/          # Dashboard VIP
+│   │   ├── tong-quan/          # Dashboard Hoi vien
 │   │   ├── feed/               # Feed cong dong + tao bai
 │   │   ├── ho-so/              # Ho so ca nhan (4 tab)
 │   │   ├── gia-han/            # Gia han membership
@@ -57,7 +57,7 @@ agarwood-community/
 │   ├── (auth)/                 # Auth pages (login, register, dat mat khau)
 │   ├── (public)/               # Public pages
 │   │   ├── page.tsx            # [Phase 3] Trang chu bao chi 6 section
-│   │   ├── landing/            # [Phase 5] Landing page conversion VIP
+│   │   ├── landing/            # [Phase 5] Landing page quyen loi Hoi vien
 │   │   ├── san-pham-tieu-bieu/ # [Phase 4] Top 20 SP tieu bieu (admin pin)
 │   │   ├── tin-tuc/            # Tin tuc Hoi
 │   │   ├── san-pham-chung-nhan/# SP da chung nhan
@@ -81,7 +81,7 @@ agarwood-community/
 │       ├── certification/      # Nop don
 │       ├── media-orders/       # Dat dich vu
 │       ├── upload/             # Cloudinary upload
-│       └── my-products/        # SP cua VIP
+│       └── my-products/        # SP cua Hoi vien
 ├── components/
 │   ├── features/
 │   │   ├── layout/             # Navbar, Footer, AdminSidebar, UserMenu, SocialLinks (Phase 1)
@@ -136,8 +136,8 @@ Document (Google Drive)
 ### Models chinh:
 | Model | Records du kien | Ghi chu |
 |-------|----------------|---------|
-| User | ~100 VIP + 1 Admin | accountType + **memberCategory** (OFFICIAL/AFFILIATE/HONORARY) |
-| Company | ~70-80 (chi BUSINESS VIP) | 0..1 voi User, **representativeName/Position** (Dieu 7.2c) |
+| User | ~100 Hoi vien + 1 Admin | accountType + **memberCategory** (OFFICIAL/AFFILIATE/HONORARY) |
+| Company | ~70-80 (chi BUSINESS Hoi vien) | 0..1 voi User, **representativeName/Position** (Dieu 7.2c) |
 | Product | ~500 | ~5 SP/DN |
 | Post | ~5000/nam | ~50 bai/thang |
 | Payment | ~200/nam | Membership + cert fee |
@@ -207,8 +207,8 @@ enum DocumentCategory {
 4. Legacy user (`isActive: false` + role GUEST tu pre-Phase 2) → auto-activate khi sign in → cho login
 
 **Role semantics (Phase 2):**
-- `GUEST` = free tier — dang ky xong dung duoc ngay, post duoc voi quota thap (5 bai/thang)
-- `VIP` = hoi vien dong phi — quota cao + uu tien hien thi trang chu
+- `GUEST` = Tai khoan co ban — dang ky xong dung duoc ngay, post duoc voi quota thap (5 bai/thang)
+- `VIP` = Hoi vien dong phi — quota cao + uu tien hien thi trang chu
 - `ADMIN` = ban quan tri — toan quyen + quota khong gioi han
 
 **Env vars can thiet:**
@@ -221,7 +221,7 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxx
 
 ### Route Protection (proxy.ts) — updated Phase 2 + Phase 5
 ```
-MEMBER_PREFIXES (VIP + ADMIN, han membership):
+MEMBER_PREFIXES (Hoi vien + ADMIN, han membership):
   /tong-quan, /company, /certification, /gia-han, /ho-so,
   /chung-nhan, /thanh-toan/lich-su, /doanh-nghiep/chinh-sua,
   /san-pham/tao-moi, /tai-lieu
@@ -238,11 +238,11 @@ AUTH_PATHS (redirect neu da login):
 
 ### Logic:
 - Khach (chua login) truy cap MEMBER route -> redirect /login?callbackUrl=...
-- GUEST truy cap MEMBER route -> redirect **/landing** (Phase 5: gioi thieu nang cap VIP)
+- GUEST truy cap MEMBER route -> redirect **/landing** (Phase 5: gioi thieu nang cap Hoi vien)
 - Guest/GUEST truy cap LOGGED_IN route -> can login truoc, sau do co the dung
-- VIP truy cap ADMIN route -> redirect /
-- VIP membership het han truy cap MEMBER route -> redirect /membership-expired
-- VIP/ADMIN da login truy cap /login -> redirect /admin hoac /tong-quan
+- Hoi vien truy cap ADMIN route -> redirect /
+- Hoi vien membership het han truy cap MEMBER route -> redirect /membership-expired
+- Hoi vien/ADMIN da login truy cap /login -> redirect /admin hoac /tong-quan
 - GUEST da login truy cap /login -> redirect /feed (khong con bi force /cho-duyet)
 
 ---
@@ -299,10 +299,10 @@ model Product {
 ### Quota system (lib/quota.ts) — Phase 2
 | Role | Default quota/thang | SiteConfig key |
 |------|---------------------|----------------|
-| GUEST | 5 | `quota_guest_monthly` |
-| VIP ★ (1 sao) | 15 | `quota_vip_1_monthly` |
-| VIP ★★ Bac | 30 | `quota_vip_2_monthly` |
-| VIP ★★★ Vang | -1 (unlimited) | `quota_vip_3_monthly` |
+| Tai khoan co ban | 5 | `quota_guest_monthly` |
+| Hoi vien ★ | 15 | `quota_vip_1_monthly` |
+| Hoi vien ★★ Bac | 30 | `quota_vip_2_monthly` |
+| Hoi vien ★★★ Vang | -1 (unlimited) | `quota_vip_3_monthly` |
 | ADMIN | -1 (hardcoded) | — |
 
 - Cache 60s, fallback defaults neu config keys khong ton tai
@@ -316,7 +316,7 @@ model Product {
 |-----------|-----------|-------|
 | Admin tat ca | 0 (realtime) | Can data moi nhat |
 | Admin dashboard | 60s | Alert refresh 1 phut |
-| VIP realtime | 0 | Feed, profile, thanh toan |
+| Hoi vien realtime | 0 | Feed, profile, thanh toan |
 | **Trang chu (Phase 3)** | **300s** | Newspaper layout, rotating slots refresh 5 min |
 | **/landing (Phase 5)** | **600s** | Marketing page, doi data 10 phut |
 | **/san-pham-tieu-bieu (Phase 4)** | **600s** | Pin list it thay doi |
@@ -329,14 +329,14 @@ model Product {
 | Section | Data fetcher | Cache | Filter chinh |
 |---------|-------------|-------|-------------|
 | 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished, sort isPinned + publishedAt |
-| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (5 rotating) | 300s | isPremium=true (top), bao gom non-VIP (rotate) |
-| 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP |
+| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (5 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
+| 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP (Hoi vien) |
 | 4. Banner quang cao | placeholder | — | Phase 6: Banner model |
 | 5. Tin DN moi nhat | `getLatestPostsByCategory("NEWS")` | 300s | isPremium=true, category=NEWS |
 | 6. Tin SP moi nhat | `getLatestPostsByCategory("PRODUCT")` | 300s | isPremium=true, category=PRODUCT |
 
 **Rotating slots algorithm** (right rail):
-- Pool 50 bai, exclude top VIP da hien thi
+- Pool 50 bai, exclude top Hoi vien da hien thi
 - Weighted random: `score = (authorPriority + 1) * (0.5 + rng())`
 - Seed = `Math.floor(Date.now() / 300_000)` (5-min bucket) → deterministic trong 5 phut
 - Mulberry32 PRNG inline (~8 dong code)
@@ -352,16 +352,16 @@ model Product {
 ### Cac email tu dong:
 | Trigger | Nguoi nhan | Subject |
 |---------|-----------|---------|
-| Admin tao VIP (invite) | VIP | Chao mung gia nhap |
-| Admin resend invite | VIP | Kich hoat tai khoan |
-| Admin reset password | VIP | Dat lai mat khau |
+| Admin tao Hoi vien (invite) | Hoi vien | Chao mung gia nhap |
+| Admin resend invite | Hoi vien | Kich hoat tai khoan |
+| Admin reset password | Hoi vien | Dat lai mat khau |
 | User dang ky qua Google | Admin | [Dang ky moi qua Google] Ten |
-| VIP xac nhan CK membership | Admin | [Hoi TH] Ten vua CK Xd |
-| Admin confirm payment | VIP | Membership da kich hoat |
-| Admin reject payment | VIP | CK bi tu choi + ly do |
-| VIP nop don chung nhan | Admin | Ten nop don CN SP |
-| Admin duyet chung nhan | VIP | Chuc mung + ma CN |
-| Admin tu choi chung nhan | VIP | Ly do tu choi |
+| Hoi vien xac nhan CK membership | Admin | [Hoi TH] Ten vua CK Xd |
+| Admin confirm payment | Hoi vien | Membership da kich hoat |
+| Admin reject payment | Hoi vien | CK bi tu choi + ly do |
+| Hoi vien nop don chung nhan | Admin | Ten nop don CN SP |
+| Admin duyet chung nhan | Hoi vien | Chuc mung + ma CN |
+| Admin tu choi chung nhan | Hoi vien | Ly do tu choi |
 | Khach dat dich vu TT | Khach + Admin | Xac nhan don + thong bao |
 | Admin doi status media order | Khach | Theo tung status |
 
@@ -405,7 +405,7 @@ npm run test:watch    # Watch mode
 ```bash
 npm run test:e2e      # Chay tat ca tests
 ```
-- 8 file test: auth, VIP pages, admin pages, public pages, performance, mobile responsive
+- 8 file test: auth, Hoi vien pages, admin pages, public pages, performance, mobile responsive
 - Config: playwright.config.ts (chromium, auto start dev server)
 - Video recording: bat (`video: "on"`), output: `e2e/test-results/`
 - Viewport: 1280x720
@@ -416,7 +416,7 @@ npm run test:e2e      # Chay tat ca tests
 Dung de **demo san pham** va **luu tru huong dan su dung**.
 
 ```bash
-# VIP flow (16 test cases)
+# Hoi vien flow (16 test cases)
 npx playwright test e2e/vip-demo-flow.spec.ts --headed
 
 # Admin flow (12 test cases)
@@ -426,11 +426,11 @@ npx playwright test e2e/admin-demo-flow.spec.ts --headed
 npx playwright test e2e/vip-demo-flow.spec.ts e2e/admin-demo-flow.spec.ts --headed
 ```
 
-**VIP Demo Flow** (`e2e/vip-demo-flow.spec.ts` — 16 steps):
+**Hoi vien Demo Flow** (`e2e/vip-demo-flow.spec.ts` — 16 steps):
 | Step | Noi dung |
 |------|---------|
 | 00 | Seed du lieu demo moi |
-| 01 | VIP dang nhap |
+| 01 | Hoi vien dang nhap |
 | 02 | Xem Dashboard tong quan |
 | 03 | Cap nhat ho so ca nhan (4 tab) |
 | 04 | Quan ly profile doanh nghiep |
@@ -455,7 +455,7 @@ npx playwright test e2e/vip-demo-flow.spec.ts e2e/admin-demo-flow.spec.ts --head
 | 03 | Xac nhan chuyen khoan (confirm/reject) |
 | 04 | Xet duyet chung nhan SP (review 2 cot) |
 | 05 | Quan ly hoi vien (tabs, search, chi tiet) |
-| 06 | Tao hoi vien VIP moi |
+| 06 | Tao hoi vien moi |
 | 07 | Quan ly tin tuc |
 | 08 | Xu ly bao cao vi pham (khoa bai, bo qua) |
 | 09 | Quan ly don truyen thong (CRM) |
@@ -583,7 +583,7 @@ npm start             # Start production server
 
 ## 10.5 Navbar mode detection (pathname-based)
 
-**Van de**: Truoc day Navbar chon menu theo `session.user.role` — VIP on public
+**Van de**: Truoc day Navbar chon menu theo `session.user.role` — Hoi vien on public
 pages van thay menu member. User muon public menu cho *moi user* tru khi vao
 area quan tri.
 
@@ -598,7 +598,7 @@ area quan tri.
    - Moi pathname khac → `public` mode (bao gom `/feed`, `/tin-tuc`, `/nghien-cuu`, `/san-pham-doanh-nghiep`...)
 4. `Navbar` render `PUBLIC_LINKS` / `BUSINESS_LINKS` / `INDIVIDUAL_LINKS` theo mode + accountType
 5. `UserMenu` dropdown them item mode-based:
-   - Public mode + VIP → "Vao khu vuc quan tri" → `/tong-quan`
+   - Public mode + Hoi vien → "Vao khu vuc quan tri" → `/tong-quan`
    - Public mode + ADMIN → "Vao trang quan tri" → `/admin`
    - Member/admin mode → "Ve trang cong khai" → `/`
 
@@ -690,7 +690,7 @@ Thu muc `scripts/` chua cac one-shot scripts cho migration data tu website cu
 Prisma client → TLS workaround cho legacy site.
 
 ### Partners (9 DN)
-- `scripts/seed-partners.ts` — tao 9 Hoi vien doi tac thuc te voi VIP Bac
+- `scripts/seed-partners.ts` — tao 9 Hoi vien doi tac thuc te voi Hoi vien Bac
 - Logo upload Cloudinary folder `agarwood-community/members/`
 - Idempotent: check Cloudinary resource trước upload
 - `scripts/fix-cloudinary-double-prefix.ts` — migration fix URL co double prefix

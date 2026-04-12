@@ -14,9 +14,9 @@
 | Tier | Quota mau / thang | Gia / mau / thang |
 |------|------------------|-------------------|
 | GUEST (user thuong) | **1** | 1.000.000 VND |
-| VIP ★ (1 sao) | **5** | 1.000.000 VND |
-| VIP ★★ Bac | **10** | 1.000.000 VND |
-| VIP ★★★ Vang | **20** | 1.000.000 VND |
+| Hoi vien ★ | **5** | 1.000.000 VND |
+| Hoi vien ★★ Bac | **10** | 1.000.000 VND |
+| Hoi vien ★★★ Vang | **20** | 1.000.000 VND |
 | ADMIN | khong gioi han | — |
 
 - Gia **flat 1tr/mau/thang**, KHONG co discount theo tier (khac voi gia su o landing page truoc do)
@@ -32,7 +32,7 @@
 ### Gia han
 - Cho phep **gia han** mot mau banner da co (extend `endDate`)
 - Phi gia han = 1tr/thang × so thang gia han
-- Gia han van dem vao quota thang (vd: VIP★ co 5 mau ACTIVE, gia han 1 mau van la 1 trong 5)
+- Gia han van dem vao quota thang (vd: Hoi vien★ co 5 mau ACTIVE, gia han 1 mau van la 1 trong 5)
 
 ### Yeu cau khach
 "Khach hang muon trien khai 1 flow de hoi vien tu dang ki banner, admin chi can check nhan tien va duyet publish."
@@ -78,28 +78,28 @@ model Banner {
 
 | Route | Vai tro |
 |-------|--------|
-| `/banner/dang-ky` | VIP form 3 step: chon vi tri → upload + content → CK |
-| `/banner/lich-su` | VIP xem cac banner cua minh + trang thai |
+| `/banner/dang-ky` | Hoi vien form 3 step: chon vi tri → upload + content → CK |
+| `/banner/lich-su` | Hoi vien xem cac banner cua minh + trang thai |
 | `/admin/banner` | Admin list + duyet content + confirm payment |
-| `POST /api/banner` | Tao banner moi (VIP) |
+| `POST /api/banner` | Tao banner moi (Hoi vien) |
 | `POST /api/admin/banner/[id]/approve` | Duyet content (set ACTIVE) |
 | `POST /api/admin/banner/[id]/reject` | Tu choi (set REJECTED + lyDo) |
 
 ---
 
 ## Tai khoan test
-- VIP A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123
-- VIP B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123
-- VIP C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123
+- Hoi vien A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123
+- Hoi vien B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123
+- Hoi vien C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123
 - GUEST (free tier): user moi dang ky
 - Admin: admin@hoitramhuong.vn / Demo@123
 
 ## Du lieu seed Phase 6 (du kien)
 Khi Phase 6 implement, seed nen co:
 - **5 banner ACTIVE** o nhieu tier khac nhau (test rotation va priority sort):
-  - 2 cua VIP Vang (tram-huong-khanh-hoa, tram-huong-quang-nam) — slot uu tien cao
-  - 2 cua VIP Bac (tinh-dau-tram-huong-sai-gon, nhang-thom-tram-viet)
-  - 1 cua VIP★ (tram-huong-phu-yen)
+  - 2 cua Hoi vien Vang (tram-huong-khanh-hoa, tram-huong-quang-nam) — slot uu tien cao
+  - 2 cua Hoi vien Bac (tinh-dau-tram-huong-sai-gon, nhang-thom-tram-viet)
+  - 1 cua Hoi vien★ (tram-huong-phu-yen)
 - **1 banner PENDING_APPROVAL** (vua CK xong, cho admin duyet)
 - **1 banner PENDING_PAYMENT** (cho user CK)
 - **1 banner EXPIRED** (het han 1 thang truoc — test cron expire)
@@ -111,15 +111,15 @@ Khi Phase 6 implement, seed nen co:
 ## A. User dang ky banner (moi user dang nhap)
 
 ### TC-BANNER-01: User truy cap form dang ky banner
-1. Login user bat ky (GUEST/VIP/ADMIN) -> truy cap `/banner/dang-ky`
+1. Login user bat ky (GUEST/Hoi vien/ADMIN) -> truy cap `/banner/dang-ky`
 2. **Kiem tra**: Step 1 hien thi — "Chon thoi gian"
 3. **Kiem tra**: Hien date picker startDate / endDate
 4. **Kiem tra**: Hien gia flat **1.000.000 VND / thang**
 5. **Kiem tra**: Hien chip "Quota: X/Y mau thang nay" (theo tier user)
    - GUEST: "0/1"
-   - VIP★: "0/5"
-   - VIP★★: "0/10"
-   - VIP★★★: "0/20"
+   - Hoi vien★: "0/5"
+   - Hoi vien★★: "0/10"
+   - Hoi vien★★★: "0/20"
 
 ### TC-BANNER-02: Khach (chua login) -> redirect login
 1. Khong dang nhap -> truy cap `/banner/dang-ky`
@@ -133,7 +133,7 @@ Khi Phase 6 implement, seed nen co:
 5. **Kiem tra**: Banner status PENDING_PAYMENT, quota tang len 1/1
 
 ### TC-BANNER-04: Step 1 — chon thoi gian va tinh gia
-1. Login VIP★ (5 quota)
+1. Login Hoi vien★ (5 quota)
 2. Vao /banner/dang-ky -> chon thoi han 2 thang
 3. **Kiem tra**: Tong gia = 1.000.000 × 2 = **2.000.000 VND** (khong co discount)
 4. Doi sang 6 thang -> tong gia = 6.000.000 VND
@@ -168,7 +168,7 @@ Khi Phase 6 implement, seed nen co:
 6. **Kiem tra**: Error "Toi thieu 1 thang"
 
 ### TC-BANNER-08: User xem lich su banner cua minh
-1. Login VIP A -> truy cap `/banner/lich-su`
+1. Login Hoi vien A -> truy cap `/banner/lich-su`
 2. **Kiem tra**: Bang liet ke cac banner: title, startDate-endDate, status, price
 3. **Kiem tra**: Co the click vao 1 banner xem chi tiet
 4. **Kiem tra**: Banner status `PENDING_APPROVAL` co badge mau vang
@@ -179,15 +179,15 @@ Khi Phase 6 implement, seed nen co:
 ### TC-BANNER-08b: Quota dem dung — moi user dat quota
 1. Login GUEST -> dang ky 1 banner -> thanh cong
 2. Co gang dang ky banner thu 2 cung thang
-3. **Kiem tra**: API tra `429` voi message "Da dat quota 1/1 mau thang nay. Nang cap VIP de tang quota."
-4. Login VIP★ -> dang ky 5 banner thanh cong
+3. **Kiem tra**: API tra `429` voi message "Da dat quota 1/1 mau thang nay. Nang cap Hoi vien de tang quota."
+4. Login Hoi vien★ -> dang ky 5 banner thanh cong
 5. Banner thu 6 -> **Kiem tra**: 429
-6. VIP★★ Bac -> dang ky 10 banner -> banner thu 11 fail
-7. VIP★★★ Vang -> dang ky 20 banner -> banner thu 21 fail
+6. Hoi vien★★ Bac -> dang ky 10 banner -> banner thu 11 fail
+7. Hoi vien★★★ Vang -> dang ky 20 banner -> banner thu 21 fail
 8. **Kiem tra**: ADMIN khong gioi han
 
 ### TC-BANNER-08c: Quota reset dau thang
-1. (Setup) User VIP★ co 5 banner ACTIVE thang truoc, da dat quota
+1. (Setup) User Hoi vien★ co 5 banner ACTIVE thang truoc, da dat quota
 2. Sang thang moi (1/MM/YYYY)
 3. Login -> /banner/dang-ky
 4. **Kiem tra**: Quota chip hien "0/5" (reset)
@@ -210,15 +210,15 @@ Khi Phase 6 implement, seed nen co:
 4. **Kiem tra**: Co 2 nut "Duyet" + "Tu choi"
 5. Click "Duyet"
 6. **Kiem tra**: Status chuyen ACTIVE, `approvedAt` set
-7. **Kiem tra**: Email gui cho VIP "Banner cua ban da duoc duyet"
+7. **Kiem tra**: Email gui cho Hoi vien "Banner cua ban da duoc duyet"
 8. **Kiem tra**: Banner xuat hien o trang chu Section 4 (neu trong khoang startDate-endDate)
 
 ### TC-BANNER-11: Admin tu choi banner
 1. Tai /admin/banner -> click banner PENDING_APPROVAL
 2. Click "Tu choi" -> nhap ly do (bat buoc)
 3. **Kiem tra**: Status -> REJECTED, `rejectReason` luu
-4. **Kiem tra**: Email gui cho VIP voi ly do tu choi
-5. **Kiem tra**: Hien TK ngan hang cua VIP cho admin CK hoan tien
+4. **Kiem tra**: Email gui cho Hoi vien voi ly do tu choi
+5. **Kiem tra**: Hien TK ngan hang cua Hoi vien cho admin CK hoan tien
 
 ### TC-BANNER-12: Validate noi dung banner
 - Cac quy tac admin can check khi duyet:
@@ -271,13 +271,13 @@ Khi Phase 6 implement, seed nen co:
 3. **Kiem tra**: Section 4 chi rotate qua **20 banner** (khong phai 25)
 4. **Kiem tra**: 5 banner du khong xuat hien tren homepage trong session nay
 
-### TC-BANNER-18: Priority chon 20 slot — VIP truoc
-1. Setup: 25 banner ACTIVE — co 5 GUEST, 8 VIP★, 7 VIP★★ Bac, 5 VIP★★★ Vang
+### TC-BANNER-18: Priority chon 20 slot — Hoi vien truoc
+1. Setup: 25 banner ACTIVE — co 5 GUEST, 8 Hoi vien★, 7 Hoi vien★★ Bac, 5 Hoi vien★★★ Vang
 2. Truy cap /
 3. **Kiem tra**: 20 slot duoc chon theo uu tien:
-   - 5 VIP Vang (full)
-   - 7 VIP Bac (full)
-   - 8 VIP★ -> chi lay 8 dau (du sap xep neu can)
+   - 5 Hoi vien Vang (full)
+   - 7 Hoi vien Bac (full)
+   - 8 Hoi vien★ -> chi lay 8 dau (du sap xep neu can)
    - 0 GUEST (vi 5+7+8 = 20, het slot)
 4. **Kiem tra**: Trong cung tier, sap xep theo `createdAt DESC` hoac random
 
@@ -314,8 +314,8 @@ Khi Phase 6 implement, seed nen co:
 ## E. Gia han banner (Phase 6 chot — co cho phep gia han)
 
 ### TC-BANNER-23: User gia han banner sap het han
-1. Setup: 1 banner ACTIVE cua VIP, endDate trong 5 ngay nua
-2. Login VIP -> /banner/lich-su
+1. Setup: 1 banner ACTIVE cua Hoi vien, endDate trong 5 ngay nua
+2. Login Hoi vien -> /banner/lich-su
 3. **Kiem tra**: Banner do co nut "Gia han" (chi hien khi < 7 ngay nua het han)
 4. Click "Gia han" -> form chon thoi gian gia han them (1, 3, 6, 12 thang)
 5. Chon 3 thang -> tong tien hien = 3.000.000 VND
@@ -332,13 +332,13 @@ Khi Phase 6 implement, seed nen co:
 6. **Kiem tra**: Email gui cho user "Da gia han thanh cong, ngay het han moi: ..."
 
 ### TC-BANNER-25: Gia han van dem vao quota thang
-1. Setup: VIP★ co 5 banner ACTIVE thang nay (dat quota)
+1. Setup: Hoi vien★ co 5 banner ACTIVE thang nay (dat quota)
 2. Co gang gia han 1 trong 5 banner
 3. **Kiem tra**: API cho phep (gia han khong tao banner moi, chi extend endDate)
 4. **Kiem tra**: Quota chip van hien "5/5" (khong tang)
 
 ### TC-BANNER-26: Banner het han lai dang ky moi (KHONG la gia han)
-1. Setup: 1 banner cua VIP da EXPIRED
+1. Setup: 1 banner cua Hoi vien da EXPIRED
 2. Vao /banner/lich-su -> banner EXPIRED khong co nut "Gia han" (chi co o ACTIVE sap het han)
 3. User vao /banner/dang-ky tao banner moi
 4. **Kiem tra**: Tinh la 1 mau moi -> dem vao quota thang hien tai
@@ -378,7 +378,7 @@ Khi Phase 6 implement, seed nen co:
 - [ ] TC-BANNER-15: PASS / FAIL / SKIP
 - [ ] TC-BANNER-16: PASS / FAIL / SKIP (rotate 5s)
 - [ ] TC-BANNER-17: PASS / FAIL / SKIP (max 20 slot)
-- [ ] TC-BANNER-18: PASS / FAIL / SKIP (priority VIP)
+- [ ] TC-BANNER-18: PASS / FAIL / SKIP (priority Hoi vien)
 - [ ] TC-BANNER-19: PASS / FAIL / SKIP (pause hover)
 
 ### D. Thanh toan va bao mat (3 TC)
@@ -419,12 +419,12 @@ Khi triển khai Phase 6, làm theo thứ tự:
    - `POST /api/admin/banner/[id]/reject`
    - `DELETE /api/admin/banner/[id]`
 6. **Pages**:
-   - `/banner/dang-ky` (3-step form, moi user dang nhap — KHONG VIP-only)
+   - `/banner/dang-ky` (3-step form, moi user dang nhap — KHONG Hoi vien-only)
    - `/banner/lich-su` (xem lich su + nut "Gia han")
    - `/banner/[id]/gia-han` (form gia han)
    - `/admin/banner` (admin CRUD)
 7. **Component**:
-   - `<HomepageBannerSlot />` rewrite — fetch top 20 banner ACTIVE theo priority VIP
+   - `<HomepageBannerSlot />` rewrite — fetch top 20 banner ACTIVE theo priority Hoi vien
    - Auto-rotate 5s (CSS-only neu co the, hoac client component voi setInterval)
    - Pause on hover
 8. **Cron**: Daily job check `endDate < now()` -> set EXPIRED + gui email "sap het han" cho banner < 7 ngay
@@ -438,7 +438,7 @@ Khi triển khai Phase 6, làm theo thứ tự:
 
 ### Quy tac chot Phase 6
 - **Gia**: 1.000.000 VND / mau / thang (flat, khong discount theo tier)
-- **Quota**: GUEST 1 / VIP★ 5 / VIP★★ 10 / VIP★★★ 20 / ADMIN unlimited
+- **Quota**: GUEST 1 / Hoi vien★ 5 / Hoi vien★★ 10 / Hoi vien★★★ 20 / ADMIN unlimited
 - **Hien thi**: Toi da 20 slot rotate, moi 5 giay chuyen banner
 - **Priority**: Khi ACTIVE > 20 -> chon top 20 theo tier (Vang -> Bac -> ★ -> GUEST)
 - **Gia han**: Cho phep, KHONG can duyet content lai, KHONG dem quota them

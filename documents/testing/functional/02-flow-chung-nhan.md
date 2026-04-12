@@ -1,19 +1,19 @@
 # Flow Chung nhan san pham end-to-end
 
 ## Tai khoan test
-- VIP: nguyen.van.a@tramhuong-hn.vn / 123456
+- Hoi vien: nguyen.van.a@tramhuong-hn.vn / 123456
 - Admin: admin@hoi-tram-huong.vn / 123456
 
 ## Kich ban
 
-### TC-CERT-01: VIP khong co SP -> redirect tao SP truoc
-1. Login VIP khong co san pham (hoac xoa het SP)
+### TC-CERT-01: Hoi vien khong co SP -> redirect tao SP truoc
+1. Login Hoi vien khong co san pham (hoac xoa het SP)
 2. Vao /chung-nhan/nop-don
 3. **Kiem tra**: Dropdown san pham trong hoac hien thong bao tao SP truoc
 4. **Kiem tra**: Co link den /san-pham/tao-moi
 
-### TC-CERT-02: VIP co SP dang pending cert -> khong cho nop trung
-1. Login VIP co SP da nop don PENDING
+### TC-CERT-02: Hoi vien co SP dang pending cert -> khong cho nop trung
+1. Login Hoi vien co SP da nop don PENDING
 2. Vao /chung-nhan/nop-don -> chon SP do
 3. **Kiem tra**: SP do bi disable hoac khong hien trong dropdown
 4. Hoac: Submit -> server tra ve loi 409 "San pham nay dang co don dang xu ly"
@@ -47,7 +47,7 @@
 5. **Kiem tra**: certStatus = APPROVED
 6. **Kiem tra**: Product.badgeUrl duoc set
 7. **Kiem tra**: Product.certApprovedAt duoc set
-8. **Kiem tra**: Email gui den VIP voi ma chung nhan HTHVN-YYYY-XXXX
+8. **Kiem tra**: Email gui den Hoi vien voi ma chung nhan HTHVN-YYYY-XXXX
 
 ### TC-CERT-07: Admin tu choi -> ly do + TK hoan tien
 1. Tao don moi -> admin confirm CK -> vao xet duyet
@@ -55,8 +55,8 @@
 3. **Kiem tra**: Khong nhap ly do -> khong cho submit
 4. Nhap ly do -> click "Xac nhan tu choi"
 5. **Kiem tra**: certStatus = REJECTED
-6. **Kiem tra**: TK hoan tien cua VIP hien thi cho admin
-7. **Kiem tra**: Email gui den VIP voi ly do tu choi
+6. **Kiem tra**: TK hoan tien cua Hoi vien hien thi cho admin
+7. **Kiem tra**: Email gui den Hoi vien voi ly do tu choi
 
 ### TC-CERT-08: Trang /verify/[certCode] tra ve thong tin dung
 1. Sau TC-CERT-06 (da duyet)
@@ -66,8 +66,8 @@
 5. Truy cap /verify/slug-khong-ton-tai
 6. **Kiem tra**: Hien "Ma chung nhan khong hop le"
 
-### TC-CERT-09: Lich su chung nhan VIP
-1. Login VIP -> vao /chung-nhan/lich-su
+### TC-CERT-09: Lich su chung nhan Hoi vien
+1. Login Hoi vien -> vao /chung-nhan/lich-su
 2. **Kiem tra**: Tat ca don da nop hien thi voi trang thai dung
 3. **Kiem tra**: Don APPROVED co link den trang verify
 4. **Kiem tra**: Don REJECTED hien ly do tu choi

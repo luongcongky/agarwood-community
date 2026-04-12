@@ -5,11 +5,11 @@ import type { Role } from "@prisma/client"
 /**
  * Quota bài đăng theo tháng. Giá trị `-1` = unlimited.
  *
- * Quy tắc khách hàng (Phase 2):
- *  - GUEST              :  5 bài/tháng
- *  - VIP ★ (1 sao)      : 15 bài/tháng
- *  - VIP ★★ (Bạc)       : 30 bài/tháng
- *  - VIP ★★★ (Vàng)     : unlimited
+ * Quy tắc (Phase 2):
+ *  - Tài khoản cơ bản   :  5 bài/tháng
+ *  - Hội viên ★          : 15 bài/tháng
+ *  - Hội viên ★★ Bạc     : 30 bài/tháng
+ *  - Hội viên ★★★ Vàng   : unlimited
  *  - ADMIN              : unlimited
  *
  * Số quota có thể override qua SiteConfig keys:

@@ -1,13 +1,13 @@
 # Flow Tiêu biểu — DN, Sản phẩm tiêu biểu, Sản phẩm mới đăng ký
 
-> Phase 4 (admin pin top 10 DN + top 20 SP) + flow tao SP moi cua VIP
+> Phase 4 (admin pin top 10 DN + top 20 SP) + flow tao SP moi cua Hoi vien
 
 ## Tai khoan test
 - Khach: khong dang nhap
 - GUEST: user moi dang ky tu /dang-ky
-- VIP A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123 (Tram Huong Khanh Hoa — featured #1)
-- VIP B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123 (Tinh Dau Tram Huong Sai Gon — featured #3)
-- VIP C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123 (Tram Huong Dak Nong — KHONG featured)
+- Hoi vien A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123 (Tram Huong Khanh Hoa — featured #1)
+- Hoi vien B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123 (Tinh Dau Tram Huong Sai Gon — featured #3)
+- Hoi vien C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123 (Tram Huong Dak Nong — KHONG featured)
 - Admin: admin@hoitramhuong.vn / Demo@123
 
 ## Du lieu seed lien quan
@@ -36,13 +36,13 @@ Sau khi chay `npx prisma db seed`:
    - "Doanh nghiep tieu bieu: 3 / 10 da chon"
 4. **Kiem tra**: 2 tab "San pham tieu bieu" (active mac dinh) va "Doanh nghiep tieu bieu"
 
-### TC-FEATURED-02: Tab San pham — hien thi danh sach SP cua VIP
+### TC-FEATURED-02: Tab San pham — hien thi danh sach SP cua Hoi vien
 1. Tai trang `/admin/tieu-bieu` tab "San pham tieu bieu"
-2. **Kiem tra**: Bang hien thi tat ca SP cua doanh nghiep VIP
+2. **Kiem tra**: Bang hien thi tat ca SP cua doanh nghiep Hoi vien
 3. **Kiem tra**: 5 cot — Tieu bieu (checkbox), Thu tu (number input), San pham (anh + ten), Doanh nghiep, Chung nhan
 4. **Kiem tra**: 5 row co `isFeatured = true` co nen vang nhat (`bg-amber-50/40`)
-5. **Kiem tra**: Cac SP DRAFT vua tao (3 SP "Moi") cung hien thi (vi co company = VIP)
-6. **Kiem tra**: SP cua DN khong-VIP (vi du dang van tuan da het VIP) **khong** xuat hien
+5. **Kiem tra**: Cac SP DRAFT vua tao (3 SP "Moi") cung hien thi (vi co company = Hoi vien)
+6. **Kiem tra**: SP cua DN khong-Hoi vien (vi du dang van tuan da het Hoi vien) **khong** xuat hien
 
 ### TC-FEATURED-03: Pin san pham moi (toggle ON)
 1. Tai tab "San pham tieu bieu" -> tim row "Tram Huong Toc Nui Khanh Hoa (Moi)"
@@ -71,12 +71,12 @@ Sau khi chay `npx prisma db seed`:
 5. Vao trang `/san-pham-tieu-bieu`
 6. **Kiem tra**: Nhang Tram Huong gio xuat hien o vi tri #1 (badge "#1")
 
-### TC-FEATURED-06: Pin san pham cua doanh nghiep KHONG VIP -> bi tu choi
+### TC-FEATURED-06: Pin san pham cua doanh nghiep KHONG Hoi vien -> bi tu choi
 1. Tai tab "San pham tieu bieu"
 2. (Pre-condition: chinh DB cho 1 user GUEST co company + 1 product)
-3. Cac SP cua user nay **khong** xuat hien o bang admin (vi filter `owner.role: VIP`)
+3. Cac SP cua user nay **khong** xuat hien o bang admin (vi filter `owner.role: VIP (Hoi vien)`)
 4. Goi truc tiep API: `PATCH /api/admin/products/[id-cua-sp-guest]/featured` voi body `{ isFeatured: true }`
-5. **Kiem tra**: API tra `400` voi message "Chi co the chon san pham tieu bieu tu doanh nghiep VIP"
+5. **Kiem tra**: API tra `400` voi message "Chi co the chon san pham tieu bieu tu doanh nghiep Hoi vien"
 
 ### TC-FEATURED-07: Tab Doanh nghiep tieu bieu
 1. Tai trang `/admin/tieu-bieu` -> click tab "Doanh nghiep tieu bieu"
@@ -106,7 +106,7 @@ Sau khi chay `npx prisma db seed`:
 5. **Kiem tra**: Moi card co badge rank "#1", "#2", ... goc tren trai
 6. **Kiem tra**: Thu tu sap xep theo `featuredOrder` ASC
 7. **Kiem tra**: Card co badge "Cong nhan" neu certStatus = APPROVED
-8. **Kiem tra**: CTA bottom "Dang ky hoi vien VIP" -> /dang-ky
+8. **Kiem tra**: CTA bottom "Dang ky Hoi vien" -> /dang-ky
 
 ### TC-FEATURED-10: Empty state khi chua pin SP
 1. Vao `/admin/tieu-bieu` -> bo pin tat ca 5 SP
@@ -169,10 +169,10 @@ Sau khi chay `npx prisma db seed`:
 
 ---
 
-## E. San pham moi dang ky (flow tao SP cua VIP)
+## E. San pham moi dang ky (flow tao SP cua Hoi vien)
 
-### TC-FEATURED-17: VIP tao SP moi
-1. Login VIP A (Tram Huong Khanh Hoa)
+### TC-FEATURED-17: Hoi vien tao SP moi
+1. Login Hoi vien A (Tram Huong Khanh Hoa)
 2. Truy cap `/doanh-nghiep-cua-toi` -> tab "San pham" -> click "+ Them san pham"
 3. URL: `/san-pham/tao-moi`
 4. Dien:
@@ -185,17 +185,17 @@ Sau khi chay `npx prisma db seed`:
 6. **Kiem tra**: Redirect ve trang DN, SP moi xuat hien trong tab San pham
 7. **Kiem tra**: certStatus mac dinh = DRAFT (chua nop don)
 
-### TC-FEATURED-18: VIP INDIVIDUAL khong tao SP duoc
-1. Login VIP loai INDIVIDUAL (vi du tu mock)
+### TC-FEATURED-18: Hoi vien INDIVIDUAL khong tao SP duoc
+1. Login Hoi vien loai INDIVIDUAL (vi du tu mock)
 2. Truy cap `/san-pham/tao-moi`
 3. **Kiem tra**: Hien thong bao "Ban chua co doanh nghiep" hoac redirect
 
 ### TC-FEATURED-19: SP vua tao xuat hien o admin Tieu bieu
-1. Login VIP A -> tao 1 SP moi (TC-FEATURED-17)
+1. Login Hoi vien A -> tao 1 SP moi (TC-FEATURED-17)
 2. Logout, login Admin
 3. Truy cap `/admin/tieu-bieu` tab "San pham tieu bieu"
 4. **Kiem tra**: SP vua tao xuat hien trong bang
-5. **Kiem tra**: Co the pin SP nay (vi owner la VIP)
+5. **Kiem tra**: Co the pin SP nay (vi owner la Hoi vien)
 
 ### TC-FEATURED-20: SP vua tao hien o trang `/san-pham`
 1. Tai trang chu / -> menu "San pham" hoac truy cap `/san-pham`
@@ -207,8 +207,8 @@ Sau khi chay `npx prisma db seed`:
 2. **Kiem tra**: Chi hien SP co `certStatus: APPROVED`
 3. **Kiem tra**: Cac SP "Moi" (DRAFT) **khong** xuat hien tai day
 
-### TC-FEATURED-22: VIP nop don chung nhan cho SP moi tao
-1. Login VIP A -> co 1 SP DRAFT vua tao
+### TC-FEATURED-22: Hoi vien nop don chung nhan cho SP moi tao
+1. Login Hoi vien A -> co 1 SP DRAFT vua tao
 2. Truy cap `/chung-nhan/nop-don`
 3. **Kiem tra**: Dropdown SP co liet ke SP DRAFT do
 4. Nop don -> CK -> admin xac nhan -> SP chuyen sang PENDING -> APPROVED
@@ -233,11 +233,11 @@ Sau khi chay `npx prisma db seed`:
 3. **Kiem tra**: Truy van DB: `featuredOrder` = NULL
 4. **Kiem tra**: SP khong xuat hien o /san-pham-tieu-bieu nua
 
-### TC-FEATURED-25: VIP downgrade ve GUEST -> SP cua ho khong con featured
-1. (Setup phuc tap): pin SP cua VIP A
-2. Admin chinh DB: doi `role` cua VIP A thanh GUEST
+### TC-FEATURED-25: Hoi vien downgrade ve GUEST -> SP cua ho khong con featured
+1. (Setup phuc tap): pin SP cua Hoi vien A
+2. Admin chinh DB: doi `role` cua Hoi vien A thanh GUEST
 3. Truy cap /san-pham-tieu-bieu
-4. **Kiem tra**: SP cua VIP A khong xuat hien (filter `owner.role: VIP`)
+4. **Kiem tra**: SP cua Hoi vien A khong xuat hien (filter `owner.role: VIP (Hoi vien)`)
 5. **Kiem tra**: Trang chu carousel cung khong show
 6. (Note: Field `isFeatured` van con TRUE trong DB — chi filter o query, chua tu dong cleanup)
 

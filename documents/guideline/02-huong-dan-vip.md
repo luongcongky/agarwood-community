@@ -6,7 +6,7 @@
 > Cap nhat lan cuoi: 04/2026 (Phase 1-6 + Dieu le Hoi)
 >
 > **Phase 2**: Tu phien ban moi, **bat ky ai** dang ky tai khoan cung su dung duoc ngay
-> (free tier — 5 bai/thang). Nang cap len **VIP** de tang quota va xuat hien tren trang chu.
+> (Tai khoan co ban — 5 bai/thang). Nang cap len **Hoi vien** de tang quota va xuat hien tren trang chu.
 >
 > **Phase 3.2**: Theo Dieu le Hoi, de duoc cong nhan **Hoi vien chinh thuc** can nop
 > don ket nap va duoc Ban Thuong vu xet duyet (xem [muc 11](#11-don-ket-nap-hoi-vien-chinh-thuc)).
@@ -30,7 +30,7 @@
 
 ---
 
-## Hai loai tai khoan VIP
+## Hai loai tai khoan Hoi vien
 
 He thong co 2 loai tai khoan hoi vien:
 
@@ -79,7 +79,7 @@ He thong ho tro 2 cach dang nhap:
 2. Nhap email va mat khau duoc cung cap
 3. Sau khi dang nhap, nen doi mat khau tai trang Ho so
 
-> **Meo**: Sau khi co tai khoan, ban co the lien ket Google de dang nhap nhanh hon. Chi can click "Dang nhap bang Google" voi email trung voi tai khoan VIP.
+> **Meo**: Sau khi co tai khoan, ban co the lien ket Google de dang nhap nhanh hon. Chi can click "Dang nhap bang Google" voi email trung voi tai khoan Hoi vien.
 
 ---
 
@@ -198,10 +198,10 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 
 | Trạng thái | Hạn mức / tháng |
 |------------|----------------|
-| Khách (chưa nâng cấp) | 5 bài |
-| VIP ★ (1 sao) | 15 bài |
-| VIP ★★ Bạc | 30 bài |
-| VIP ★★★ Vàng | Không giới hạn |
+| Tài khoản cơ bản | 5 bài |
+| Hội viên ★ | 15 bài |
+| Hội viên ★★ Bạc | 30 bài |
+| Hội viên ★★★ Vàng | Không giới hạn |
 
 - Hạn mức **reset vào 0h ngày 1 hằng tháng**
 - Bài bị xóa **không** trả lại slot
@@ -211,10 +211,10 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 ### Phan loai bai viet (Phase 2)
 Khi tao bai moi, chon **loai bai**:
 - **Bai viet chung** (default): hien thi o /feed
-- **Tin doanh nghiep**: tin tuc cua DN — neu ban la VIP, bai co the len section "Tin DN moi nhat" tren trang chu
-- **Tin san pham**: gioi thieu / chung nhan SP — neu VIP, bai co the len section "Tin SP moi nhat"
+- **Tin doanh nghiep**: tin tuc cua DN — neu ban la Hoi vien, bai co the len section "Tin DN moi nhat" tren trang chu
+- **Tin san pham**: gioi thieu / chung nhan SP — neu Hoi vien, bai co the len section "Tin SP moi nhat"
 
-> Bai cua user **chua VIP** chi hien o /feed, KHONG len trang chu.
+> Bai cua user **chua la Hoi vien** chi hien o /feed, KHONG len trang chu.
 
 ### Noi dung khong duoc phep
 - Noi dung khong lien quan den nganh tram huong
@@ -281,7 +281,7 @@ Khi tao bai moi, chon **loai bai**:
 1. Truy cap: `/gia-han`
 2. Xem trang thai hien tai: hang, ngay het han, tong dong gop
 3. Chon muc phi:
-   - Muc toi thieu (vd: 5.000.000d): duy tri quyen VIP co ban
+   - Muc toi thieu (vd: 5.000.000d): duy tri quyen Hoi vien co ban
    - Muc cao (vd: 10.000.000d): uu tien feed cao hon, thang hang nhanh hon
 4. Click "Xem huong dan chuyen khoan"
 5. He thong hien: ngan hang, so TK, chu TK, so tien, noi dung CK
@@ -296,7 +296,7 @@ Khi tao bai moi, chon **loai bai**:
 - Tong dong gop 10-20 trieu: Hoi vien Bac (2 sao)
 - Tong dong gop >= 20 trieu: Hoi vien Vang (3 sao)
 
-> **Luu y**: Dong muc cao hon khong chi duy tri VIP ma con tang muc uu tien bai viet tren feed.
+> **Luu y**: Dong muc cao hon khong chi duy tri quyen Hoi vien ma con tang muc uu tien bai viet tren feed.
 
 ---
 
@@ -326,18 +326,18 @@ Khi tao bai moi, chon **loai bai**:
 A: Lien he ban quan tri. Admin se gui email dat lai mat khau voi link co hieu luc 48 gio. Click link de dat mat khau moi va tu dong dang nhap.
 
 **Q: Toi moi dang ky, tai sao van dang bai duoc khong can cho duyet?**
-A: Tu Phase 2 (04/2026), he thong khong con flow "cho duyet 3 ngay". Tai khoan kich hoat ngay sau khi dang ky, ban co the post 5 bai/thang voi tu cach Khach (free tier). Nang cap len VIP de tang quota va co bai len trang chu.
+A: Tu Phase 2 (04/2026), he thong khong con flow "cho duyet 3 ngay". Tai khoan kich hoat ngay sau khi dang ky, ban co the post 5 bai/thang voi Tai khoan co ban. Nang cap len Hoi vien de tang quota va co bai len trang chu.
 
 **Q: Lam sao de bai cua toi xuat hien tren trang chu?**
 A: Phai dat 2 dieu kien:
-1. Tai khoan dang la VIP (da nang cap qua membership fee)
+1. Tai khoan dang la Hoi vien (da nang cap qua membership fee)
 2. Bai dat loai "Tin doanh nghiep" (NEWS) hoac "Tin san pham" (PRODUCT) khi tao
 Bai loai "chung" (GENERAL) chi hien o /feed.
 
 **Q: Toi het quota thang nay, lam sao?**
 A: Co 2 cach:
 1. Doi sang thang sau (quota reset 0h ngay 1)
-2. Nang cap VIP de tang quota — VIP★ 15 bai, VIP★★ 30 bai, VIP★★★ khong gioi han
+2. Nang cap Hoi vien de tang quota — Hoi vien★ 15 bai, Hoi vien★★ 30 bai, Hoi vien★★★ khong gioi han
 Vao trang `/landing` (Quyen loi hoi vien) de xem chi tiet.
 
 **Q: Toi muon doi email dang nhap?**

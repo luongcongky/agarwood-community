@@ -36,7 +36,7 @@ hoi vien duoc chia thanh 3 hang:
 | **Danh du (HONORARY)** | Ca nhan/to chuc uy tin, dong gop cho Hoi | — | — |
 
 > Hang nay (field `User.memberCategory`) doc lap voi *tier* Bac/Vang (field
-> `contributionTotal`). Mot VIP co the la "Chinh thuc" voi tier "Bac" dong thoi.
+> `contributionTotal`). Mot Hoi vien co the la "Chinh thuc" voi tier "Bac" dong thoi.
 
 ### 1.1 Hai loai tai khoan (ky thuat)
 | Loai | Doi tuong | Dieu kien |
@@ -77,13 +77,13 @@ gia cac hoat dong cua Hoi:
 3. Email confirmation co link dang nhap
 4. Hoi vien dat mat khau va dang nhap
 
-**Nang cap len VIP (tuy chon, sau khi co tai khoan):**
+**Nang cap len Hoi vien (tuy chon, sau khi co tai khoan):**
 5. Dong phi membership thong qua chuyen khoan ngan hang (xem muc 2)
-6. Admin xac nhan chuyen khoan -> tai khoan tro thanh VIP
-7. Quota bai viet tang, bai len trang chu, mo khoa cac tinh nang VIP
+6. Admin xac nhan chuyen khoan -> tai khoan tro thanh Hoi vien
+7. Quota bai viet tang, bai len trang chu, mo khoa cac tinh nang Hoi vien
 
 > **Phase 2 thay doi quan trong**: Khong con flow "ban quan tri xet duyet 3 ngay" cho user moi.
-> Bat ky ai cung dang ky va dung he thong duoc ngay. VIP la nang cap thuong, khong la gate.
+> Bat ky ai cung dang ky va dung he thong duoc ngay. Hoi vien la nang cap thuong, khong la gate.
 
 ### 1.3.1 Don ket nap Hoi vien chinh thuc (Dieu le, Dieu 11)
 
@@ -116,12 +116,12 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 
 ### 1.4 Gioi han
 - **Tai khoan free (GUEST)**: khong gioi han so luong dang ky
-- **Hoi vien VIP**: toi da 100 hoi vien VIP (slot enforce o flow nang cap, khong o dang ky)
+- **Hoi vien**: toi da 100 hoi vien (slot enforce o flow nang cap, khong o dang ky)
 - Moi hoi vien dai dien cho 1 doanh nghiep (1 tai khoan = 1 cong ty)
 
 ### 1.5 Cac tinh nang theo trang thai tai khoan
 
-| Tinh nang | Khach (chua login) | GUEST | VIP★ | VIP★★ Bac | VIP★★★ Vang |
+| Tinh nang | Khach (chua login) | Tai khoan co ban | Hoi vien★ | Hoi vien★★ Bac | Hoi vien★★★ Vang |
 |-----------|:---:|:---:|:---:|:---:|:---:|
 | Xem trang chu, tin tuc | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Xem feed (3 bai dau) | ✓ blur | ✓ | ✓ | ✓ | ✓ |
@@ -147,7 +147,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
   - Phi chung nhan: `HOITRAMHUONG-CERT-[ten viet tat]-[YYYYMMDD]`
 
 ### 2.3 Quy trinh xac nhan
-1. VIP chuyen khoan va bam "Toi da chuyen khoan" tren he thong
+1. Hoi vien chuyen khoan va bam "Toi da chuyen khoan" tren he thong
 2. He thong tao yeu cau voi trang thai PENDING
 3. He thong gui email thong bao cho admin
 4. Admin doi chieu bank statement:
@@ -162,7 +162,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 - Sau khi xac nhan: KHONG the hoan tac
 
 ### 2.5 Thoi han xu ly
-- Admin xu ly trong vong **24 gio lam viec** ke tu khi VIP xac nhan
+- Admin xu ly trong vong **24 gio lam viec** ke tu khi Hoi vien xac nhan
 - Qua 24 gio: he thong hien canh bao DO tren dashboard
 - Xem them: [SLA xu ly don](#5-sla-xu-ly-don)
 
@@ -185,7 +185,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 ### 3.3 Quy trinh
 | Buoc | Nguoi thuc hien | Mo ta | SLA |
 |------|-----------------|-------|-----|
-| 1 | VIP | Nop don + tai lieu + chuyen khoan | — |
+| 1 | Hoi vien | Nop don + tai lieu + chuyen khoan | — |
 | 2 | Admin | Xac nhan chuyen khoan | 24h |
 | 3 | Admin | Xet duyet ho so (Online hoac Offline) | 7 ngay |
 | 4a | Admin | Duyet -> cap badge + email | Ngay |
@@ -220,18 +220,18 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 |-----------|-------|
 | Phi membership | Khong hoan du bat ky ly do gi |
 | Don chung nhan da duyet | Da su dung dich vu |
-| VIP tu huy tai khoan | Phi la dong gop cho hoi |
+| Hoi vien tu huy tai khoan | Phi la dong gop cho hoi |
 
 ### 4.3 Quy trinh hoan tien
 1. Admin xac nhan tu choi don chung nhan tren he thong
-2. He thong hien TK ngan hang cua VIP cho admin
+2. He thong hien TK ngan hang cua Hoi vien cho admin
 3. Admin thuc hien chuyen khoan hoan tien thu cong
 4. Admin click "Xac nhan da hoan tien" tren he thong
 5. He thong cap nhat trang thai thanh "Da hoan tien"
 
 ### 4.4 Thoi han hoan tien
 - **5-7 ngay lam viec** ke tu ngay tu choi
-- Neu qua thoi han, VIP co quyen lien he truc tiep ban quan tri
+- Neu qua thoi han, Hoi vien co quyen lien he truc tiep ban quan tri
 
 ---
 
@@ -279,16 +279,16 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 
 | Trang thai | Quota/thang |
 |-----------|------------|
-| GUEST (free tier) | 5 bai |
-| VIP ★ (1 sao) | 15 bai |
-| VIP ★★ Bac (2 sao) | 30 bai |
-| VIP ★★★ Vang (3 sao) | Khong gioi han |
+| Tai khoan co ban | 5 bai |
+| Hoi vien ★ | 15 bai |
+| Hoi vien ★★ Bac | 30 bai |
+| Hoi vien ★★★ Vang | Khong gioi han |
 
 - Reset vao 0h ngay 1 hang thang
 - Bai bi xoa khong duoc tinh lai quota (chong gian lan)
 - Het quota -> nut "Dang bai" disable + thong bao "Da dung X/Y bai thang nay"
-- Bai dang voi `category: NEWS` hoac `PRODUCT` cua VIP co the len trang chu (section 5/6)
-- Bai cua GUEST khong len trang chu, chi hien o /feed
+- Bai dang voi `category: NEWS` hoac `PRODUCT` cua Hoi vien co the len trang chu (section 5/6)
+- Bai cua Tai khoan co ban khong len trang chu, chi hien o /feed
 
 ### 6.3 Xu ly vi pham
 | Muc do | Hanh dong | Ai xu ly |
@@ -311,7 +311,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 
 | Hang | Dieu kien | Quyen loi |
 |------|----------|---------|
-| Hoi vien (1 sao) | Dong gop < 10 trieu | Quyen VIP co ban |
+| Hoi vien (1 sao) | Dong gop < 10 trieu | Quyen Hoi vien co ban |
 | Hoi vien Bac (2 sao) | Dong gop 10-20 trieu | Uu tien feed trung binh |
 | Hoi vien Vang (3 sao) | Dong gop >= 20 trieu | Uu tien feed cao nhat |
 
@@ -370,9 +370,9 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 - Hoi chi ho tro lam trung gian khi ca 2 ben dong y
 
 ### 9.3 Tranh chap ve chung nhan
-- VIP khong dong y ket qua xet duyet: gui khieu nai kem tai lieu bo sung
+- Hoi vien khong dong y ket qua xet duyet: gui khieu nai kem tai lieu bo sung
 - Ban quan tri xem xet lai trong 14 ngay lam viec
-- Co the moi chuyen gia doc lap danh gia (phi do VIP chiu)
+- Co the moi chuyen gia doc lap danh gia (phi do Hoi vien chiu)
 
 ### 9.4 Luu tru bang chung
 - Tat ca giao dich duoc log trong he thong (payment, certification, report)
@@ -436,7 +436,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 | 2.0 | 04/2026 | Cap nhat toan bo theo he thong moi |
 | 3.0 | 04/2026 | Phase 1-5: Open posting (bo cho duyet), quota thang, top 10 DN + top 20 SP tieu bieu, landing page Quyen loi hoi vien, trang chu newspaper layout |
 | 3.1 | 04/2026 | Phase 6 (SPEC): chot business rules cho banner quang cao — 1tr/mau/thang, quota 1/5/10/20 theo tier, gia han duoc, hien thi rotate 5s top 20 slot |
-| **3.2** | **04/2026** | **Dieu le Hoi integration**: 3 hang hoi vien (Chinh thuc / Lien ket / Danh du), phi dung Dieu le (gia nhap + nien lien), Don ket nap (/ket-nap + admin review), Van ban phap quy (/phap-ly voi 3 tabs), Nguoi dai dien to chuc, Hoi vien doi tac thuc te (9 DN VIP Bac), menu restructure (Trang chu / Tin tuc / Nghien cuu / Doanh nghiep / San pham / Quyen loi) |
+| **3.2** | **04/2026** | **Dieu le Hoi integration**: 3 hang hoi vien (Chinh thuc / Lien ket / Danh du), phi dung Dieu le (gia nhap + nien lien), Don ket nap (/ket-nap + admin review), Van ban phap quy (/phap-ly voi 3 tabs), Nguoi dai dien to chuc, Hoi vien doi tac thuc te (9 DN Hoi vien Bac), menu restructure (Trang chu / Tin tuc / Nghien cuu / Doanh nghiep / San pham / Quyen loi) |
 
 ---
 
@@ -446,17 +446,17 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 > Khi implement, doc them dac ta ky thuat tai `documents/testing/functional/08-flow-banner-quang-cao.md`.
 
 ### 11.1 Doi tuong su dung
-- **Moi user dang nhap** deu co the dang ky banner (kha c voi cac dich vu khac chi cho VIP)
-- Quota theo tier — GUEST cung dung duoc nhung quota thap
+- **Moi user dang nhap** deu co the dang ky banner (khac voi cac dich vu khac chi cho Hoi vien)
+- Quota theo tier — Tai khoan co ban cung dung duoc nhung quota thap
 
 ### 11.2 Bieu phi va quota
 | Tier | Quota mau/thang | Gia 1 mau |
 |------|----------------|----------|
 | Khach (chua dang ky) | 0 (khong dung duoc) | — |
-| GUEST (free tier) | **1 mau/thang** | 1.000.000 VND/thang |
-| VIP ★ (1 sao) | **5 mau/thang** | 1.000.000 VND/thang |
-| VIP ★★ Bac | **10 mau/thang** | 1.000.000 VND/thang |
-| VIP ★★★ Vang | **20 mau/thang** | 1.000.000 VND/thang |
+| Tai khoan co ban | **1 mau/thang** | 1.000.000 VND/thang |
+| Hoi vien ★ | **5 mau/thang** | 1.000.000 VND/thang |
+| Hoi vien ★★ Bac | **10 mau/thang** | 1.000.000 VND/thang |
+| Hoi vien ★★★ Vang | **20 mau/thang** | 1.000.000 VND/thang |
 | ADMIN | Khong gioi han | — |
 
 - Gia FLAT 1tr/mau/thang, **khong discount** theo tier
@@ -480,7 +480,7 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 - Pause khi user hover
 
 ### 11.5 Quy tac chon 20 slot khi co > 20 banner ACTIVE
-- Uu tien theo tier: VIP★★★ Vang -> VIP★★ Bac -> VIP★ -> GUEST
+- Uu tien theo tier: Hoi vien★★★ Vang -> Hoi vien★★ Bac -> Hoi vien★ -> Tai khoan co ban
 - Trong cung tier: random hoac theo `createdAt DESC`
 - Thay doi moi page load (de fair share)
 

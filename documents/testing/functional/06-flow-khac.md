@@ -3,7 +3,7 @@
 ## Kich ban
 
 ### TC-OTHER-01: Upload anh Cloudinary
-1. Login VIP -> /doanh-nghiep/chinh-sua -> upload logo
+1. Login Hoi vien -> /doanh-nghiep/chinh-sua -> upload logo
 2. **Kiem tra**: Anh upload thanh cong, preview hien thi
 3. Upload anh bia -> **Kiem tra**: Preview hien thi
 4. /san-pham/tao-moi -> upload nhieu anh
@@ -31,7 +31,7 @@
 1. Login Admin -> /admin/cai-dat
 2. Doi "Phi membership toi thieu" tu 5000000 thanh 6000000
 3. Luu cai dat
-4. Login VIP -> /gia-han
+4. Login Hoi vien -> /gia-han
 5. **Kiem tra**: Muc phi hien thi la 6.000.000d (khong phai 5.000.000d)
 6. Doi lai ve 5000000 sau khi test
 
@@ -39,13 +39,13 @@
 1. Login Admin -> /admin/cai-dat
 2. Doi "Ten ngan hang nhan" thanh "Techcombank"
 3. Luu cai dat
-4. Login VIP -> /gia-han -> click "Xem huong dan CK"
+4. Login Hoi vien -> /gia-han -> click "Xem huong dan CK"
 5. **Kiem tra**: Ngan hang hien thi la "Techcombank"
 6. Doi lai ve gia tri cu sau khi test
 
 ### TC-OTHER-06: Dashboard admin KPI dung
 1. Login Admin -> /admin
-2. **Kiem tra**: "Hoi vien Active" = so VIP co membershipExpires > now
+2. **Kiem tra**: "Hoi vien Active" = so Hoi vien co membershipExpires > now
 3. **Kiem tra**: "Doanh thu thang" = tong payment SUCCESS thang nay
 4. **Kiem tra**: "SP Chung nhan" = so product APPROVED
 5. **Kiem tra**: "Don Truyen thong" = so media order khong COMPLETED/CANCELLED
@@ -57,7 +57,7 @@
 4. **Kiem tra**: Click vao alert -> redirect den /admin/thanh-toan
 
 ### TC-OTHER-08: Company profile dual-mode
-1. Login VIP A -> /doanh-nghiep/tram-huong-ha-noi (cong ty cua A)
+1. Login Hoi vien A -> /doanh-nghiep/tram-huong-ha-noi (cong ty cua A)
 2. **Kiem tra**: Nut "Chinh sua" hien tren header
 3. **Kiem tra**: Tab San pham co nut "+ Them san pham"
 4. Logout -> truy cap lai cung URL
@@ -67,23 +67,23 @@
 ### TC-OTHER-09: San pham chi tiet - CTA theo role
 1. Guest xem /san-pham/[slug]
 2. **Kiem tra**: CTA = "Lien he doanh nghiep"
-3. Login VIP (khong phai owner) -> xem lai
+3. Login Hoi vien (khong phai owner) -> xem lai
 4. **Kiem tra**: CTA = "Lien he doanh nghiep"
-5. Login VIP owner -> xem SP cua minh
+5. Login Hoi vien owner -> xem SP cua minh
 6. **Kiem tra**: CTA = "Chinh sua san pham" + "Nop don chung nhan" (neu DRAFT)
 7. Login Admin -> xem bat ky SP
 8. **Kiem tra**: CTA = "Chinh sua"
 
-### TC-OTHER-10: Trang ho so VIP 4 tabs
-1. Login VIP -> /ho-so
+### TC-OTHER-10: Trang ho so Hoi vien 4 tabs
+1. Login Hoi vien -> /ho-so
 2. **Kiem tra**: Header: avatar + ten + cong ty + tier + ngay con lai
 3. Tab "Thong tin ca nhan": doi ten -> luu -> **Kiem tra**: Cap nhat thanh cong
 4. Tab "Ngan hang": dien TK -> luu -> **Kiem tra**: Cap nhat thanh cong
 5. Tab "Bao mat": doi mat khau -> **Kiem tra**: Mat khau cu sai -> bao loi
 6. Tab "Lich su": **Kiem tra**: Bang lich su membership hien thi dung
 
-### TC-OTHER-11: VIP dashboard /tong-quan
-1. Login VIP -> /tong-quan
+### TC-OTHER-11: Hoi vien dashboard /tong-quan
+1. Login Hoi vien -> /tong-quan
 2. **Kiem tra**: Loi chao theo thoi gian ("Chao buoi sang/chieu/toi")
 3. **Kiem tra**: 3 stat cards: Membership days, Bai viet count, SP chung nhan
 4. **Kiem tra**: Thao tac nhanh: 4 link hoat dong dung
@@ -94,7 +94,7 @@
 2. Chon "Tao voi mat khau" -> dien form -> submit
 3. **Kiem tra**: Tai khoan moi xuat hien trong danh sach
 4. **Kiem tra**: Tai khoan active ngay
-5. Tao VIP khac voi "Gui email moi" -> submit
+5. Tao Hoi vien khac voi "Gui email moi" -> submit
 6. **Kiem tra**: Tai khoan tao voi isActive=false
 7. **Kiem tra**: Email moi duoc gui
 

@@ -25,8 +25,8 @@ type UserProfile = {
 function roleLabel(role: string): string {
   switch (role) {
     case "ADMIN": return "Quản trị viên"
-    case "VIP": return "Hội viên VIP"
-    default: return "Khách"
+    case "VIP": return "Hội viên"
+    default: return "Tài khoản cơ bản"
   }
 }
 

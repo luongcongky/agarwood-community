@@ -4,11 +4,11 @@ import type { Role } from "@prisma/client"
 /**
  * Quota banner mỗi tháng theo tier (Phase 6).
  *
- * Quy tắc khách hàng (chốt 04/2026):
- *  - GUEST              :  1 mẫu/tháng
- *  - VIP ★ (1 sao)      :  5 mẫu/tháng
- *  - VIP ★★ (Bạc)       : 10 mẫu/tháng
- *  - VIP ★★★ (Vàng)     : 20 mẫu/tháng
+ * Quy tắc (chốt 04/2026):
+ *  - Tài khoản cơ bản   :  1 mẫu/tháng
+ *  - Hội viên ★          :  5 mẫu/tháng
+ *  - Hội viên ★★ Bạc     : 10 mẫu/tháng
+ *  - Hội viên ★★★ Vàng   : 20 mẫu/tháng
  *  - ADMIN              : unlimited (-1)
  *
  * Override qua SiteConfig:

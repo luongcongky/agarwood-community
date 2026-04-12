@@ -3,13 +3,13 @@
 ## Tai khoan test
 - Khach: khong dang nhap
 - GUEST (free tier): user moi dang ky tu /dang-ky
-- VIP: nguyen.van.a@tramhuong-hn.vn / 123456
+- Hoi vien: nguyen.van.a@tramhuong-hn.vn / 123456
 - Admin: admin@hoi-tram-huong.vn / 123456
 
 ## Phase 2 changes
 - Bo flow "cho duyet" — dang ky xong la post duoc ngay (free tier 5 bai/thang)
 - Quota thang thay the rule "3 bai/ngay" cu (TC-FEED-05 cap nhat)
-- Bai co `category` (GENERAL/NEWS/PRODUCT) — chi VIP voi NEWS/PRODUCT moi len trang chu
+- Bai co `category` (GENERAL/NEWS/PRODUCT) — chi Hoi vien voi NEWS/PRODUCT moi len trang chu
 
 ## Kich ban
 
@@ -22,8 +22,8 @@
 6. **Kiem tra**: Guest khong thay menu 3 cham
 7. **Kiem tra**: Sidebar hien "Tham gia Hoi Tram Huong" + nut dang nhap
 
-### TC-FEED-02: VIP dang bai -> xuat hien tren feed
-1. Login VIP -> click "Chia se kien thuc..." (quick post box)
+### TC-FEED-02: Hoi vien dang bai -> xuat hien tren feed
+1. Login Hoi vien -> click "Chia se kien thuc..." (quick post box)
 2. Redirect den /feed/tao-bai
 3. Nhap tieu de + noi dung (>50 ky tu) + dinh kem 1 anh
 4. Click "Dang bai"
@@ -41,7 +41,7 @@
 7. **Kiem tra**: Noi dung expand inline (khong chuyen trang)
 
 ### TC-FEED-04: Menu 3 cham theo role
-1. Login VIP A -> xem bai cua VIP B
+1. Login Hoi vien A -> xem bai cua Hoi vien B
 2. Click menu "..." -> **Kiem tra**: Chi co "Bao cao bai viet"
 3. Xem bai cua chinh minh
 4. Click menu "..." -> **Kiem tra**: Co "Chinh sua" + "Xoa bai"
@@ -54,11 +54,11 @@
 3. Dang 5 bai trong thang
 4. **Kiem tra**: Sau bai thu 5, chip thanh "5/5", nut "Dang bai" disable
 5. Co gang POST /api/posts -> **Kiem tra**: Server tra 429 + message "Ban da dang 5/5 bai thang nay..."
-6. Login VIP★★ Vang -> /feed/tao-bai
+6. Login Hoi vien★★ Vang -> /feed/tao-bai
 7. **Kiem tra**: Chip "Han muc: ∞", khong gioi han
 
 ### TC-FEED-12: Phan loai bai viet (category — Phase 2)
-1. Login VIP -> /feed/tao-bai
+1. Login Hoi vien -> /feed/tao-bai
 2. **Kiem tra**: Hien 3 chip chon loai: "Bai viet chung" (default) | "Tin doanh nghiep" | "Tin san pham"
 3. Chon "Tin doanh nghiep" -> nhap noi dung -> Dang bai
 4. Vao trang chu / -> **Kiem tra**: Bai vua post xuat hien o section "Tin doanh nghiep moi nhat"
@@ -69,18 +69,18 @@
 1. Login GUEST -> /feed/tao-bai -> chon "Tin doanh nghiep"
 2. Submit bai
 3. Vao trang chu / -> section "Tin doanh nghiep moi nhat"
-4. **Kiem tra**: Bai cua GUEST KHONG hien o section nay (chi VIP)
+4. **Kiem tra**: Bai cua GUEST KHONG hien o section nay (chi Hoi vien)
 5. Vao /feed -> **Kiem tra**: Bai van hien binh thuong
 
 ### TC-FEED-06: Reaction "Huu ich" voi optimistic update
-1. Login VIP -> click "Huu ich" tren 1 bai
+1. Login Hoi vien -> click "Huu ich" tren 1 bai
 2. **Kiem tra**: UI cap nhat ngay lap tuc (khong doi server)
 3. **Kiem tra**: So dem tang len 1
 4. Click lai -> **Kiem tra**: Unlike, so dem giam 1
 5. Reload trang -> **Kiem tra**: Trang thai reaction giu nguyen voi DB
 
 ### TC-FEED-07: Report bai viet
-1. Login VIP A -> click menu "..." tren bai cua VIP B
+1. Login Hoi vien A -> click menu "..." tren bai cua Hoi vien B
 2. Click "Bao cao bai viet"
 3. Nhap ly do -> submit
 4. **Kiem tra**: Thong bao "Da gui bao cao"
@@ -93,7 +93,7 @@
 3. **Kiem tra**: Bai mo di (opacity thap)
 4. **Kiem tra**: Noi dung thay bang "Noi dung da bi an do vi pham quy dinh"
 5. **Kiem tra**: Reaction bar an
-6. Guest/VIP xem bai do -> chi thay thong bao vi pham
+6. Guest/Hoi vien xem bai do -> chi thay thong bao vi pham
 
 ### TC-FEED-09: Infinite scroll khong duplicate
 1. Load feed -> scroll xuong cuoi
@@ -104,7 +104,7 @@
 6. **Kiem tra**: Hien "Da hien thi tat ca bai viet"
 
 ### TC-FEED-10: Xoa bai viet
-1. Login VIP -> xem bai cua minh -> menu "..." -> "Xoa bai"
+1. Login Hoi vien -> xem bai cua minh -> menu "..." -> "Xoa bai"
 2. **Kiem tra**: Confirm dialog xuat hien
 3. Click xac nhan
 4. **Kiem tra**: Bai bien mat khoi feed

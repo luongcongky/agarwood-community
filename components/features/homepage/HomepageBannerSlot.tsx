@@ -6,7 +6,7 @@ import { BannerCarousel } from "./BannerCarousel"
  * Section 4 — Banner quảng cáo (Phase 6).
  *
  * Fetch top 20 banner ACTIVE đang trong khoảng startDate ≤ now ≤ endDate.
- * Priority sort: VIP★★★ Vàng → VIP★★ Bạc → VIP★ → GUEST → ADMIN
+ * Priority sort: Hội viên★★★ Vàng → Hội viên★★ Bạc → Hội viên★ → Tài khoản cơ bản → ADMIN
  * (sort theo `contributionTotal DESC` của owner — proxy cho tier)
  *
  * Cache 60s để tránh query liên tục, cùng tag "homepage" + "banners".

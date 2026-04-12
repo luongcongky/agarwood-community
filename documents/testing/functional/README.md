@@ -3,17 +3,17 @@
 ## Tong quan
 - 8 nhom test flow
 - 132 test case (103 active + 29 spec cho Phase 6)
-- 3 role can test: Guest/Khach, GUEST (free tier), VIP, Admin
+- 3 role can test: Guest/Khach, Tai khoan co ban, Hoi vien, Admin
 
 ## Tai khoan test (sau khi `npx prisma db seed`)
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@hoitramhuong.vn | Demo@123 |
-| VIP ★★★ Vang | trankhanh@tramhuongkhanhhoa.vn | Demo@123 |
-| VIP ★★★ Vang | levanminh@tramhuongquangnam.vn | Demo@123 |
-| VIP ★★ Bac | nguyenthilan@tinhdautramhuong.vn | Demo@123 |
-| VIP ★★ Bac | phamducthang@nhangthom.vn | Demo@123 |
-| VIP ★ Co ban | dangvantuan@tramhuongdaknong.vn | Demo@123 |
+| Hoi vien ★★★ Vang | trankhanh@tramhuongkhanhhoa.vn | Demo@123 |
+| Hoi vien ★★★ Vang | levanminh@tramhuongquangnam.vn | Demo@123 |
+| Hoi vien ★★ Bac | nguyenthilan@tinhdautramhuong.vn | Demo@123 |
+| Hoi vien ★★ Bac | phamducthang@nhangthom.vn | Demo@123 |
+| Hoi vien ★ | dangvantuan@tramhuongdaknong.vn | Demo@123 |
 | GUEST | (dang ky moi tai /dang-ky — kich hoat ngay) | (do user dat) |
 
 ## Danh sach file test
@@ -52,7 +52,7 @@ Ngoai 60 test case thu cong, du an co 2 test suite Playwright chay tu dong va gh
 
 | File | Doi tuong | So buoc | Muc dich |
 |------|----------|---------|---------|
-| `e2e/vip-demo-flow.spec.ts` | VIP | 16 | Demo toan bo flow hoi vien |
+| `e2e/vip-demo-flow.spec.ts` | Hoi vien | 16 | Demo toan bo flow hoi vien |
 | `e2e/admin-demo-flow.spec.ts` | Admin | 12 | Demo toan bo flow quan tri |
 
 - Seed data tu dau, chay tuan tu, du lieu xuyensuot

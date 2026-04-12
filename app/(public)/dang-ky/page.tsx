@@ -151,8 +151,8 @@ export default async function DangKyPage() {
                   ngày nộp hồ sơ đầy đủ.
                 </p>
                 <p className="leading-relaxed">
-                  Trước khi được công nhận chính thức, bạn được cấp tài khoản{" "}
-                  <em>Khách</em> (Guest) để truy cập cộng đồng và chia sẻ bài viết ngay.
+                  Trước khi được công nhận chính thức, bạn được cấp{" "}
+                  <em>Tài khoản cơ bản</em> để truy cập cộng đồng và chia sẻ bài viết ngay.
                   Sau khi đăng nhập, bạn có thể{" "}
                   <Link href="/ket-nap" className="underline font-semibold text-amber-800 hover:text-amber-950">
                     nộp đơn kết nạp chính thức

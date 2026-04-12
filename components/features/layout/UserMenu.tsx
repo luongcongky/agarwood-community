@@ -29,7 +29,7 @@ interface UserMenuProps {
 }
 
 const roleLabel: Record<Role, string> = {
-  GUEST: "Khách",
+  GUEST: "Tài khoản cơ bản",
   VIP: "Hội viên",
   ADMIN: "Quản trị",
 }

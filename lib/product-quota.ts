@@ -6,10 +6,10 @@ import type { Role } from "@prisma/client"
  * Quota sản phẩm đăng theo tháng. Giá trị `-1` = unlimited.
  *
  * Quy tắc:
- *  - GUEST              :  3 SP/tháng
- *  - VIP ★ (1 sao)      : 10 SP/tháng
- *  - VIP ★★ (Bạc)       : 25 SP/tháng
- *  - VIP ★★★ (Vàng)     : unlimited
+ *  - Tài khoản cơ bản   :  3 SP/tháng
+ *  - Hội viên ★          : 10 SP/tháng
+ *  - Hội viên ★★ Bạc     : 25 SP/tháng
+ *  - Hội viên ★★★ Vàng   : unlimited
  *  - ADMIN              : unlimited
  *
  * Override qua SiteConfig keys:
