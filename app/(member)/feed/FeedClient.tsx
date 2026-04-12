@@ -49,13 +49,20 @@ type TopContributor = {
   company: { name: string } | null
 }
 
-type MembershipInfo = { expires: string | null; contributionTotal: number; displayPriority: number }
+type MembershipInfo = {
+  expires: string | null
+  contributionTotal: number
+  displayPriority: number
+  accountType: string
+  company: { name: string; slug: string } | null
+}
 
 type FeedClientProps = {
   initialPosts: Post[]
   currentUserId: string | null
   currentUserRole: string | null
   currentUserName: string | null
+  currentUserAvatarUrl: string | null
   membershipInfo: MembershipInfo | null
   tierSilver?: number
   tierGold?: number
@@ -338,6 +345,253 @@ function PostCard({
   )
 }
 
+// ── Inline Post Creator ─────────────────────────────────────────────────────
+
+function InlinePostCreator({
+  currentUserName,
+  currentUserAvatarUrl,
+  currentUserId,
+  currentUserRole,
+  membershipInfo,
+  onPostCreated,
+}: {
+  currentUserName: string | null
+  currentUserAvatarUrl: string | null
+  currentUserId: string
+  currentUserRole: string
+  membershipInfo: MembershipInfo | null
+  onPostCreated: (post: Post) => void
+}) {
+  const [content, setContent] = useState("")
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current
+    if (ta) {
+      ta.style.height = "auto"
+      ta.style.height = ta.scrollHeight + "px"
+    }
+  }, [content])
+
+  function handleReset() {
+    setContent("")
+    setImages([])
+    setError(null)
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const remaining = 4 - images.length
+    const toAdd = files.slice(0, remaining)
+    setImages((prev) => [
+      ...prev,
+      ...toAdd.map((file) => ({ file, preview: URL.createObjectURL(file) })),
+    ])
+    e.target.value = ""
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => {
+      URL.revokeObjectURL(prev[index].preview)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  async function handleSubmit() {
+    const plainText = content.trim()
+    if (plainText.length < 50) {
+      setError(`Nội dung tối thiểu 50 ký tự (hiện tại: ${plainText.length})`)
+      return
+    }
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      // Upload images first
+      const uploadedUrls: string[] = []
+      for (const img of images) {
+        const formData = new FormData()
+        formData.append("file", img.file)
+        formData.append("folder", "bai-viet")
+        const res = await fetch("/api/upload", { method: "POST", body: formData })
+        if (!res.ok) throw new Error("Upload ảnh thất bại")
+        const data = await res.json()
+        uploadedUrls.push(data.secure_url)
+      }
+
+      // Build HTML content — paragraphs + images
+      const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
+      const imageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
+      const htmlContent = paragraphs + imageHtml
+
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: htmlContent, category: "GENERAL" }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Đăng bài thất bại")
+      }
+
+      const { post } = await res.json()
+
+      // Build optimistic Post for immediate feed display
+      const optimisticPost: Post = {
+        id: post.id,
+        authorId: currentUserId,
+        title: null,
+        content: paragraphs + imageHtml,
+        imageUrls: uploadedUrls,
+        status: "PUBLISHED",
+        isPremium: currentUserRole === "VIP",
+        isPromoted: false,
+        authorPriority: membershipInfo?.displayPriority ?? 0,
+        viewCount: 0,
+        reportCount: 0,
+        lockedAt: null,
+        lockedBy: null,
+        lockReason: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        author: {
+          id: currentUserId,
+          name: currentUserName ?? "",
+          avatarUrl: currentUserAvatarUrl,
+          role: currentUserRole,
+          accountType: membershipInfo?.accountType ?? "BUSINESS",
+          contributionTotal: membershipInfo?.contributionTotal ?? 0,
+          company: membershipInfo?.company ?? null,
+        },
+        reactions: [],
+        _count: { reactions: 0, comments: 0 },
+      }
+      onPostCreated(optimisticPost)
+
+      // Reset form
+      images.forEach((img) => URL.revokeObjectURL(img.preview))
+      handleReset()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Có lỗi xảy ra")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const charCount = content.trim().length
+
+  return (
+    <div className="bg-white rounded-xl border border-brand-200 p-4 space-y-3">
+      {/* Author + textarea row */}
+      <div className="flex gap-3">
+        <div className="relative w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
+          {currentUserAvatarUrl ? (
+            <Image src={currentUserAvatarUrl} alt="" fill className="object-cover" sizes="40px" />
+          ) : (
+            <span className="text-sm font-bold text-brand-700">
+              {currentUserName?.[0]?.toUpperCase() ?? "?"}
+            </span>
+          )}
+        </div>
+        <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => { setContent(e.target.value); setError(null) }}
+        placeholder="Chia sẻ kiến thức, kinh nghiệm hoặc thông tin thị trường trầm hương..."
+          className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
+          disabled={submitting}
+          rows={2}
+        />
+      </div>
+
+      {/* Image previews */}
+      {images.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {images.map((img, i) => (
+            <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-brand-200">
+              <Image src={img.preview} alt="" fill className="object-cover" sizes="80px" />
+              <button
+                onClick={() => removeImage(i)}
+                className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      {/* Footer: actions + submit */}
+      <div className="flex items-center justify-between pt-2 border-t border-brand-100">
+        <div className="flex items-center gap-2">
+          {/* Image upload button */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={images.length >= 4 || submitting}
+            className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
+            title="Thêm ảnh (tối đa 4)"
+          >
+            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Zm7.5-12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+            </svg>
+            Ảnh
+          </button>
+
+          {/* Full editor link */}
+          <Link
+            href="/feed/tao-bai"
+            className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors"
+            title="Trình soạn thảo đầy đủ"
+          >
+            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+            </svg>
+            Soạn đầy đủ
+          </Link>
+
+          {/* Char count hint */}
+          {content.length > 0 && charCount < 50 && (
+            <span className="text-xs text-brand-400">
+              {charCount}/50
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || charCount < 50}
+          className={cn(
+            "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
+            charCount >= 50
+              ? "bg-brand-700 text-white hover:bg-brand-800"
+              : "bg-brand-100 text-brand-400 cursor-not-allowed",
+          )}
+        >
+          {submitting ? "Đang đăng..." : "Đăng bài"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Membership Card ──────────────────────────────────────────────────────────
 
 function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
@@ -383,6 +637,7 @@ export function FeedClient({
   currentUserId,
   currentUserRole,
   currentUserName,
+  currentUserAvatarUrl,
   membershipInfo,
   topContributors,
   tierSilver,
@@ -481,6 +736,11 @@ export function FeedClient({
     } catch { /* */ }
   }
 
+  function handlePostCreated(post: Post) {
+    setPosts((prev) => [post, ...prev])
+    setNow(Date.now())
+  }
+
   const isLoggedIn = !!currentUserId
   const isMember = currentUserRole === "VIP" || currentUserRole === "ADMIN"
   const canPost = isMember
@@ -489,19 +749,16 @@ export function FeedClient({
     <div className="flex flex-col lg:flex-row gap-6">
       {/* ── Feed column ────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
-        {/* Quick post box */}
-        {canPost && (
-          <Link
-            href="/feed/tao-bai"
-            className="flex items-center gap-3 bg-white rounded-xl border border-brand-200 p-4 hover:bg-brand-50 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-full bg-brand-200 flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-brand-700">{currentUserName?.[0]?.toUpperCase() ?? "?"}</span>
-            </div>
-            <span className="text-sm text-brand-500 flex-1">
-              Chia sẻ kiến thức, kinh nghiệm hoặc thông tin thị trường trầm hương...
-            </span>
-          </Link>
+        {/* Inline post creator */}
+        {canPost && currentUserId && currentUserRole && (
+          <InlinePostCreator
+            currentUserName={currentUserName}
+            currentUserAvatarUrl={currentUserAvatarUrl}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            membershipInfo={membershipInfo}
+            onPostCreated={handlePostCreated}
+          />
         )}
 
         {/* Posts */}
@@ -565,14 +822,6 @@ export function FeedClient({
         ) : (
           <>
             {membershipInfo && <MembershipCard info={membershipInfo} now={now} />}
-            {canPost && (
-              <Link
-                href="/feed/tao-bai"
-                className="flex items-center justify-center gap-2 w-full rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 px-4 py-4 text-sm font-semibold text-brand-700 hover:bg-brand-100 transition-colors"
-              >
-                + Tạo bài viết
-              </Link>
-            )}
           </>
         )}
 

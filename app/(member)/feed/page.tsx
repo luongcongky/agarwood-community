@@ -66,7 +66,7 @@ export default async function FeedPage() {
     userId
       ? prisma.user.findUnique({
           where: { id: userId },
-          select: { membershipExpires: true, contributionTotal: true, displayPriority: true },
+          select: { membershipExpires: true, contributionTotal: true, displayPriority: true, accountType: true, company: { select: { name: true, slug: true } } },
         })
       : null,
     prisma.user.findMany({
@@ -95,6 +95,7 @@ export default async function FeedPage() {
       currentUserId={userId ?? null}
       currentUserRole={session?.user?.role ?? null}
       currentUserName={session?.user?.name ?? null}
+      currentUserAvatarUrl={session?.user?.image ?? null}
       tierSilver={bizTier.silver}
       tierGold={bizTier.gold}
       tierIndSilver={indTier.silver}
@@ -105,6 +106,8 @@ export default async function FeedPage() {
               expires: membershipInfo.membershipExpires?.toISOString() ?? null,
               contributionTotal: membershipInfo.contributionTotal,
               displayPriority: membershipInfo.displayPriority,
+              accountType: membershipInfo.accountType,
+              company: membershipInfo.company,
             }
           : null
       }
