@@ -58,20 +58,20 @@ export function DigitalPlatformHero() {
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: "radial-gradient(circle at 20% 30%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, #fbbf24 0, transparent 40%)",
         }} />
-        <div className="relative">
+        <div className="relative mx-auto max-w-4xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-amber-400/20 border border-amber-300/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-200">
             <Sparkles className="w-3.5 h-3.5" />
             Tính năng mới — Ra mắt 2026
           </span>
-          <h2 className="mt-4 text-3xl sm:text-4xl font-bold leading-tight">
+          <h2 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
             Nền tảng số Hội Trầm Hương Việt Nam
           </h2>
-          <p className="mt-3 text-base sm:text-lg text-brand-100 max-w-3xl leading-relaxed">
+          <p className="mt-4 text-base sm:text-lg text-brand-100 leading-relaxed">
             Lần đầu tiên trong lịch sử Hội, tất cả hội viên có thể <strong className="text-amber-200">hiển thị thương hiệu,
             chứng nhận sản phẩm, kết nối đối tác và nhận hỗ trợ truyền thông trực tuyến</strong> —
             tất cả thông qua một nền tảng duy nhất.
           </p>
-          <p className="mt-3 text-sm text-brand-200 max-w-3xl">
+          <p className="mt-4 text-sm text-brand-200">
             Đây là quyền lợi <strong>đã bao gồm</strong> trong phí hội viên hiện tại của bạn.
             Hãy trả lời khảo sát bên dưới để Hội giúp bạn khai thác tối đa lợi ích này.
           </p>
