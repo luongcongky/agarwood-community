@@ -169,6 +169,9 @@ model User {
   banners           Banner[]
   applications      MembershipApplication[] @relation("ApplicantRelation")
   applicationsReviewed MembershipApplication[] @relation("ReviewerRelation")
+  surveyResponses   SurveyResponse[]
+  consultationRequests ConsultationRequest[] @relation("ConsultationRequester")
+  consultationsHandled ConsultationRequest[] @relation("ConsultationHandler")
 
   @@index([role])
   @@index([accountType])
@@ -821,4 +824,110 @@ model MembershipApplication {
   @@index([status])
   @@index([submittedAt])
   @@map("membership_applications")
+}
+
+// ============================================================
+// SURVEY SYSTEM — generic, dùng nhiều loại khảo sát
+// ============================================================
+
+enum SurveyAudience {
+  ALL          // mọi user (kể cả guest đã login)
+  BUSINESS     // chỉ accountType = BUSINESS
+  INDIVIDUAL   // chỉ accountType = INDIVIDUAL
+  BOTH_VIP     // cả BUSINESS + INDIVIDUAL (loại GUEST)
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum ConsultationStatus {
+  PENDING
+  CONTACTED
+  DONE
+  CANCELLED
+}
+
+/**
+ * Bộ khảo sát động — admin tạo qua UI. Câu hỏi lưu dạng JSON, có thể có
+ * `mapsTo` để tự đồng bộ câu trả lời sang field User/Company tương ứng.
+ *
+ * Cấu trúc 1 câu hỏi (trong `questions` JSON):
+ *   {
+ *     id: string,                    // unique trong scope survey
+ *     label: string,                 // câu hỏi hiển thị
+ *     type: "text"|"textarea"|"number"|"select"|"multiselect"|"scale",
+ *     options?: string[],            // cho select/multiselect
+ *     required?: boolean,
+ *     mapsTo?: "user.fieldName"|"company.fieldName",
+ *     scoreRule?: Record<string, number>,  // map giá trị → điểm cho recommendation
+ *     helpText?: string,
+ *   }
+ */
+model Survey {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  title       String
+  description String?        @db.Text
+  audience    SurveyAudience @default(BOTH_VIP)
+  status      SurveyStatus   @default(DRAFT)
+  questions   Json           // mảng câu hỏi (xem comment trên)
+  config      Json?          // { scoring: {...}, recommendation: {...} } — tùy loại survey
+  startsAt    DateTime?
+  endsAt      DateTime?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  responses   SurveyResponse[]
+
+  @@index([status, audience])
+  @@map("surveys")
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  userId      String
+  answers     Json     // { [questionId]: value }
+  score       Int?     // điểm tính từ scoreRule — dùng cho recommendation
+  recommendedTier String?  // "BASIC" | "SILVER" | "GOLD" — snapshot tại thời điểm submit
+  submittedAt DateTime @default(now())
+
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, userId])
+  @@index([surveyId, submittedAt])
+  @@map("survey_responses")
+}
+
+/**
+ * Yêu cầu tư vấn nâng cấp — phát sinh từ CTA cuối flow khảo sát.
+ * Giai đoạn này chưa có flow thanh toán nâng cấp tự động → chỉ ghi nhận
+ * để admin liên hệ lại.
+ */
+model ConsultationRequest {
+  id          String             @id @default(cuid())
+  userId      String
+  fullName    String
+  phone       String
+  email       String?
+  note        String?            @db.Text
+  context     String?            // "survey:member-onboarding" — nguồn phát sinh
+  recommendedTier String?
+  status      ConsultationStatus @default(PENDING)
+  handledById String?
+  handledAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user        User               @relation("ConsultationRequester", fields: [userId], references: [id], onDelete: Cascade)
+  handledBy   User?              @relation("ConsultationHandler", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("consultation_requests")
 }
