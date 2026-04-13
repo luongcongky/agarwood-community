@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
+import { CheckCircle2 } from "lucide-react"
 import { TierComparisonTable } from "@/components/features/survey/TierComparisonTable"
 
 interface Contact {
@@ -30,6 +31,12 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [showToast, setShowToast] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowToast(false), 5000)
+    return () => clearTimeout(t)
+  }, [])
 
   async function sendConsultation() {
     setSubmitting(true)
@@ -59,7 +66,33 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Toast cảm ơn — hiện 5s rồi tự ẩn */}
+      {showToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-4 right-4 z-50 max-w-sm animate-in slide-in-from-top-2 fade-in"
+        >
+          <div className="flex items-start gap-3 rounded-xl border-2 border-emerald-300 bg-white shadow-xl p-4">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-emerald-800">Khảo sát đã gửi thành công!</p>
+              <p className="text-sm text-brand-600 mt-0.5">
+                Cảm ơn {contact.name.split(" ").slice(-1)[0]} đã dành thời gian đồng hành cùng Hội Trầm Hương VN 🌿
+              </p>
+            </div>
+            <button
+              onClick={() => setShowToast(false)}
+              className="text-brand-400 hover:text-brand-600 text-xl leading-none"
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="rounded-2xl bg-gradient-to-r from-brand-700 via-brand-600 to-amber-600 p-8 text-white shadow-xl text-center">
         <p className="text-sm uppercase tracking-wider opacity-90">Cảm ơn {contact.name}!</p>

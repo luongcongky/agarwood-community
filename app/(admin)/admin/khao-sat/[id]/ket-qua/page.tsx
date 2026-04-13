@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import type { SurveyAnswers, SurveyQuestion } from "@/lib/survey/types"
 
 export const revalidate = 0
 
@@ -22,7 +21,6 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
     take: 300,
   })
 
-  const questions = (survey.questions as unknown as SurveyQuestion[]) ?? []
   const total = responses.length
   const goldCount = responses.filter((r) => r.recommendedTier === "GOLD").length
   const silverCount = responses.filter((r) => r.recommendedTier === "SILVER").length
@@ -74,12 +72,15 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
                 const email = r.contactEmail ?? r.user?.email ?? null
                 const phone = r.contactPhone ?? null
                 const type = r.submitterType ?? r.user?.accountType ?? "—"
+                const detailUrl = `/admin/khao-sat/${id}/ket-qua/${r.id}`
                 return (
-                  <tr key={r.id} className="hover:bg-brand-50/50 align-top">
+                  <tr key={r.id} className="hover:bg-brand-50/50 align-top cursor-pointer">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-brand-900">{name}</div>
-                      {r.user && <div className="text-[10px] text-brand-400">(hội viên)</div>}
-                      {!r.userId && <div className="text-[10px] text-amber-600">(anon)</div>}
+                      <Link href={detailUrl} className="block hover:underline">
+                        <div className="font-medium text-brand-900">{name}</div>
+                        {r.user && <div className="text-[10px] text-brand-400">(hội viên)</div>}
+                        {!r.userId && <div className="text-[10px] text-amber-600">(anon)</div>}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       {r.companyName && (
@@ -106,7 +107,12 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
                         "bg-brand-100 text-brand-600"
                       }`}>{r.recommendedTier ?? "—"}</span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-brand-500">{r.submittedAt.toLocaleString("vi-VN")}</td>
+                    <td className="px-4 py-3 text-xs text-brand-500 whitespace-nowrap">
+                      {r.submittedAt.toLocaleString("vi-VN")}
+                      <Link href={detailUrl} className="block text-brand-700 hover:underline mt-1 font-semibold">
+                        Xem chi tiết →
+                      </Link>
+                    </td>
                   </tr>
                 )
               })}
@@ -115,27 +121,9 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <details className="rounded-xl border border-brand-200 bg-white p-4">
-        <summary className="cursor-pointer font-semibold text-brand-700">Xem chi tiết answers</summary>
-        <div className="mt-3 space-y-4">
-          {responses.map((r) => {
-            const a = r.answers as unknown as SurveyAnswers
-            return (
-              <div key={r.id} className="border-t border-brand-100 pt-2">
-                <div className="text-xs font-semibold text-brand-700">
-                  {r.contactName ?? r.user?.name} {r.companyName && `— ${r.companyName}`}
-                </div>
-                {questions.map((q) => (
-                  <div key={q.id} className="text-xs text-brand-600 mt-1">
-                    <span className="font-medium">{q.label}:</span>{" "}
-                    {Array.isArray(a[q.id]) ? (a[q.id] as string[]).join(", ") : String(a[q.id] ?? "—")}
-                  </div>
-                ))}
-              </div>
-            )
-          })}
-        </div>
-      </details>
+      <p className="text-xs text-brand-500 italic text-center">
+        Bấm vào một hàng để xem chi tiết câu trả lời.
+      </p>
     </div>
   )
 }
