@@ -30,7 +30,7 @@ const FEATURES: Array<{
     section: "Sản phẩm & Chứng nhận",
     rows: [
       { label: "Chứng nhận sản phẩm bởi Hội", basic: false, silver: "3 sản phẩm", gold: "KHÔNG GIỚI HẠN", highlight: true },
-      { label: "Phí chứng nhận / sản phẩm", basic: "—", silver: "Giảm 30%", gold: "MIỄN PHÍ" },
+      { label: "Phí chứng nhận / sản phẩm", basic: "—", silver: "Giảm 10%", gold: "Giảm 20%" },
       { label: "Hiển thị top sản phẩm trang chủ", basic: false, silver: "1 sản phẩm", gold: "3 sản phẩm" },
     ],
   },
@@ -45,7 +45,7 @@ const FEATURES: Array<{
   {
     section: "Marketing & Truyền thông",
     rows: [
-      { label: "Banner quảng cáo trên website Hội", basic: false, silver: "1 banner/quý", gold: "KHÔNG GIỚI HẠN", highlight: true },
+      { label: "Banner quảng cáo trên website Hội", basic: false, silver: "1 banner/quý", gold: "3 banner/quý", highlight: true },
       { label: "Hỗ trợ viết bài PR / phỏng vấn", basic: false, silver: "1 bài/năm", gold: "4 bài/năm" },
       { label: "Quảng bá trên kênh đối tác Hội", basic: false, silver: false, gold: true },
     ],
