@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier } from "@/lib/tier"
+import { SurveyBanner } from "@/components/features/survey/SurveyBanner"
 
 export const revalidate = 60
 
@@ -119,6 +120,9 @@ export default async function VipDashboardPage() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Survey banner (ẩn nếu không có khảo sát pending) ────────────── */}
+      <SurveyBanner userId={userId} accountType={user.accountType as "BUSINESS" | "INDIVIDUAL"} />
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-brand-200 p-6">

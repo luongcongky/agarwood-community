@@ -28,6 +28,7 @@ const MEMBER_PREFIXES = [
   "/chung-nhan/lich-su",
   "/thanh-toan/lich-su",
   "/tai-lieu",
+  "/khao-sat",
 ]
 
 /** Routes mọi user đăng nhập đều vào được (kể cả GUEST), nhưng không cho khách lạ */

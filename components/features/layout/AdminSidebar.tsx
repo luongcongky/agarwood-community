@@ -20,6 +20,8 @@ import {
   Scale,
   Globe,
   Crown,
+  ClipboardList,
+  Headset,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -37,6 +39,8 @@ export const ADMIN_NAV_ITEMS = [
   { label: "Tài liệu",     href: "/admin/tai-lieu",    icon: FileText },
   { label: "Văn bản pháp quy", href: "/admin/phap-ly", icon: Scale },
   { label: "Tin tức",      href: "/admin/tin-tuc",     icon: Newspaper },
+  { label: "Khảo sát",     href: "/admin/khao-sat",    icon: ClipboardList },
+  { label: "Tư vấn",       href: "/admin/tu-van",      icon: Headset },
   { label: "Cài đặt",      href: "/admin/cai-dat",     icon: Settings },
 ]
 

@@ -24,6 +24,7 @@ const VIP_ADMIN_PREFIXES = [
   "/tai-lieu",
   "/certification",
   "/company",
+  "/khao-sat",
 ]
 
 const ADMIN_PREFIXES = ["/admin"]
