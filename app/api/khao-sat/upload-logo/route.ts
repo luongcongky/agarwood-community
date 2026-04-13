@@ -35,12 +35,17 @@ export async function POST(request: Request) {
   const now = new Date()
   const monthFolder = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`
 
+  // Sub-folder (logo/avatar/store/team/board/...) — whitelist để tránh abuse
+  const rawSub = (formData.get("sub") as string) || "logo"
+  const ALLOWED_SUB = ["logo", "avatar", "store", "team", "board", "other"]
+  const sub = ALLOWED_SUB.includes(rawSub) ? rawSub : "other"
+
   try {
     const result = await cloudinary.uploader.upload(base64, {
-      folder: `khao-sat/${monthFolder}`,
+      folder: `khao-sat/${sub}/${monthFolder}`,
       resource_type: "image",
       transformation: [
-        { width: 400, height: 400, crop: "limit" },
+        { width: 800, height: 800, crop: "limit" },
         { quality: "auto:good" },
       ],
     })

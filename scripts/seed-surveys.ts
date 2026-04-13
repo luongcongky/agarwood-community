@@ -232,6 +232,32 @@ const businessQuestions = [
     ],
     required: false,
   },
+
+  // ── Hình ảnh doanh nghiệp (type=files) ──
+  {
+    id: "store_photos",
+    label: "Ảnh cửa hàng / showroom / xưởng sản xuất",
+    type: "files",
+    maxFiles: 5,
+    required: false,
+    helpText: "Giúp Hội hiểu quy mô & không gian kinh doanh của bạn. Tối đa 5 ảnh.",
+  },
+  {
+    id: "board_photos",
+    label: "Ảnh Ban Giám đốc / Lãnh đạo doanh nghiệp",
+    type: "files",
+    maxFiles: 5,
+    required: false,
+    helpText: "Ảnh chân dung Giám đốc, Chủ tịch HĐQT hoặc đại diện lãnh đạo khác.",
+  },
+  {
+    id: "team_photos",
+    label: "Ảnh đội ngũ / thành viên quan trọng",
+    type: "files",
+    maxFiles: 5,
+    required: false,
+    helpText: "Ảnh tập thể nhân viên, nghệ nhân chủ chốt, team sản xuất...",
+  },
 ]
 
 const individualQuestions = [
@@ -373,6 +399,24 @@ const individualQuestions = [
       "Hiện chưa có kế hoạch",
     ],
     required: false,
+  },
+
+  // ── Hình ảnh minh họa (type=files) ──
+  {
+    id: "work_photos",
+    label: "Ảnh công việc / sản phẩm của bạn",
+    type: "files",
+    maxFiles: 5,
+    required: false,
+    helpText: "Ảnh sản phẩm bạn chế tác, không gian làm việc, giải thưởng, bằng khen... (tối đa 5 ảnh)",
+  },
+  {
+    id: "certification_photos",
+    label: "Ảnh chứng chỉ / bằng cấp (nếu có)",
+    type: "files",
+    maxFiles: 3,
+    required: false,
+    helpText: "Bằng tốt nghiệp, chứng chỉ chuyên môn, giải thưởng... Giúp Hội xét duyệt chứng nhận cá nhân.",
   },
 ]
 

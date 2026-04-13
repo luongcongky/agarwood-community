@@ -83,16 +83,14 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      {r.companyName && (
-                        <div className="flex items-center gap-2">
-                          {r.logoUrl && (
-                            <div className="relative w-8 h-8 rounded border bg-white shrink-0">
-                              <Image src={r.logoUrl} alt="" fill className="object-contain" sizes="32px" />
-                            </div>
-                          )}
-                          <span className="text-xs text-brand-700">{r.companyName}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {(r.logoUrl || r.avatarUrl) && (
+                          <div className="relative w-8 h-8 rounded border bg-white shrink-0 overflow-hidden">
+                            <Image src={(r.logoUrl ?? r.avatarUrl)!} alt="" fill className="object-cover" sizes="32px" />
+                          </div>
+                        )}
+                        {r.companyName && <span className="text-xs text-brand-700">{r.companyName}</span>}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs">
                       {email && <div className="text-brand-700">{email}</div>}

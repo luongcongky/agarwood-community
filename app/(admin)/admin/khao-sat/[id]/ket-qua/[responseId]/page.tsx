@@ -62,9 +62,9 @@ export default async function SurveyResponseDetailPage({
       <div className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-2 rounded-xl border border-brand-200 bg-white p-6">
           <div className="flex items-start gap-4">
-            {response.logoUrl && (
+            {(response.logoUrl || response.avatarUrl) && (
               <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-brand-200 bg-brand-50 shrink-0">
-                <Image src={response.logoUrl} alt="" fill className="object-contain" sizes="64px" />
+                <Image src={(response.logoUrl ?? response.avatarUrl)!} alt="" fill className="object-contain" sizes="64px" />
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -180,8 +180,27 @@ export default async function SurveyResponseDetailPage({
 }
 
 function AnswerValue({ value, question }: { value: SurveyAnswers[string]; question: SurveyQuestion }) {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
     return <span className="text-sm text-brand-400 italic">(Không trả lời)</span>
+  }
+
+  // Files (array of image URLs)
+  if (question.type === "files" && Array.isArray(value)) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {value.map((url, i) => (
+          <a
+            key={i}
+            href={String(url)}
+            target="_blank"
+            rel="noreferrer"
+            className="relative w-20 h-20 rounded-lg overflow-hidden border border-brand-200 bg-brand-50 hover:border-brand-400 block"
+          >
+            <Image src={String(url)} alt={`Ảnh ${i + 1}`} fill className="object-cover" sizes="80px" />
+          </a>
+        ))}
+      </div>
+    )
   }
 
   if (Array.isArray(value)) {

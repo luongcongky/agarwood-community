@@ -902,6 +902,7 @@ model SurveyResponse {
   contactName    String?
   contactEmail   String?
   contactPhone   String?
+  avatarUrl      String?  // ảnh đại diện cá nhân (cho INDIVIDUAL)
   companyName    String?
   logoUrl        String?
   submitterType  String?  // "INDIVIDUAL" | "BUSINESS"

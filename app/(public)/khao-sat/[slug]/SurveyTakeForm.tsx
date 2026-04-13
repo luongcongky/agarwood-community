@@ -3,12 +3,13 @@
 import { useState } from "react"
 import type { SurveyAnswers, SurveyQuestion } from "@/lib/survey/types"
 import { ResultPanel } from "./ResultPanel"
-import { LogoUpload } from "./LogoUpload"
+import { ImageUpload } from "./ImageUpload"
 
 interface Prefill {
   name: string
   email: string
   phone: string
+  avatarUrl?: string
   companyName: string
   logoUrl: string
 }
@@ -24,6 +25,7 @@ interface ContactData {
   name: string
   email: string
   phone: string
+  avatarUrl: string
   companyName: string
   logoUrl: string
 }
@@ -38,6 +40,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
     name: prefill?.name ?? "",
     email: prefill?.email ?? "",
     phone: prefill?.phone ?? "",
+    avatarUrl: prefill?.avatarUrl ?? "",
     companyName: prefill?.companyName ?? "",
     logoUrl: prefill?.logoUrl ?? "",
   })
@@ -75,6 +78,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
             name: contact.name,
             email: contact.email,
             phone: contact.phone,
+            avatarUrl: !isBusiness ? contact.avatarUrl : undefined,
             companyName: isBusiness ? contact.companyName : undefined,
             logoUrl: isBusiness ? contact.logoUrl : undefined,
             submitterType,
@@ -124,15 +128,28 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
               </Field>
             </div>
 
+            {!isBusiness && (
+              <Field label="Ảnh đại diện" hint="Ảnh chân dung, tối đa 3MB. Không bắt buộc nhưng giúp Hội nhận diện bạn tốt hơn.">
+                <ImageUpload
+                  sub="avatar"
+                  value={contact.avatarUrl}
+                  onChange={(url) => setContact({ ...contact, avatarUrl: url })}
+                  label="Chọn ảnh đại diện"
+                />
+              </Field>
+            )}
+
             {isBusiness && (
               <>
                 <Field label="Tên doanh nghiệp đang công tác *">
                   <input required value={contact.companyName} onChange={(e) => setContact({ ...contact, companyName: e.target.value })} className={inp} />
                 </Field>
                 <Field label="Logo doanh nghiệp" hint="Tối đa 3MB. Không bắt buộc.">
-                  <LogoUpload
+                  <ImageUpload
+                    sub="logo"
                     value={contact.logoUrl}
                     onChange={(url) => setContact({ ...contact, logoUrl: url })}
+                    label="Chọn ảnh logo"
                   />
                 </Field>
               </>
@@ -181,6 +198,15 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
 }
 
 const inp = "w-full rounded-md border border-brand-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+
+/** Đoán sub-folder từ label câu hỏi để ảnh được phân loại hợp lý trên Cloudinary. */
+function mapLabelToSub(label: string): "store" | "team" | "board" | "other" {
+  const l = label.toLowerCase()
+  if (l.includes("cửa hàng") || l.includes("showroom") || l.includes("xưởng")) return "store"
+  if (l.includes("ban giám đốc") || l.includes("lãnh đạo")) return "board"
+  if (l.includes("thành viên") || l.includes("nhân sự") || l.includes("đội ngũ")) return "team"
+  return "other"
+}
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -247,6 +273,15 @@ function QuestionField({
               </label>
             ))}
           </div>
+        )}
+        {q.type === "files" && (
+          <ImageUpload
+            multi
+            sub={mapLabelToSub(q.label)}
+            value={Array.isArray(value) ? (value as string[]) : []}
+            onChange={onChange}
+            maxFiles={q.maxFiles ?? 5}
+          />
         )}
         {q.type === "multiselect" && q.options && (
           <div className="space-y-2">
