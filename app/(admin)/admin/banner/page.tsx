@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import Image from "next/image"
+import { cloudinaryFit } from "@/lib/cloudinary"
 import { AdminBannerActions } from "./AdminBannerActions"
 
 export const metadata = {
@@ -110,14 +111,23 @@ export default async function AdminBannerPage({
                 className="bg-white rounded-xl border border-brand-200 overflow-hidden"
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-brand-100">
-                    <Image
-                      src={banner.imageUrl}
-                      alt={banner.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
+                  <div className="space-y-2">
+                    {/* Preview ở tỉ lệ 5:1 — đúng cảm giác desktop trên trang chủ */}
+                    <div
+                      className="relative w-full overflow-hidden rounded-lg bg-brand-100"
+                      style={{ aspectRatio: "5 / 1" }}
+                    >
+                      <Image
+                        src={cloudinaryFit(banner.imageUrl, { ar: "5:1", w: 800 })}
+                        alt={banner.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                      />
+                    </div>
+                    <p className="text-[10px] text-brand-400 text-center">
+                      Preview tỉ lệ 5:1 (desktop) — Cloudinary auto-crop
+                    </p>
                   </div>
 
                   <div className="md:col-span-2 flex flex-col gap-2">
