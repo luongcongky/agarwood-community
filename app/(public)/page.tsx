@@ -74,6 +74,9 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
+      {/* ── Banner quảng cáo đầu trang (sau thanh menu) ── */}
+      <HomepageBannerSlot position="TOP" />
+
       {/* ── Section 1 + 2: Tin Hội (left) + Bản tin hội viên (right rail) ── */}
       <section className="bg-brand-50 py-8 lg:py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -127,7 +130,7 @@ export default async function HomePage() {
       <CertifiedProductsCarousel />
 
       {/* ── Section 4: Banner quảng cáo ── */}
-      <HomepageBannerSlot />
+      <HomepageBannerSlot position="MID" />
 
       {/* ── Section 5: Tin doanh nghiệp mới nhất ── */}
       <LatestPostsSection

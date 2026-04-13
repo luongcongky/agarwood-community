@@ -119,6 +119,11 @@ enum BannerStatus {
   EXPIRED             // hết hạn (cron daily check)
 }
 
+enum BannerPosition {
+  TOP   // Đầu trang chủ — ngay sau thanh menu
+  MID   // Giữa trang chủ — sau section Sản phẩm chứng nhận
+}
+
 // ============================================================
 // USER & AUTH
 // ============================================================
@@ -350,11 +355,17 @@ model Product {
   // Ranking — denormalized từ owner.displayPriority tại thời điểm đăng
   ownerPriority   Int         @default(0)
 
+  // Liên kết với bài post trên feed (MXH Trầm Hương). 1-1 optional.
+  // Khi Post bị xoá → cascade xoá Product (merge model: product luôn đi kèm 1 post).
+  // Với product tạo trước khi gộp, cột này null cho đến khi backfill.
+  postId          String?     @unique
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   owner           User        @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   company         Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  post            Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
   certifications  Certification[]
   comments        Comment[]
 
@@ -448,6 +459,7 @@ model Post {
   updatedAt       DateTime    @updatedAt
 
   author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  product         Product?    // sidecar metadata khi category=PRODUCT
   reports         Report[]
   reactions       PostReaction[]
   tags            PostTag[]
@@ -677,6 +689,7 @@ model Banner {
   imageUrl      String       // Cloudinary URL
   targetUrl     String       // link tới DN/SP/bài post (mở tab mới khi click)
   title         String       // tiêu đề ngắn (hiện tooltip + alt)
+  position      BannerPosition @default(TOP) // vị trí hiển thị trên trang chủ
 
   // Schedule
   startDate     DateTime     // ngày bắt đầu hiển thị
@@ -700,6 +713,7 @@ model Banner {
   @@index([status])
   @@index([endDate])
   @@index([status, endDate])  // homepage query: ACTIVE + đang trong khoảng startDate-endDate
+  @@index([status, position, endDate])  // homepage query tách theo position
   @@map("banners")
 }
 

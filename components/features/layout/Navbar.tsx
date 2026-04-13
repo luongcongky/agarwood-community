@@ -48,11 +48,10 @@ function detectMode(pathname: string): NavMode {
  */
 const PUBLIC_LINKS: NavLink[] = [
   { label: "Trang chủ", href: "/" },
-  { label: "Tin tức", href: "/tin-tuc" },
+  { label: "Giới thiệu", href: "/gioi-thieu" },
   { label: "Nghiên cứu", href: "/nghien-cuu" },
-  { label: "Cộng đồng", href: "/feed", isNew: true },
-  { label: "Sản phẩm", href: "/san-pham-doanh-nghiep", isNew: true },
-  { label: "Quyền lợi", href: "/landing" },
+  { label: "MXH Trầm Hương", href: "/feed", isNew: true },
+  { label: "Hội viên", href: "/landing" },
 ]
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -137,9 +136,9 @@ export async function Navbar() {
                         lineHeight: 1,
                         color: "#ef4444",
                       }}
-                      className="font-bold uppercase"
+                      className="font-bold uppercase ml-0.5"
                     >
-                      News
+                      Thử nghiệm
                     </span>
                   )}
                 </Link>

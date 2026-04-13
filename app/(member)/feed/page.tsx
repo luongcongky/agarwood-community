@@ -25,6 +25,7 @@ export default async function FeedPage() {
       content: true,
       imageUrls: true,
       status: true,
+      category: true,
       isPremium: true,
       isPromoted: true,
       authorPriority: true,
@@ -44,6 +45,17 @@ export default async function FeedPage() {
           accountType: true,
           contributionTotal: true,
           company: { select: { name: true, slug: true } },
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          priceRange: true,
+          category: true,
+          badgeUrl: true,
+          certStatus: true,
         },
       },
       reactions: {

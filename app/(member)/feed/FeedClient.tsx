@@ -18,6 +18,16 @@ type PostAuthor = {
   company: { name: string; slug: string } | null
 }
 
+type ProductSidecar = {
+  id: string
+  name: string
+  slug: string
+  priceRange: string | null
+  category: string | null
+  badgeUrl: string | null
+  certStatus: string
+}
+
 type Post = {
   id: string
   authorId: string
@@ -25,6 +35,7 @@ type Post = {
   content: string
   imageUrls: string[]
   status: string
+  category?: string
   isPremium: boolean
   isPromoted: boolean
   authorPriority: number
@@ -36,8 +47,27 @@ type Post = {
   createdAt: string
   updatedAt: string
   author: PostAuthor
+  product?: ProductSidecar | null
   reactions: { type: string }[]
   _count: { reactions: number; comments: number }
+}
+
+type FilterKey = "all" | "NEWS" | "PRODUCT" | "CERTIFIED"
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "Tất cả" },
+  { key: "NEWS", label: "Tin tức" },
+  { key: "PRODUCT", label: "Sản phẩm" },
+  { key: "CERTIFIED", label: "Chứng nhận" },
+]
+
+function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
+  const params = new URLSearchParams()
+  if (filter === "CERTIFIED") params.set("certified", "1")
+  else if (filter !== "all") params.set("category", filter)
+  if (cursor) params.set("cursor", cursor)
+  const qs = params.toString()
+  return qs ? `/api/posts?${qs}` : "/api/posts"
 }
 
 type TopContributor = {
@@ -259,6 +289,32 @@ function PostCard({
       {/* Promoted badge */}
       {post.isPromoted && (
         <span className="inline-flex text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full mb-2">Ghim bởi admin</span>
+      )}
+
+      {/* Product sidecar strip — hiện khi bài post là sản phẩm */}
+      {post.category === "PRODUCT" && post.product && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/60 px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white border border-brand-200 px-2 py-0.5 font-semibold text-brand-700">
+            🛍️ Sản phẩm
+          </span>
+          {post.product.certStatus === "APPROVED" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 font-semibold text-emerald-700">
+              ✓ Đã chứng nhận
+            </span>
+          )}
+          {post.product.category && (
+            <span className="text-brand-600">{post.product.category}</span>
+          )}
+          {post.product.priceRange && (
+            <span className="font-semibold text-brand-900">{post.product.priceRange}</span>
+          )}
+          <Link
+            href={`/san-pham/${post.product.slug}`}
+            className="ml-auto font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-2"
+          >
+            Xem chi tiết →
+          </Link>
+        </div>
       )}
 
       {/* Title — clickable to detail */}
@@ -649,6 +705,7 @@ export function FeedClient({
   const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [hasMore, setHasMore] = useState(initialPosts.length >= 20)
+  const [filter, setFilter] = useState<FilterKey>("all")
 
   useEffect(() => {
     setNow(Date.now())
@@ -658,11 +715,35 @@ export function FeedClient({
   const observerRef = useRef<HTMLDivElement>(null)
   const cursorRef = useRef<string | null>(initialPosts.at(-1)?.id ?? null)
 
+  // Refetch khi đổi filter (bỏ qua lần mount đầu — đã có initialPosts)
+  const didMountFilter = useRef(false)
+  useEffect(() => {
+    if (!didMountFilter.current) {
+      didMountFilter.current = true
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    fetch(buildFeedUrl(filter))
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        setPosts(data.posts ?? [])
+        setHasMore((data.posts?.length ?? 0) >= 20)
+        cursorRef.current = data.posts?.at(-1)?.id ?? null
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [filter])
+
   const loadMore = useCallback(async () => {
     if (loading || !hasMore || !cursorRef.current) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/posts?cursor=${cursorRef.current}`)
+      const res = await fetch(buildFeedUrl(filter, cursorRef.current))
       const data = await res.json()
       if (data.posts.length < 20) setHasMore(false)
       setPosts((prev) => [...prev, ...data.posts])
@@ -672,7 +753,7 @@ export function FeedClient({
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore])
+  }, [loading, hasMore, filter])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -760,6 +841,25 @@ export function FeedClient({
             onPostCreated={handlePostCreated}
           />
         )}
+
+        {/* Filter chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors",
+                filter === f.key
+                  ? "bg-brand-700 text-white border-brand-700"
+                  : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50",
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
 
         {/* Posts */}
         {posts.length === 0 && !loading && (

@@ -38,6 +38,7 @@ export default async function AdminBannerPage({
         startDate: true,
         endDate: true,
         status: true,
+        position: true,
         price: true,
         rejectReason: true,
         createdAt: true,
@@ -109,7 +110,7 @@ export default async function AdminBannerPage({
                 className="bg-white rounded-xl border border-brand-200 overflow-hidden"
               >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-                  <div className="relative aspect-[16/9] rounded-lg overflow-hidden bg-brand-100">
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-brand-100">
                     <Image
                       src={banner.imageUrl}
                       alt={banner.title}
@@ -122,9 +123,14 @@ export default async function AdminBannerPage({
                   <div className="md:col-span-2 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="font-semibold text-brand-900 line-clamp-2">{banner.title}</h3>
-                      <span className={`shrink-0 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.color}`}>
-                        {status.label}
-                      </span>
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-100 text-brand-700">
+                          {banner.position === "TOP" ? "Đầu trang" : "Giữa trang"}
+                        </span>
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.color}`}>
+                          {status.label}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="text-xs text-brand-600 space-y-0.5">
