@@ -63,7 +63,7 @@ export function DigitalPlatformHero() {
             <Sparkles className="w-3.5 h-3.5" />
             Tính năng mới — Ra mắt 2026
           </span>
-          <h2 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
+          <h2 className="mt-4 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight md:whitespace-nowrap">
             Nền tảng số Hội Trầm Hương Việt Nam
           </h2>
           <p className="mt-4 text-base sm:text-lg text-brand-100 leading-relaxed">
