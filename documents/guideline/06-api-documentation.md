@@ -327,6 +327,25 @@ Dat lai mat khau hoi vien. Yeu cau: ADMIN. Khong ap dung cho tai khoan ADMIN.
 
 **Response:** `{ success: true }`
 
+### POST /api/auth/forgot-password
+Hoi vien tu yeu cau dat lai mat khau tu trang `/quen-mat-khau`. **KHONG can auth.**
+
+**Body:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Process:**
+1. Validate format email
+2. Tim user theo email
+3. Neu khong ton tai HOAC role = ADMIN -> van tra ve `{ success: true }` (chong email enumeration)
+4. Xoa token cu, tao token moi (48h), luu VerificationToken
+5. Gui email voi link `/dat-mat-khau?token=...&email=...` qua Resend
+
+**Response:** luon `{ success: true }` (kể ca khi email khong ton tai)
+
+**Security note:** luon tra success de attacker khong the dung endpoint nay de do email nao da dang ky.
+
 **Errors:**
 - `403` — Khong phai ADMIN
 - `404` — Khong tim thay nguoi dung
@@ -538,6 +557,36 @@ Dat mat khau va kich hoat tai khoan. Dung cho ca 2 flow: kich hoat lan dau va re
 - User.passwordHash cap nhat (bcrypt cost 12)
 - User.isActive = true
 - VerificationToken bi xoa (1 lan dung)
+
+### POST /api/contact
+Form lien he cong khai tai `/lien-he`. **KHONG can auth.**
+
+**Body:**
+```json
+{
+  "name": "Nguyen Van A",
+  "email": "a@example.com",
+  "phone": "0901234567",
+  "message": "Noi dung lien he..."
+}
+```
+
+**Validation:**
+- `name`, `email`, `message`: bat buoc
+- `email`: phai dung format
+- Gioi han do dai: name/email ≤ 200, message ≤ 5000
+- HTML escape toan bo input truoc khi render vao email
+
+**Process:**
+- Gui email qua Resend toi `CONTACT_INBOX_EMAIL` (mac dinh: `hoitramhuongvietnam2010@gmail.com`)
+- `reply-to` = email nguoi gui (admin bam Reply la tra loi dung nguoi lien he)
+- Subject: `[Lien he website] {name}`
+
+**Response:** `{ success: true }` | `{ error: "..." }`
+
+**Env vars:**
+- `RESEND_API_KEY` (bat buoc)
+- `CONTACT_INBOX_EMAIL` (tuy chon, mac dinh fallback)
 
 ---
 

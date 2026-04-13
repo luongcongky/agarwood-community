@@ -15,6 +15,8 @@ function ContactForm() {
   })
   const [submitted, setSubmitted] = useState(false)
   const [errors, setErrors] = useState<Partial<typeof fields>>({})
+  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState("")
 
   function validate() {
     const errs: Partial<typeof fields> = {}
@@ -38,14 +40,32 @@ function ContactForm() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setServerError("")
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
-    setSubmitted(true)
+    setLoading(true)
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fields),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setServerError(json.error ?? "Không thể gửi liên hệ. Vui lòng thử lại.")
+        return
+      }
+      setSubmitted(true)
+    } catch {
+      setServerError("Không thể gửi liên hệ. Vui lòng thử lại.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -75,6 +95,11 @@ function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      {serverError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {serverError}
+        </div>
+      )}
       {/* Name */}
       <div>
         <label
@@ -183,12 +208,14 @@ function ContactForm() {
 
       <button
         type="submit"
+        disabled={loading}
         className={cn(
           "w-full rounded-lg bg-brand-700 px-6 py-3 text-base font-semibold text-white",
-          "transition-colors hover:bg-brand-800 active:bg-brand-900"
+          "transition-colors hover:bg-brand-800 active:bg-brand-900",
+          "disabled:opacity-50 disabled:cursor-not-allowed"
         )}
       >
-        Gửi liên hệ
+        {loading ? "Đang gửi..." : "Gửi liên hệ"}
       </button>
     </form>
   )

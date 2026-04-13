@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 type CreateMode = "password" | "invite"
 
-export default function TaoMoiVIPPage() {
+export default function TaoMoiHoiVienPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -67,7 +67,7 @@ export default function TaoMoiVIPPage() {
         <Link href="/admin/hoi-vien" className="text-brand-600 hover:text-brand-800 text-sm">
           &larr; Quay lại
         </Link>
-        <h1 className="text-2xl font-bold text-brand-900">Tạo tài khoản VIP</h1>
+        <h1 className="text-2xl font-bold text-brand-900">Tạo tài khoản hội viên</h1>
       </div>
 
       {/* Mode selector */}

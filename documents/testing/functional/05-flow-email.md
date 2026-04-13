@@ -73,6 +73,27 @@
 3. Mo tren Gmail mobile -> **Kiem tra**: Responsive dung
 4. Mo tren Outlook -> **Kiem tra**: Khong bi loi CSS
 
+### TC-EMAIL-11: Hoi vien tu yeu cau dat lai mat khau (self-service)
+1. Tai trang `/login`, click link "Quen mat khau?" ben canh nhan mat khau
+2. **Kiem tra**: Chuyen den trang `/quen-mat-khau` voi form nhap email
+3. Nhap email da dang ky -> click "Gui lien ket dat lai"
+4. **Kiem tra**: Trang hien "Kiem tra email cua ban" (generic success)
+5. **Kiem tra**: Hoi vien nhan email "Dat lai mat khau - Hoi Tram Huong Viet Nam"
+6. **Kiem tra**: Link co dang `/dat-mat-khau?token=xxx&email=xxx`
+7. Click link -> nhap mat khau moi -> **Kiem tra**: Dang nhap duoc voi mat khau moi
+8. **Kiem tra email enumeration**: Thu nhap email KHONG ton tai -> van hien success ma khong bao loi (chong lo thong tin user nao da dang ky)
+9. **Kiem tra**: Email ADMIN khong nhan duoc link reset (endpoint tu choi ADMIN)
+
+### TC-EMAIL-12: Form lien he gui email toi Hoi
+1. Truy cap `/lien-he` (khong can dang nhap)
+2. Dien day du ho ten, email, so dien thoai, noi dung -> click "Gui lien he"
+3. **Kiem tra**: Hien thi "Gui thanh cong!" tren trang
+4. **Kiem tra**: Hop thu Hoi (`CONTACT_INBOX_EMAIL`, mac dinh `hoitramhuongvietnam2010@gmail.com`) nhan email voi subject `[Lien he website] {ho ten}`
+5. **Kiem tra**: Email chua day du ho ten, email, so dien thoai, noi dung dung nhu da nhap
+6. Bam Reply trong Gmail -> **Kiem tra**: Dia chi "To" la email cua nguoi lien he (reply-to hoat dong)
+7. **Kiem tra validation**: Bo trong ho ten/email/noi dung -> form khong submit
+8. **Kiem tra XSS**: Nhap `<script>alert(1)</script>` vao noi dung -> email hien thi text thuan, khong execute script
+
 ## Ket qua
 - [ ] TC-EMAIL-01: PASS / FAIL
 - [ ] TC-EMAIL-02: PASS / FAIL
@@ -84,3 +105,5 @@
 - [ ] TC-EMAIL-08: PASS / FAIL
 - [ ] TC-EMAIL-09: PASS / FAIL
 - [ ] TC-EMAIL-10: PASS / FAIL
+- [ ] TC-EMAIL-11: PASS / FAIL
+- [ ] TC-EMAIL-12: PASS / FAIL
