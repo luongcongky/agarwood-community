@@ -17,7 +17,7 @@ interface NewsData {
   excerpt: string
   coverImageUrl: string
   content: string
-  category: "GENERAL" | "RESEARCH"
+  category: "GENERAL" | "RESEARCH" | "LEGAL"
   isPublished: boolean
   isPinned: boolean
   publishedAt: string
@@ -38,7 +38,7 @@ export default function NewsEditorPage({
   const [coverImageUrl, setCoverImageUrl] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState("")
-  const [category, setCategory] = useState<"GENERAL" | "RESEARCH">("GENERAL")
+  const [category, setCategory] = useState<"GENERAL" | "RESEARCH" | "LEGAL">("GENERAL")
   const [isPublished, setIsPublished] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
   const [publishedAt, setPublishedAt] = useState("")
@@ -343,14 +343,16 @@ export default function NewsEditorPage({
                 </label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as "GENERAL" | "RESEARCH")}
+                  onChange={(e) => setCategory(e.target.value as "GENERAL" | "RESEARCH" | "LEGAL")}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                 >
                   <option value="GENERAL">Tin tức (/tin-tuc)</option>
                   <option value="RESEARCH">Nghiên cứu khoa học (/nghien-cuu)</option>
+                  <option value="LEGAL">Văn bản pháp lý (/privacy, /terms)</option>
                 </select>
                 <p className="mt-1 text-[11px] text-brand-400 leading-snug">
-                  Tin tức hiển thị ở trang /tin-tuc. Nghiên cứu khoa học hiển thị ở trang /nghien-cuu.
+                  Tin tức → /tin-tuc. Nghiên cứu khoa học → /nghien-cuu. Văn bản pháp lý chỉ hiển thị
+                  ở /privacy hoặc /terms (theo slug <code>chinh-sach-bao-mat</code>, <code>dieu-khoan-su-dung</code>).
                 </p>
               </div>
 
@@ -481,7 +483,7 @@ export default function NewsEditorPage({
                 <span className="hover:text-brand-700 cursor-default">Trang chủ</span>
                 <span>/</span>
                 <span className="hover:text-brand-700 cursor-default">
-                  {category === "RESEARCH" ? "Nghiên cứu" : "Tin tức"}
+                  {category === "RESEARCH" ? "Nghiên cứu" : category === "LEGAL" ? "Văn bản pháp lý" : "Tin tức"}
                 </span>
                 <span>/</span>
                 <span className="text-foreground font-medium line-clamp-1">

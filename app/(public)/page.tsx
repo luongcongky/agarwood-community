@@ -9,6 +9,7 @@ import {
 import { MemberNewsRail } from "@/components/features/homepage/MemberNewsRail"
 import { CertifiedProductsCarousel } from "@/components/features/homepage/CertifiedProductsCarousel"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
+import { PartnersCarousel } from "@/components/features/homepage/PartnersCarousel"
 import { PostCard } from "@/components/features/homepage/PostCard"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 
@@ -147,8 +148,11 @@ export default async function HomePage() {
         subtitle="Sản phẩm mới giới thiệu hoặc vừa được chứng nhận"
         posts={productPosts}
         emptyText="Chưa có tin sản phẩm nào."
-        bgClass="bg-brand-50"
+        bgClass="bg-white"
       />
+
+      {/* ── Section 7: Đối tác & Cơ quan liên kết ── */}
+      <PartnersCarousel />
     </>
   )
 }
