@@ -22,6 +22,7 @@ import {
   Crown,
   ClipboardList,
   Headset,
+  Handshake,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -41,6 +42,7 @@ export const ADMIN_NAV_ITEMS = [
   { label: "Tin tức",      href: "/admin/tin-tuc",     icon: Newspaper },
   { label: "Khảo sát",     href: "/admin/khao-sat",    icon: ClipboardList },
   { label: "Tư vấn",       href: "/admin/tu-van",      icon: Headset },
+  { label: "Đối tác",      href: "/admin/doi-tac",     icon: Handshake },
   { label: "Cài đặt",      href: "/admin/cai-dat",     icon: Settings },
 ]
 
