@@ -9,6 +9,7 @@ export type QuestionType =
   | "select"
   | "multiselect"
   | "scale"
+  | "files"   // upload nhiều ảnh (giá trị: string[] URLs)
 
 export interface SurveyQuestion {
   id: string
@@ -21,6 +22,8 @@ export interface SurveyQuestion {
   mapsTo?: string
   /** Map giá trị → điểm (cho recommendation engine). Multiselect: cộng dồn. */
   scoreRule?: Record<string, number>
+  /** Chỉ với type=files: tối đa bao nhiêu ảnh (mặc định 5) */
+  maxFiles?: number
 }
 
 export type RecommendedTier = "BASIC" | "SILVER" | "GOLD"

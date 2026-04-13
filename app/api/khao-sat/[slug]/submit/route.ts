@@ -18,6 +18,7 @@ interface Body {
     name?: string
     email?: string
     phone?: string
+    avatarUrl?: string
     companyName?: string
     logoUrl?: string
     submitterType?: "INDIVIDUAL" | "BUSINESS"
@@ -83,6 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       contactName: contact.name?.trim() || null,
       contactEmail: contact.email?.trim().toLowerCase() || null,
       contactPhone: contact.phone?.trim() || null,
+      avatarUrl: contact.avatarUrl?.trim() || null,
       companyName: contact.companyName?.trim() || null,
       logoUrl: contact.logoUrl?.trim() || null,
       submitterType: contact.submitterType || null,

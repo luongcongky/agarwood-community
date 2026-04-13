@@ -26,6 +26,7 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: "select", label: "Chọn 1 đáp án" },
   { value: "multiselect", label: "Chọn nhiều đáp án" },
   { value: "scale", label: "Thang điểm (1-5)" },
+  { value: "files", label: "Upload nhiều ảnh" },
 ]
 
 const ALLOWED_MAPS_TO = listAllowedFields()

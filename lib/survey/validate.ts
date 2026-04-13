@@ -37,6 +37,14 @@ export function validateAnswers(
           if (invalid.length) errors.push(`Câu "${q.label}" có giá trị lạ: ${invalid.join(", ")}`)
         }
         break
+      case "files":
+        if (!Array.isArray(v) || v.some((x) => typeof x !== "string" || !x.startsWith("http"))) {
+          errors.push(`Câu "${q.label}" phải là danh sách URL ảnh`)
+        } else {
+          const max = q.maxFiles ?? 10
+          if (v.length > max) errors.push(`Câu "${q.label}" vượt quá ${max} ảnh`)
+        }
+        break
       case "text":
       case "textarea":
         if (typeof v !== "string") errors.push(`Câu "${q.label}" phải là chuỗi`)

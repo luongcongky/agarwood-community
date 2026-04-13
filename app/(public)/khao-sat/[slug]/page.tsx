@@ -22,7 +22,7 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
   const loggedInUser = session?.user
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { name: true, email: true, phone: true, company: { select: { name: true, logoUrl: true } } },
+        select: { name: true, email: true, phone: true, avatarUrl: true, company: { select: { name: true, logoUrl: true } } },
       })
     : null
 
@@ -50,6 +50,7 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
           name: loggedInUser.name ?? "",
           email: loggedInUser.email ?? "",
           phone: loggedInUser.phone ?? "",
+          avatarUrl: loggedInUser.avatarUrl ?? "",
           companyName: loggedInUser.company?.name ?? "",
           logoUrl: loggedInUser.company?.logoUrl ?? "",
         } : null}

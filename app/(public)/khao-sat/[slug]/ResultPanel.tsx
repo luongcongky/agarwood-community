@@ -94,7 +94,7 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
       )}
 
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-brand-700 via-brand-600 to-amber-600 p-8 text-white shadow-xl text-center">
+      <div className="rounded-2xl bg-linear-to-r from-brand-700 via-brand-600 to-amber-600 p-8 text-white shadow-xl text-center">
         <p className="text-sm uppercase tracking-wider opacity-90">Cảm ơn {contact.name}!</p>
         <h2 className="text-3xl font-bold mt-2">Dựa trên câu trả lời của bạn</h2>
         <p className="mt-3 text-lg">
@@ -107,7 +107,7 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
 
       {/* Consultation CTA */}
       {!submitted ? (
-        <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-amber-100 p-6">
+        <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-r from-amber-50 to-amber-100 p-6">
           <h3 className="text-xl font-bold text-brand-900">
             Muốn tìm hiểu chi tiết phí &amp; quy trình nâng cấp gói {tierLabel}?
           </h3>
