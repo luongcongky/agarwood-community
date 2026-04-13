@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { DigitalPlatformHero } from "@/components/features/survey/DigitalPlatformHero"
 
 export const revalidate = 0
 
@@ -34,10 +35,12 @@ export default async function MemberSurveyListPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <DigitalPlatformHero />
+
       <div>
-        <h1 className="text-2xl font-bold text-brand-900">Khảo sát</h1>
-        <p className="text-sm text-brand-500 mt-1">Tham gia khảo sát giúp Hội phục vụ bạn tốt hơn</p>
+        <h2 className="text-xl font-bold text-brand-900">Khảo sát dành cho bạn</h2>
+        <p className="text-sm text-brand-500 mt-1">Chọn khảo sát bên dưới để bắt đầu</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
