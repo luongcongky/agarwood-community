@@ -71,7 +71,7 @@ export function DigitalPlatformHero() {
             chứng nhận sản phẩm, kết nối đối tác và nhận hỗ trợ truyền thông trực tuyến</strong> —
             tất cả thông qua một nền tảng duy nhất.
           </p>
-          <p className="mt-4 text-sm text-brand-200">
+          <p className="mt-4 text-xs sm:text-sm text-brand-200 lg:whitespace-nowrap">
             Đây là quyền lợi <strong>đã bao gồm</strong> trong phí hội viên hiện tại của bạn.
             Hãy trả lời khảo sát bên dưới để Hội giúp bạn khai thác tối đa lợi ích này.
           </p>
