@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
+import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 
 export const revalidate = 600
 
@@ -377,6 +378,13 @@ export default async function GioiThieuPage() {
               🕐 Thứ 2 - Thứ 6: 8:00 - 17:00
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* ── Kênh truyền thông chính thức + cảnh báo giả mạo ── */}
+      <section className="py-12 lg:py-16 bg-white">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <OfficialChannelsBlock variant="compact" />
         </div>
       </section>
 

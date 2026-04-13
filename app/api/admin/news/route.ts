@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     )
   }
 
-  const validCategory = category === "RESEARCH" ? "RESEARCH" : "GENERAL"
+  const validCategory =
+    category === "RESEARCH" ? "RESEARCH" : category === "LEGAL" ? "LEGAL" : "GENERAL"
 
   const news = await prisma.news.create({
     data: {

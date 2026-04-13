@@ -41,9 +41,23 @@ enum ApplicationStatus {
 }
 
 // Phân loại bài viết trong News
+/// LEGAL — văn bản pháp lý (Chính sách bảo mật, Điều khoản sử dụng) hiển thị
+/// ở /privacy, /terms; KHÔNG xuất hiện trong /tin-tuc hay /nghien-cuu.
 enum NewsCategory {
   GENERAL      // Tin tức ngành — hiển thị ở /tin-tuc
   RESEARCH     // Nghiên cứu khoa học, báo cáo học thuật — hiển thị ở /nghien-cuu
+  LEGAL        // Văn bản pháp lý (privacy, terms) — render trực tiếp ở /privacy, /terms
+}
+
+/// Phân loại đối tác / cơ quan đoàn thể liên kết — dùng cho marquee trang chủ.
+enum PartnerCategory {
+  GOVERNMENT      // Cơ quan quản lý nhà nước (Bộ, Sở, Cục, Tổng cục…)
+  ASSOCIATION     // Hiệp hội, hội nghề nghiệp
+  RESEARCH        // Viện, trường, đơn vị nghiên cứu
+  ENTERPRISE      // Doanh nghiệp đối tác chiến lược
+  INTERNATIONAL   // Tổ chức quốc tế
+  MEDIA           // Cơ quan báo chí, đài phát thanh – truyền hình
+  OTHER           // Khác
 }
 
 enum MembershipStatus {
@@ -715,6 +729,29 @@ model Banner {
   @@index([status, endDate])  // homepage query: ACTIVE + đang trong khoảng startDate-endDate
   @@index([status, position, endDate])  // homepage query tách theo position
   @@map("banners")
+}
+
+// ============================================================
+// PARTNERS — Đối tác / cơ quan đoàn thể liên kết với Hội
+// ============================================================
+
+model Partner {
+  id          String          @id @default(cuid())
+  name        String
+  shortName   String?         // viết tắt để hiển thị khi không có logo (initials fallback)
+  category    PartnerCategory @default(OTHER)
+  logoUrl     String?         // Cloudinary — null = dùng initials placeholder
+  websiteUrl  String?         // link mở tab mới khi click; null = không clickable
+  description String?         // hiển thị tooltip / hover
+  sortOrder   Int             @default(0) // số nhỏ = ưu tiên hiển thị trước
+  isActive    Boolean         @default(true)
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([category])
+  @@map("partners")
 }
 
 // ============================================================
