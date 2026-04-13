@@ -887,20 +887,39 @@ model Survey {
   @@map("surveys")
 }
 
+/**
+ * Phản hồi khảo sát — cho phép cả user đã đăng nhập và khách public.
+ *  - userId: set nếu người trả lời là member đã login (giữ mirror mapsTo)
+ *  - contact*: thông tin user tự điền (bắt buộc với public submissions)
+ *  - submitterType: "INDIVIDUAL" | "BUSINESS" — user tự chọn ở step đầu
+ */
 model SurveyResponse {
   id          String   @id @default(cuid())
   surveyId    String
-  userId      String
-  answers     Json     // { [questionId]: value }
-  score       Int?     // điểm tính từ scoreRule — dùng cho recommendation
-  recommendedTier String?  // "BASIC" | "SILVER" | "GOLD" — snapshot tại thời điểm submit
-  submittedAt DateTime @default(now())
+  userId      String?
 
-  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Contact info (do user tự điền, bắt buộc cho anon)
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  companyName    String?
+  logoUrl        String?
+  submitterType  String?  // "INDIVIDUAL" | "BUSINESS"
 
-  @@unique([surveyId, userId])
+  answers         Json
+  score           Int?
+  recommendedTier String?
+  submittedAt     DateTime @default(now())
+
+  // IP để dedupe / rate-limit theo request (tùy chọn lưu)
+  submitterIp String?
+
+  survey Survey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   @@index([surveyId, submittedAt])
+  @@index([userId])
+  @@index([contactEmail])
   @@map("survey_responses")
 }
 
@@ -911,10 +930,11 @@ model SurveyResponse {
  */
 model ConsultationRequest {
   id          String             @id @default(cuid())
-  userId      String
+  userId      String?            // null nếu anon (từ /khao-sat public)
   fullName    String
   phone       String
   email       String?
+  companyName String?
   note        String?            @db.Text
   context     String?            // "survey:member-onboarding" — nguồn phát sinh
   recommendedTier String?
@@ -924,7 +944,7 @@ model ConsultationRequest {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
-  user        User               @relation("ConsultationRequester", fields: [userId], references: [id], onDelete: Cascade)
+  user        User?              @relation("ConsultationRequester", fields: [userId], references: [id], onDelete: SetNull)
   handledBy   User?              @relation("ConsultationHandler", fields: [handledById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])

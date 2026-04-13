@@ -34,7 +34,6 @@ export const VIP_NAV_ITEMS: VipNavItem[] = [
   { label: "Chứng nhận SP",    href: "/chung-nhan",           icon: BadgeCheck, businessOnly: true },
   { label: "Đơn kết nạp",      href: "/ket-nap",              icon: FileCheck },
   { label: "Tài liệu",         href: "/tai-lieu",             icon: FileText },
-  { label: "Khảo sát",         href: "/khao-sat",             icon: ClipboardList },
   { label: "Gia hạn",          href: "/gia-han",              icon: RefreshCw },
   { label: "Lịch sử CK",       href: "/thanh-toan/lich-su",   icon: CreditCard },
 ]

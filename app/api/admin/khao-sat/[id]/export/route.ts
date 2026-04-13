@@ -29,7 +29,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const headers = [
     "Họ tên",
     "Email",
-    "Account",
+    "SĐT",
+    "Doanh nghiệp",
+    "Logo URL",
+    "Loại",
+    "Nguồn",
     "Submitted",
     "Score",
     "Recommended",
@@ -37,10 +41,15 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   ]
   const rows = responses.map((r) => {
     const a = r.answers as unknown as SurveyAnswers
+    const source = r.userId ? `Hội viên: ${r.user?.name ?? ""}` : "Anon (public)"
     return [
-      r.user.name,
-      r.user.email,
-      r.user.accountType,
+      r.contactName ?? r.user?.name ?? "",
+      r.contactEmail ?? r.user?.email ?? "",
+      r.contactPhone ?? "",
+      r.companyName ?? "",
+      r.logoUrl ?? "",
+      r.submitterType ?? r.user?.accountType ?? "",
+      source,
       r.submittedAt.toISOString(),
       r.score ?? "",
       r.recommendedTier ?? "",
@@ -49,7 +58,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   })
 
   const csv =
-    "\uFEFF" + // BOM cho Excel hiểu UTF-8
+    "\uFEFF" +
     [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n")
 
   return new Response(csv, {
