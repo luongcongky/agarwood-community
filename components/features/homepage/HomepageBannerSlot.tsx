@@ -1,47 +1,55 @@
 import { unstable_cache } from "next/cache"
+import type { BannerPosition } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { BannerCarousel } from "./BannerCarousel"
 
 /**
- * Section 4 — Banner quảng cáo (Phase 6).
+ * Banner quảng cáo trang chủ — tách theo position (TOP / MID).
  *
- * Fetch top 20 banner ACTIVE đang trong khoảng startDate ≤ now ≤ endDate.
- * Priority sort: Hội viên★★★ Vàng → Hội viên★★ Bạc → Hội viên★ → Tài khoản cơ bản → ADMIN
- * (sort theo `contributionTotal DESC` của owner — proxy cho tier)
- *
- * Cache 60s để tránh query liên tục, cùng tag "homepage" + "banners".
+ * Fetch top 20 banner ACTIVE đang trong khoảng startDate ≤ now ≤ endDate,
+ * lọc theo vị trí hiển thị. Priority sort theo `contributionTotal DESC` của owner.
+ * Cache 60s mỗi position, tag "homepage" + "banners".
  */
 
-const getActiveBanners = unstable_cache(
-  async () => {
-    const now = new Date()
-    const banners = await prisma.banner.findMany({
-      where: {
-        status: "ACTIVE",
-        startDate: { lte: now },
-        endDate: { gte: now },
-      },
-      orderBy: [
-        // Priority: contributionTotal DESC = VIP cao nhất trước, GUEST cuối
-        { user: { contributionTotal: "desc" } },
-        { createdAt: "desc" },
-      ],
-      take: 20,
-      select: {
-        id: true,
-        title: true,
-        imageUrl: true,
-        targetUrl: true,
-      },
-    })
-    return banners
-  },
-  ["homepage_active_banners"],
-  { revalidate: 60, tags: ["homepage", "banners"] },
-)
+const getActiveBanners = (position: BannerPosition) =>
+  unstable_cache(
+    async () => {
+      const now = new Date()
+      return prisma.banner.findMany({
+        where: {
+          status: "ACTIVE",
+          position,
+          startDate: { lte: now },
+          endDate: { gte: now },
+        },
+        orderBy: [
+          { user: { contributionTotal: "desc" } },
+          { createdAt: "desc" },
+        ],
+        take: 20,
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+          targetUrl: true,
+        },
+      })
+    },
+    [`homepage_active_banners_${position}`],
+    { revalidate: 60, tags: ["homepage", "banners"] },
+  )()
 
-export async function HomepageBannerSlot() {
-  const banners = await getActiveBanners()
+const POSITION_COPY: Record<BannerPosition, string> = {
+  TOP: "Vị trí Banner — Đầu trang chủ",
+  MID: "Vị trí Banner — Giữa trang chủ",
+}
+
+export async function HomepageBannerSlot({
+  position = "MID",
+}: {
+  position?: BannerPosition
+}) {
+  const banners = await getActiveBanners(position)
 
   if (banners.length === 0) {
     return (
@@ -49,7 +57,7 @@ export async function HomepageBannerSlot() {
         <div className="mx-auto max-w-7xl px-4">
           <div className="rounded-xl border-2 border-dashed border-brand-300 bg-white p-8 text-center">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Vị trí Banner Quảng cáo
+              {POSITION_COPY[position]}
             </p>
             <p className="text-sm text-brand-600">
               Doanh nghiệp hội viên có thể đăng ký banner quảng cáo tại vị trí này.

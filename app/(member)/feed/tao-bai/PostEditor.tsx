@@ -5,6 +5,17 @@ import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
+import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
+
+/** Slugify tiếng Việt → a-z, 0-9, dấu gạch ngang */
+function slugify(str: string): string {
+  return str
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,7 +55,7 @@ type PostCategoryClient = "GENERAL" | "NEWS" | "PRODUCT"
 const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
   { value: "GENERAL", label: "Bài viết chung", hint: "Hiển thị ở Bản tin hội viên" },
   { value: "NEWS",    label: "Tin doanh nghiệp", hint: "Có thể lên section tin DN trang chủ (nếu là Hội viên)" },
-  { value: "PRODUCT", label: "Tin sản phẩm", hint: "Giới thiệu / chứng nhận SP — có thể lên trang chủ (nếu là Hội viên)" },
+  { value: "PRODUCT", label: "Sản phẩm", hint: "Tạo sản phẩm mới — kèm thẻ giá, chứng nhận, liên kết marketplace" },
 ]
 
 type QuotaInfo = { used: number; limit: number; remaining: number; resetAt: string }
@@ -53,9 +64,18 @@ function TaoBaiContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("edit")
+  const initialCategory = searchParams.get("category") as PostCategoryClient | null
   const editorRef = useRef<RichTextEditorHandle>(null)
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState<PostCategoryClient>("GENERAL")
+  const [category, setCategory] = useState<PostCategoryClient>(
+    initialCategory === "NEWS" || initialCategory === "PRODUCT" ? initialCategory : "GENERAL",
+  )
+  // Product sidecar — chỉ dùng khi category=PRODUCT
+  const [productName, setProductName] = useState("")
+  const [productSlug, setProductSlug] = useState("")
+  const [productSlugEdited, setProductSlugEdited] = useState(false)
+  const [productCategory, setProductCategory] = useState("")
+  const [productPriceRange, setProductPriceRange] = useState("")
   const [preview, setPreview] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +91,12 @@ function TaoBaiContent() {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editIdRef = useRef(editId)
   editIdRef.current = editId
+
+  // Auto-generate slug sản phẩm từ tên (trừ khi user đã chỉnh)
+  useEffect(() => {
+    if (productSlugEdited) return
+    setProductSlug(slugify(productName))
+  }, [productName, productSlugEdited])
 
   // Fetch quota — chỉ khi tạo mới
   useEffect(() => {
@@ -235,6 +261,18 @@ function TaoBaiContent() {
       setError("Nội dung cần ít nhất 50 ký tự")
       return
     }
+    // Validate product sidecar khi category=PRODUCT
+    const isProduct = !editId && category === "PRODUCT"
+    if (isProduct) {
+      if (!productName.trim() || productName.trim().length < 2) {
+        setError("Vui lòng nhập tên sản phẩm (tối thiểu 2 ký tự)")
+        return
+      }
+      if (!/^[a-z0-9-]+$/.test(productSlug) || productSlug.length < 2) {
+        setError("Slug sản phẩm không hợp lệ (chỉ a-z, 0-9, dấu gạch ngang)")
+        return
+      }
+    }
     setError(null)
     setSubmitting(true)
     try {
@@ -251,6 +289,16 @@ function TaoBaiContent() {
           title: title || undefined,
           content: html,
           ...(editId ? {} : { category }),
+          ...(isProduct
+            ? {
+                product: {
+                  name: productName.trim(),
+                  slug: productSlug.trim(),
+                  category: productCategory || undefined,
+                  priceRange: productPriceRange || undefined,
+                },
+              }
+            : {}),
         }),
       })
       if (res.ok) {
@@ -331,6 +379,71 @@ function TaoBaiContent() {
               {opt.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Product sidecar panel — chỉ khi tạo mới + category=PRODUCT */}
+      {!editId && category === "PRODUCT" && (
+        <div className="bg-white rounded-xl border border-brand-200 p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-brand-900">Thông tin sản phẩm</h3>
+            <p className="text-xs text-brand-500 mt-0.5">
+              Bài này sẽ đồng thời được tạo dưới dạng sản phẩm trên marketplace và hiển thị trong feed với thẻ giá + nút xem chi tiết.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">
+                Tên sản phẩm <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="VD: Nhang trầm cao cấp Khánh Hòa"
+                className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">
+                Slug (URL) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={productSlug}
+                onChange={(e) => {
+                  setProductSlug(e.target.value)
+                  setProductSlugEdited(true)
+                }}
+                placeholder="nhang-tram-cao-cap-khanh-hoa"
+                className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono"
+              />
+              <p className="text-[11px] text-brand-400 mt-0.5">Tự sinh từ tên; có thể chỉnh thủ công.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">Danh mục</label>
+              <select
+                value={productCategory}
+                onChange={(e) => setProductCategory(e.target.value)}
+                className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm bg-white"
+              >
+                <option value="">— Chọn danh mục —</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">Khoảng giá</label>
+              <input
+                type="text"
+                value={productPriceRange}
+                onChange={(e) => setProductPriceRange(e.target.value)}
+                placeholder="500k - 2tr, Liên hệ,..."
+                className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
         </div>
       )}
 

@@ -39,9 +39,10 @@ export function BannerRegisterForm() {
   const [step, setStep] = useState<Step>(1)
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
 
-  // Step 1: schedule
+  // Step 1: schedule + position
   const [startDate, setStartDate] = useState(todayPlusDays(1))
   const [endDate, setEndDate] = useState(todayPlusDays(31))
+  const [position, setPosition] = useState<"TOP" | "MID">("TOP")
 
   // Step 2: content
   const [imageUrl, setImageUrl] = useState("")
@@ -121,7 +122,7 @@ export function BannerRegisterForm() {
       const res = await fetch("/api/banner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, targetUrl, title, startDate, endDate }),
+        body: JSON.stringify({ imageUrl, targetUrl, title, startDate, endDate, position }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -209,6 +210,31 @@ export function BannerRegisterForm() {
               <p className="text-sm text-brand-500 mt-0.5">
                 Banner sẽ hiển thị trên trang chủ trong khoảng thời gian này (tối thiểu 1 tháng).
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-brand-800 mb-2">Vị trí hiển thị</label>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { value: "TOP", label: "Đầu trang chủ", desc: "Ngay sau thanh menu" },
+                  { value: "MID", label: "Giữa trang chủ", desc: "Sau khu sản phẩm chứng nhận" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPosition(opt.value)}
+                    className={cn(
+                      "rounded-lg border p-3 text-left transition-colors",
+                      position === opt.value
+                        ? "border-brand-700 bg-brand-50 ring-1 ring-brand-700"
+                        : "border-brand-200 hover:bg-brand-50/50",
+                    )}
+                  >
+                    <p className="text-sm font-semibold text-brand-900">{opt.label}</p>
+                    <p className="text-xs text-brand-500 mt-0.5">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -402,6 +428,12 @@ export function BannerRegisterForm() {
 
             {/* Summary */}
             <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-5 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-brand-600">Vị trí:</span>
+                <span className="font-semibold text-brand-900">
+                  {position === "TOP" ? "Đầu trang chủ" : "Giữa trang chủ"}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-brand-600">Tiêu đề:</span>
                 <span className="font-semibold text-brand-900 text-right">{title}</span>

@@ -37,7 +37,6 @@ export function Footer() {
             <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
               {[
                 { label: "Trang chủ",         href: "/" },
-                { label: "Giới thiệu",        href: "/gioi-thieu" },
                 { label: "Doanh nghiệp",      href: "/doanh-nghiep" },
                 { label: "Dịch vụ",           href: "/dich-vu" },
                 { label: "Điều lệ Hội",       href: "/dieu-le" },

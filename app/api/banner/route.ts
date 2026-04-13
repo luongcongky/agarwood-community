@@ -22,18 +22,20 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { imageUrl, targetUrl, title, startDate, endDate } = body as {
+  const { imageUrl, targetUrl, title, startDate, endDate, position } = body as {
     imageUrl?: string
     targetUrl?: string
     title?: string
     startDate?: string
     endDate?: string
+    position?: "TOP" | "MID"
   }
 
   // Validate fields
   if (!imageUrl || !targetUrl || !title || !startDate || !endDate) {
     return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 })
   }
+  const bannerPosition: "TOP" | "MID" = position === "MID" ? "MID" : "TOP"
   if (!/^https:\/\//.test(targetUrl)) {
     return NextResponse.json({ error: "Đường dẫn đích phải bắt đầu bằng https://" }, { status: 400 })
   }
@@ -118,6 +120,7 @@ export async function POST(request: Request) {
         endDate: end,
         status: "PENDING_PAYMENT",
         price: totalPrice,
+        position: bannerPosition,
       },
     })
     const payment = await tx.payment.create({

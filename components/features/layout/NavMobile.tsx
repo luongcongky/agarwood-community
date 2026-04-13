@@ -70,9 +70,9 @@ export function NavMobile({ links, isLoggedIn }: NavMobileProps) {
                       lineHeight: 1,
                       color: "#ef4444",
                     }}
-                    className="font-bold uppercase"
+                    className="font-bold uppercase ml-0.5"
                   >
-                    News
+                    Thử nghiệm
                   </span>
                 )}
               </Link>
