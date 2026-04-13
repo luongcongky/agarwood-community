@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Các package CJS cần jsdom — Turbopack không bundle được nên để Node require trực tiếp.
+  serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
   images: {
     remotePatterns: [
       {
