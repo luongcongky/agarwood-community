@@ -56,12 +56,13 @@ export default async function ConsultationListPage() {
                   fullName: c.fullName,
                   phone: c.phone,
                   email: c.email,
+                  companyName: c.companyName,
                   note: c.note,
                   recommendedTier: c.recommendedTier,
                   context: c.context,
                   createdAt: c.createdAt.toISOString(),
                   handledByName: c.handledBy?.name ?? null,
-                  user: { name: c.user.name, email: c.user.email, accountType: c.user.accountType },
+                  user: c.user ? { name: c.user.name, email: c.user.email, accountType: c.user.accountType } : null,
                   statusLabel: STATUS_LABEL[c.status],
                 }} />
               ))}

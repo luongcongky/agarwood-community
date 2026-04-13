@@ -10,19 +10,36 @@ import {
   syncAnswersToProfile,
   validateAnswers,
 } from "@/lib/survey"
+import { checkRateLimit, getClientIp } from "@/lib/survey/rate-limit"
 
-// POST /api/khao-sat/[slug]/submit
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Bạn cần đăng nhập" }, { status: 401 })
+interface Body {
+  answers?: SurveyAnswers
+  contact?: {
+    name?: string
+    email?: string
+    phone?: string
+    companyName?: string
+    logoUrl?: string
+    submitterType?: "INDIVIDUAL" | "BUSINESS"
+  }
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^[\d\s+()-]{8,15}$/
+
+export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const ip = getClientIp(request.headers)
+  const rl = checkRateLimit(`submit:${ip}`, 10, 60 * 60 * 1000) // 10 submissions / giờ / IP
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: `Quá nhiều yêu cầu, vui lòng thử lại sau ${Math.ceil(rl.resetInMs / 60_000)} phút` },
+      { status: 429 }
+    )
   }
 
   const { slug } = await params
-  const body = (await request.json().catch(() => null)) as { answers?: SurveyAnswers } | null
+  const session = await auth()
+  const body = (await request.json().catch(() => null)) as Body | null
   if (!body?.answers || typeof body.answers !== "object") {
     return NextResponse.json({ error: "Thiếu answers" }, { status: 400 })
   }
@@ -33,18 +50,19 @@ export async function POST(
     return NextResponse.json({ error: "Khảo sát đang đóng" }, { status: 409 })
   }
 
-  // Audience check
-  const dbUser = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { accountType: true, role: true },
-  })
-  if (!dbUser) return NextResponse.json({ error: "User không tồn tại" }, { status: 404 })
-  if (
-    (survey.audience === "BUSINESS" && dbUser.accountType !== "BUSINESS") ||
-    (survey.audience === "INDIVIDUAL" && dbUser.accountType !== "INDIVIDUAL") ||
-    (survey.audience === "BOTH_VIP" && dbUser.role !== "VIP")
-  ) {
-    return NextResponse.json({ error: "Bạn không thuộc đối tượng khảo sát" }, { status: 403 })
+  // Validate contact (bắt buộc nếu anon, optional nếu đã login)
+  const contact = body.contact ?? {}
+  const isAnon = !session?.user?.id
+  if (isAnon) {
+    if (!contact.name || contact.name.trim().length < 2) {
+      return NextResponse.json({ error: "Vui lòng nhập họ tên" }, { status: 400 })
+    }
+    if (!contact.email || !EMAIL_RE.test(contact.email.trim())) {
+      return NextResponse.json({ error: "Email không hợp lệ" }, { status: 400 })
+    }
+    if (!contact.phone || !PHONE_RE.test(contact.phone.trim())) {
+      return NextResponse.json({ error: "Số điện thoại không hợp lệ" }, { status: 400 })
+    }
   }
 
   const questions = survey.questions as unknown as SurveyQuestion[]
@@ -58,29 +76,30 @@ export async function POST(
   const score = calcScore(questions, body.answers)
   const tier = recommendTier(score, config)
 
-  // Upsert response
-  const response = await prisma.surveyResponse.upsert({
-    where: { surveyId_userId: { surveyId: survey.id, userId: session.user.id } },
-    create: {
+  const response = await prisma.surveyResponse.create({
+    data: {
       surveyId: survey.id,
-      userId: session.user.id,
+      userId: session?.user?.id ?? null,
+      contactName: contact.name?.trim() || null,
+      contactEmail: contact.email?.trim().toLowerCase() || null,
+      contactPhone: contact.phone?.trim() || null,
+      companyName: contact.companyName?.trim() || null,
+      logoUrl: contact.logoUrl?.trim() || null,
+      submitterType: contact.submitterType || null,
       answers: body.answers,
       score,
       recommendedTier: tier,
-    },
-    update: {
-      answers: body.answers,
-      score,
-      recommendedTier: tier,
-      submittedAt: new Date(),
+      submitterIp: ip,
     },
   })
 
-  // Mirror sang profile (best-effort, không block response)
-  try {
-    await syncAnswersToProfile(session.user.id, questions, body.answers)
-  } catch (e) {
-    console.error("syncAnswersToProfile failed:", e)
+  // Mirror answers → profile chỉ khi có user đã login (best-effort)
+  if (session?.user?.id) {
+    try {
+      await syncAnswersToProfile(session.user.id, questions, body.answers)
+    } catch (e) {
+      console.error("syncAnswersToProfile failed:", e)
+    }
   }
 
   return NextResponse.json({ id: response.id, score, recommendedTier: tier })

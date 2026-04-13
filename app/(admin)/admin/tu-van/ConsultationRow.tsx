@@ -9,12 +9,13 @@ interface Item {
   fullName: string
   phone: string
   email: string | null
+  companyName: string | null
   note: string | null
   recommendedTier: string | null
   context: string | null
   createdAt: string
   handledByName: string | null
-  user: { name: string; email: string; accountType: string }
+  user: { name: string; email: string; accountType: string } | null
   statusLabel: string
 }
 
@@ -39,7 +40,12 @@ export function ConsultationRow({ item }: { item: Item }) {
     <tr className="hover:bg-brand-50/50 align-top">
       <td className="px-4 py-3">
         <div className="font-medium text-brand-900">{item.fullName}</div>
-        <div className="text-xs text-brand-500">User: {item.user.name} ({item.user.accountType})</div>
+        {item.companyName && <div className="text-xs text-brand-600">{item.companyName}</div>}
+        {item.user ? (
+          <div className="text-xs text-brand-500">Hội viên: {item.user.name} ({item.user.accountType})</div>
+        ) : (
+          <div className="text-xs text-amber-600">Anon (public)</div>
+        )}
       </td>
       <td className="px-4 py-3 text-xs">
         <div>{item.phone}</div>
