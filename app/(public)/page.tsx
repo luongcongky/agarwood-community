@@ -79,7 +79,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Section 1 — Tin tức Hội (col 1+2) */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="min-w-0 lg:col-span-2 space-y-6">
               <header>
                 <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
                   Tin tức của Hội
@@ -116,7 +116,7 @@ export default async function HomePage() {
             </div>
 
             {/* Section 2 — Bản tin hội viên (right rail) */}
-            <div className="lg:col-span-1">
+            <div className="min-w-0 lg:col-span-1">
               <MemberNewsRail />
             </div>
           </div>

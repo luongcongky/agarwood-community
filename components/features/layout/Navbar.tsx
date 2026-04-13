@@ -109,7 +109,7 @@ export async function Navbar() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1" aria-label="Navigation chính">
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Navigation chính">
             {links.map((link) =>
               link.comingSoon ? (
                 <span
@@ -150,7 +150,7 @@ export async function Navbar() {
           {/* Right side */}
           <div className="flex items-center gap-2">
             {/* Social icons luôn hiển thị ở navbar công khai */}
-            <div className="hidden md:flex">
+            <div className="hidden lg:flex">
               <SocialLinks facebookUrl={facebookUrl} youtubeUrl={youtubeUrl} variant="navbar" />
             </div>
 
@@ -164,7 +164,7 @@ export async function Navbar() {
                 mode={mode}
               />
             ) : (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
                 <Link
                   href="/login"
                   className="px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
