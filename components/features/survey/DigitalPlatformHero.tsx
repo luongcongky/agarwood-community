@@ -54,7 +54,7 @@ export function DigitalPlatformHero() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-800 via-brand-700 to-amber-800 p-8 sm:p-10 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-brand-800 via-brand-700 to-amber-800 p-8 sm:p-10 text-white shadow-xl">
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: "radial-gradient(circle at 20% 30%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, #fbbf24 0, transparent 40%)",
         }} />
@@ -85,7 +85,7 @@ export function DigitalPlatformHero() {
             key={title}
             className="group rounded-2xl border-2 border-brand-200 bg-white p-5 transition-all hover:border-amber-400 hover:shadow-lg hover:-translate-y-0.5"
           >
-            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-sm mb-3 group-hover:scale-110 transition-transform">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 text-white shadow-sm mb-3 group-hover:scale-110 transition-transform">
               <Icon className="w-5 h-5" />
             </div>
             <h3 className="font-bold text-brand-900 mb-1">{title}</h3>
@@ -95,7 +95,7 @@ export function DigitalPlatformHero() {
       </div>
 
       {/* Pitch */}
-      <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-amber-100 p-5 text-center">
+      <div className="rounded-2xl border-2 border-amber-300 bg-linear-to-r from-amber-50 to-amber-100 p-5 text-center">
         <p className="text-sm sm:text-base font-semibold text-brand-900">
           💡 <span className="text-amber-800">Dành 3-5 phút</span> trả lời khảo sát
           để Ban Quản trị <span className="text-amber-800">gợi ý gói quyền lợi phù hợp nhất</span> với
