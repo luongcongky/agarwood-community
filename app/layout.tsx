@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google"
 import Script from "next/script"
+import { ProgressBar } from "@/components/features/layout/ProgressBar"
 import "./globals.css"
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -64,6 +65,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col antialiased" suppressHydrationWarning>
+        <ProgressBar />
         {children}
 
         {/* Google Analytics 4 */}
