@@ -84,6 +84,13 @@ const businessQuestions = [
     helpText: "VD: Giám đốc, Chủ tịch HĐQT",
   },
   {
+    id: "representative_cccd",
+    label: "Số CCCD/CMND của người đại diện",
+    type: "text",
+    required: true,
+    helpText: "12 số (CCCD) hoặc 9 số (CMND cũ). Chỉ dùng cho xét duyệt hội viên, được bảo mật.",
+  },
+  {
     id: "company_address",
     label: "Địa chỉ trụ sở",
     type: "textarea",
@@ -263,6 +270,13 @@ const businessQuestions = [
 const individualQuestions = [
   // Lưu ý: name/email/phone được thu thập ở Bước 1 (contact step).
   // Dưới đây chỉ là các câu chuyên môn.
+  {
+    id: "cccd",
+    label: "Số CCCD/CMND của bạn",
+    type: "text",
+    required: true,
+    helpText: "12 số (CCCD) hoặc 9 số (CMND cũ). Chỉ dùng cho xét duyệt hội viên, được bảo mật.",
+  },
   {
     id: "role_in_industry",
     label: "Vai trò chính của bạn trong ngành trầm hương",
