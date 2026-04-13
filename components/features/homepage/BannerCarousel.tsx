@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import Image from "next/image"
+import { cloudinaryFit } from "@/lib/cloudinary"
 
 type BannerItem = {
   id: string
@@ -68,14 +68,31 @@ export function BannerCarousel({ banners }: Props) {
             }`}
             aria-hidden={idx !== safeActiveIdx}
           >
-            <Image
-              src={banner.imageUrl}
-              alt={banner.title}
-              fill
-              priority={idx === 0}
-              className="object-cover"
-              sizes="(max-width: 1280px) 100vw, 1280px"
-            />
+            {/*
+              Responsive crop bằng Cloudinary transformation:
+              - lg (≥1024px): 5:1 (1280×256 → ~2560×512 retina)
+              - sm (≥640px):  21:9 (640×274 → ~1280×548 retina)
+              - mobile:       16:9 (640×360 → ~1280×720 retina)
+              g_auto: AI tự chọn trọng tâm. f_auto+q_auto: webp/avif tự chọn theo trình duyệt.
+            */}
+            <picture>
+              <source
+                media="(min-width: 1024px)"
+                srcSet={cloudinaryFit(banner.imageUrl, { ar: "5:1", w: 2560 })}
+              />
+              <source
+                media="(min-width: 640px)"
+                srcSet={cloudinaryFit(banner.imageUrl, { ar: "21:9", w: 1280 })}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cloudinaryFit(banner.imageUrl, { ar: "16:9", w: 1280 })}
+                alt={banner.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading={idx === 0 ? "eager" : "lazy"}
+                fetchPriority={idx === 0 ? "high" : "auto"}
+              />
+            </picture>
             {/* Title overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-4">
               <p className="text-white text-sm sm:text-base font-semibold line-clamp-1">

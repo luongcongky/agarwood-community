@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { cloudinaryFit } from "@/lib/cloudinary"
 
 type Step = 1 | 2 | 3 | 4
 
@@ -306,22 +307,47 @@ export function BannerRegisterForm() {
             <div>
               <h2 className="text-lg font-bold text-brand-900">Nội dung banner</h2>
               <p className="text-sm text-brand-500 mt-0.5">
-                Tải lên ảnh banner (khuyến nghị tỉ lệ 16:9, tối đa 5MB), nhập tiêu đề và link đích.
+                Tải lên ảnh banner, nhập tiêu đề và link đích. Hệ thống tự cắt ảnh
+                theo trọng tâm cho 3 kích thước hiển thị.
               </p>
+            </div>
+
+            {/* Spec guideline */}
+            <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-4 space-y-2 text-xs text-brand-700">
+              <p className="font-semibold text-brand-900 text-sm">📐 Hướng dẫn kích thước</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>
+                  <strong>Khuyến nghị</strong>: ảnh ngang, tỉ lệ <strong>5:1</strong> — kích
+                  thước tối ưu <strong>2560×512 px</strong> (≥1280×256)
+                </li>
+                <li>
+                  Định dạng: JPG / PNG / WebP, dung lượng <strong>≤ 2MB</strong>
+                </li>
+                <li>
+                  Hệ thống <strong>tự crop theo trọng tâm</strong> qua Cloudinary AI khi
+                  hiển thị ở 3 kích thước responsive (5:1 desktop, 21:9 tablet, 16:9 mobile).
+                  Đặt nội dung quan trọng vào <strong>vùng giữa</strong> để tránh bị cắt ở
+                  màn hẹp.
+                </li>
+                <li>Tránh chữ quá nhỏ — tiêu đề trên ảnh nên ≥ 48px ở kích thước gốc.</li>
+              </ul>
             </div>
 
             {/* Image upload */}
             <div>
               <label className="block text-sm font-medium text-brand-800 mb-2">Ảnh banner *</label>
               {imageUrl ? (
-                <div className="relative">
-                  <div className="relative aspect-video rounded-lg overflow-hidden border border-brand-200 bg-brand-50">
-                    <Image src={imageUrl} alt="Preview" fill className="object-cover" sizes="600px" />
+                <div className="space-y-3">
+                  <div
+                    className="relative w-full overflow-hidden rounded-lg border border-brand-200 bg-brand-50"
+                    style={{ aspectRatio: "5 / 1" }}
+                  >
+                    <Image src={imageUrl} alt="Ảnh gốc" fill className="object-cover" sizes="600px" />
                   </div>
                   <button
                     type="button"
                     onClick={() => setImageUrl("")}
-                    className="mt-2 text-xs text-red-600 hover:underline"
+                    className="text-xs text-red-600 hover:underline"
                   >
                     Xóa ảnh và tải lại
                   </button>
@@ -331,7 +357,8 @@ export function BannerRegisterForm() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-full aspect-video rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/50 hover:bg-brand-50 hover:border-brand-400 transition-colors flex flex-col items-center justify-center text-brand-500 disabled:opacity-50"
+                  className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/50 hover:bg-brand-50 hover:border-brand-400 transition-colors flex flex-col items-center justify-center text-brand-500 disabled:opacity-50"
+                  style={{ aspectRatio: "5 / 1" }}
                 >
                   {uploading ? (
                     <div className="size-8 border-4 border-brand-400 border-t-transparent rounded-full animate-spin" />
@@ -339,7 +366,9 @@ export function BannerRegisterForm() {
                     <>
                       <span className="text-3xl mb-2">📷</span>
                       <span className="text-sm font-medium">Click để tải lên</span>
-                      <span className="text-xs text-brand-400 mt-1">Tỉ lệ 16:9 hoặc 3:1, max 5MB</span>
+                      <span className="text-xs text-brand-400 mt-1">
+                        Khuyến nghị 2560×512 (tỉ lệ 5:1), ≤ 2MB
+                      </span>
                     </>
                   )}
                 </button>
@@ -356,6 +385,16 @@ export function BannerRegisterForm() {
                 }}
               />
             </div>
+
+            {/* Preview như trên trang chủ — 3 breakpoint */}
+            {imageUrl && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-brand-900">
+                  👀 Xem trước hiển thị thực tế trên trang chủ
+                </p>
+                <BannerPreview imageUrl={imageUrl} />
+              </div>
+            )}
 
             {/* Title */}
             <div>
@@ -556,6 +595,44 @@ function BankRow({ label, value, mono, highlight }: { label: string; value: stri
       >
         {value}
       </span>
+    </div>
+  )
+}
+
+/**
+ * Preview banner ở 3 breakpoint giống thực tế trên trang chủ.
+ * URL được rewrite qua Cloudinary transformation để đúng cảm giác cuối cùng.
+ */
+function BannerPreview({ imageUrl }: { imageUrl: string }) {
+  const previews: { label: string; ar: string; w: number }[] = [
+    { label: "Desktop (≥1024px) — tỉ lệ 5:1", ar: "5:1", w: 1280 },
+    { label: "Tablet (640-1023px) — tỉ lệ 21:9", ar: "21:9", w: 720 },
+    { label: "Mobile (<640px) — tỉ lệ 16:9", ar: "16:9", w: 480 },
+  ]
+
+  return (
+    <div className="space-y-3">
+      {previews.map((p) => (
+        <div key={p.ar} className="space-y-1">
+          <p className="text-xs text-brand-500">{p.label}</p>
+          <div
+            className="relative w-full overflow-hidden rounded-lg border border-brand-200 bg-brand-100"
+            style={{ aspectRatio: p.ar.replace(":", " / ") }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={cloudinaryFit(imageUrl, { ar: p.ar, w: p.w })}
+              alt={`Preview ${p.label}`}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      ))}
+      <p className="text-[11px] text-brand-500 italic">
+        ⓘ Cloudinary AI tự chọn vùng trọng tâm khi cắt — nếu phần quan trọng bị cắt
+        (logo / chữ chính), hãy upload lại ảnh có chủ thể nằm ở trung tâm.
+      </p>
     </div>
   )
 }
