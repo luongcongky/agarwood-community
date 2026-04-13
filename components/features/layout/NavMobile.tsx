@@ -26,7 +26,7 @@ export function NavMobile({ links, isLoggedIn }: NavMobileProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
-        className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-brand-100 hover:bg-brand-700 transition-colors"
+        className="lg:hidden inline-flex items-center justify-center rounded-md p-2 text-brand-100 hover:bg-brand-700 transition-colors"
         aria-label="Mở menu"
       >
         <Menu className="h-6 w-6" />

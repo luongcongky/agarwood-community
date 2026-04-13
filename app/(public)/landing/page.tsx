@@ -240,7 +240,7 @@ export default async function LandingPage() {
       {/* ── Stats Bar ────────────────────────────────────────────────────── */}
       <section className="bg-white border-b border-brand-100">
         <div className="mx-auto max-w-6xl px-4 py-12">
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
             {[
               { value: vipCount, label: "Hội viên", icon: "👥", href: "/hoi-vien" },
               { value: companyCount, label: "Doanh nghiệp", icon: "🏢", href: "/doanh-nghiep" },
@@ -289,14 +289,14 @@ export default async function LandingPage() {
                   <span className="absolute -top-2 -left-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs shadow-md">
                     #{idx + 1}
                   </span>
-                  <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-brand-100 mb-3 bg-brand-50">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-brand-100 mb-3 bg-brand-50">
                     {company.logoUrl ? (
                       <Image
                         src={company.logoUrl}
                         alt={company.name}
                         fill
                         className="object-cover"
-                        sizes="80px"
+                        sizes="(max-width: 640px) 64px, 80px"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-brand-700 text-2xl font-bold text-brand-100">
@@ -348,7 +348,7 @@ export default async function LandingPage() {
                     href={`/san-pham/${product.slug}`}
                     className="group relative bg-white rounded-xl border border-brand-200 shadow-sm overflow-hidden hover:shadow-lg hover:border-brand-400 transition-all"
                   >
-                    <div className="relative h-40 bg-brand-100 overflow-hidden">
+                    <div className="relative aspect-square bg-brand-100 overflow-hidden">
                       {cover ? (
                         <Image
                           src={cover}
