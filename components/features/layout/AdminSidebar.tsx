@@ -106,23 +106,23 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
 /** Backward-compat: vẫn export flat list cho các nơi (nếu có) đang dùng. */
 export const ADMIN_NAV_ITEMS = ADMIN_NAV_GROUPS.flatMap((g) => g.items)
 
-const LS_KEY = "admin_sidebar_collapsed"
+// Accordion: chỉ 1 group mở tại 1 thời điểm. Mặc định tất cả đóng;
+// khi navigate vào item của group nào → group đó tự mở, group cũ đóng.
+const LS_KEY = "admin_sidebar_open_group"
 
-function loadCollapsed(): Set<string> {
-  if (typeof window === "undefined") return new Set()
+function loadOpenKey(): string | null {
+  if (typeof window === "undefined") return null
   try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return new Set()
-    const arr = JSON.parse(raw)
-    return Array.isArray(arr) ? new Set(arr.filter((x) => typeof x === "string")) : new Set()
+    return localStorage.getItem(LS_KEY)
   } catch {
-    return new Set()
+    return null
   }
 }
 
-function saveCollapsed(set: Set<string>) {
+function saveOpenKey(key: string | null) {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify([...set]))
+    if (key === null) localStorage.removeItem(LS_KEY)
+    else localStorage.setItem(LS_KEY, key)
   } catch {
     // ignore quota / private mode
   }
@@ -135,16 +135,10 @@ interface AdminNavLinksProps {
 /** Dùng lại cả trong sidebar desktop và Sheet mobile */
 export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [openKey, setOpenKey] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
 
-  // Hydrate từ localStorage sau mount để tránh mismatch SSR
-  useEffect(() => {
-    setCollapsed(loadCollapsed())
-    setHydrated(true)
-  }, [])
-
-  // Group nào chứa route hiện tại — luôn force expand
+  // Group nào chứa route hiện tại
   const activeGroupKey = useMemo(() => {
     for (const g of ADMIN_NAV_GROUPS) {
       if (g.items.some((it) => pathname === it.href || pathname.startsWith(it.href + "/"))) {
@@ -154,12 +148,23 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
     return null
   }, [pathname])
 
+  // Hydrate sau mount: ưu tiên activeGroupKey (route hiện tại) → fallback localStorage.
+  // Mỗi lần đổi route sang group khác, cũng tự mở group mới (đóng group cũ).
+  useEffect(() => {
+    setHydrated(true)
+    if (activeGroupKey) {
+      setOpenKey(activeGroupKey)
+      saveOpenKey(activeGroupKey)
+    } else {
+      const saved = loadOpenKey()
+      setOpenKey(saved)
+    }
+  }, [activeGroupKey])
+
   function toggle(key: string) {
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      saveCollapsed(next)
+    setOpenKey((prev) => {
+      const next = prev === key ? null : key
+      saveOpenKey(next)
       return next
     })
   }
@@ -168,9 +173,8 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
     <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
       {ADMIN_NAV_GROUPS.map((group) => {
         const isStandalone = group.label === null
-        // Trước hydration: mặc định expand tất cả → không bị flicker lúc render server
-        const isOpen =
-          !hydrated || isStandalone || group.key === activeGroupKey || !collapsed.has(group.key)
+        // Trước hydration: chỉ mở group đứng riêng → tránh flicker SSR
+        const isOpen = isStandalone || (hydrated && openKey === group.key)
 
         return (
           <div key={group.key} className="space-y-0.5">
