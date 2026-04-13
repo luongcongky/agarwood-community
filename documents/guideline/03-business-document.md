@@ -440,10 +440,11 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 
 ---
 
-## 11. Banner quang cao (Phase 6 — du kien)
+## 11. Banner quang cao (Phase 6 — DA TRIEN KHAI)
 
-> **Status**: Phase 6 chua duoc trien khai. Day la business rules da chot voi khach 04/2026.
-> Khi implement, doc them dac ta ky thuat tai `documents/testing/functional/08-flow-banner-quang-cao.md`.
+> **Status (04/2026)**: Da trien khai. Schema `Banner` + `BannerPosition` (TOP/MID),
+> form dang ky tai `/banner/dang-ky`, admin duyet tai `/admin/banner`,
+> hien thi 2 slot tach biet tren trang chu.
 
 ### 11.1 Doi tuong su dung
 - **Moi user dang nhap** deu co the dang ky banner (khac voi cac dich vu khac chi cho Hoi vien)
@@ -472,12 +473,13 @@ dinh trong vong **30 ngay** ke tu ngay nop don day du. Cac trang thai:
 6. Admin xac nhan CK + duyet noi dung -> banner -> `ACTIVE`
 7. Banner xuat hien tren homepage Section 4 trong khoang `startDate <= now <= endDate`
 
-### 11.4 Hien thi banner tren homepage
-- Vi tri: Section 4 trang chu (giua Carousel SP va Tin DN)
+### 11.4 Hien thi banner tren homepage — 2 vi tri tach biet (BannerPosition)
+- **TOP**: ngay sau thanh menu, day trang chu — `<HomepageBannerSlot position="TOP" />`
+- **MID**: giua trang, sau khu San pham chung nhan — `<HomepageBannerSlot position="MID" />`
+- User chon vi tri o Step 1 cua form dang ky; gia + quota khong khac nhau giua 2 vi tri
 - Width: trong max-w-7xl (nhat quan voi cac section khac)
-- **Toi da 20 slot rotate** trong cung mot lan load trang
-- **Auto-rotate moi 5 giay** -> banner ke tiep
-- Pause khi user hover
+- **Toi da 20 slot rotate** moi vi tri trong cung mot lan load
+- **Auto-rotate moi 5 giay**, pause khi user hover
 
 ### 11.5 Quy tac chon 20 slot khi co > 20 banner ACTIVE
 - Uu tien theo tier: Hoi vien★★★ Vang -> Hoi vien★★ Bac -> Hoi vien★ -> Tai khoan co ban
@@ -548,6 +550,70 @@ Admin upload tai `/admin/phap-ly` voi thong tin:
 - File PDF (toi da 20MB)
 
 He thong tu dong upload len Google Drive + luu metadata vao DB.
+
+---
+
+## 13. MXH Tram Huong (Feed + Marketplace gop)
+
+> **Status (04/2026)**: Da trien khai. Khach hang yeu cau gop `/feed` va `/san-pham-doanh-nghiep`
+> thanh 1 dong noi dung duy nhat de giam ma sat cho nguoi dang.
+
+### 13.1 Mo hinh
+- **Post canonical + Product sidecar**: moi san pham gan voi mot Post (`Product.postId String? @unique`).
+- Khi user dang bai voi `category=PRODUCT` qua composer `/feed/tao-bai`, server tao
+  `Post + Product` trong 1 transaction.
+- Bai PRODUCT hien thi tren feed voi card co gia + badge chung nhan + nut "Xem chi tiet" → `/san-pham/[slug]`.
+- Trang `/san-pham-doanh-nghiep`, `/san-pham/[slug]` van hoat dong nhu cu (deep-link cu khong gay 404).
+- `/san-pham/tao-moi` redirect → `/feed/tao-bai?category=PRODUCT`.
+
+### 13.2 Filter chips o feed
+Feed `/feed` co 4 chip loc:
+- **Tat ca** (default)
+- **Tin tuc** (`category=NEWS`)
+- **San pham** (`category=PRODUCT`)
+- **Chung nhan** (`category=PRODUCT && product.certStatus=APPROVED`)
+
+### 13.3 Quota
+Khi user dang san pham qua composer gop:
+- Check ca **post quota** (`lib/quota.ts`) **va** **product quota** (`lib/product-quota.ts`)
+- Cae che do quota van giu nguyen (tier-based) — chi them lop check thu hai
+
+---
+
+## 14. Chinh sach bao mat & Dieu khoan su dung
+
+### 14.1 Pham vi
+Trang `/privacy` (Chinh sach bao mat) va `/terms` (Dieu khoan su dung) la van ban phap ly
+chinh thuc cua Hoi, hien thi cong khai, link tu footer.
+
+### 14.2 Cach quan ly noi dung
+Noi dung KHONG hardcode — luu trong `News` voi `category=LEGAL` theo slug co dinh:
+- `chinh-sach-bao-mat` → `/privacy`
+- `dieu-khoan-su-dung` → `/terms`
+
+Admin sua qua `/admin/tin-tuc/[id]` (chon category=LEGAL, slug khong duoc doi).
+Trang public tu cap nhat sau ~10 phut.
+
+### 14.3 Khoi "Kenh truyen thong chinh thuc & Canh bao gia mao"
+Hien thi cuoi `/privacy`, `/terms`, `/lien-he`, `/gioi-thieu` (component `OfficialChannelsBlock`).
+Lay danh sach kenh tu `SiteConfig` (`facebook_url`, `zalo_url`, `youtube_url`,
+`association_email/phone/website`). Tuyen bo cua Hoi:
+- Hoi chi truyen thong qua cac kenh duoc liet ke
+- Khong chiu trach nhiem ve cac trang gia mao (giao dich, quyen gop, phat ngon...)
+- Huong dan bao cao trang gia mao ve email chinh thuc
+
+Co bai canh bao chi tiet pinned tai `/news/canh-bao-cac-trang-facebook-zalo-gia-mao-hoi-tram-huong-viet-nam`.
+
+---
+
+## 15. Doi tac & Co quan lien ket
+
+Hien thi marquee chay ngang o trang chu (sau khu Tin san pham moi nhat). Quan ly tai
+`/admin/doi-tac` — phan loai theo `PartnerCategory` (GOVERNMENT, ASSOCIATION, RESEARCH,
+ENTERPRISE, INTERNATIONAL, MEDIA, OTHER).
+
+Danh sach hien tai (08/2026): MARD + 7 co quan bao chi (VTV, VOV, TTXVN, Bao Nhan Dan,
+Bao Nong nghiep VN, Thanh Nien, Tuoi Tre).
 
 ---
 

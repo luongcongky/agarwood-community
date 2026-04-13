@@ -21,6 +21,9 @@
 11. [Van ban phap quy (`/admin/phap-ly`)](#11-van-ban-phap-quy)
 12. [Don ket nap Hoi vien (`/admin/hoi-vien/don-ket-nap`)](#12-don-ket-nap-hoi-vien)
 13. [Che do xem (Public/Management mode)](#13-che-do-xem)
+14. [Quan ly Banner quang cao (`/admin/banner`)](#14-quan-ly-banner)
+15. [Quan ly Doi tac (`/admin/doi-tac`)](#15-quan-ly-doi-tac)
+16. [Chinh sach bao mat & Dieu khoan (`/privacy`, `/terms`)](#16-chinh-sach--dieu-khoan)
 
 ---
 
@@ -543,6 +546,86 @@ He thong co 2 che do cho admin:
 - **Khong gay nham lan** — user cong khai thay menu nhu guest (trangki chu, tin tuc, ...)
 - **Admin co the xem website nhu khach** — de verify cong viec
 - **Khong bi khoa** — admin luon co the chuyen 2 chieu qua dropdown/sidebar
+
+---
+
+## 14. Quan ly Banner quang cao
+
+Truy cap: `/admin/banner`. Quan ly cac banner do hoi vien dang ky.
+
+### Vi tri (BannerPosition)
+Banner duoc gan vao 1 trong 2 vi tri:
+- **TOP** — slot tren cung trang chu, ngay sau thanh menu
+- **MID** — slot giua trang chu, sau khu San pham chung nhan
+
+User chon vi tri khi dang ky tai `/banner/dang-ky`. Admin thay cot "Dau trang / Giua trang"
+trong bang quan ly.
+
+### Quy trinh duyet
+1. User → `/banner/dang-ky` chon vi tri + thoi gian + upload anh + tra phi
+2. Sau khi user CK → admin xac nhan o `/admin/thanh-toan`
+3. Banner chuyen sang `PENDING_APPROVAL` → admin vao `/admin/banner` review noi dung
+4. Approve → status `ACTIVE` → tu dong hien tren trang chu (cache 60s)
+5. Cron tu dong chuyen sang `EXPIRED` khi het han
+
+---
+
+## 15. Quan ly Doi tac
+
+Truy cap: `/admin/doi-tac`. Quan ly cac co quan, doan the, doi tac truyen thong lien ket
+voi Hoi — hien thi tren PartnersCarousel marquee trang chu (sau khu Tin san pham moi nhat).
+
+### Thao tac
+- **Them moi**: nut "+ Them doi tac" → form inline → upload logo (Cloudinary folder
+  `doi-tac/MM-YYYY`) hoac dan URL truc tiep → chon phan loai → luu
+- **Sua**: nut "Sua" tren tung card → form inline xuat hien
+- **An / Hien**: toggle `isActive` → an khoi trang chu nhung khong xoa
+- **Xoa**: nut "Xoa" → confirm → xoa han khoi DB
+
+### Phan loai (PartnerCategory)
+- `GOVERNMENT` — Co quan nha nuoc (Bo, So, Tong cuc...)
+- `ASSOCIATION` — Hiep hoi nghe nghiep
+- `RESEARCH` — Vien, truong, don vi nghien cuu
+- `ENTERPRISE` — Doanh nghiep doi tac chien luoc
+- `INTERNATIONAL` — To chuc quoc te
+- `MEDIA` — Co quan bao chi, dai phat thanh – truyen hinh
+- `OTHER` — Khac
+
+### Luu y
+- `sortOrder` so nho hien truoc (vi du 10, 20, 30...). De khoang trong de chen sau.
+- Logo trong → component tu sinh initials tren nen mau (vi du: VTV, BNV) → admin nen
+  upload logo that som de chuyen nghiep hon.
+- Sau moi mutation: cache `partners` invalidate → carousel cap nhat ngay.
+
+---
+
+## 16. Chinh sach bao mat & Dieu khoan
+
+Trang `/privacy` va `/terms` KHONG hardcode trong code — fetch tu News voi
+`category=LEGAL` theo slug co dinh:
+
+| Trang public | Slug News (LEGAL) |
+|--------------|-------------------|
+| `/privacy` | `chinh-sach-bao-mat` |
+| `/terms` | `dieu-khoan-su-dung` |
+
+### Cach sua noi dung
+1. Vao `/admin/tin-tuc`
+2. Mo bai "Chinh sach bao mat" hoac "Dieu khoan su dung" (dam bao `category=LEGAL`)
+3. Sua bang rich-text editor → Luu
+4. Trang public tu cap nhat sau ~10 phut (cache `legal-pages` revalidate 600s)
+
+**Khong duoc doi slug** — neu doi se lam trang public hien empty state.
+
+### Khoi "Kenh truyen thong chinh thuc & Canh bao gia mao"
+Cuoi 2 trang `/privacy` va `/terms` (cung `/lien-he`, `/gioi-thieu`) co block hien thi:
+- Danh sach kenh chinh thuc (Facebook, Zalo, YouTube, Email, Hotline) lay tu SiteConfig
+- Tuyen bo Hoi khong chiu trach nhiem ve cac trang gia mao
+- Huong dan bao cao trang gia mao
+
+Cap nhat danh sach kenh: vao `/admin/cai-dat` sua cac key `facebook_url`, `zalo_url`,
+`youtube_url`, `association_email`, `association_phone`, `association_website`. Bo trong
+mot key se an dong tuong ung trong block.
 
 ---
 

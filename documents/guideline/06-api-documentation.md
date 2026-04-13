@@ -31,14 +31,31 @@ Tat ca API yeu cau auth su dung NextAuth session cookie. Gui cookie trong moi re
 ## 1. Posts (Feed)
 
 ### GET /api/posts
-Lay danh sach bai viet (cursor pagination).
+Lay danh sach bai viet (cursor pagination). Ho tro filter theo category + chung nhan
+phuc vu MXH Tram Huong (gop feed + marketplace).
 
 **Query params:**
 | Param | Type | Mo ta |
 |-------|------|-------|
 | cursor | string | ID bai viet cuoi cung (optional, trang dau khong can) |
+| category | enum | `GENERAL` / `NEWS` / `PRODUCT` — loc theo loai bai. Bo trong = tat ca |
+| certified | "1" | Khi `=1` chi tra bai PRODUCT co `product.certStatus=APPROVED` |
 
-**Response:** `{ posts: Post[] }`
+**Response:** `{ posts: Post[] }` — moi `Post` voi `category=PRODUCT` se kem field `product` (sidecar metadata):
+```json
+{
+  "category": "PRODUCT",
+  "product": {
+    "id": "cuid",
+    "name": "Tram huong Khanh Hoa",
+    "slug": "tram-khanh-hoa",
+    "priceRange": "1tr-3tr",
+    "category": "Tram tu nhien",
+    "badgeUrl": null,
+    "certStatus": "APPROVED"
+  }
+}
+```
 
 ```json
 {
@@ -71,28 +88,49 @@ Lay danh sach bai viet (cursor pagination).
 ```
 
 ### POST /api/posts
-Tao bai viet moi. **Phase 2: cho phep moi user dang nhap (GUEST/VIP/ADMIN), khong gioi han 3 bai/ngay nua.**
+Tao bai viet moi. Cho phep moi user dang nhap (GUEST/VIP/ADMIN), check post quota theo thang.
 
 **Body:**
 ```json
 {
   "title": "Tieu de (optional)",
   "content": "<p>Noi dung HTML, toi thieu 50 ky tu</p>",
-  "category": "GENERAL"
+  "category": "GENERAL",
+  "product": null
 }
 ```
 
 `category` (optional, default `GENERAL`):
 - `GENERAL` — bai feed thuong
 - `NEWS` — tin tuc doanh nghiep (co the len section 5 trang chu neu user la VIP)
-- `PRODUCT` — tin san pham (co the len section 6 trang chu neu user la VIP)
+- `PRODUCT` — bai san pham (xem `product` field ben duoi)
+
+**MXH merge — composer gop**: khi `category="PRODUCT"` va body co `product`, server tao
+ca `Post` + `Product` trong **1 transaction**, link qua `Product.postId`. Hien thi tren feed
+voi product card variant + nut "Xem chi tiet" → `/san-pham/[slug]`.
+
+```json
+"product": {
+  "name": "Tram huong Khanh Hoa cao cap",
+  "slug": "tram-khanh-hoa-cao-cap",
+  "category": "Tram tu nhien",
+  "priceRange": "1tr-3tr"
+}
+```
+
+Khi `product` co mat:
+- Server validate slug `^[a-z0-9-]+$`, kiem tra `Product.slug` unique
+- Check ca **post quota** + **product quota** (lib/product-quota.ts)
+- Server tu fetch `companyId` cua user neu co
+- `imageUrls` + `description` cua Product duoc trich tu HTML content cua post
 
 **Response:** `201 { post: Post }`
 
 **Errors:**
 - `401` — Chua dang nhap
-- `400` — Noi dung qua ngan (< 50 ky tu)
-- `429` — Het quota thang nay (vi du: GUEST 5 bai/thang). Response body co `quota: { used, limit, remaining, resetAt }`
+- `400` — Noi dung qua ngan (< 50 ky tu) / slug khong hop le / ten SP qua ngan
+- `409` — Slug san pham da ton tai
+- `429` — Het quota post HOAC quota san pham thang nay. Response body co `quota`
 
 ### GET /api/posts/quota
 Tra ve quota thang hien tai cua user dang dang nhap. Yeu cau: dang nhap.
@@ -512,24 +550,102 @@ Xoa van ban (ca Drive + DB). Yeu cau: ADMIN. Best-effort Drive delete.
 ## 8. News category (admin)
 
 ### POST /api/admin/news + PATCH /api/admin/news/{id}
-Them field `category` cho body:
+Field `category` co 3 gia tri:
 
 ```json
-{
-  "category": "GENERAL"  // hoac "RESEARCH"
-}
+{ "category": "GENERAL" }    // → hien thi /tin-tuc
+{ "category": "RESEARCH" }   // → hien thi /nghien-cuu
+{ "category": "LEGAL" }      // → render o /privacy hoac /terms theo slug co dinh
 ```
 
-`GENERAL` → hien thi `/tin-tuc`. `RESEARCH` → hien thi `/nghien-cuu`.
+**Quy uoc slug cho LEGAL:**
+- `chinh-sach-bao-mat` → trang `/privacy`
+- `dieu-khoan-su-dung` → trang `/terms`
+
+Trang fetch noi dung qua `lib/legal-pages.ts` (`unstable_cache` revalidate 600s, tag
+`legal:<key>`). Admin sua noi dung qua `/admin/tin-tuc/[id]` chon category=LEGAL —
+trang public tu cap nhat sau 10 phut.
 
 ---
 
-## 9. Other
+## 9. Banner quang cao (Phase 6)
+
+Banner quang cao chia 2 vi tri (`BannerPosition`):
+- `TOP` — sau menu
+- `MID` — giua trang chu (sau khu San pham chung nhan)
+
+### POST /api/banner
+User dang ky banner — tao Banner + Payment trong 1 transaction.
+
+**Body:**
+```json
+{
+  "imageUrl": "https://res.cloudinary.com/.../banner.jpg",
+  "targetUrl": "https://...",
+  "title": "Tieu de banner (5-100 ky tu)",
+  "startDate": "2026-04-15",
+  "endDate": "2026-05-15",
+  "position": "TOP"
+}
+```
+
+**Response:** `{ bankInfo, price, paymentId, bannerId }`
+
+**Errors:**
+- `429` — Het quota banner thang nay theo tier (1 / 5 / 10 / 20)
+- `400` — Date khong hop le, title sai do dai
+
+### GET /api/banner/quota
+Tra ve quota banner thang hien tai cua user.
+
+### POST /api/admin/banner/{id}
+Approve hoac reject banner. Yeu cau: ADMIN. `revalidateTag("banners","max")`.
+
+---
+
+## 10. Doi tac (Partner)
+
+CRUD doi tac / co quan dien thai lien ket — hien thi tren PartnersCarousel marquee
+trang chu. Phan loai qua enum `PartnerCategory` (GOVERNMENT, ASSOCIATION, RESEARCH,
+ENTERPRISE, INTERNATIONAL, MEDIA, OTHER).
+
+### POST /api/admin/partners
+Tao moi. Yeu cau: ADMIN.
+
+**Body:**
+```json
+{
+  "name": "Dai Truyen hinh Viet Nam",
+  "shortName": "VTV",
+  "category": "MEDIA",
+  "logoUrl": "https://res.cloudinary.com/.../doi-tac/04-2026/vtv.png",
+  "websiteUrl": "https://vtv.vn",
+  "description": "Dai Truyen hinh Quoc gia...",
+  "sortOrder": 20,
+  "isActive": true
+}
+```
+
+Logo upload qua `/api/upload` voi `folder: "doi-tac"`. Khong co `logoUrl` → component
+hien initials tren nen mau sinh tu hash ten.
+
+### PATCH /api/admin/partners/{id}
+Cap nhat ban ghi (cho phep gui mot phan field). `isActive=false` an khoi trang chu.
+
+### DELETE /api/admin/partners/{id}
+Xoa han ban ghi.
+
+Sau moi mutation: `revalidateTag("partners","max")` → carousel trang chu cap nhat ngay.
+
+---
+
+## 11. Other
 
 ### POST /api/upload
-Upload anh len Cloudinary. Yeu cau: VIP hoac ADMIN.
+Upload anh len Cloudinary. Yeu cau: dang nhap.
 
-**Body:** FormData voi field `file` (image/*, max 5MB)
+**Body:** FormData voi field `file` (image/*, max 5MB) + `folder` (menu name, vd: `bai-viet`,
+`san-pham`, `tin-tuc`, `doanh-nghiep`, `banner`, `doi-tac`). Server tu them `MM-YYYY` sub-folder.
 
 **Response:** `{ secure_url: "https://res.cloudinary.com/..." }`
 

@@ -41,7 +41,9 @@ agarwood-community/
 │   │       ├── chung-nhan/     # Xet duyet chung nhan
 │   │       ├── tieu-bieu/      # [Phase 4] Pin top 20 SP + top 10 DN
 │   │       ├── truyen-thong/   # CRM don truyen thong
-│   │       ├── tin-tuc/        # Quan ly tin tuc
+│   │       ├── tin-tuc/        # Quan ly tin tuc (gom Privacy/Terms qua category=LEGAL)
+│   │       ├── banner/         # Duyet banner quang cao (TOP/MID)
+│   │       ├── doi-tac/        # CRUD doi tac (PartnersCarousel)
 │   │       ├── bao-cao/        # Bao cao vi pham
 │   │       └── cai-dat/        # Cai dat he thong
 │   ├── (member)/               # Layout Hoi vien (navbar)
@@ -62,6 +64,8 @@ agarwood-community/
 │   │   ├── tin-tuc/            # Tin tuc Hoi
 │   │   ├── san-pham-chung-nhan/# SP da chung nhan
 │   │   ├── doanh-nghiep/[slug] # Trang DN
+│   │   ├── privacy/            # Chinh sach bao mat (fetch News slug=chinh-sach-bao-mat)
+│   │   ├── terms/              # Dieu khoan (fetch News slug=dieu-khoan-su-dung)
 │   │   └── ... (gioi thieu, hoi vien, dich vu, dieu le, lien he)
 │   └── api/                    # API Routes
 │       ├── auth/               # NextAuth + verify-token + set-password + register
@@ -74,7 +78,9 @@ agarwood-community/
 │       │   ├── products/[id]/featured/   # [Phase 4] PATCH pin SP tieu bieu
 │       │   ├── companies/[id]/featured/  # [Phase 4] PATCH pin DN tieu bieu
 │       │   ├── media-orders/   # Update status
-│       │   ├── news/           # CRUD tin tuc
+│       │   ├── news/           # CRUD tin tuc + LEGAL pages (privacy/terms)
+│       │   ├── partners/        # CRUD doi tac — POST + PATCH/DELETE [id]
+│       │   ├── banner/          # Duyet/tu choi banner quang cao
 │       │   ├── reports/        # Xu ly bao cao
 │       │   └── settings/       # Luu SiteConfig
 │       ├── membership/         # Gia han
@@ -84,8 +90,8 @@ agarwood-community/
 │       └── my-products/        # SP cua Hoi vien
 ├── components/
 │   ├── features/
-│   │   ├── layout/             # Navbar, Footer, AdminSidebar, UserMenu, SocialLinks (Phase 1)
-│   │   └── homepage/           # [Phase 3] PostCard, MemberNewsRail, CertifiedProductsCarousel, HomepageBannerSlot
+│   │   ├── layout/             # Navbar, Footer, AdminSidebar, UserMenu, SocialLinks, OfficialChannelsBlock
+│   │   └── homepage/           # PostCard, MemberNewsRail, CertifiedProductsCarousel, HomepageBannerSlot, PartnersCarousel
 │   └── ui/                     # Shared UI (Avatar, Button, Sheet, etc.)
 ├── lib/
 │   ├── auth.ts                 # NextAuth full config (Prisma adapter)
@@ -94,13 +100,22 @@ agarwood-community/
 │   ├── tier.ts                 # Tier helpers (Bac/Vang thresholds)
 │   ├── quota.ts                # [Phase 2] Monthly post quota helper (5/15/30/-1)
 │   ├── homepage.ts             # [Phase 3] Cached data fetchers + rotation logic
+│   ├── legal-pages.ts          # Helper fetch News(LEGAL) cho /privacy, /terms
+│   ├── product-quota.ts        # Monthly product quota helper
+│   ├── bannerQuota.ts          # Monthly banner quota helper
 │   ├── utils.ts                # cn() utility
 │   └── constants/
 │       ├── banks.ts            # 21 ngan hang VN
 │       └── agarwood.ts         # Danh muc SP, vung nguyen lieu, hang
 ├── prisma/
 │   ├── schema.prisma           # Database schema
-│   └── seed.ts                 # Seed data
+│   ├── seed.ts                 # Seed data chinh (users, leaders, configs)
+│   ├── seed-content.ts         # Seed Post + News content
+│   ├── seed-banners.ts         # Seed banner TOP/MID demo
+│   ├── seed-warning-news.ts    # Bai canh bao trang gia mao (pinned)
+│   ├── seed-legal-pages.ts     # Privacy + Terms (News category=LEGAL)
+│   ├── seed-partners.ts        # 8 doi tac (MARD + 7 co quan bao chi)
+│   └── backfill-product-posts.ts  # Tao Post cho moi Product cu (MXH merge)
 ├── proxy.ts                    # Middleware (route protection)
 ├── e2e/                        # Playwright E2E tests
 ├── __tests__/                  # Vitest unit tests
@@ -113,16 +128,20 @@ agarwood-community/
 
 ```
 User (1) ──── (0..1) Company ──── (*) Product ──── (*) Certification
-  │              ↑ chi BUSINESS                           │
-  ├──── (*) Membership                                    │
-  ├──── (*) Payment ────────────────────────────── (0..1) ─┘
+  │              ↑ chi BUSINESS         │ (0..1) ──── Post (sidecar)
+  │                                     │            (Product.postId, MXH merge)
+  ├──── (*) Membership                  │
+  ├──── (*) Payment ────────────── (0..1)─┘
   ├──── (*) Post ──── (*) PostReaction
-  │            └──── (*) Report
-  │            └──── (*) PostTag ──── Tag
+  │            ├──── (*) Report
+  │            ├──── (*) PostTag ──── Tag
+  │            └──── (0..1) Product (khi category=PRODUCT)
+  ├──── (*) Banner (position: TOP/MID)
   ├──── (*) MediaOrder
   └──── (*) Account (NextAuth)
 
-SiteConfig (key-value store doc lap)
+Partner (doc lap — PartnersCarousel trang chu)
+SiteConfig (key-value store)
 VerificationToken (NextAuth)
 Document (Google Drive)
 ```
@@ -146,7 +165,9 @@ Document (Google Drive)
 | News | ~100-200 (admin nhap + crawled) | **category** (GENERAL/RESEARCH), **sourceUrl**, **originalAuthor** |
 | **MembershipApplication** | ~50-100 | Don ket nap (Dieu 11) — status + reviewer + reject reason |
 | Document | ~20 legal + N tai lieu | **DIEU_LE/QUY_CHE/GIAY_PHEP** + issuer + sortOrder |
-| SiteConfig | ~25 keys | Config he thong (them `join_fee_*`) |
+| **Banner** | ~50 ACTIVE | `position` (TOP/MID) — 2 slot tach biet tren trang chu |
+| **Partner** | ~10-30 | Doi tac / co quan lien ket — PartnersCarousel marquee |
+| SiteConfig | ~30 keys | Config he thong (them `join_fee_*`, `zalo_url`) |
 
 ### Enums moi (Dieu le integration):
 ```prisma
@@ -165,6 +186,23 @@ enum ApplicationStatus {
 enum NewsCategory {
   GENERAL      // tin tuc — /tin-tuc
   RESEARCH     // nghien cuu khoa hoc — /nghien-cuu
+  LEGAL        // van ban phap ly — render o /privacy, /terms theo slug co dinh
+               // ("chinh-sach-bao-mat", "dieu-khoan-su-dung")
+}
+
+enum BannerPosition {
+  TOP          // dau trang chu, sau thanh menu
+  MID          // giua trang, sau khu San pham chung nhan
+}
+
+enum PartnerCategory {
+  GOVERNMENT   // co quan nha nuoc
+  ASSOCIATION  // hiep hoi
+  RESEARCH     // vien / truong
+  ENTERPRISE   // doanh nghiep
+  INTERNATIONAL // to chuc quoc te
+  MEDIA        // co quan bao chi, dai phat thanh - truyen hinh
+  OTHER
 }
 
 // DocumentCategory: them 3 gia tri
@@ -183,6 +221,12 @@ enum DocumentCategory {
 - `add_news_source_url` — `News.sourceUrl` (crawl reference)
 - `add_news_original_author` — `News.originalAuthor`
 - `add_legal_doc_categories` — `DocumentCategory` them 3 enum values + `Document.issuer` + `Document.sortOrder`
+- `add_banner_position` — `BannerPosition` enum (TOP/MID) + `Banner.position` + index `(status, position, endDate)`
+- `add_post_product_relation` — `Product.postId String? @unique` (1-1 voi Post, Cascade tu Post)
+- `add_news_category_legal` — them gia tri `LEGAL` vao `NewsCategory`
+- `add_partner_model` — model `Partner` + enum `PartnerCategory` (gom MEDIA cho bao chi)
+
+> Cac migration nay duoc apply qua `prisma db push` (khong tao migration file rieng) — schema drift duoc dong bo truc tiep tu schema.prisma.
 
 ---
 
@@ -328,12 +372,14 @@ model Product {
 
 | Section | Data fetcher | Cache | Filter chinh |
 |---------|-------------|-------|-------------|
+| 0. Banner TOP (sau menu) | `HomepageBannerSlot position="TOP"` | 60s | Banner ACTIVE + position=TOP |
 | 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished, sort isPinned + publishedAt |
 | 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (5 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
 | 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP (Hoi vien) |
-| 4. Banner quang cao | placeholder | — | Phase 6: Banner model |
+| 4. Banner MID (giua trang) | `HomepageBannerSlot position="MID"` | 60s | Banner ACTIVE + position=MID |
 | 5. Tin DN moi nhat | `getLatestPostsByCategory("NEWS")` | 300s | isPremium=true, category=NEWS |
 | 6. Tin SP moi nhat | `getLatestPostsByCategory("PRODUCT")` | 300s | isPremium=true, category=PRODUCT |
+| 7. Doi tac & Co quan lien ket | `getActivePartners` (PartnersCarousel) | 300s | Partner.isActive=true, sort sortOrder ASC |
 
 **Rotating slots algorithm** (right rail):
 - Pool 50 bai, exclude top Hoi vien da hien thi
@@ -341,7 +387,7 @@ model Product {
 - Seed = `Math.floor(Date.now() / 300_000)` (5-min bucket) → deterministic trong 5 phut
 - Mulberry32 PRNG inline (~8 dong code)
 
-**Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`
+**Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`, `banners`, `partners`, `legal-pages`
 - Admin pin/unpin → `revalidateTag("homepage", "max")` + tag tuong ung
 - Next 16 yeu cau profile arg thu 2 — dung `"max"` cho stale-while-revalidate dai nhat
 
@@ -379,8 +425,20 @@ From: "Hoi Tram Huong Viet Nam <noreply@hoitramhuong.vn>"
 - Auth: required (khong cho GUEST)
 - MIME: chi image/*
 - Max size: 5MB
-- Folder: agarwood/posts
+- Body: FormData voi `file` + `folder` (menu name) — server tu them sub-folder `MM-YYYY`
 - Response: { secure_url }
+
+### Folder convention
+| Menu (folder param) | Cloudinary path | Su dung tai |
+|---------------------|----------------|-------------|
+| `bai-viet` | `bai-viet/MM-YYYY/` | Anh trong post (PostEditor, RichTextEditor) |
+| `san-pham` | `san-pham/MM-YYYY/` | Anh san pham (ProductForm) |
+| `tin-tuc` | `tin-tuc/MM-YYYY/` | Anh bia + body tin tuc (NewsEditor) |
+| `doanh-nghiep` | `doanh-nghiep/MM-YYYY/` | Logo + anh DN |
+| `banner` | `banner/MM-YYYY/` | Banner quang cao trang chu |
+| `doi-tac` | `doi-tac/MM-YYYY/` | Logo doi tac (PartnerManager) |
+| `members` | `agarwood/members/` | Avatar + anh ho so hoi vien (legacy crawl) |
+| `research` | `agarwood/research/{slug}/` | Anh nghien cuu (legacy crawl) |
 
 ### Config:
 ```
