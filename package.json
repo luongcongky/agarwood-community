@@ -18,6 +18,8 @@
     "db:push:supabase": "powershell -Command \"$env:MIGRATE_TARGET='supabase'; npx prisma db push\"",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "db:backup": "npx tsx scripts/backup-supabase-to-local.ts",
+    "db:restore-public": "npx tsx scripts/restore-backup-to-public.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
