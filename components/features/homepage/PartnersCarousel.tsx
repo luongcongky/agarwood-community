@@ -4,7 +4,13 @@ import { prisma } from "@/lib/prisma"
 
 /**
  * Đối tác & Cơ quan liên kết — marquee chạy ngang (CSS-only, hover pause).
- * Cùng pattern với CertifiedProductsCarousel.
+ *
+ * Hiển thị: chỉ logo trên card có background pattern network vàng.
+ * Hover: overlay tối mờ che logo, hiện tên + mô tả (nếu có).
+ *
+ * Background ảnh: `public/partners-card-bg.webp` (400×400 WebP, user tự save —
+ * mình không write được binary). Fallback JPG `partners-card-bg.jpg` nếu trình duyệt
+ * cổ không hỗ trợ WebP. Nếu cả 2 file đều thiếu → gradient kem (vẫn nổi hơn trắng phẳng).
  *
  * Source: Partner model, sort theo (sortOrder ASC, createdAt DESC).
  * Cache 5 phút, tag "homepage" + "partners".
@@ -25,14 +31,14 @@ function colorFromName(name: string): string {
   let hash = 0
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0
   const palette = [
-    "bg-emerald-600",
-    "bg-amber-600",
-    "bg-sky-600",
-    "bg-rose-600",
-    "bg-violet-600",
-    "bg-teal-600",
-    "bg-orange-600",
-    "bg-indigo-600",
+    "bg-emerald-700",
+    "bg-amber-700",
+    "bg-sky-700",
+    "bg-rose-700",
+    "bg-violet-700",
+    "bg-teal-700",
+    "bg-orange-700",
+    "bg-indigo-700",
   ]
   return palette[Math.abs(hash) % palette.length]
 }
@@ -67,6 +73,18 @@ const getActivePartners = unstable_cache(
   { revalidate: 300, tags: ["homepage", "partners"] },
 )
 
+// Background style — ưu tiên WebP (~15-30KB), fallback JPG, cuối cùng gradient kem.
+// `image-set()` để browser tự chọn format tốt nhất; browser cổ sẽ bỏ qua image-set và dùng gradient.
+const CARD_BG_STYLE: React.CSSProperties = {
+  backgroundImage: [
+    "image-set(url('/partners-card-bg.webp') type('image/webp'), url('/partners-card-bg.jpg') type('image/jpeg'))",
+    "linear-gradient(135deg, #f8efdf 0%, #f2e4c9 100%)",
+  ].join(", "),
+  backgroundSize: "cover, cover",
+  backgroundPosition: "center, center",
+  backgroundRepeat: "no-repeat, no-repeat",
+}
+
 export async function PartnersCarousel() {
   const partners = await getActivePartners()
 
@@ -90,7 +108,6 @@ export async function PartnersCarousel() {
     )
   }
 
-  // Duplicate cho infinite loop liên tục
   const items = [...partners, ...partners]
 
   return (
@@ -119,38 +136,57 @@ export async function PartnersCarousel() {
           <div className="flex gap-4 w-max animate-[homepage-partners-marquee_70s_linear_infinite] group-hover:paused">
             {items.map((p, idx) => {
               const initials = getInitials(p.name, p.shortName)
+              const categoryLabel = CATEGORY_LABEL[p.category] ?? CATEGORY_LABEL.OTHER
+
               const cardInner = (
-                <div className="flex flex-col items-center gap-3 w-44 h-44 shrink-0 rounded-xl border border-brand-200 bg-white p-4 transition-shadow hover:shadow-md">
-                  <div
-                    className="relative w-20 h-20 shrink-0 rounded-full overflow-hidden bg-brand-100 flex items-center justify-center"
-                    title={p.description ?? p.name}
-                  >
+                <div
+                  className="group/card relative w-44 h-44 shrink-0 rounded-xl border border-amber-200/60 overflow-hidden shadow-sm hover:shadow-lg transition-all"
+                  style={CARD_BG_STYLE}
+                >
+                  {/* Logo center */}
+                  <div className="absolute inset-0 flex items-center justify-center p-6">
                     {p.logoUrl ? (
-                      <Image
-                        src={p.logoUrl}
-                        alt={p.name}
-                        fill
-                        className="object-contain p-1"
-                        sizes="80px"
-                      />
+                      <div className="relative w-full h-full">
+                        <Image
+                          src={p.logoUrl}
+                          alt={p.name}
+                          fill
+                          className="object-contain drop-shadow-sm"
+                          sizes="144px"
+                        />
+                      </div>
                     ) : (
                       <span
-                        className={`flex items-center justify-center w-full h-full text-white text-base font-bold ${colorFromName(p.name)}`}
+                        className={`flex items-center justify-center w-20 h-20 rounded-full text-white text-lg font-bold shadow-md ${colorFromName(p.name)}`}
                       >
                         {initials}
                       </span>
                     )}
                   </div>
-                  <div className="text-center min-w-0 w-full">
-                    <p className="text-xs font-semibold text-brand-900 line-clamp-2 leading-tight">
+
+                  {/* Hover overlay — tên + mô tả */}
+                  <div
+                    className="absolute inset-0 flex flex-col justify-end p-3 bg-linear-to-t from-black/85 via-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-200"
+                    aria-hidden
+                  >
+                    <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-300 mb-1">
+                      {categoryLabel}
+                    </p>
+                    <p className="text-xs font-bold text-white leading-tight line-clamp-2">
                       {p.name}
                     </p>
-                    <p className="mt-1 text-[10px] uppercase tracking-wider text-brand-500">
-                      {CATEGORY_LABEL[p.category] ?? CATEGORY_LABEL.OTHER}
-                    </p>
+                    {p.description && (
+                      <p className="mt-1 text-[11px] text-white/85 leading-snug line-clamp-3">
+                        {p.description}
+                      </p>
+                    )}
                   </div>
                 </div>
               )
+
+              const commonTitle = p.description
+                ? `${p.name} — ${p.description}`
+                : p.name
 
               return p.websiteUrl ? (
                 <a
@@ -158,12 +194,20 @@ export async function PartnersCarousel() {
                   href={p.websiteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title={commonTitle}
+                  aria-label={commonTitle}
                   className="block"
                 >
                   {cardInner}
                 </a>
               ) : (
-                <div key={`${p.id}-${idx}`}>{cardInner}</div>
+                <div
+                  key={`${p.id}-${idx}`}
+                  title={commonTitle}
+                  aria-label={commonTitle}
+                >
+                  {cardInner}
+                </div>
               )
             })}
           </div>
