@@ -20,8 +20,9 @@ export default async function MemberDetailPage({
   const { id } = await params
 
   const [user, memberships, payments, posts, certifications] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id, role: "VIP" },
+    prisma.user.findFirst({
+      // Admin xem được cả VIP + GUEST (tài khoản cơ bản) — chỉ loại admin
+      where: { id, role: { in: ["VIP", "GUEST"] } },
       select: {
         id: true,
         name: true,

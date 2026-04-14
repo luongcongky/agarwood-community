@@ -10,6 +10,7 @@ type LeaderCategory = "BTV" | "BCH" | "BKT"
 type Leader = {
   id: string
   name: string
+  honorific: string | null
   title: string
   category: LeaderCategory
   workTitle: string | null
@@ -22,6 +23,7 @@ type Leader = {
 
 type FormData = {
   name: string
+  honorific: string
   title: string
   category: LeaderCategory
   workTitle: string
@@ -33,6 +35,7 @@ type FormData = {
 
 const EMPTY_FORM: FormData = {
   name: "",
+  honorific: "Ông",
   title: "",
   category: "BCH",
   workTitle: "",
@@ -86,6 +89,7 @@ export function LeaderManager({
     setEditing(leader.id)
     setForm({
       name: leader.name,
+      honorific: leader.honorific ?? "Ông",
       title: leader.title,
       category: leader.category,
       workTitle: leader.workTitle ?? "",
@@ -156,6 +160,151 @@ export function LeaderManager({
     router.refresh()
   }
 
+  // ── Form JSX được dùng chung cho cả "tạo mới" (đầu trang) và "sửa" (inline) ──
+  function renderForm() {
+    return (
+      <div className="rounded-xl border border-brand-300 bg-brand-50 p-5 space-y-4">
+        <h3 className="font-semibold text-foreground">
+          {editing === "new" ? "Thêm thành viên mới" : "Chỉnh sửa"}
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Xưng hô
+            </label>
+            <select
+              value={form.honorific}
+              onChange={(e) => setForm({ ...form, honorific: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="Ông">Ông</option>
+              <option value="Bà">Bà</option>
+              <option value="">(Không hiển thị)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Họ tên *
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="VD: Phạm Văn Du"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Chức danh trong Hội *
+            </label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="VD: Chủ tịch, Phó Chủ tịch, Ủy viên..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Nhóm *
+            </label>
+            <select
+              value={form.category}
+              onChange={(e) =>
+                setForm({ ...form, category: e.target.value as LeaderCategory })
+              }
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="BTV">Ban Thường vụ</option>
+              <option value="BKT">Ban Kiểm tra</option>
+              <option value="BCH">UV Ban Chấp hành</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Thứ tự hiển thị
+            </label>
+            <input
+              type="number"
+              value={form.sortOrder}
+              onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Chức vụ đơn vị công tác
+            </label>
+            <input
+              type="text"
+              value={form.workTitle}
+              onChange={(e) => setForm({ ...form, workTitle: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="VD: Giám đốc Công ty TNHH..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Nhiệm kỳ *
+            </label>
+            <input
+              type="text"
+              value={form.term}
+              onChange={(e) => setForm({ ...form, term: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="VD: Nhiệm kỳ III (2023–2028)"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              URL ảnh đại diện
+            </label>
+            <input
+              type="text"
+              value={form.photoUrl}
+              onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="https://..."
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Tiểu sử
+            </label>
+            <textarea
+              value={form.bio}
+              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+              rows={3}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+              placeholder="Mô tả ngắn về vai trò, kinh nghiệm..."
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="rounded-lg bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
+          >
+            {saving ? "Đang lưu..." : "Lưu"}
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            className="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+          >
+            Hủy
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Term selector + Add button */}
@@ -224,139 +373,8 @@ export function LeaderManager({
         ))}
       </div>
 
-      {/* Create / Edit form */}
-      {editing && (
-        <div className="rounded-xl border border-brand-300 bg-brand-50 p-5 space-y-4">
-          <h3 className="font-semibold text-foreground">
-            {editing === "new" ? "Thêm thành viên mới" : "Chỉnh sửa"}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Họ tên *
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="VD: Phạm Văn Du"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Chức danh trong Hội *
-              </label>
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="VD: Chủ tịch, Phó Chủ tịch, Ủy viên..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Nhóm *
-              </label>
-              <select
-                value={form.category}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    category: e.target.value as LeaderCategory,
-                  })
-                }
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="BTV">Ban Thường vụ</option>
-                <option value="BKT">Ban Kiểm tra</option>
-                <option value="BCH">UV Ban Chấp hành</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Thứ tự hiển thị
-              </label>
-              <input
-                type="number"
-                value={form.sortOrder}
-                onChange={(e) =>
-                  setForm({ ...form, sortOrder: Number(e.target.value) })
-                }
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Chức vụ đơn vị công tác
-              </label>
-              <input
-                type="text"
-                value={form.workTitle}
-                onChange={(e) =>
-                  setForm({ ...form, workTitle: e.target.value })
-                }
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="VD: Giám đốc Công ty TNHH..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Nhiệm kỳ *
-              </label>
-              <input
-                type="text"
-                value={form.term}
-                onChange={(e) => setForm({ ...form, term: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="VD: Nhiệm kỳ III (2023–2028)"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                URL ảnh đại diện
-              </label>
-              <input
-                type="text"
-                value={form.photoUrl}
-                onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="https://..."
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Tiểu sử
-              </label>
-              <textarea
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
-                rows={3}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
-                placeholder="Mô tả ngắn về vai trò, kinh nghiệm..."
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="rounded-lg bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Đang lưu..." : "Lưu"}
-            </button>
-            <button
-              type="button"
-              onClick={cancel}
-              className="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
-            >
-              Hủy
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Form inline tạo mới — chỉ hiển thị ở đầu trang */}
+      {editing === "new" && renderForm()}
 
       {/* Leaders list */}
       {filtered.length === 0 ? (
@@ -368,7 +386,10 @@ export function LeaderManager({
         <div className="space-y-3">
           {filtered
             .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((leader) => (
+            .map((leader) =>
+              editing === leader.id ? (
+                <div key={leader.id}>{renderForm()}</div>
+              ) : (
               <div
                 key={leader.id}
                 className={cn(

@@ -19,6 +19,7 @@ export async function PATCH(
     where: { id },
     data: {
       ...(body.name !== undefined && { name: body.name }),
+      ...(body.honorific !== undefined && { honorific: body.honorific || null }),
       ...(body.title !== undefined && { title: body.title }),
       ...(body.category !== undefined && { category: body.category }),
       ...(body.workTitle !== undefined && { workTitle: body.workTitle || null }),

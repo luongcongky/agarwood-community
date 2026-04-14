@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { name, title, category, workTitle, bio, photoUrl, term, sortOrder } = body
+  const { name, honorific, title, category, workTitle, bio, photoUrl, term, sortOrder } = body
 
   if (!name || !title || !term) {
     return NextResponse.json(
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
   const leader = await prisma.leader.create({
     data: {
       name,
+      honorific: honorific || null,
       title,
       category: category || "BCH",
       workTitle: workTitle || null,

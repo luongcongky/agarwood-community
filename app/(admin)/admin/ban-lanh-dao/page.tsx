@@ -11,6 +11,7 @@ export default async function LeadersAdminPage() {
     select: {
       id: true,
       name: true,
+      honorific: true,
       title: true,
       category: true,
       workTitle: true,

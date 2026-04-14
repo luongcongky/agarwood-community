@@ -1,9 +1,12 @@
-import Image from "next/image"
+import QRCode from "qrcode"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { calcTier } from "@/lib/tier"
 import { getTierThresholds } from "@/lib/tier"
-import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { MemberCardFlip } from "@/components/features/member-card/MemberCardFlip"
+import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
+import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
+import { generateMemberCardId, tierFromStars } from "@/lib/memberCard"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -15,22 +18,7 @@ export const metadata: Metadata = {
 
 export const revalidate = 600
 
-function TierBadge({ stars, label }: { stars: number; label: string }) {
-  const colors =
-    stars === 3
-      ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-      : stars === 2
-        ? "bg-gray-100 text-gray-700 border-gray-300"
-        : "bg-brand-100 text-brand-700 border-brand-300"
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${colors}`}
-    >
-      {"★".repeat(stars)} {label}
-    </span>
-  )
-}
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hoitramhuong.vn"
 
 export default async function VipMembersPage({
   searchParams,
@@ -40,8 +28,8 @@ export default async function VipMembersPage({
   const params = await searchParams
   const q = params.q ?? ""
 
-  const [members, businessThresholds, individualThresholds] = await Promise.all(
-    [
+  const [members, businessThresholds, individualThresholds, configs] =
+    await Promise.all([
       prisma.user.findMany({
         where: {
           role: "VIP",
@@ -70,6 +58,8 @@ export default async function VipMembersPage({
           accountType: true,
           contributionTotal: true,
           memberCategory: true,
+          membershipExpires: true,
+          createdAt: true,
           company: {
             select: {
               name: true,
@@ -77,13 +67,49 @@ export default async function VipMembersPage({
               logoUrl: true,
               address: true,
               isVerified: true,
+              representativePosition: true,
             },
           },
         },
       }),
       getTierThresholds("BUSINESS"),
       getTierThresholds("INDIVIDUAL"),
-    ],
+      prisma.siteConfig.findMany({
+        where: {
+          key: {
+            in: ["association_email", "association_phone", "association_website"],
+          },
+        },
+      }),
+    ])
+
+  const cfg = Object.fromEntries(configs.map((c) => [c.key, c.value]))
+
+  // Sinh QR trước (song song) — mỗi card có URL verify unique
+  const cardsData = await Promise.all(
+    members.map(async (member) => {
+      const thresholds =
+        member.accountType === "INDIVIDUAL" ? individualThresholds : businessThresholds
+      const tierInfo = calcTier(
+        member.contributionTotal,
+        thresholds.silver,
+        thresholds.gold,
+      )
+      const memberCardId = generateMemberCardId(member.id, member.createdAt)
+      const verifyUrl = `${SITE_URL}/hoi-vien/${member.id}`
+      let qrDataUrl: string | null = null
+      try {
+        qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 256,
+          color: { dark: "#000", light: "#fff" },
+        })
+      } catch {
+        /* ignore */
+      }
+      return { member, tierInfo, memberCardId, verifyUrl, qrDataUrl }
+    }),
   )
 
   return (
@@ -141,103 +167,70 @@ export default async function VipMembersPage({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {members.map((member) => {
-              const thresholds =
-                member.accountType === "INDIVIDUAL"
-                  ? individualThresholds
-                  : businessThresholds
-              const tier = calcTier(
-                member.contributionTotal,
-                thresholds.silver,
-                thresholds.gold,
-              )
-              const logo = member.company?.logoUrl ?? member.avatarUrl
-
-              return (
-                <div
-                  key={member.id}
-                  className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
-                >
-                  {/* Avatar + Name Row */}
-                  <div className="flex items-center gap-3">
-                    {logo ? (
-                      <div className="relative w-16 h-16 shrink-0">
-                        <Image
-                          src={logo}
-                          alt={member.name}
-                          fill
-                          className="rounded-full object-cover"
-                          sizes="64px"
+          <>
+            <p className="text-center text-xs text-brand-500 mb-4 italic">
+              💡 Click vào thẻ để lật xem mặt sau · Click "Xem chi tiết" để xem hồ sơ đầy đủ
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {cardsData.map(({ member, tierInfo, memberCardId, verifyUrl, qrDataUrl }) => {
+                const tier = tierFromStars(tierInfo.stars)
+                return (
+                  <div key={member.id} className="space-y-2">
+                    <MemberCardFlip
+                      front={
+                        <MemberCardFront
+                          data={{
+                            name: member.name,
+                            avatarUrl: member.avatarUrl ?? member.company?.logoUrl ?? null,
+                            title: member.company?.representativePosition ?? null,
+                            companyName: member.company?.name ?? null,
+                            memberCategory: member.memberCategory,
+                            memberCardId,
+                            validFrom: member.createdAt,
+                            validTo: member.membershipExpires,
+                            tier,
+                          }}
                         />
+                      }
+                      back={
+                        <MemberCardBack
+                          tier={tier}
+                          memberCardId={memberCardId}
+                          qrDataUrl={qrDataUrl}
+                          verifyUrl={verifyUrl}
+                          associationEmail={cfg.association_email ?? ""}
+                          associationPhone={cfg.association_phone ?? ""}
+                          associationWebsite={cfg.association_website ?? SITE_URL}
+                        />
+                      }
+                    />
+
+                    {/* Actions dưới card */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-brand-600 font-medium">{member.name}</span>
+                      <div className="flex gap-3">
+                        {member.company?.slug && (
+                          <Link
+                            href={`/doanh-nghiep/${member.company.slug}`}
+                            className="text-brand-600 hover:text-brand-900 hover:underline"
+                          >
+                            Xem chi tiết →
+                          </Link>
+                        )}
+                        <Link
+                          href={`/hoi-vien/${member.id}/the-in`}
+                          className="text-brand-500 hover:text-brand-800 hover:underline"
+                          title="Mở trang in thẻ cứng"
+                        >
+                          🖨️ In thẻ
+                        </Link>
                       </div>
-                    ) : (
-                      <AgarwoodPlaceholder
-                        className="w-16 h-16"
-                        shape="full"
-                        size="sm"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <h2 className="font-bold text-foreground text-base leading-tight">
-                        {member.name}
-                      </h2>
-                      <TierBadge stars={tier.stars} label={tier.label} />
                     </div>
                   </div>
-
-                  {/* Company */}
-                  {member.company && (
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      {member.company.isVerified && (
-                        <span className="shrink-0 inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                          ✓ Verified
-                        </span>
-                      )}
-                      <span className="text-sm font-medium text-brand-700 truncate">
-                        {member.company.name}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Address */}
-                  {member.company?.address && (
-                    <p className="text-muted-foreground text-xs truncate flex items-center gap-1">
-                      <span>📍</span> {member.company.address}
-                    </p>
-                  )}
-
-                  {/* Phone */}
-                  {member.phone && (
-                    <p className="text-muted-foreground text-xs flex items-center gap-1">
-                      <span>📞</span> {member.phone}
-                    </p>
-                  )}
-
-                  {/* Member Category */}
-                  <p className="text-xs text-muted-foreground">
-                    {member.memberCategory === "HONORARY"
-                      ? "Hội viên danh dự"
-                      : member.memberCategory === "AFFILIATE"
-                        ? "Hội viên liên kết"
-                        : "Hội viên chính thức"}
-                  </p>
-
-                  {/* CTA */}
-                  {member.company?.slug && (
-                    <div className="mt-auto pt-2">
-                      <Link
-                        href={`/doanh-nghiep/${member.company.slug}`}
-                        className="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors"
-                      >
-                        Xem doanh nghiệp →
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
