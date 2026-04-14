@@ -818,6 +818,7 @@ model Document {
 model Leader {
   id        String         @id @default(cuid())
   name      String
+  honorific String?        // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
   title     String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
   category  LeaderCategory @default(BCH) // nhóm chính hiển thị
   workTitle String?        // chức vụ đơn vị công tác

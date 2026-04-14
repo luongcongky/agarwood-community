@@ -1,8 +1,8 @@
 import Link from "next/link"
-import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
+import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
 
 export const revalidate = 600
 
@@ -45,49 +45,38 @@ const orgJsonLd = {
   sameAs: ["https://www.facebook.com/hoitramhuongvietnam.org"],
 }
 
-function InitialsAvatar({
-  name,
-  className,
-}: {
-  name: string
-  className?: string
-}) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center rounded-full bg-brand-700 text-white font-bold",
-        className
-      )}
-    >
-      {initials}
-    </div>
-  )
-}
-
 export default async function GioiThieuPage() {
-  // Only show Ban Thường vụ on this page — full list at /ban-lanh-dao
-  const btvLeaders = await prisma.leader.findMany({
-    where: { isActive: true, category: "BTV" },
+  // Fetch all leaders của nhiệm kỳ mới nhất — 3 category (BTV/BCH/BKT) cho tabs
+  const rawLeaders = await prisma.leader.findMany({
+    where: { isActive: true },
     orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
     select: {
       id: true,
       name: true,
+      honorific: true,
       title: true,
       workTitle: true,
+      bio: true,
       photoUrl: true,
       term: true,
+      category: true,
     },
   })
 
-  // Show the most recent term's BTV
-  const currentTerm = btvLeaders[0]?.term ?? null
-  const currentBtv = btvLeaders.filter((l) => l.term === currentTerm)
+  const currentTerm = rawLeaders[0]?.term ?? null
+  const currentLeaders: LeaderItem[] = rawLeaders
+    .filter((l) => l.term === currentTerm)
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      honorific: l.honorific,
+      title: l.title,
+      workTitle: l.workTitle,
+      bio: l.bio,
+      photoUrl: l.photoUrl,
+      term: l.term,
+      category: l.category as "BTV" | "BCH" | "BKT",
+    }))
 
   return (
     <>
@@ -164,67 +153,14 @@ export default async function GioiThieuPage() {
         </div>
       </section>
 
-      {/* ── Leadership (Ban Thường vụ only) ── */}
-      <section className="bg-brand-50 py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Ban Thường vụ
+      {/* ── Leadership — tabs cho BTV / BCH / BKT ── */}
+      <section className="bg-brand-50 py-16 lg:py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
+            Ban lãnh đạo Hội
           </h2>
-          {currentTerm && (
-            <p className="mb-10 text-center text-sm text-brand-500">
-              {currentTerm}
-            </p>
-          )}
 
-          {currentBtv.length === 0 ? (
-            <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-              Thông tin ban lãnh đạo sẽ được cập nhật sớm.
-            </div>
-          ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-              {currentBtv.map((leader) => (
-                <div
-                  key={leader.id}
-                  className="flex flex-col items-center rounded-xl border border-brand-200 bg-white p-8 text-center shadow-sm"
-                >
-                  {leader.photoUrl ? (
-                    <div className="relative h-20 w-20 rounded-full overflow-hidden mb-4">
-                      <Image
-                        src={leader.photoUrl}
-                        alt={leader.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
-                  ) : (
-                    <InitialsAvatar
-                      name={leader.name}
-                      className="h-20 w-20 text-xl mb-4"
-                    />
-                  )}
-                  <h3 className="font-bold text-brand-900">{leader.name}</h3>
-                  <p className="mt-1 text-sm font-medium text-amber-700">
-                    {leader.title}
-                  </p>
-                  {leader.workTitle && (
-                    <p className="mt-2 text-xs text-brand-500 leading-relaxed">
-                      {leader.workTitle}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-8 text-center">
-            <Link
-              href="/ban-lanh-dao"
-              className="inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-4"
-            >
-              Xem toàn bộ Ban Chấp hành, Ban Kiểm tra →
-            </Link>
-          </div>
+          <LeadershipTabs leaders={currentLeaders} />
         </div>
       </section>
 
