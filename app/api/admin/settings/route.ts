@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
   revalidatePath("/chung-nhan/nop-don")
   revalidatePath("/gioi-thieu")
   revalidatePath("/admin")
+  revalidateTag("footer", "max")
+  revalidateTag("site-config", "max")
 
   return NextResponse.json({ success: true })
 }

@@ -41,7 +41,8 @@
       "Bash(echo \"Exit: $?\")",
       "Bash('/c/Program Files/PostgreSQL/17/bin/psql.exe' postgresql://postgres.zkhxgczjgpbedxroyygf:ma4SZqmHLsymHFye@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres -f scripts/local-full-dump.sql)",
       "Bash('/c/Program Files/PostgreSQL/17/bin/psql.exe' postgresql://postgres.zkhxgczjgpbedxroyygf:ma4SZqmHLsymHFye@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres -c ':*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(tasklist)"
     ]
   }
 }

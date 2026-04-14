@@ -89,7 +89,7 @@ function LeaderCard({
       )}
     >
       {/* Ảnh — vuông 4:5, cỡ đồng nhất mọi level */}
-      <div className="relative shrink-0 w-24 aspect-[4/5] overflow-hidden rounded-md bg-brand-100">
+      <div className="relative shrink-0 w-24 aspect-4/5 overflow-hidden rounded-md bg-brand-100">
         {leader.photoUrl ? (
           <Image
             src={leader.photoUrl}
@@ -162,7 +162,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
         </button>
 
         <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 p-6 md:p-8">
-          <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-brand-100 shrink-0">
+          <div className="relative w-full aspect-4/5 rounded-xl overflow-hidden bg-brand-100 shrink-0">
             {leader.photoUrl ? (
               <Image
                 src={leader.photoUrl}

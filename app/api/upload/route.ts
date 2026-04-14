@@ -40,15 +40,31 @@ export async function POST(request: Request) {
   const monthFolder = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`
   const folder = `${menu}/${monthFolder}`
 
+  // Cap width tự động theo ngữ cảnh — giảm size đáng kể so với cap chung 1600px.
+  // Client có thể override bằng formData "maxWidth" (số px, kẹp 200..4000).
+  const FOLDER_MAX_WIDTH: Record<string, number> = {
+    "bai-viet": 1200, // ảnh trong bài post — content thường max-width ~800px
+    "tin-tuc": 1600, // thumbnail + hero tin tức
+    "san-pham": 1600, // ảnh sản phẩm — modal zoom cần nét
+    "doi-tac": 600, // logo đối tác — max render 200px
+    "doanh-nghiep": 1600, // logo + cover chung; client có thể override
+    banner: 2560, // banner quảng cáo full-width desktop
+  }
+  const DEFAULT_MAX_WIDTH = 1600
+
+  const clientMax = Number(formData.get("maxWidth"))
+  const maxWidth =
+    Number.isFinite(clientMax) && clientMax >= 200 && clientMax <= 4000
+      ? Math.round(clientMax)
+      : FOLDER_MAX_WIDTH[menu] ?? DEFAULT_MAX_WIDTH
+
   const result = await cloudinary.uploader.upload(base64, {
     folder,
     resource_type: "image",
-    // Auto optimization
     format: "webp",
     quality: "auto",
-    // Resize large images to max 1600px width
     transformation: [
-      { width: 1600, crop: "limit" },
+      { width: maxWidth, crop: "limit" },
       { fetch_format: "auto", quality: "auto" },
     ],
   })

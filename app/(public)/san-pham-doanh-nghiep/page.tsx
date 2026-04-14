@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 
 export const revalidate = 600
 
@@ -292,6 +293,8 @@ export default async function MarketplacePage({
                         src={cover}
                         alt={product.name}
                         fill
+                        placeholder="blur"
+                        blurDataURL={BRAND_BLUR_DATA_URL}
                         className={cn(
                           "object-cover transition-transform duration-300 group-hover:scale-105",
                           !isCertified && "opacity-90",

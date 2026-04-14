@@ -50,6 +50,11 @@ const getFooterData = unstable_cache(
               "association_phone_2",
               "contact_address",
               "association_website",
+              "footer_brand_desc",
+              "footer_working_hours",
+              "footer_legal_basis",
+              "footer_copyright_notice",
+              "footer_quick_links",
             ],
           },
         },
@@ -69,6 +74,35 @@ export async function Footer() {
   const chuTich = leaders.find((l) => /^Chủ tịch/i.test(l.title))
   const phoChuTich = leaders.filter((l) => /Phó Chủ tịch/i.test(l.title)).slice(0, 3)
   const tongThuKy = leaders.find((l) => /Tổng Thư ký/i.test(l.title))
+
+  const brandDesc =
+    cfg.footer_brand_desc ||
+    "Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm, chia sẻ tri thức và phát triển thị trường bền vững."
+  const workingHours = cfg.footer_working_hours || "Thứ 2 - Thứ 6: 8:00 - 17:00"
+  const legalBasis =
+    cfg.footer_legal_basis ||
+    "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ. Điều lệ Hội được phê duyệt qua Đại hội nhiệm kỳ."
+  const copyrightNotice =
+    cfg.footer_copyright_notice ||
+    "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này."
+  const quickLinks: { label: string; href: string }[] = (cfg.footer_quick_links
+    ? cfg.footer_quick_links.split("\n")
+    : [
+        "Trang chủ|/",
+        "Doanh nghiệp|/doanh-nghiep",
+        "Dịch vụ|/dich-vu",
+        "Điều lệ Hội|/dieu-le",
+        "Văn bản pháp quy|/phap-ly",
+        "Liên hệ|/lien-he",
+      ]
+  )
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, href] = line.split("|").map((s) => s.trim())
+      return { label, href: href || "/" }
+    })
+    .filter((l) => l.label)
 
   return (
     <>
@@ -94,9 +128,8 @@ export async function Footer() {
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-brand-300 leading-relaxed">
-                Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm,
-                chia sẻ tri thức và phát triển thị trường bền vững.
+              <p className="text-sm text-brand-300 leading-relaxed whitespace-pre-line">
+                {brandDesc}
               </p>
 
               {/* Social */}
@@ -104,16 +137,16 @@ export async function Footer() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-brand-100">
                   Theo dõi Hội trên
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {cfg.facebook_url && (
                     <a
                       href={cfg.facebook_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Facebook chính thức"
-                      className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-800 hover:bg-brand-700 text-brand-200 hover:text-brand-100 transition-colors"
+                      className="inline-flex items-center justify-center text-brand-200 hover:text-brand-100 transition-colors"
                     >
-                      <FacebookIcon className="w-4 h-4" />
+                      <FacebookIcon className="w-7 h-7" />
                     </a>
                   )}
                   {cfg.zalo_url && (
@@ -122,9 +155,9 @@ export async function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Zalo chính thức"
-                      className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-800 hover:bg-brand-700 text-brand-200 hover:text-brand-100 transition-colors"
+                      className="inline-flex items-center justify-center text-brand-200 hover:text-brand-100 transition-colors"
                     >
-                      <ZaloIcon className="w-4 h-4" />
+                      <ZaloIcon className="w-7 h-7" />
                     </a>
                   )}
                   {cfg.youtube_url && (
@@ -133,9 +166,9 @@ export async function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="YouTube chính thức"
-                      className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-800 hover:bg-brand-700 text-brand-200 hover:text-brand-100 transition-colors"
+                      className="inline-flex items-center justify-center text-brand-200 hover:text-brand-100 transition-colors"
                     >
-                      <YoutubeIcon className="w-4 h-4" />
+                      <YoutubeIcon className="w-7 h-7" />
                     </a>
                   )}
                 </div>
@@ -202,21 +235,21 @@ export async function Footer() {
                     <span>{cfg.contact_address}</span>
                   </li>
                 )}
-                <li className="flex gap-2">
-                  <span>🕐</span>
-                  <span>Thứ 2 - Thứ 6: 8:00 - 17:00</span>
-                </li>
+                {workingHours && (
+                  <li className="flex gap-2">
+                    <span>🕐</span>
+                    <span>{workingHours}</span>
+                  </li>
+                )}
               </ul>
 
               {/* Căn cứ pháp lý — đặt ngay dưới thông tin liên hệ */}
-              <div className="rounded-md border border-brand-700 bg-brand-800/60 p-3 text-xs text-brand-300 leading-relaxed">
-                <p className="text-brand-100 font-semibold mb-1">Căn cứ pháp lý</p>
-                <p>
-                  Thành lập theo Quyết định số{" "}
-                  <strong className="text-brand-100">23/QĐ-BNV</strong> ngày 11/01/2010
-                  của Bộ Nội Vụ. Điều lệ Hội được phê duyệt qua Đại hội nhiệm kỳ.
-                </p>
-              </div>
+              {legalBasis && (
+                <div className="rounded-md border border-brand-700 bg-brand-800/60 p-3 text-xs text-brand-300 leading-relaxed">
+                  <p className="text-brand-100 font-semibold mb-1">Căn cứ pháp lý</p>
+                  <p className="whitespace-pre-line">{legalBasis}</p>
+                </div>
+              )}
             </div>
 
             {/* ── Col 3 (span 1): Liên kết nhanh ── */}
@@ -225,14 +258,7 @@ export async function Footer() {
                 Liên kết nhanh
               </h4>
               <ul className="space-y-1">
-                {[
-                  { label: "Trang chủ", href: "/" },
-                  { label: "Doanh nghiệp", href: "/doanh-nghiep" },
-                  { label: "Dịch vụ", href: "/dich-vu" },
-                  { label: "Điều lệ Hội", href: "/dieu-le" },
-                  { label: "Văn bản pháp quy", href: "/phap-ly" },
-                  { label: "Liên hệ", href: "/lien-he" },
-                ].map((l) => (
+                {quickLinks.map((l) => (
                   <li key={l.href}>
                     <Link
                       href={l.href}
@@ -250,12 +276,11 @@ export async function Footer() {
 
           {/* Copyright notice + legal links */}
           <div className="space-y-3">
-            <p className="text-xs text-brand-400 leading-relaxed italic">
-              ⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản
-              của Hội Trầm Hương Việt Nam. Ghi rõ nguồn{" "}
-              <strong className="text-brand-300">hoitramhuong.vn</strong> khi phát hành
-              lại thông tin từ website này.
-            </p>
+            {copyrightNotice && (
+              <p className="text-xs text-brand-400 leading-relaxed italic whitespace-pre-line">
+                {copyrightNotice}
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm text-brand-400 pt-2 border-t border-brand-800">
               <span>
                 © {new Date().getFullYear()} Hội Trầm Hương Việt Nam. Bảo lưu mọi quyền.

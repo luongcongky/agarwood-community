@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { getFeaturedProductsForHomepage } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 
 /**
  * Section 3 — Sản phẩm tiêu biểu (carousel).
@@ -82,6 +83,8 @@ export async function CertifiedProductsCarousel() {
                       src={product.imageUrls[0]}
                       alt={product.name}
                       fill
+                      placeholder="blur"
+                      blurDataURL={BRAND_BLUR_DATA_URL}
                       className="object-cover transition-transform duration-300 group-hover/card:scale-105"
                       sizes="224px"
                     />

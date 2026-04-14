@@ -92,7 +92,7 @@ export default async function BannerHistoryPage() {
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
                     {/* Image */}
-                    <div className="relative aspect-[16/9] rounded-lg overflow-hidden bg-brand-100">
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-brand-100">
                       <Image
                         src={banner.imageUrl}
                         alt={banner.title}

@@ -15,9 +15,27 @@ const SETTINGS_GROUPS = [
       { key: "association_name", label: "Tên hội", type: "text" },
       { key: "association_email", label: "Email liên hệ chính thức", type: "email" },
       { key: "association_phone", label: "Số điện thoại", type: "tel" },
+      { key: "association_phone_2", label: "Số điện thoại phụ", type: "tel" },
+      { key: "association_website", label: "Website chính thức", type: "url" },
       { key: "contact_address", label: "Địa chỉ trụ sở", type: "text" },
-      { key: "facebook_url", label: "Link Facebook / Zalo OA", type: "url" },
+      { key: "facebook_url", label: "Link Facebook", type: "url" },
+      { key: "zalo_url", label: "Link Zalo OA", type: "url" },
       { key: "youtube_url", label: "Link kênh YouTube", type: "url" },
+    ],
+  },
+  {
+    title: "Footer website",
+    description: "Nội dung hiển thị tại chân trang — hỗ trợ nhiều dòng",
+    keys: [
+      { key: "footer_brand_desc", label: "Mô tả ngắn về Hội (dưới logo)", type: "textarea" },
+      { key: "footer_working_hours", label: "Giờ làm việc", type: "text" },
+      { key: "footer_legal_basis", label: "Căn cứ pháp lý", type: "textarea" },
+      { key: "footer_copyright_notice", label: "Cảnh báo bản quyền", type: "textarea" },
+      {
+        key: "footer_quick_links",
+        label: "Liên kết nhanh — mỗi dòng: Nhãn|đường-dẫn",
+        type: "textarea",
+      },
     ],
   },
   {
@@ -115,14 +133,23 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {group.keys.map(({ key, label, type }) => (
-              <div key={key}>
+              <div key={key} className={type === "textarea" ? "sm:col-span-2" : ""}>
                 <label className="block text-sm font-medium text-brand-800 mb-1">{label}</label>
-                <input
-                  type={type}
-                  value={values[key] ?? ""}
-                  onChange={(e) => handleChange(key, e.target.value)}
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                />
+                {type === "textarea" ? (
+                  <textarea
+                    rows={4}
+                    value={values[key] ?? ""}
+                    onChange={(e) => handleChange(key, e.target.value)}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  />
+                ) : (
+                  <input
+                    type={type}
+                    value={values[key] ?? ""}
+                    onChange={(e) => handleChange(key, e.target.value)}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  />
+                )}
               </div>
             ))}
           </div>

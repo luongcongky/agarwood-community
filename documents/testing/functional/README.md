@@ -9,7 +9,7 @@
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@hoitramhuong.vn | Demo@123 |
-| Hoi vien ★★★ Vang | trankhanh@tramhuongkhanhhoa.vn | Demo@123 |
+| Hoi vien ★★★ Vang | binhnv@hoitramhuong.vn | Demo@123 |
 | Hoi vien ★★★ Vang | levanminh@tramhuongquangnam.vn | Demo@123 |
 | Hoi vien ★★ Bac | nguyenthilan@tinhdautramhuong.vn | Demo@123 |
 | Hoi vien ★★ Bac | phamducthang@nhangthom.vn | Demo@123 |

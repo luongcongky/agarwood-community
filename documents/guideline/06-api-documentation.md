@@ -644,10 +644,28 @@ Sau moi mutation: `revalidateTag("partners","max")` → carousel trang chu cap n
 ### POST /api/upload
 Upload anh len Cloudinary. Yeu cau: dang nhap.
 
-**Body:** FormData voi field `file` (image/*, max 5MB) + `folder` (menu name, vd: `bai-viet`,
-`san-pham`, `tin-tuc`, `doanh-nghiep`, `banner`, `doi-tac`). Server tu them `MM-YYYY` sub-folder.
+**Body:** FormData voi:
+- `file` — image/*, max 5MB (bat buoc)
+- `folder` — menu name (bat buoc, vd: `bai-viet`, `san-pham`, `tin-tuc`, `doanh-nghiep`,
+  `banner`, `doi-tac`). Server tu them `MM-YYYY` sub-folder.
+- `maxWidth` — (tuy chon) so px ghi de cap width mac dinh. Server kep trong khoang
+  `200..4000`; gia tri ngoai khoang hoac khong hop le se fallback ve preset theo folder.
 
-**Response:** `{ secure_url: "https://res.cloudinary.com/..." }`
+**Cap width mac dinh theo folder** (Cloudinary `crop: "limit"` — chi downscale):
+
+| Folder | maxWidth | Ly do |
+|--------|----------|-------|
+| `bai-viet` | 1200px | Noi dung post render max-width ~800px |
+| `tin-tuc` | 1600px | Hero + thumbnail tin tuc |
+| `san-pham` | 1600px | Modal zoom san pham |
+| `doi-tac` | 600px | Logo doi tac render ~200px |
+| `doanh-nghiep` | 1600px | Default; client override: logo → 600, cover → 1920 |
+| `banner` | 2560px | Banner full-width desktop |
+| (default) | 1600px | Folder chua khai bao preset |
+
+Output van la WebP + `quality: "auto"` (khong doi). Anh nho hon cap khong bi upscale.
+
+**Response:** `{ secure_url: "https://res.cloudinary.com/...", url: "..." }`
 
 ### GET /api/my-products
 Lay danh sach SP cua VIP hien tai. Yeu cau: VIP.

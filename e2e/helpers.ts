@@ -13,5 +13,5 @@ export async function login(page: Page, email: string, password: string) {
 }
 
 export const ADMIN = { email: "admin@hoitramhuong.vn", password: "Demo@123" }
-export const VIP_A = { email: "trankhanh@tramhuongkhanhhoa.vn", password: "Demo@123" }
+export const VIP_A = { email: "binhnv@hoitramhuong.vn", password: "Demo@123" }
 export const VIP_B = { email: "levanminh@tramhuongquangnam.vn", password: "Demo@123" }

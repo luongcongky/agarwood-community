@@ -387,9 +387,36 @@ model Product {
 - Seed = `Math.floor(Date.now() / 300_000)` (5-min bucket) → deterministic trong 5 phut
 - Mulberry32 PRNG inline (~8 dong code)
 
-**Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`, `banners`, `partners`, `legal-pages`
+**Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`, `banners`, `partners`, `legal-pages`, `footer`, `site-config`
 - Admin pin/unpin → `revalidateTag("homepage", "max")` + tag tuong ung
+- Admin luu `/admin/cai-dat` → `revalidateTag("footer", "max")` + `revalidateTag("site-config", "max")` (cho Footer va cac block doc SiteConfig)
 - Next 16 yeu cau profile arg thu 2 — dung `"max"` cho stale-while-revalidate dai nhat
+
+### Progressive streaming trang chu (Phase 7+)
+`app/(public)/page.tsx` khong con goi `Promise.all` top-level. Moi section fetch rieng,
+phan lon wrap `<Suspense fallback={<Skeleton/>}>` (xem `components/features/homepage/skeletons.tsx`):
+- **KHONG wrap Suspense (co chu y)**: `NewsSection` (Tin Hoi) + `MemberNewsRail` —
+  block initial flush de main content luon co mat khi HTML flush lan dau
+- **Wrap Suspense (stream sau)**: banner TOP/MID, CertifiedProductsCarousel,
+  `LatestPostsSection` (Tin DN + Tin SP), `PartnersCarousel`
+- List pages co `loading.tsx` rieng: `app/(public)/tin-tuc/loading.tsx`,
+  `app/(public)/san-pham-doanh-nghiep/loading.tsx`
+
+### Cloudinary blur placeholder
+File `lib/imageBlur.ts`:
+- `BRAND_BLUR_DATA_URL` — PNG base64 8×5 warm-beige (~120B) dung chung
+- `cloudinaryBlurUrl(publicId)` — optional, gen blur URL tu chinh anh (Cloudinary transform `w_8,q_10,e_blur:1000`)
+Ap dung `placeholder="blur" blurDataURL={BRAND_BLUR_DATA_URL}` cho `next/image` o:
+PostCard (3 variants), NewsSection, CertifiedProductsCarousel, marketplace product grid.
+
+### Footer editable qua SiteConfig
+`components/features/layout/Footer.tsx` doc cac key sau tu SiteConfig (co fallback mac dinh):
+- `footer_brand_desc`, `footer_working_hours`, `footer_legal_basis`, `footer_copyright_notice`
+- `footer_quick_links` — moi dong format `Nhan|duong-dan`, Footer tu parse
+Admin chinh tai `/admin/cai-dat` nhom **"Footer website"** (SettingsForm co
+`type: "textarea"`). Nhom "Thong tin Hoi" bo sung `association_phone_2`,
+`association_website`, `zalo_url`. Seed defaults: `scripts/seed-footer-settings.ts`
+(idempotent, chi tao khi key chua ton tai).
 
 ---
 
@@ -425,20 +452,29 @@ From: "Hoi Tram Huong Viet Nam <noreply@hoitramhuong.vn>"
 - Auth: required (khong cho GUEST)
 - MIME: chi image/*
 - Max size: 5MB
-- Body: FormData voi `file` + `folder` (menu name) — server tu them sub-folder `MM-YYYY`
+- Body: FormData voi `file` + `folder` (menu name) + optional `maxWidth` — server tu them sub-folder `MM-YYYY`
 - Response: { secure_url }
 
-### Folder convention
-| Menu (folder param) | Cloudinary path | Su dung tai |
-|---------------------|----------------|-------------|
-| `bai-viet` | `bai-viet/MM-YYYY/` | Anh trong post (PostEditor, RichTextEditor) |
-| `san-pham` | `san-pham/MM-YYYY/` | Anh san pham (ProductForm) |
-| `tin-tuc` | `tin-tuc/MM-YYYY/` | Anh bia + body tin tuc (NewsEditor) |
-| `doanh-nghiep` | `doanh-nghiep/MM-YYYY/` | Logo + anh DN |
-| `banner` | `banner/MM-YYYY/` | Banner quang cao trang chu |
-| `doi-tac` | `doi-tac/MM-YYYY/` | Logo doi tac (PartnerManager) |
-| `members` | `agarwood/members/` | Avatar + anh ho so hoi vien (legacy crawl) |
-| `research` | `agarwood/research/{slug}/` | Anh nghien cuu (legacy crawl) |
+### Folder convention + cap width theo ngu canh
+Cloudinary transform `crop: "limit"` — chi downscale, khong upscale. Ket qua van la
+WebP + `quality: "auto"` (khong doi). Cap width chon theo folder de anh dau ra nho
+hon dang ke so voi cap chung 1600px truoc day.
+
+| Menu (folder param) | Cloudinary path | Max width | Su dung tai |
+|---------------------|----------------|-----------|-------------|
+| `bai-viet` | `bai-viet/MM-YYYY/` | 1200px | Anh trong post (content max-width ~800px) |
+| `san-pham` | `san-pham/MM-YYYY/` | 1600px | Anh san pham — modal zoom can net |
+| `tin-tuc` | `tin-tuc/MM-YYYY/` | 1600px | Anh bia + body tin tuc (NewsEditor) |
+| `doanh-nghiep` | `doanh-nghiep/MM-YYYY/` | 1600px (default) | Logo + cover DN; client co the override |
+| `banner` | `banner/MM-YYYY/` | 2560px | Banner quang cao full-width desktop |
+| `doi-tac` | `doi-tac/MM-YYYY/` | 600px | Logo doi tac (render max ~200px) |
+| (default) | — | 1600px | Folder khong khai bao |
+| `members` | `agarwood/members/` | — | Avatar + anh ho so hoi vien (legacy crawl) |
+| `research` | `agarwood/research/{slug}/` | — | Anh nghien cuu (legacy crawl) |
+
+Client co the ghi de qua FormData `maxWidth` (so px, server kep trong khoang
+200..4000). Vi du: `CompanyEditForm.tsx` gui `maxWidth=600` cho logo va `maxWidth=1920`
+cho cover. Du lieu cu khong anh huong — chi ap dung tu luc upload moi.
 
 ### Config:
 ```
@@ -523,7 +559,7 @@ npx playwright test e2e/vip-demo-flow.spec.ts e2e/admin-demo-flow.spec.ts --head
 **Luu y:**
 - Can start dev server truoc (`npm run dev`)
 - Video output: `e2e/test-results/` (file `.webm`)
-- Tai khoan demo: `admin@hoitramhuong.vn` / `trankhanh@tramhuongkhanhhoa.vn` / `Demo@123`
+- Tai khoan demo: `admin@hoitramhuong.vn` / `binhnv@hoitramhuong.vn` / `Demo@123`
 
 ---
 

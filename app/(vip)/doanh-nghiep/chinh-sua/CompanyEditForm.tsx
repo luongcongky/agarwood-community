@@ -68,6 +68,8 @@ export function CompanyEditForm({ company }: { company: Company }) {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("folder", "doanh-nghiep")
+      // Logo nhỏ (render ≤ 200px), cover rộng (hero full-width)
+      formData.append("maxWidth", target === "logo" ? "600" : "1920")
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (!res.ok) { setMsg({ type: "error", text: "Upload that bai" }); return }
       const data = await res.json()

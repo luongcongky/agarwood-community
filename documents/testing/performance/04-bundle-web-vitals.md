@@ -60,6 +60,22 @@
 4. **Kiem tra**: Interactive < 3s
 5. Truy cap /feed -> **Kiem tra**: First post hien < 2s
 
+### TC-PERF-BUNDLE-STREAM: Homepage progressive streaming (Suspense)
+1. `app/(public)/page.tsx` KHONG con `Promise.all` o top-level — moi section co
+   data fetch rieng, wrap `<Suspense>` + skeleton (`components/features/homepage/skeletons.tsx`)
+2. **Exception (co chu y)**: `NewsSection` (Tin Hoi) + `MemberNewsRail`
+   (Ban tin hoi vien) KHONG wrap Suspense — block initial HTML flush de
+   content chinh luon co mat khi first paint
+3. Cac section khac (banners, CertifiedProductsCarousel, LatestPostsSection, partners)
+   stream sau -> cai thien TTFB va LCP cua main content
+4. **Kiem tra** (Lighthouse / WebPageTest):
+   - TTFB van nho (Tin Hoi block nhung nhanh — cung cache)
+   - LCP element = Tin Hoi heading/thumbnail (above fold, khong cho stream)
+   - Cac skeleton hien nhanh o banner/carousel slot, sau do replace khong layout shift
+5. List pages co `loading.tsx` skeleton rieng: `/tin-tuc`, `/san-pham-doanh-nghiep`
+6. Trade-off: TTFB cao hon 1 chut so voi full-streaming, nhung LCP on dinh —
+   tranh case man hinh trong hoac nhay skeleton tren main content
+
 ### TC-PERF-BUNDLE-08: Font preload
 1. Xem HTML source cua bat ky trang nao
 2. **Kiem tra**: Font Inter va Playfair Display co preload link

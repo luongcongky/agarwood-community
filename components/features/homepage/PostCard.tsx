@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 import type { HomepagePost } from "@/lib/homepage"
 
 interface PostCardProps {
@@ -42,7 +43,15 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
       >
         {cover && (
           <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded">
-            <Image src={cover} alt="" fill className="object-cover" sizes="64px" />
+            <Image
+              src={cover}
+              alt=""
+              fill
+              placeholder="blur"
+              blurDataURL={BRAND_BLUR_DATA_URL}
+              className="object-cover"
+              sizes="64px"
+            />
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -67,7 +76,15 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
       >
         {cover ? (
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded">
-            <Image src={cover} alt="" fill className="object-cover" sizes="80px" />
+            <Image
+              src={cover}
+              alt=""
+              fill
+              placeholder="blur"
+              blurDataURL={BRAND_BLUR_DATA_URL}
+              className="object-cover"
+              sizes="80px"
+            />
           </div>
         ) : (
           <AgarwoodPlaceholder className="h-20 w-20" size="sm" shape="rounded" tone="light" />
@@ -98,6 +115,8 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
             src={cover}
             alt={post.title ?? authorName}
             fill
+            placeholder="blur"
+            blurDataURL={BRAND_BLUR_DATA_URL}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, 33vw"
           />
