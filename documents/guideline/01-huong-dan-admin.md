@@ -352,13 +352,28 @@ Bo loc tren danh sach `/admin/tin-tuc`:
 
 ### Truy cap: `/admin/cai-dat`
 
-### 4 nhom cai dat:
+### 5 nhom cai dat:
 
 **Thong tin Hoi:**
-- Ten hoi, email, SDT, dia chi
-- **Link Facebook / Zalo OA** (Phase 1: hien icon FB tren navbar)
+- Ten hoi, email, SDT (`association_phone`), SDT 2 (`association_phone_2`), dia chi
+- **Website chinh thuc** (`association_website`) — hien o footer + block "Kenh truyen thong chinh thuc"
+- **Link Facebook / Zalo OA (`zalo_url`)** (Phase 1: hien icon FB tren navbar + footer)
 - **Link kenh YouTube** (Phase 1: hien icon YT tren navbar)
 - Hien thi tren toan bo website, footer, email
+
+**Footer website** (moi — noi dung hien o footer cong khai):
+- `footer_brand_desc` (textarea) — doan gioi thieu ngan duoi logo
+- `footer_working_hours` (textarea) — gio lam viec, moi dong 1 y
+- `footer_legal_basis` (textarea) — co so phap ly / QD thanh lap
+- `footer_copyright_notice` (textarea) — dong ban quyen duoi cung
+- `footer_quick_links` (textarea) — moi dong 1 link theo format `Nhan|duong-dan`, vi du:
+  ```
+  Gioi thieu|/gioi-thieu
+  Lien he|/lien-he
+  Dieu khoan|/terms
+  ```
+- Thay doi -> luu -> footer cap nhat ngay (cache `footer` + `site-config` auto revalidate)
+- Neu key trong, Footer fallback ve gia tri mac dinh trong code
 
 **Phi & Gioi han:**
 - Phi membership toi thieu / toi da (VND)

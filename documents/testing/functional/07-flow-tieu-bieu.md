@@ -5,7 +5,7 @@
 ## Tai khoan test
 - Khach: khong dang nhap
 - GUEST: user moi dang ky tu /dang-ky
-- Hoi vien A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123 (Tram Huong Khanh Hoa — featured #1)
+- Hoi vien A (Vang): binhnv@hoitramhuong.vn / Demo@123 (Tram Huong Khanh Hoa — featured #1)
 - Hoi vien B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123 (Tinh Dau Tram Huong Sai Gon — featured #3)
 - Hoi vien C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123 (Tram Huong Dak Nong — KHONG featured)
 - Admin: admin@hoitramhuong.vn / Demo@123

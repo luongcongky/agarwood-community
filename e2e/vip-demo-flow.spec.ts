@@ -14,7 +14,7 @@ import { execSync } from "child_process"
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const VIP = { email: "trankhanh@tramhuongkhanhhoa.vn", password: "Demo@123" }
+const VIP = { email: "binhnv@hoitramhuong.vn", password: "Demo@123" }
 const ADMIN = { email: "admin@hoitramhuong.vn", password: "Demo@123" }
 const PAUSE = 800 // ms — cho video de doc
 

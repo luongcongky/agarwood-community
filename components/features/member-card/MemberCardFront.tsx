@@ -112,7 +112,7 @@ export function MemberCardFront({
         <div className="flex-1 flex items-center gap-3 mt-[3%]">
           {/* Avatar vuông */}
           <div
-            className="relative aspect-[4/5] w-[20%] shrink-0 rounded-md overflow-hidden"
+            className="relative aspect-4/5 w-[20%] shrink-0 rounded-md overflow-hidden"
             style={{ background: "rgba(255,255,255,0.2)" }}
           >
             {data.avatarUrl ? (

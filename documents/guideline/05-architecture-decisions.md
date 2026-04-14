@@ -639,3 +639,138 @@ Sau khi inspect, xac dinh trang cu dung template chung voi main content o `.sing
 - (+) Scripts idempotent → safe chay nhieu lan
 - (-) Legacy site template thay doi se break scripts
 - (-) Scripts la one-shot, khong phai cron — chi chay khi setup
+
+---
+
+## ADR-021: Footer editable qua SiteConfig + tag-based revalidation
+
+### Boi canh
+Khach hang yeu cau tu sua noi dung footer (gioi thieu ngan, gio lam viec, co so
+phap ly, copyright, quick links) ma khong can developer deploy lai. Truoc day
+cac gia tri nay hard-code trong `components/features/layout/Footer.tsx`.
+
+### Quyet dinh
+- Footer doc cac key sau tu SiteConfig, co fallback mac dinh trong code neu key trong:
+  `footer_brand_desc`, `footer_working_hours`, `footer_legal_basis`,
+  `footer_copyright_notice`, `footer_quick_links`
+- `footer_quick_links` dung format text don gian, moi dong 1 link: `Nhan|duong-dan`
+  (Footer tu parse, khong can JSON de admin sua de hon)
+- Admin UI `/admin/cai-dat` them nhom **"Footer website"** trong `SettingsForm.tsx`,
+  support `type: "textarea"` cho cac field nhieu dong
+- Bo sung `association_phone_2`, `association_website`, `zalo_url` vao nhom
+  "Thong tin Hoi" (truoc day thieu tren UI du da co trong SiteConfig)
+- API `app/api/admin/settings/route.ts` goi `revalidateTag("footer", "max")` +
+  `revalidateTag("site-config", "max")` sau khi save -> Footer cap nhat ngay,
+  khong can doi TTL
+- Seed script `scripts/seed-footer-settings.ts` idempotent, tao defaults khi key
+  chua ton tai (khong ghi de)
+
+### Ly do
+- **Pipe-separated format**: Admin 40-60 tuoi khong quen JSON. Format
+  `Nhan|duong-dan` de hieu, de sua, van parse duoc deterministic
+- **Tag-based invalidation**: Pattern da quen thuoc trong codebase (homepage,
+  banners...) — khong can hoc pattern moi
+- **Fallback trong code**: Neu admin xoa nham key, Footer van hoat dong
+
+### Trade-offs
+- (+) Khong can deploy cho thay doi noi dung footer
+- (+) Seed script giu default o 1 cho — de update
+- (-) Them ~5 keys SiteConfig (khong dang ke)
+- (-) Format `Nhan|duong-dan` khong validate URL — admin phai go dung
+
+---
+
+## ADR-022: Homepage streaming + blur placeholder — LCP uu tien main content
+
+### Boi canh
+Truoc day `app/(public)/page.tsx` dung `Promise.all` fetch tat ca 6-7 sections
+cung luc roi render mot lan. TTFB cham vi phai doi section cham nhat (thuong la
+CertifiedProductsCarousel hoac banner query). LCP bi anh huong vi anh hien trang
+truoc khi load.
+
+### Quyet dinh
+**1. Progressive streaming voi Suspense boundary co chon loc**
+- Bo `Promise.all` top-level — moi section fetch rieng trong component con
+- Wrap `<Suspense fallback={<Skeleton/>}>` cho: banner TOP/MID,
+  CertifiedProductsCarousel, `LatestPostsSection` (Tin DN + Tin SP), PartnersCarousel
+- **KHONG wrap Suspense** (co chu y): `NewsSection` (Tin Hoi) + `MemberNewsRail`
+  (Ban tin hoi vien) — de block initial HTML flush, dam bao main content luon
+  co mat khi first paint
+- List pages co `loading.tsx` rieng: `/tin-tuc`, `/san-pham-doanh-nghiep`
+
+**2. Cloudinary blur placeholder**
+- `lib/imageBlur.ts` export `BRAND_BLUR_DATA_URL` — PNG base64 8×5 warm-beige
+  (~120B), dung `placeholder="blur" blurDataURL={...}` tren `next/image`
+- Optional helper `cloudinaryBlurUrl(publicId)` — gen blur tu chinh anh khi can
+  accuracy cao (transform `w_8,q_10,e_blur:1000`)
+- Ap dung: PostCard (3 variants), NewsSection, CertifiedProductsCarousel,
+  marketplace product grid
+
+### Ly do
+- **Uu tien LCP cua main content**: Nguoi dung vao trang chu can thay Tin Hoi
+  ngay — khong chap nhan skeleton cho section chinh. Cac section phu (banner,
+  carousel) stream sau, CLS=0 nho skeleton cung kich thuoc
+- **Constant blur placeholder**: 1 data URL dung chung -> khong can query
+  Cloudinary cho placeholder -> nhe, cache-friendly. Warm-beige match brand
+  khong bi "xam xit" nhu default
+- **Helper co san**: `cloudinaryBlurUrl()` san sang cho case can accuracy cao
+  (vd hero image) ma khong phai refactor
+
+### Trade-offs
+- (+) LCP on dinh hon — Tin Hoi luon hien khi first paint
+- (+) Perceived performance tot — blur thay vi man trang
+- (+) TTFB van chap nhan duoc (Tin Hoi cache 300s)
+- (-) TTFB cao hon 1 chut so voi full-streaming (moi section wrap Suspense)
+- (-) Hard-code BRAND_BLUR_DATA_URL — doi mau brand phai re-gen (toi gian)
+- (-) Them 3 files (`NewsSection`, `LatestPostsSection`, `skeletons`) —
+  tach concern ro rang hon nen chap nhan
+
+### Khi nao review lai
+- Neu query Tin Hoi cham > 500ms -> can xem xet wrap Suspense va chap nhan
+  skeleton cho section nay
+- Neu them hero image co anh chat luong cao -> dung `cloudinaryBlurUrl()` thay
+  vi constant
+
+---
+
+## ADR-023: Cap width upload theo ngu canh (folder-based preset)
+
+### Boi canh
+Truoc day `/api/upload` ap cap chung 1600px cho moi anh qua Cloudinary transform
+`c_limit,w_1600`. Hop ly cho hero/san pham nhung lang phi cho logo doi tac
+(render ~200px), anh trong post (content max-width ~800px) va qua it cho banner
+full-width desktop 2560px+.
+
+### Quyet dinh
+- Server `app/api/upload/route.ts` co bang preset `FOLDER_MAX_WIDTH`:
+  - `bai-viet` → 1200, `tin-tuc` → 1600, `san-pham` → 1600,
+    `doi-tac` → 600, `doanh-nghiep` → 1600, `banner` → 2560,
+    default → 1600
+- Client co the ghi de qua FormData `maxWidth` — server kep `200..4000` truoc
+  khi fallback ve preset. Da ap dung tai `CompanyEditForm.tsx`
+  (logo → 600, cover → 1920)
+- Cloudinary `crop: "limit"` giu nguyen — chi downscale, khong upscale
+- WebP + `quality: "auto"` khong doi
+- Khong schema change, khong migration — anh cu giu nguyen
+
+### Ly do
+- **Byte thuc te giam manh** cho logo/anh nho: 600px ~ 1/7 diem anh so voi 1600px,
+  keo theo giam mang luoi mobile va LCP
+- **Preset server-side** tranh rui ro client gui cap qua cao hoac sai, van co
+  escape-hatch qua `maxWidth` cho truong hop dac biet (cover full-bleed 1920)
+- **Kep 200..4000** chan abuse (upscale 8K) va sai so (maxWidth=0 hoac NaN)
+- **Khong touch du lieu cu**: goi la toi gian, roll-forward an toan
+
+### Trade-offs
+- (+) Byte tai ve giam, LCP mobile tot hon
+- (+) Logo doi tac sac net dung do phan giai render (khong phi pixel)
+- (+) Banner 2560 du cho man hinh 2K/4K
+- (-) Them 1 bang mapping can dong bo voi folder convention — doi ten folder
+  phai update bang
+- (-) Anh cu van 1600px (khong re-encode) — chap nhan vi re-upload thu cong khi can
+
+### Khi nao review lai
+- Neu them folder moi → bo sung vao `FOLDER_MAX_WIDTH` (khong de default 1600
+  lang phi byte)
+- Neu Cloudinary ho tro responsive breakpoints rong hon → cos nhac chuyen sang
+  `w_auto` + DPR-aware thay vi cap cung

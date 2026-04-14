@@ -1,17 +1,17 @@
-import Link from "next/link"
-import Image from "next/image"
+import { Suspense } from "react"
 import type { Metadata } from "next"
-import {
-  getAssociationNews,
-  getLatestPostsByCategory,
-  type HomepageNewsItem,
-} from "@/lib/homepage"
 import { MemberNewsRail } from "@/components/features/homepage/MemberNewsRail"
 import { CertifiedProductsCarousel } from "@/components/features/homepage/CertifiedProductsCarousel"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
 import { PartnersCarousel } from "@/components/features/homepage/PartnersCarousel"
-import { PostCard } from "@/components/features/homepage/PostCard"
-import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { NewsSection } from "@/components/features/homepage/NewsSection"
+import { LatestPostsSection } from "@/components/features/homepage/LatestPostsSection"
+import {
+  CarouselSkeleton,
+  LatestPostsSkeleton,
+  BannerSlotSkeleton,
+  PartnersCarouselSkeleton,
+} from "@/components/features/homepage/skeletons"
 
 export const metadata: Metadata = {
   title: "Hội Trầm Hương Việt Nam — Cộng đồng Doanh nghiệp Trầm Hương",
@@ -25,28 +25,9 @@ export const metadata: Metadata = {
   },
 }
 
-// Trang chủ phụ thuộc vào nhiều cache 5 phút trong lib/homepage.ts.
-// Set revalidate ngắn hơn ở đây để Next.js cũng revalidate static shell.
 export const revalidate = 300
 
-function formatDate(d: Date | null | string): string {
-  if (!d) return ""
-  const date = typeof d === "string" ? new Date(d) : d
-  return date.toLocaleDateString("vi-VN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
-}
-
-export default async function HomePage() {
-  // Fetch song song để giảm latency
-  const [associationNews, businessPosts, productPosts] = await Promise.all([
-    getAssociationNews(),
-    getLatestPostsByCategory("NEWS", 6),
-    getLatestPostsByCategory("PRODUCT", 6),
-  ])
-
+export default function HomePage() {
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -65,9 +46,6 @@ export default async function HomePage() {
     sameAs: ["https://www.facebook.com/hoitramhuongvietnam.org"],
   }
 
-  const heroNews = associationNews[0] ?? null
-  const restNews = associationNews.slice(1)
-
   return (
     <>
       <script
@@ -75,51 +53,21 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      {/* ── Banner quảng cáo đầu trang (sau thanh menu) ── */}
-      <HomepageBannerSlot position="TOP" />
+      {/* ── Banner TOP — stream ── */}
+      <Suspense fallback={<BannerSlotSkeleton />}>
+        <HomepageBannerSlot position="TOP" />
+      </Suspense>
 
-      {/* ── Section 1 + 2: Tin Hội (left) + Bản tin hội viên (right rail) ── */}
+      {/*
+        Section 1 + 2: Tin Hội + Bản tin hội viên — KHÔNG bọc Suspense.
+        Next.js sẽ chờ 2 component này resolve xong mới flush HTML đầu tiên,
+        đảm bảo "khối nội dung chính" luôn hiện ngay khi trang hiện ra.
+        Các section khác (banners, carousels, latest posts, partners) vẫn stream sau.
+      */}
       <section className="bg-brand-50 py-8 lg:py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Section 1 — Tin tức Hội (col 1+2) */}
-            <div className="min-w-0 lg:col-span-2 space-y-6">
-              <header>
-                <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-                  Tin tức của Hội
-                </h2>
-                <p className="text-sm text-brand-500 mt-1">
-                  Cập nhật từ Ban quản trị Hội Trầm Hương Việt Nam
-                </p>
-              </header>
-
-              {heroNews ? (
-                <NewsHero news={heroNews} />
-              ) : (
-                <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-                  Chưa có tin tức nào.
-                </div>
-              )}
-
-              {restNews.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {restNews.map((news) => (
-                    <NewsListItem key={news.id} news={news} />
-                  ))}
-                </div>
-              )}
-
-              <div className="text-right">
-                <Link
-                  href="/tin-tuc"
-                  className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
-                >
-                  Xem tất cả tin tức →
-                </Link>
-              </div>
-            </div>
-
-            {/* Section 2 — Bản tin hội viên (right rail) */}
+            <NewsSection />
             <div className="min-w-0 lg:col-span-1">
               <MemberNewsRail />
             </div>
@@ -127,144 +75,40 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Section 3: Sản phẩm chứng nhận (carousel) ── */}
-      <CertifiedProductsCarousel />
+      {/* ── Section 3: Sản phẩm chứng nhận ── */}
+      <Suspense fallback={<CarouselSkeleton />}>
+        <CertifiedProductsCarousel />
+      </Suspense>
 
-      {/* ── Section 4: Banner quảng cáo ── */}
-      <HomepageBannerSlot position="MID" />
+      {/* ── Section 4: Banner MID ── */}
+      <Suspense fallback={<BannerSlotSkeleton />}>
+        <HomepageBannerSlot position="MID" />
+      </Suspense>
 
       {/* ── Section 5: Tin doanh nghiệp mới nhất ── */}
-      <LatestPostsSection
-        title="Tin doanh nghiệp mới nhất"
-        subtitle="Tin tức từ các doanh nghiệp hội viên"
-        posts={businessPosts}
-        emptyText="Chưa có tin tức nào từ doanh nghiệp hội viên."
-        bgClass="bg-white"
-      />
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <LatestPostsSection
+          category="NEWS"
+          title="Tin doanh nghiệp mới nhất"
+          subtitle="Tin tức từ các doanh nghiệp hội viên"
+          emptyText="Chưa có tin tức nào từ doanh nghiệp hội viên."
+        />
+      </Suspense>
 
       {/* ── Section 6: Tin sản phẩm mới nhất ── */}
-      <LatestPostsSection
-        title="Tin sản phẩm mới nhất"
-        subtitle="Sản phẩm mới giới thiệu hoặc vừa được chứng nhận"
-        posts={productPosts}
-        emptyText="Chưa có tin sản phẩm nào."
-        bgClass="bg-white"
-      />
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <LatestPostsSection
+          category="PRODUCT"
+          title="Tin sản phẩm mới nhất"
+          subtitle="Sản phẩm mới giới thiệu hoặc vừa được chứng nhận"
+          emptyText="Chưa có tin sản phẩm nào."
+        />
+      </Suspense>
 
-      {/* ── Section 7: Đối tác & Cơ quan liên kết ── */}
-      <PartnersCarousel />
+      {/* ── Section 7: Đối tác ── */}
+      <Suspense fallback={<PartnersCarouselSkeleton />}>
+        <PartnersCarousel />
+      </Suspense>
     </>
-  )
-}
-
-// ─── Section 1 sub-components ───────────────────────────────────────────────
-
-function NewsHero({ news }: { news: HomepageNewsItem }) {
-  return (
-    <Link
-      href={`/tin-tuc/${news.slug}`}
-      className="group block overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm hover:shadow-md transition-all"
-    >
-      <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-brand-100">
-        {news.coverImageUrl ? (
-          <Image
-            src={news.coverImageUrl}
-            alt={news.title}
-            fill
-            priority
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 1024px) 100vw, 66vw"
-          />
-        ) : (
-          <AgarwoodPlaceholder className="h-full w-full" size="xl" shape="square" />
-        )}
-        {news.isPinned && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
-            📌 Tin nổi bật
-          </span>
-        )}
-      </div>
-      <div className="p-5 sm:p-6">
-        <h3 className="text-xl sm:text-2xl font-bold text-brand-900 group-hover:text-brand-700 line-clamp-2">
-          {news.title}
-        </h3>
-        {news.excerpt && (
-          <p className="mt-2 text-sm sm:text-base text-brand-600 line-clamp-2">
-            {news.excerpt}
-          </p>
-        )}
-        <time className="mt-3 block text-xs text-brand-500">{formatDate(news.publishedAt)}</time>
-      </div>
-    </Link>
-  )
-}
-
-function NewsListItem({ news }: { news: HomepageNewsItem }) {
-  return (
-    <Link
-      href={`/tin-tuc/${news.slug}`}
-      className="group flex gap-3 p-3 rounded-lg border border-brand-200 bg-white hover:border-brand-300 hover:shadow-sm transition-all"
-    >
-      {news.coverImageUrl ? (
-        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded">
-          <Image src={news.coverImageUrl} alt="" fill className="object-cover" sizes="96px" />
-        </div>
-      ) : (
-        <AgarwoodPlaceholder className="h-20 w-24" size="sm" shape="rounded" tone="light" />
-      )}
-      <div className="min-w-0 flex-1">
-        <h4 className="line-clamp-2 text-sm font-semibold text-brand-900 group-hover:text-brand-700">
-          {news.title}
-        </h4>
-        <time className="mt-1 block text-xs text-brand-500">{formatDate(news.publishedAt)}</time>
-      </div>
-    </Link>
-  )
-}
-
-// ─── Section 5+6 reusable ──────────────────────────────────────────────────
-
-function LatestPostsSection({
-  title,
-  subtitle,
-  posts,
-  emptyText,
-  bgClass,
-}: {
-  title: string
-  subtitle: string
-  posts: Awaited<ReturnType<typeof getLatestPostsByCategory>>
-  emptyText: string
-  bgClass: string
-}) {
-  return (
-    <section className={`${bgClass} py-12 lg:py-16`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="mb-6 flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">{title}</h2>
-            <p className="text-sm text-brand-500 mt-1">{subtitle}</p>
-          </div>
-          <Link
-            href="/feed"
-            className="hidden sm:inline-block text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
-          >
-            Xem tất cả →
-          </Link>
-        </header>
-
-        {posts.length === 0 ? (
-          <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-            {emptyText}
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} variant="vertical" />
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
   )
 }

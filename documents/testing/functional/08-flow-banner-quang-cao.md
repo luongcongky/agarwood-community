@@ -88,7 +88,7 @@ model Banner {
 ---
 
 ## Tai khoan test
-- Hoi vien A (Vang): trankhanh@tramhuongkhanhhoa.vn / Demo@123
+- Hoi vien A (Vang): binhnv@hoitramhuong.vn / Demo@123
 - Hoi vien B (Bac): nguyenthilan@tinhdautramhuong.vn / Demo@123
 - Hoi vien C (Co ban): dangvantuan@tramhuongdaknong.vn / Demo@123
 - GUEST (free tier): user moi dang ky

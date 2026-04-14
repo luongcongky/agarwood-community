@@ -15,7 +15,7 @@ Dung de **demo san pham** va **luu tru huong dan su dung**.
 | Role | Email | Password |
 |------|-------|----------|
 | Admin | admin@hoitramhuong.vn | Demo@123 |
-| VIP (Vang) | trankhanh@tramhuongkhanhhoa.vn | Demo@123 |
+| VIP (Vang) | binhnv@hoitramhuong.vn | Demo@123 |
 
 ---
 

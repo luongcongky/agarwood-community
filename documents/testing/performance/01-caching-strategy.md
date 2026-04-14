@@ -55,6 +55,15 @@
 3. Truy cap /gia-han ngay
 4. **Kiem tra**: Phi moi hien thi ngay (revalidatePath da duoc goi)
 
+### TC-PERF-CACHE-06: revalidateTag("footer") + ("site-config") khi doi footer
+1. Admin -> /admin/cai-dat -> nhom "Footer website" -> doi `footer_brand_desc`
+2. Click Luu
+3. Refresh bat ky trang cong khai
+4. **Kiem tra**: Footer hien noi dung moi ngay (khong can doi TTL)
+5. **Ly do**: API `/api/admin/settings` goi `revalidateTag("footer", "max")` +
+   `revalidateTag("site-config", "max")` sau khi upsert thanh cong
+6. Pattern nay dung chung cho moi key co tag `footer` trong `unstable_cache`
+
 ## Ket qua
 - [ ] TC-PERF-CACHE-01: PASS / FAIL
 - [ ] TC-PERF-CACHE-02: PASS / FAIL
