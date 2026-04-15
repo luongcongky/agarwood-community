@@ -31,7 +31,7 @@ export const VIP_NAV_ITEMS: VipNavItem[] = [
   { label: "Tổng quan",        href: "/tong-quan",            icon: LayoutDashboard },
   { label: "Hồ sơ cá nhân",    href: "/ho-so",                icon: User },
   { label: "Doanh nghiệp",     href: "/doanh-nghiep-cua-toi", icon: Building2, businessOnly: true },
-  { label: "Chứng nhận SP",    href: "/chung-nhan",           icon: BadgeCheck, businessOnly: true },
+  { label: "Chứng nhận SP",    href: "/chung-nhan/lich-su",   icon: BadgeCheck, businessOnly: true },
   { label: "Đơn kết nạp",      href: "/ket-nap",              icon: FileCheck },
   { label: "Tài liệu",         href: "/tai-lieu",             icon: FileText },
   { label: "Gia hạn",          href: "/gia-han",              icon: RefreshCw },
