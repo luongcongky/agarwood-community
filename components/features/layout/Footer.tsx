@@ -37,7 +37,7 @@ const getFooterData = unstable_cache(
         },
         orderBy: [{ sortOrder: "asc" }],
         select: { id: true, name: true, title: true },
-        take: 6,
+        take: 10,
       }),
       prisma.siteConfig.findMany({
         where: {
