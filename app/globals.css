@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 /* ── Brand token aliases (dùng trong Tailwind utilities) ─────────────────── */
@@ -142,4 +144,20 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── Prose overrides — hợp màu brand trầm hương ─────────────────────────── */
+.prose :where(a):not(:where([class~="not-prose"] *)) {
+  color: var(--brand-700, #8a5a2a);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose :where(a):not(:where([class~="not-prose"] *)):hover {
+  color: var(--brand-800, #6e4420);
+}
+.prose :where(h1, h2, h3, h4):not(:where([class~="not-prose"] *)) {
+  color: var(--brand-900, #3d2817);
+}
+.prose :where(strong):not(:where([class~="not-prose"] *)) {
+  color: inherit;
 }
