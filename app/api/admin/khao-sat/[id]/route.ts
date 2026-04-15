@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { isAdmin, canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { validateQuestionsSchema } from "@/lib/survey"
 import type { SurveyAudience, SurveyStatus } from "@prisma/client"
@@ -10,7 +11,7 @@ const VALID_STATUS: SurveyStatus[] = ["DRAFT", "ACTIVE", "CLOSED"]
 // GET /api/admin/khao-sat/[id]
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
   const { id } = await params
@@ -22,7 +23,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 // PATCH /api/admin/khao-sat/[id]
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
   const { id } = await params
@@ -50,7 +51,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // DELETE /api/admin/khao-sat/[id]
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
   const { id } = await params

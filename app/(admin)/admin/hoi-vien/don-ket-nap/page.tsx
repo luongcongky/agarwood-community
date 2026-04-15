@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { ApplicationCard } from "./ApplicationCard"
 
@@ -23,7 +24,7 @@ export default async function AdminApplicationsPage({
   searchParams: Promise<{ status?: string }>
 }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const params = await searchParams
   const activeTab = params.status ?? "PENDING"

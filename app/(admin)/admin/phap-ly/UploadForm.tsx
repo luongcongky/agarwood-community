@@ -2,9 +2,11 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 export function UploadForm() {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const formRef = useRef<HTMLFormElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -175,7 +177,8 @@ export function UploadForm() {
 
       <button
         type="submit"
-        disabled={uploading}
+        disabled={uploading || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="w-full rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60 transition-colors"
       >
         {uploading ? "Đang upload..." : "Upload văn bản"}

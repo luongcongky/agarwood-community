@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import DOMPurify from "isomorphic-dompurify"
 
@@ -21,7 +22,7 @@ export async function GET(
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   // Only author or admin can read for editing
-  if (post.authorId !== session.user.id && session.user.role !== "ADMIN") {
+  if (post.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -44,7 +45,7 @@ export async function PATCH(
   })
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (post.authorId !== session.user.id && session.user.role !== "ADMIN") {
+  if (post.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -82,7 +83,7 @@ export async function DELETE(
   })
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  if (post.authorId !== session.user.id && session.user.role !== "ADMIN") {
+  if (post.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

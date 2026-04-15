@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Headset,
   Handshake,
+  Menu as MenuIcon,
   ChevronDown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -99,7 +100,10 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     key: "system",
     label: "Hệ thống",
-    items: [{ label: "Cài đặt", href: "/admin/cai-dat", icon: Settings }],
+    items: [
+      { label: "Menu navbar", href: "/admin/menu", icon: MenuIcon },
+      { label: "Cài đặt", href: "/admin/cai-dat", icon: Settings },
+    ],
   },
 ]
 

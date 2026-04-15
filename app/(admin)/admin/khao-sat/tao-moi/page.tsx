@@ -1,11 +1,12 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { SurveyEditor } from "../SurveyEditor"
 
 export default async function NewSurveyPage() {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   return (
     <div className="space-y-4">

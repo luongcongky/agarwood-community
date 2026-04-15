@@ -72,7 +72,7 @@ export async function getBannerMonthlyQuota(args: {
   role: Role
   contributionTotal?: number
 }): Promise<number> {
-  if (args.role === "ADMIN") return -1
+  if (args.role === "ADMIN" || args.role === "INFINITE") return -1
 
   const { quota } = await loadConfig()
 

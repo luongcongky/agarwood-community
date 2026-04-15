@@ -4,7 +4,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DashboardChartsLoader } from "./DashboardChartsLoader"
 
-export const revalidate = 60 // Alert panel refreshes every 60s
+export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 function formatVND(n: number) { return (n / 1_000_000).toFixed(0) + "tr" }
 function timeAgo(d: Date) {

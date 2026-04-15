@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { isAdmin } from "@/lib/roles"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,7 +34,7 @@ export default function LoginPage() {
         const res = await fetch("/api/auth/session")
         const session = await res.json()
         const role = session?.user?.role
-        if (role === "ADMIN") router.push("/admin")
+        if (isAdmin(role)) router.push("/admin")
         else if (role === "VIP") router.push("/tong-quan")
         else router.push("/")
       }

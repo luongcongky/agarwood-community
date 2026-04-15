@@ -65,7 +65,7 @@ export async function getMonthlyQuota(args: {
   contributionTotal?: number
   accountType?: "BUSINESS" | "INDIVIDUAL"
 }): Promise<number> {
-  if (args.role === "ADMIN") return -1
+  if (args.role === "ADMIN" || args.role === "INFINITE") return -1
 
   const config = await loadQuotaConfig()
 

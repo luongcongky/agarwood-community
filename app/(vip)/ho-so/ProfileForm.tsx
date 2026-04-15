@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { isAdmin } from "@/lib/roles"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -233,7 +234,7 @@ export function ProfileForm({ user }: { user: UserProfile }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1">Trạng thái hội viên</p>
-            {user.role === "VIP" || user.role === "ADMIN" ? (
+            {user.role === "VIP" || isAdmin(user.role) ? (
               <span
                 className={cn(
                   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",

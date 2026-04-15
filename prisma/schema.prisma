@@ -19,6 +19,7 @@ enum Role {
   GUEST
   VIP
   ADMIN
+  INFINITE     // Hạng đặc biệt — full quyền VIP Vàng + quyền admin, cấp thủ công
 }
 
 enum AccountType {
@@ -688,6 +689,37 @@ model SiteConfig {
   updatedAt   DateTime @updatedAt
 
   @@map("site_config")
+}
+
+// ============================================================
+// MENU CMS — Navbar items, support 1 cấp submenu
+// ============================================================
+
+model MenuItem {
+  id            String     @id @default(cuid())
+  /// Slug ổn định dùng làm cầu nối giữa code và CMS.
+  /// Route registry (lib/route-menu-map.ts) tham chiếu menuKey để xác định
+  /// route nào thuộc menu nào → highlight nhất quán cho mọi page (kể cả deep).
+  /// Có thể null cho menu mới chưa cần gắn route nào.
+  menuKey       String?    @unique
+  label         String
+  href          String
+  parentId      String?
+  parent        MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children      MenuItem[] @relation("MenuTree")
+  sortOrder     Int        @default(0)
+  isVisible     Boolean    @default(true)
+  isNew         Boolean    @default(false)
+  comingSoon    Boolean    @default(false)
+  openInNewTab  Boolean    @default(false)
+  /// Các prefix route con — dùng để highlight menu cha khi user ở deep page.
+  /// Vd: "/feed" có matchPrefixes = ["/feed", "/bai-viet"]. Empty = chỉ match đúng href.
+  matchPrefixes String[]   @default([])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([parentId, sortOrder])
+  @@map("menu_items")
 }
 
 // ============================================================

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { Resend } from "resend"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     select: { email: true, name: true, role: true },
   })
 
-  if (!user || user.role === "ADMIN") {
+  if (!user || isAdmin(user.role)) {
     return genericSuccess
   }
 

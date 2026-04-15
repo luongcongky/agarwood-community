@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface ReportActionsProps {
   reportId: string
@@ -13,6 +14,7 @@ export function ReportActions({
   postId,
   postStatus,
 }: ReportActionsProps) {
+  const readOnly = useAdminReadOnly()
   const [loading, setLoading] = useState(false)
   const [handled, setHandled] = useState(false)
   const [currentPostStatus, setCurrentPostStatus] = useState(postStatus)
@@ -64,7 +66,8 @@ export function ReportActions({
 
       <button
         onClick={() => callAction("dismiss")}
-        disabled={loading}
+        disabled={loading || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
       >
         Bỏ qua
@@ -73,7 +76,8 @@ export function ReportActions({
       {currentPostStatus !== "LOCKED" && (
         <button
           onClick={() => callAction("lock")}
-          disabled={loading}
+          disabled={loading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-md border border-orange-300 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100 disabled:opacity-50 transition-colors"
         >
           Khoá bài
@@ -83,7 +87,8 @@ export function ReportActions({
       {currentPostStatus === "LOCKED" && (
         <button
           onClick={() => callAction("unlock")}
-          disabled={loading}
+          disabled={loading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-md border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-colors"
         >
           Mở khoá

@@ -6,7 +6,7 @@ import { getTierThresholds } from "@/lib/tier"
 import { MemberCardFlip } from "@/components/features/member-card/MemberCardFlip"
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
-import { generateMemberCardId, tierFromStars } from "@/lib/memberCard"
+import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -32,7 +32,7 @@ export default async function VipMembersPage({
     await Promise.all([
       prisma.user.findMany({
         where: {
-          role: "VIP",
+          role: { in: ["VIP", "INFINITE"] },
           isActive: true,
           ...(q && {
             OR: [
@@ -55,6 +55,7 @@ export default async function VipMembersPage({
           name: true,
           avatarUrl: true,
           phone: true,
+          role: true,
           accountType: true,
           contributionTotal: true,
           memberCategory: true,
@@ -173,7 +174,7 @@ export default async function VipMembersPage({
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {cardsData.map(({ member, tierInfo, memberCardId, verifyUrl, qrDataUrl }) => {
-                const tier = tierFromStars(tierInfo.stars)
+                const tier = tierFromRole(member.role, tierInfo.stars)
                 return (
                   <div key={member.id} className="space-y-2">
                     <MemberCardFlip

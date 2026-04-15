@@ -19,7 +19,7 @@ export function generateMemberCardId(userId: string, createdAt: Date): string {
 
 // ── Tier theme tokens ─────────────────────────────────────────────────────
 
-export type TierKey = "basic" | "silver" | "gold"
+export type TierKey = "basic" | "silver" | "gold" | "infinite"
 
 export type TierTheme = {
   label: string
@@ -43,9 +43,19 @@ export type TierTheme = {
 }
 
 export function tierFromStars(stars: number): TierKey {
+  if (stars >= 4) return "infinite"
   if (stars >= 3) return "gold"
   if (stars >= 2) return "silver"
   return "basic"
+}
+
+/**
+ * Resolve tier theo role + stars. Role INFINITE luôn thắng — card đen,
+ * bất kể contributionTotal. Các role khác fallback theo stars (tier auto).
+ */
+export function tierFromRole(role: string | null | undefined, stars: number): TierKey {
+  if (role === "INFINITE") return "infinite"
+  return tierFromStars(stars)
 }
 
 export const TIER_THEMES: Record<TierKey, TierTheme> = {
@@ -53,13 +63,13 @@ export const TIER_THEMES: Record<TierKey, TierTheme> = {
     label: "Hội viên",
     stars: 1,
     background:
-      "linear-gradient(135deg, #3d2e1f 0%, #5c4228 50%, #3d2e1f 100%)",
-    borderColor: "#6b4d2a",
-    textPrimary: "#f5ecd9",
-    textSecondary: "#c9b393",
-    accent: "#b07a3d",
-    badgeBg: "rgba(176, 122, 61, 0.2)",
-    badgeText: "#e5c593",
+      "linear-gradient(135deg, #0b2e1f 0%, #14532d 50%, #0b2e1f 100%)",
+    borderColor: "#22c55e",
+    textPrimary: "#ecfdf5",
+    textSecondary: "#a7f3d0",
+    accent: "#34d399",
+    badgeBg: "rgba(52, 211, 153, 0.18)",
+    badgeText: "#bbf7d0",
   },
   silver: {
     label: "Hội viên Bạc",
@@ -85,6 +95,18 @@ export const TIER_THEMES: Record<TierKey, TierTheme> = {
     badgeBg: "rgba(124, 90, 30, 0.15)",
     badgeText: "#3d2817",
     pattern: "/partners-card-bg.webp", // reuse network pattern vàng
+  },
+  infinite: {
+    label: "Hội viên Infinite",
+    stars: 4,
+    background:
+      "linear-gradient(135deg, #000000 0%, #1a1a1a 35%, #2a2a2a 50%, #1a1a1a 65%, #000000 100%)",
+    borderColor: "#d4af37",
+    textPrimary: "#fafafa",
+    textSecondary: "#d1d5db",
+    accent: "#d4af37",
+    badgeBg: "rgba(212, 175, 55, 0.18)",
+    badgeText: "#f5e6a8",
   },
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { validateQuestionsSchema } from "@/lib/survey"
 import type { SurveyAudience, SurveyStatus } from "@prisma/client"
@@ -22,7 +23,7 @@ interface Body {
 // POST /api/admin/khao-sat — tạo survey mới
 export async function POST(request: Request) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

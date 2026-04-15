@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 const CATEGORIES = [
   { value: "CONG_VAN_DEN", label: "Công văn đến" },
@@ -14,6 +15,7 @@ const CATEGORIES = [
 
 export function DocumentUploadButton() {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -60,7 +62,9 @@ export function DocumentUploadButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors"
+        disabled={readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+        className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
       >
         + Tải lên tài liệu
       </button>

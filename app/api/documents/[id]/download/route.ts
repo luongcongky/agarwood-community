@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
@@ -20,7 +21,7 @@ export async function GET(
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  if (session.user.role !== "ADMIN" && !doc.isPublic) {
+  if (!isAdmin(session.user.role) && !doc.isPublic) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

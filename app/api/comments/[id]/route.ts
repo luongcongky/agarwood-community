@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 
 /**
@@ -23,7 +24,7 @@ export async function PATCH(
   if (!comment || comment.deletedAt) {
     return NextResponse.json({ error: "Comment not found" }, { status: 404 })
   }
-  if (comment.authorId !== session.user.id && session.user.role !== "ADMIN") {
+  if (comment.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -61,7 +62,7 @@ export async function DELETE(
   if (!comment || comment.deletedAt) {
     return NextResponse.json({ error: "Comment not found" }, { status: 404 })
   }
-  if (comment.authorId !== session.user.id && session.user.role !== "ADMIN") {
+  if (comment.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

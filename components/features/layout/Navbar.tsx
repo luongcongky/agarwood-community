@@ -3,8 +3,10 @@ import Image from "next/image"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getMenuTree } from "@/lib/menu"
 import { UserMenu } from "./UserMenu"
-import { NavMobile, type NavLink } from "./NavMobile"
+import { NavMobile } from "./NavMobile"
+import { NavDesktopMenu } from "./NavDesktopItem"
 import { SocialLinks } from "./SocialLinks"
 
 // ── Mode detection ────────────────────────────────────────────────────────────
@@ -40,19 +42,7 @@ function detectMode(pathname: string): NavMode {
   return "public"
 }
 
-// ── Nav links ─────────────────────────────────────────────────────────────────
-
-/**
- * Menu công khai — Hội viên, ADMIN và guest đều thấy giống nhau. Việc vào khu vực
- * quản lý riêng được thực hiện qua UserMenu ("Vào khu vực quản trị").
- */
-const PUBLIC_LINKS: NavLink[] = [
-  { label: "Trang chủ", href: "/" },
-  { label: "Giới thiệu", href: "/gioi-thieu" },
-  { label: "Nghiên cứu", href: "/nghien-cuu" },
-  { label: "MXH Trầm Hương", href: "/feed", isNew: true },
-  { label: "Hội viên", href: "/landing" },
-]
+// Menu items được CMS-driven (model MenuItem). Xem lib/menu.ts.
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -63,8 +53,8 @@ export async function Navbar() {
   const pathname = headersList.get("x-pathname") ?? "/"
   const mode = detectMode(pathname)
 
-  // Fetch accountType cho VIP users + social links (1 round-trip)
-  const [dbUser, socialConfigs] = await Promise.all([
+  // Fetch accountType cho VIP users + social links + menu tree (1 round-trip)
+  const [dbUser, socialConfigs, menuTree] = await Promise.all([
     session?.user?.id && role === "VIP"
       ? prisma.user.findUnique({
           where: { id: session.user.id },
@@ -74,6 +64,7 @@ export async function Navbar() {
     prisma.siteConfig.findMany({
       where: { key: { in: ["facebook_url", "youtube_url"] } },
     }),
+    getMenuTree(),
   ])
 
   const accountType = role === "VIP" ? dbUser?.accountType ?? "BUSINESS" : null
@@ -81,8 +72,6 @@ export async function Navbar() {
   const facebookUrl = socialMap.facebook_url || null
   const youtubeUrl = socialMap.youtube_url || null
 
-  // Luôn dùng menu công khai — không phụ thuộc role hay mode
-  const links = PUBLIC_LINKS
 
   return (
     <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md">
@@ -109,41 +98,7 @@ export async function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1" aria-label="Navigation chính">
-            {links.map((link) =>
-              link.comingSoon ? (
-                <span
-                  key={link.label}
-                  title="Sắp có"
-                  aria-disabled="true"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-brand-400 cursor-not-allowed inline-flex items-center gap-1.5"
-                >
-                  {link.label}
-                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-brand-700 text-brand-300">
-                    Sắp có
-                  </span>
-                </span>
-              ) : (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-300 transition-colors inline-flex items-start"
-                >
-                  {link.label}
-                  {link.isNew && (
-                    <span
-                      style={{
-                        fontSize: "8px",
-                        lineHeight: 1,
-                        color: "#ef4444",
-                      }}
-                      className="font-bold uppercase ml-0.5"
-                    >
-                      Thử nghiệm
-                    </span>
-                  )}
-                </Link>
-              )
-            )}
+            <NavDesktopMenu tree={menuTree} />
           </nav>
 
           {/* Right side */}
@@ -180,7 +135,7 @@ export async function Navbar() {
             )}
 
             {/* Mobile hamburger */}
-            <NavMobile links={links} isLoggedIn={!!session} />
+            <NavMobile menu={menuTree} isLoggedIn={!!session} />
           </div>
 
         </div>

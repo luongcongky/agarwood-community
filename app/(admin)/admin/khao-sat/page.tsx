@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -19,7 +20,7 @@ const AUDIENCE_LABEL: Record<string, string> = {
 
 export default async function AdminSurveysPage() {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const surveys = await prisma.survey.findMany({
     orderBy: { createdAt: "desc" },

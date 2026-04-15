@@ -24,6 +24,8 @@
 14. [Quan ly Banner quang cao (`/admin/banner`)](#14-quan-ly-banner)
 15. [Quan ly Doi tac (`/admin/doi-tac`)](#15-quan-ly-doi-tac)
 16. [Chinh sach bao mat & Dieu khoan (`/privacy`, `/terms`)](#16-chinh-sach--dieu-khoan)
+17. [Hang Infinite — admin chi-doc](#17-hang-infinite)
+18. [Quan ly Menu navbar (`/admin/menu`)](#18-quan-ly-menu-navbar)
 
 ---
 
@@ -69,6 +71,14 @@ Moi sang mo trang `/admin`, ban se thay:
 |------|-------|-------|
 | **Doanh nghiep (BUSINESS)** | Dai dien cong ty tram huong | Day du: DN, SP, chung nhan, feed, tai lieu |
 | **Ca nhan / Chuyen gia (INDIVIDUAL)** | Chuyen gia, nha nghien cuu, nghe nhan | Feed, ho so, tai lieu, gia han — KHONG co DN/SP/chung nhan |
+
+### 4 vai tro (Role)
+| Role | Mo ta |
+|------|------|
+| `GUEST` | Tai khoan co ban (dang ky xong dung ngay) |
+| `VIP` | Hoi vien dong phi — quota cao + uu tien hien thi |
+| `ADMIN` | Ban quan tri — toan quyen (doc + ghi) |
+| `INFINITE` | Admin **chi-doc** — xem moi trang admin nhu ADMIN nhung moi mutation bi chan 403. Xem muc 17. |
 
 ### Tai khoan moi (Phase 2 — bo flow cho duyet)
 
@@ -641,6 +651,89 @@ Cuoi 2 trang `/privacy` va `/terms` (cung `/lien-he`, `/gioi-thieu`) co block hi
 Cap nhat danh sach kenh: vao `/admin/cai-dat` sua cac key `facebook_url`, `zalo_url`,
 `youtube_url`, `association_email`, `association_phone`, `association_website`. Bo trong
 mot key se an dong tuong ung trong block.
+
+---
+
+---
+
+## 17. Hang Infinite
+
+### Hang Infinite la gi?
+Role moi `INFINITE` — **admin chi-doc**. Danh cho lanh dao Hoi (Chu tich / Pho Chu tich) hoac
+kiem tra vien can xem moi du lieu admin ma khong duoc thao tac mutation.
+
+### Dac diem
+- Xem moi trang `/admin/*` voi du lieu day du nhu ADMIN that.
+- **Moi API mutation (POST/PATCH/PUT/DELETE)** bi chan voi HTTP 403.
+- Moi nut "Them", "Sua", "Xoa", "Duyet", "Tu choi", "Kich hoat"... bi **disable** tren UI kem
+  tooltip: *"Tai khoan Infinite o che do chi-doc"*.
+- Banner canh bao read-only hien o dau moi trang `/admin/*` khi role=INFINITE.
+- Khong bi check `membershipExpires` khi vao cac route VIP.
+- Card hang: **nen den vien vang** (khac biet voi hang Vang/Bac/Basic).
+
+### Cap / huy hang Infinite
+1. Dang nhap bang tai khoan ADMIN (khong phai INFINITE — nut nay khong render cho INFINITE).
+2. Vao `/admin/hoi-vien/[id]` cua user can cap.
+3. Click nut **"Cap hang Infinite"**.
+4. De huy: click **"Huy hang Infinite"** → user tro ve role `VIP` hoac `GUEST` (tuy `memberCategory`).
+
+> Luu y: Co the nang tu VIP/GUEST len INFINITE tu chinh UI nay. Endpoint dung:
+> `PATCH /api/admin/users/[id]/role` voi body `{ role: "INFINITE" | "VIP" | "GUEST" }`.
+
+### Khi INFINITE lam viec
+- Vao trang admin binh thuong, nhin thay banner vang:
+  *"Ban dang o che do Infinite (chi-doc). Moi thao tac sua/xoa deu bi vo hieu hoa."*
+- Co the vao sau mot trang chi tiet, click link, mo tab moi — nhung khong the luu form.
+
+---
+
+## 18. Quan ly Menu navbar
+
+### Tong quan
+Navbar cong khai (Trang chu, Gioi thieu, Nghien cuu, MXH Tram Huong, Hoi vien) duoc
+**CMS-driven** qua model `MenuItem`. Admin co toan quyen CRUD: them / sua / an / xoa /
+them submenu.
+
+Truy cap: `/admin/menu`.
+
+### Cau truc
+- **1 cap submenu**: moi menu cha co the co nhieu con; menu con **khong co** cau con rieng.
+- Hien tai seed 5 menu cha + 14 submenu (nhom duoi Gioi thieu, MXH Tram Huong, Hoi vien).
+
+### Bo cuc trang
+- **Cot trai**: cay menu (top-level → children), them nut **"+ Them submenu"** tren tung menu cha.
+- **Cot phai**: form tao/sua.
+
+### Cac field quan trong
+| Field | Mo ta |
+|-------|-------|
+| `label` | Nhan hien thi (bat buoc) |
+| `href` | Duong dan (vd `/gioi-thieu`, `https://fb.com/...`) |
+| `parentId` | Menu cha (null = top-level) |
+| `sortOrder` | Thu tu hien thi — so nho hien truoc |
+| `isVisible` | An/hien cong khai |
+| `isNew` | Badge "Moi" ben canh label |
+| `comingSoon` | Badge "Sap ra mat" + disable click |
+| `openInNewTab` | Mo tab moi |
+| `matchPrefixes[]` | **Override highlight** — cac prefix pathname khi match thi menu nay active |
+| `menuKey` | Key noi bo (vd `about`, `research`) lien ket voi registry trong code |
+
+### `matchPrefixes` — override highlight
+Neu admin muon 1 menu "Nghien cuu" cung active khi user vao `/tai-lieu-khoa-hoc`, them
+prefix do vao `matchPrefixes`. Match tu `matchPrefixes` **thang** match tu registry code
+(`lib/route-menu-map.ts`).
+
+### `menuKey`
+Key dinh danh menu cha de registry code (danh sach `{prefix, menuKey}` cho ~34 public route)
+co the fallback active. Cac key hop le: `home`, `about`, `research`, `social`, `members`.
+
+### Cache
+- Menu tree cache 60s (`getMenuTree()` trong `lib/menu.ts`).
+- Moi mutation (POST/PATCH/DELETE) tu dong clear cache.
+
+### Validate
+- API chan vong cha-con (khong the set `parentId` bang chinh ID node).
+- API chan tao submenu cap 2 (1 cap thoi).
 
 ---
 

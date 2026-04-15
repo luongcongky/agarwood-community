@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -42,7 +43,7 @@ export default async function AdminDocumentsPage({
   searchParams: Promise<{ category?: string; page?: string; q?: string }>
 }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const params = await searchParams
   const categoryFilter = params.category ?? ""

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,6 +139,7 @@ export function MemberDetailTabs({
   tierGold?: number
 }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [activeTab, setActiveTab] = useState<Tab>("membership")
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -196,7 +198,8 @@ export function MemberDetailTabs({
       <div className="px-6 pt-4 flex gap-2 flex-wrap">
         <button
           onClick={handleToggleActive}
-          disabled={actionLoading}
+          disabled={actionLoading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className={cn(
             "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50",
             user.isActive
@@ -209,7 +212,8 @@ export function MemberDetailTabs({
         {!user.isActive && !user.membershipExpires && (
           <button
             onClick={handleResendInvite}
-            disabled={actionLoading}
+            disabled={actionLoading || readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
             className="rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
           >
             Gửi lại email mời
@@ -217,7 +221,8 @@ export function MemberDetailTabs({
         )}
         <button
           onClick={handleResetPassword}
-          disabled={actionLoading}
+          disabled={actionLoading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
         >
           Đặt lại mật khẩu

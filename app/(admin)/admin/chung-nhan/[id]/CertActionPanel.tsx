@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { CertStatus } from "@prisma/client"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface CertActionPanelProps {
   certId: string
@@ -26,6 +27,7 @@ export function CertActionPanel({
   refundedAt,
 }: CertActionPanelProps) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [reviewNote, setReviewNote] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -134,7 +136,8 @@ export function CertActionPanel({
               <p className="text-xs">Số tài khoản: {refundAccountNo ?? "—"}</p>
               <button
                 onClick={handleRefund}
-                disabled={loading}
+                disabled={loading || readOnly}
+                title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                 className="mt-2 w-full rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
               >
                 Xác nhận đã hoàn tiền
@@ -161,9 +164,11 @@ export function CertActionPanel({
             <textarea
               value={reviewNote}
               onChange={(e) => setReviewNote(e.target.value)}
+              disabled={readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               rows={4}
               placeholder="Nhập ghi chú cho hội viên..."
-              className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
+              className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none disabled:bg-brand-50"
             />
           </div>
 
@@ -174,14 +179,16 @@ export function CertActionPanel({
           <div className="flex gap-2">
             <button
               onClick={handleReject}
-              disabled={loading || isLocked}
+              disabled={loading || isLocked || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="flex-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors"
             >
               Từ chối
             </button>
             <button
               onClick={handleApprove}
-              disabled={loading || isLocked}
+              disabled={loading || isLocked || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               Duyệt &amp; Cấp Badge

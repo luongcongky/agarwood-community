@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type Props = {
   /** Drive file ID hiện tại (nếu có) */
@@ -27,6 +28,7 @@ export function DieuLeUploader({
   currentUploadedAt,
 }: Props) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -152,7 +154,8 @@ export function DieuLeUploader({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+              disabled={uploading || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="inline-flex items-center gap-1 rounded-md bg-brand-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-800 disabled:opacity-50"
             >
               🔁 Upload phiên bản mới
@@ -160,7 +163,8 @@ export function DieuLeUploader({
             <button
               type="button"
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 ml-auto"
             >
               {deleting ? "Đang xóa..." : "🗑 Xóa"}
@@ -171,7 +175,8 @@ export function DieuLeUploader({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="w-full rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/50 hover:bg-brand-50 hover:border-brand-400 transition-colors p-6 flex flex-col items-center justify-center text-brand-500 disabled:opacity-50"
         >
           {uploading ? (
@@ -198,6 +203,7 @@ export function DieuLeUploader({
         accept="application/pdf"
         className="hidden"
         onChange={handleFileChange}
+        disabled={readOnly}
       />
 
       {/* Status messages */}

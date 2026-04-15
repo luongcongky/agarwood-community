@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 export function AdminBannerActions({ bannerId, status }: { bannerId: string; status: string }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [working, setWorking] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [reason, setReason] = useState("")
@@ -75,7 +77,8 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
           <button
             type="button"
             onClick={handleApprove}
-            disabled={working}
+            disabled={working || readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
             ✓ Duyệt
@@ -83,7 +86,8 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
           <button
             type="button"
             onClick={() => setShowRejectModal(true)}
-            disabled={working}
+            disabled={working || readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
             className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
           >
             ✗ Từ chối
@@ -98,7 +102,8 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
       <button
         type="button"
         onClick={handleDelete}
-        disabled={working}
+        disabled={working || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="ml-auto rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
       >
         Xóa
@@ -147,7 +152,8 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
               <button
                 type="button"
                 onClick={handleReject}
-                disabled={working}
+                disabled={working || readOnly}
+                title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
                 {working ? "Đang xử lý..." : "Xác nhận từ chối"}

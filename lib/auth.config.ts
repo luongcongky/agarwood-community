@@ -23,7 +23,7 @@ export const authConfig: NextAuthConfig = {
      */
     async session({ session, token }) {
       if (token.sub) session.user.id = token.sub
-      if (token.role) session.user.role = token.role as "GUEST" | "VIP" | "ADMIN"
+      if (token.role) session.user.role = token.role as "GUEST" | "VIP" | "ADMIN" | "INFINITE"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(session.user as any).membershipExpires = (token.membershipExpires as string | null) ?? null
       return session
