@@ -11,7 +11,7 @@ const TAG = "hero-images"
 
 /** Clear cache — gọi sau khi admin thay đổi gallery. */
 export function clearHeroCache() {
-  revalidateTag(TAG)
+  revalidateTag(TAG, "max")
 }
 
 /** YYYY-MM-DD theo múi giờ VN — deterministic daily key. */
