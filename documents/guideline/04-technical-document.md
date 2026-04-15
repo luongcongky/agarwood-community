@@ -935,3 +935,76 @@ Component chung cho **tat ca fallback** (thieu avatar, thieu logo, thieu ảnh s
 ```
 
 Da thay cho 11 location fallback (hoi-vien, page home, san-pham-doanh-nghiep, tin-tuc, nghien-cuu, san-pham-chung-nhan, san-pham/[slug], doanh-nghiep/[slug], CertifiedProductsCarousel, PostCard, v.v.).
+
+---
+
+## 14. Gallery Hero — anh nen trang cong khai
+
+Feature round-6: admin quan ly 1 bo anh phong canh lam background cho **toan bo layout public**; moi ngay he thong pick deterministic 1 anh.
+
+### Migration
+- `prisma/migrations/20260416000000_add_hero_images/` — them model `HeroImage`.
+
+```prisma
+model HeroImage {
+  id         String   @id @default(cuid())
+  imageUrl   String
+  label      String?
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+```
+
+### `lib/hero.ts`
+- `getDailyHeroImage(): Promise<HeroImage | null>` — dung Next.js `unstable_cache` voi tag `"hero-images"`, `revalidate: 300`.
+- Thuat toan pick:
+  1. `key = formatInTimeZone(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")`
+  2. `hash = fnv1a(key)`
+  3. `index = hash % activeImages.length`
+- `clearHeroCache()` → `revalidateTag("hero-images")`.
+- **Khong** dung cache module-level (vd `let cached: HeroImage | null`) — trong Next dev, API handler va layout renderer chay trong **module graph khac nhau**, bien module-level set tu API handler **khong visible** tu layout → invalidate khong cross-process. `unstable_cache` di qua persistent layer cua Next → invalidate dung.
+
+### `components/features/layout/HeroBackdrop.tsx`
+Server component, dat trong `app/(public)/layout.tsx` — hien tren **moi trang public**.
+
+```tsx
+export default async function HeroBackdrop() {
+  const hero = await getDailyHeroImage()
+  if (!hero) return null
+  return (
+    <>
+      <link rel="preload" as="image" href={hero.imageUrl} />
+      <div
+        data-testid="hero-backdrop"
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: `url(${hero.imageUrl})` }}
+      />
+    </>
+  )
+}
+```
+
+### Kien truc layered (translucent sections)
+- HeroBackdrop o `-z-10` (base layer, fixed full viewport).
+- Cac section homepage (`HomepageBannerSlot`, `CertifiedProductsCarousel`, `LatestPostsSection`, `PartnersCarousel`) doi sang **`bg-<color>/85 backdrop-blur-[2px]`** — ban trong suot → anh gallery show through toan trang ma section van giu identity mau.
+- `app/(public)/page.tsx` + `app/(public)/layout.tsx` cap nhat wrapper tuong ung.
+
+### Admin CRUD
+- `/admin/gallery` (page + form inline).
+- API: `GET|POST /api/admin/gallery`, `PATCH|DELETE /api/admin/gallery/[id]`.
+- Upload: dung `/api/upload` voi folder `gallery`. Them key `gallery: 2560` vao `FOLDER_MAX_WIDTH` (`app/api/upload/route.ts`).
+
+### Invalidation quan trong
+Moi mutation **phai** goi ca 2:
+
+```ts
+clearHeroCache()                // revalidateTag("hero-images")
+revalidatePath("/", "layout")   // bat buoc chu "layout"
+```
+
+> **Vi sao `"layout"`**: HeroBackdrop render trong `(public)/layout.tsx`. `revalidatePath("/")` mac dinh chi invalidate **page** cache, khong invalidate **layout** cache. User se van thay anh cu sau khi admin toggle. Fix: pass arg thu 2 `"layout"` → Next invalidate ca layout tree. Bug da fix va cover bang `e2e/gallery-toggle.spec.ts`.
+
+### Sidebar
+`components/features/layout/AdminSidebar.tsx` → nhom **He thong** them muc **"Gallery trang chu"** (icon `Images` tu lucide).

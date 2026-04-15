@@ -53,7 +53,7 @@ export async function HomepageBannerSlot({
 
   if (banners.length === 0) {
     return (
-      <section className="bg-brand-50 py-8">
+      <section className="bg-brand-50/85 backdrop-blur-[2px] py-8">
         <div className="mx-auto max-w-7xl px-4">
           <div className="rounded-xl border-2 border-dashed border-brand-300 bg-white p-8 text-center">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">

@@ -64,7 +64,7 @@ export default function HomePage() {
         đảm bảo "khối nội dung chính" luôn hiện ngay khi trang hiện ra.
         Các section khác (banners, carousels, latest posts, partners) vẫn stream sau.
       */}
-      <section className="bg-brand-50 py-8 lg:py-10">
+      <section className="bg-brand-50/85 backdrop-blur-[2px] py-8 lg:py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-3">
             <NewsSection />

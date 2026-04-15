@@ -737,4 +737,36 @@ co the fallback active. Cac key hop le: `home`, `about`, `research`, `social`, `
 
 ---
 
+## 19. Gallery anh nen trang chu (`/admin/gallery`)
+
+> **Muc dich**: Upload 1 bo anh phong canh (rung tram, canh dep...) lam **background xuyen suot toan bo trang cong khai**. He thong tu dong chon 1 anh moi ngay, ap dung cho tat ca user truy cap trong ngay do.
+
+### Logic chon anh
+- Moi ngay (theo mui gio **Viet Nam, YYYY-MM-DD**), he thong pick **deterministic** 1 anh trong so cac anh `isActive = true`.
+- Deterministic = hash ngay → index → **moi user cung ngay thay cung 1 anh**, giup CDN cache tot + trai nghiem nhat quan.
+- 00:00 giao sang ngay moi → anh tu dong doi sang anh khac trong list active.
+
+### Bo cuc trang
+- Nut **"+ Them anh"** → upload qua dialog (Cloudinary, folder `gallery`, resize toi da 2560px canh lon).
+- **Preview grid**: xem truoc tat ca anh, inline sua `label`, `sortOrder`, toggle `isActive`, nut xoa.
+
+### Cac field
+| Field | Mo ta |
+|-------|-------|
+| `imageUrl` | URL Cloudinary (auto fill sau upload) |
+| `label` | Nhan noi bo (vd "Rung tram Khanh Hoa") — khong hien thi cong khai |
+| `sortOrder` | Thu tu hien thi trong admin grid (khong anh huong thuat toan pick) |
+| `isActive` | Co vao pool pick hay khong — tat = tam an |
+
+### Khuyen nghi khi upload
+- Kich thuoc toi thieu **1920x1080**, uu tien landscape 16:9 hoac rong hon.
+- **Phong canh it chi tiet** (bau troi, rung xa, texture) — tranh anh co nhieu chu / khuon mat / dong goc phai → vi noi dung cac section se chong len anh (ban trong suot).
+- **Ton mau am nha / trung tinh** → khong lam choi mau voi brand.
+- 5-15 anh la du cho 1 vong quay thoai mai (neu 15 anh → 15 ngay moi lap lai).
+
+### Che do INFINITE
+- Admin INFINITE (chi-doc) van xem duoc danh sach nhung moi nut upload / edit / xoa se disabled (`useAdminReadOnly()`).
+
+---
+
 > **Lien he ky thuat**: Khi gap su co ngoai pham vi tai lieu nay, lien he doi ngu ky thuat qua email/Zalo da cung cap.

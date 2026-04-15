@@ -839,6 +839,69 @@ Form lien he cong khai tai `/lien-he`. **KHONG can auth.**
 
 ---
 
+## Gallery Hero (CMS)
+
+Quan ly anh nen cho toan bo trang cong khai. Model `HeroImage`. He thong pick deterministic 1 anh moi ngay (mui gio VN).
+
+**Permission**:
+- `GET` — `isAdmin(role)` (ADMIN + INFINITE).
+- `POST` / `PATCH` / `DELETE` — `canAdminWrite(role)` (chi ADMIN; INFINITE 403).
+
+**Side effect moi mutation**: goi `clearHeroCache()` (`revalidateTag("hero-images")`) + `revalidatePath("/", "layout")`.
+
+### GET /api/admin/gallery
+List toan bo anh, sort theo `sortOrder` ASC.
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "clx...",
+      "imageUrl": "https://res.cloudinary.com/.../gallery/04-2026/xxx.jpg",
+      "label": "Rung tram Khanh Hoa",
+      "sortOrder": 0,
+      "isActive": true,
+      "createdAt": "2026-04-15T10:00:00Z",
+      "updatedAt": "2026-04-15T10:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /api/admin/gallery
+Tao anh moi.
+
+**Body:**
+```json
+{
+  "imageUrl": "https://res.cloudinary.com/.../gallery/04-2026/xxx.jpg",
+  "label": "Rung tram Khanh Hoa",
+  "sortOrder": 0,
+  "isActive": true
+}
+```
+- `imageUrl`: bat buoc (upload truoc qua `POST /api/upload` folder `gallery`).
+- `label`, `sortOrder`, `isActive`: optional (default: `null`, `0`, `true`).
+
+**Response:** `{ item: HeroImage }`
+
+### PATCH /api/admin/gallery/[id]
+Partial update. Body chi can field muon doi.
+
+```json
+{ "label": "Ten moi", "isActive": false }
+```
+
+**Response:** `{ item: HeroImage }` | `404` neu khong tim thay.
+
+### DELETE /api/admin/gallery/[id]
+Xoa cung anh. **Khong** xoa file tren Cloudinary (de admin phuc hoi neu can — Cloudinary co the quet thu cong sau).
+
+**Response:** `{ success: true }` | `404`.
+
+---
+
 ## Error Format
 
 Tat ca error tra ve JSON:

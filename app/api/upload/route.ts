@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     "doi-tac": 600, // logo đối tác — max render 200px
     "doanh-nghiep": 1600, // logo + cover chung; client có thể override
     banner: 2560, // banner quảng cáo full-width desktop
+    gallery: 2560, // gallery hero trang chủ — full viewport width, cần nét trên 4K
   }
   const DEFAULT_MAX_WIDTH = 1600
 

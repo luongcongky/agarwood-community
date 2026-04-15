@@ -887,3 +887,70 @@ Dong thoi van can highlight "active" menu chinh xac khi user vao sub-page (vd
 - Neu cay menu sau nay can deeper (> 1 cap) → schema can `depth` guard + UI redesign.
 - Neu registry ngay cang phuc tap (> 100 route) → cos nhac chuyen hoan toan sang
   `matchPrefixes` trong DB + admin UI de them bulk.
+
+---
+
+## ADR-026: Hero Gallery — `unstable_cache` + daily deterministic pick
+
+### Boi canh
+Round-6 them feature **anh nen gallery** cho toan bo trang cong khai. Admin upload N anh, he thong phai:
+1. Chon 1 anh cho moi request.
+2. Cho phep admin toggle `isActive` va thay doi phan anh anh ra **ngay lap tuc** tren homepage.
+3. Khong lam giam perf (HeroBackdrop render trong layout public → chay tren moi page).
+
+Hai quyet dinh con ban-cai ky.
+
+### Quyet dinh
+
+**1. Dung Next.js `unstable_cache` (tag-based) thay cho in-memory module cache.**
+
+```ts
+export const getDailyHeroImage = unstable_cache(
+  async () => { /* query DB + pick */ },
+  ["hero-daily"],
+  { tags: ["hero-images"], revalidate: 300 },
+)
+export const clearHeroCache = () => revalidateTag("hero-images")
+```
+
+**2. Daily deterministic pick (hash YYYY-MM-DD mui gio VN) thay cho random moi request.**
+
+```ts
+const key = formatInTimeZone(new Date(), "Asia/Ho_Chi_Minh", "yyyy-MM-dd")
+const idx = fnv1a(key) % active.length
+```
+
+### Ly do
+
+**`unstable_cache` thay module cache**:
+- Pattern tu nhien ban dau: `let cached: HeroImage | null = null` trong `lib/hero.ts`, API handler set `cached = null` khi mutation.
+- Thuc te trong Next dev (va production serverless): **module graph cua API route va cua layout renderer bi isolate** — bien module-level set tu API handler **khong visible** tu layout renderer → admin toggle nhung user van thay anh cu cho toi khi Next tu invalidate (hoac restart).
+- `unstable_cache` dung persistent cache layer cua Next + `revalidateTag` di qua cache layer do → cross-process invalidate hoat dong dung.
+- Tradeoff: API van `unstable_` → Next co the rename. Chap nhan vi la primitive chinh thuc duoc document, khong co alternative on-dinh hon o Next 16.
+
+**Daily deterministic pick**:
+- Neu random moi request: moi F5 thay anh khac → user kho chiu, CDN/browser khong cache duoc hero image (moi request moi URL).
+- Neu deterministic theo `userId`: user chua login thi sao? Va anh se "stuck" 1 nguoi vao 1 anh mai → phi gallery.
+- Daily deterministic = cai bang: moi user cung thay cung anh trong ngay (cache CDN + browser hit 100%), nhung moi ngay moi anh (trai nghiem tuoi moi, showcase du bo gallery trong ~N ngay).
+- Mui gio VN: bao dam "ngay moi" flip dung 00:00 VN, khong phai 00:00 UTC (se flip luc 7:00 VN — kho hieu).
+- FNV-1a: fast, deterministic, distribution du tot cho N < 100 anh. Khong can crypto.
+
+### Cach thuc hien
+- `lib/hero.ts` (~40 LoC) — `getDailyHeroImage` + `clearHeroCache`.
+- Moi mutation trong `/api/admin/gallery` goi **ca 2**:
+  - `clearHeroCache()` — invalidate tag.
+  - `revalidatePath("/", "layout")` — **bat buoc chu "layout"**, vi HeroBackdrop trong `(public)/layout.tsx`; arg mac dinh chi invalidate "page" khong xuong toi layout cache.
+- E2E guard: `e2e/gallery-toggle.spec.ts` — admin deactivate anh → reload homepage → expect `hero-backdrop` doi (hoac mat).
+
+### Trade-offs
+- (+) Cross-process invalidate hoat dong trong ca dev va prod.
+- (+) CDN cache hit cao (URL on-dinh 24h).
+- (+) User experience nhat quan — khong flicker anh giua cac page nav.
+- (+) E2E cover revalidate bug → tranh regression.
+- (-) Dung `unstable_` API → co risk rename o major upgrade. Mitigate: grep de rename 1 lan.
+- (-) Neu admin upload anh moi va muon "see it now", phai reload → co the cam thay cham neu browser cache HTML. Chap nhan — admin workflow khong phai real-time.
+
+### Khi nao review lai
+- Neu can hien thi anh khac nhau theo loai trang (vd homepage vs `/tin-tuc`) → them field `scope` va logic pick theo scope.
+- Neu so anh active > 100 va muon weight theo `sortOrder` (vd anh A hien gap 2 anh B) → thay FNV-1a index bang cumulative-weight selection.
+- Neu Next cho ra `cache()` stable API thay the `unstable_cache` → migrate.

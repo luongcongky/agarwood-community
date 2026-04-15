@@ -8,7 +8,7 @@ export async function LatestPostsSection({
   title,
   subtitle,
   emptyText,
-  bgClass = "bg-white",
+  bgClass = "bg-white/85 backdrop-blur-[2px]",
   take = 6,
 }: {
   category: PostCategory
