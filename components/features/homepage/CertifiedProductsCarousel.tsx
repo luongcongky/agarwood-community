@@ -19,7 +19,7 @@ export async function CertifiedProductsCarousel() {
 
   if (products.length === 0) {
     return (
-      <section className="bg-white py-12 lg:py-16">
+      <section className="bg-white/85 backdrop-blur-[2px] py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="mb-6">
             <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
@@ -41,7 +41,7 @@ export async function CertifiedProductsCarousel() {
   const items = [...products, ...products]
 
   return (
-    <section className="bg-white py-12">
+    <section className="bg-white/85 backdrop-blur-[2px] py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between mb-6">
           <div>

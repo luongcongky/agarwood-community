@@ -723,6 +723,25 @@ model MenuItem {
 }
 
 // ============================================================
+// HERO GALLERY — Ảnh nền trang chủ (Section "Tin Hội / Bản tin hội viên").
+// Admin upload N ảnh, mỗi ngày chọn 1 ảnh ngẫu nhiên (deterministic theo
+// date nên mọi user cùng ngày thấy cùng ảnh → CDN cache hiệu quả).
+// ============================================================
+
+model HeroImage {
+  id          String   @id @default(cuid())
+  imageUrl    String   // Cloudinary secure_url (folder "gallery/MM-YYYY")
+  label       String?  // Ghi chú admin ("Rừng gió — tháng 11/2026")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("hero_images")
+}
+
+// ============================================================
 // BANNER ADS — Phase 6
 // ============================================================
 

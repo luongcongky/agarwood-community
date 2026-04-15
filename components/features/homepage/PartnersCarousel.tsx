@@ -90,7 +90,7 @@ export async function PartnersCarousel() {
 
   if (partners.length === 0) {
     return (
-      <section className="bg-brand-50 py-12 lg:py-16">
+      <section className="bg-brand-50/85 backdrop-blur-[2px] py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="mb-6">
             <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
@@ -111,7 +111,7 @@ export async function PartnersCarousel() {
   const items = [...partners, ...partners]
 
   return (
-    <section className="bg-brand-50 py-12 lg:py-16">
+    <section className="bg-brand-50/85 backdrop-blur-[2px] py-12 lg:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <header className="mb-6 flex items-end justify-between">
           <div>
