@@ -72,7 +72,8 @@ export async function Footer() {
   const { leaders, cfg } = await getFooterData()
 
   // Tách Chủ tịch (unique) và Phó CT (nhiều)
-  const chuTich = leaders.find((l) => /^Chủ tịch/i.test(l.title))
+  // Match chính xác "Chủ tịch" — không gồm "Chủ tịch danh dự" (thuộc vị trí danh dự)
+  const chuTich = leaders.find((l) => /^Chủ tịch\s*$/i.test(l.title.trim()))
   const phoChuTich = leaders.filter((l) => /Phó Chủ tịch/i.test(l.title)).slice(0, 3)
   const tongThuKy = leaders.find((l) => /Tổng Thư ký/i.test(l.title))
   const chanhVanPhong = leaders.find((l) => /Chánh Văn Phòng/i.test(l.title))
