@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import type { Role } from "@prisma/client"
+import { isAdmin } from "@/lib/roles"
 
 export type NavMode = "public" | "vip-admin" | "admin"
 
@@ -32,12 +33,14 @@ const roleLabel: Record<Role, string> = {
   GUEST: "Tài khoản cơ bản",
   VIP: "Hội viên",
   ADMIN: "Quản trị",
+  INFINITE: "Quản trị",
 }
 
 const roleBadgeClass: Record<Role, string> = {
   GUEST: "bg-muted text-muted-foreground",
   VIP: "bg-secondary text-secondary-foreground",
   ADMIN: "bg-primary text-primary-foreground",
+  INFINITE: "bg-primary text-primary-foreground",
 }
 
 export function UserMenu({ name, email, image, role, accountType, mode = "public" }: UserMenuProps) {
@@ -47,9 +50,9 @@ export function UserMenu({ name, email, image, role, accountType, mode = "public
     : "?"
 
   // Quyết định destination cho "Vào khu vực quản trị" / "Trang quản lý"
-  const managementHref = role === "ADMIN" ? "/admin" : "/tong-quan"
-  const managementLabel = role === "ADMIN" ? "Vào trang quản trị" : "Trang quản lý"
-  const showEnterManagement = mode === "public" && (role === "VIP" || role === "ADMIN")
+  const managementHref = isAdmin(role) ? "/admin" : "/tong-quan"
+  const managementLabel = isAdmin(role) ? "Vào trang quản trị" : "Trang quản lý"
+  const showEnterManagement = mode === "public" && (role === "VIP" || isAdmin(role))
   const showExitToPublic = mode === "vip-admin" || mode === "admin"
 
   return (

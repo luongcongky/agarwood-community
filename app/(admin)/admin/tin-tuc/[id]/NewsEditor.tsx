@@ -10,6 +10,7 @@ import {
 } from "@/components/editor/RichTextEditor"
 
 import { slugify } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface NewsData {
   title: string
@@ -31,6 +32,7 @@ export default function NewsEditorPage({
   const { id } = use(params)
   const isNew = id === "moi"
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
 
   const [title, setTitle] = useState("")
   const [slug, setSlug] = useState("")
@@ -418,7 +420,8 @@ export default function NewsEditorPage({
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="w-full rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
             >
               {loading

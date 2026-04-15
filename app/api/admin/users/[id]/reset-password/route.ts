@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { isAdmin, canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import crypto from "crypto"
 import { Resend } from "resend"
@@ -11,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -26,7 +27,7 @@ export async function POST(
     return NextResponse.json({ error: "Không tìm thấy người dùng" }, { status: 404 })
   }
 
-  if (user.role === "ADMIN") {
+  if (isAdmin(user.role)) {
     return NextResponse.json({ error: "Không thể đặt lại mật khẩu tài khoản Admin" }, { status: 400 })
   }
 

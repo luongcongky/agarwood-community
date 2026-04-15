@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import QRCode from "qrcode"
 import { prisma } from "@/lib/prisma"
 import { calcTier, getTierThresholds } from "@/lib/tier"
-import { generateMemberCardId, tierFromStars } from "@/lib/memberCard"
+import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { PrintButton } from "./PrintButton"
@@ -24,11 +24,12 @@ export default async function PrintMemberCardPage({
   const [member, businessThresholds, individualThresholds, configs] =
     await Promise.all([
       prisma.user.findFirst({
-        where: { id, role: "VIP", isActive: true },
+        where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
         select: {
           id: true,
           name: true,
           avatarUrl: true,
+          role: true,
           accountType: true,
           contributionTotal: true,
           memberCategory: true,
@@ -66,7 +67,7 @@ export default async function PrintMemberCardPage({
   )
   const memberCardId = generateMemberCardId(member.id, member.createdAt)
   const verifyUrl = `${SITE_URL}/hoi-vien/${member.id}`
-  const tier = tierFromStars(tierInfo.stars)
+  const tier = tierFromRole(member.role, tierInfo.stars)
 
   let qrDataUrl: string | null = null
   try {

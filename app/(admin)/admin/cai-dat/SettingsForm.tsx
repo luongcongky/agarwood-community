@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface SettingsFormProps {
   configMap: Record<string, string>
@@ -85,6 +86,7 @@ const SETTINGS_GROUPS = [
 
 export function SettingsForm({ configMap }: SettingsFormProps) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [values, setValues] = useState<Record<string, string>>(configMap)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -140,14 +142,18 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
                     rows={4}
                     value={values[key] ?? ""}
                     onChange={(e) => handleChange(key, e.target.value)}
-                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50 disabled:opacity-70"
                   />
                 ) : (
                   <input
                     type={type}
                     value={values[key] ?? ""}
                     onChange={(e) => handleChange(key, e.target.value)}
-                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50 disabled:opacity-70"
                   />
                 )}
               </div>
@@ -168,7 +174,8 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-lg bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
         >
           {loading ? "Đang lưu..." : "Lưu cài đặt"}

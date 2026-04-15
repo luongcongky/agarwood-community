@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidateTag, revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
+import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { uploadToDrive, deleteFromDrive } from "@/lib/google-drive"
 
@@ -18,7 +19,7 @@ import { uploadToDrive, deleteFromDrive } from "@/lib/google-drive"
  */
 export async function POST(request: Request) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
  */
 export async function DELETE() {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

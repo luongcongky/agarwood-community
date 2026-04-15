@@ -16,12 +16,17 @@ Tat ca API yeu cau auth su dung NextAuth session cookie. Gui cookie trong moi re
 | Google OAuth | `/api/auth/callback/google` | Dang nhap / dang ky nhanh, auto-link email trung |
 | Credentials | `/api/auth/callback/credentials` | Dang nhap bang email + mat khau |
 
-### Roles (cap nhat Phase 2)
+### Roles (cap nhat Phase 2 + INFINITE)
 | Role | Quyen |
 |------|------|
 | GUEST | Free tier — dang ky xong dung ngay, post 5 bai/thang |
 | VIP | Hoi vien dong phi — quota cao + uu tien hien thi trang chu |
 | ADMIN | Toan quyen, quota khong gioi han |
+| INFINITE | **Admin chi-doc** — xem moi admin endpoint (GET) nhu ADMIN, **moi mutation (POST/PATCH/PUT/DELETE) tra 403**. Guard dung `canAdminWrite()` trong `lib/roles.ts`. |
+
+> **Mutation guard chung**: tat ca admin endpoint mutation (bao gom cac endpoint da doc
+> trong tai lieu nay) hien dung `canAdminWrite(role)` — INFINITE bi 403. Endpoint chi-doc
+> (GET) dung `isAdmin(role)` — ADMIN + INFINITE deu vao duoc.
 
 > **Phase 2 breaking change**: Bo flow "GUEST cho duyet". User dang ky xong la `isActive: true` ngay,
 > co the dang nhap va post bai. VIP la nang cap thuong (qua membership fee), khong phai gate.
@@ -355,6 +360,29 @@ Bat / tat tai khoan VIP. Yeu cau: ADMIN.
 ### POST /api/admin/users/{id}/resend-invite
 Gui lai email moi (tao token moi 48h). Yeu cau: ADMIN.
 
+### PATCH /api/admin/users/{id}/role
+Cap / huy role dac biet (INFINITE). Yeu cau: **ADMIN** (INFINITE khong the tu nang cap /
+xuong cap minh hoac user khac).
+
+**Body:**
+```json
+{ "role": "INFINITE" }
+```
+Gia tri hop le: `"INFINITE" | "VIP" | "GUEST"` (khong cho set thang `ADMIN` qua endpoint nay).
+
+**Response:** `{ success: true, user: { id, role } }`
+
+**Side effects:**
+- Khi set INFINITE: user bo qua check `membershipExpires` o cac route VIP.
+- Khi huy (set VIP/GUEST): tuy `memberCategory` va `membershipExpires` van con han.
+
+**Errors:**
+- `401` — Chua dang nhap
+- `403` — Role nguoi goi khong phai ADMIN (INFINITE cung bi 403 vi day la mutation)
+- `400` — Gia tri role khong hop le
+
+---
+
 ### POST /api/admin/users/{id}/reset-password
 Dat lai mat khau hoi vien. Yeu cau: ADMIN. Khong ap dung cho tai khoan ADMIN.
 
@@ -636,6 +664,93 @@ Cap nhat ban ghi (cho phep gui mot phan field). `isActive=false` an khoi trang c
 Xoa han ban ghi.
 
 Sau moi mutation: `revalidateTag("partners","max")` → carousel trang chu cap nhat ngay.
+
+---
+
+## 10.5 Menu navbar (CMS)
+
+Navbar cong khai duoc quan ly qua model `MenuItem` (1 cap submenu). Cache 60s, auto
+invalidate moi khi write.
+
+### GET /api/admin/menu
+Tra ve cay menu day du (top-level + children). Yeu cau: `isAdmin()` (ADMIN + INFINITE).
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "id": "cuid",
+      "label": "Gioi thieu",
+      "href": "/gioi-thieu",
+      "parentId": null,
+      "sortOrder": 20,
+      "isVisible": true,
+      "isNew": false,
+      "comingSoon": false,
+      "openInNewTab": false,
+      "matchPrefixes": ["/gioi-thieu", "/lien-he"],
+      "menuKey": "about",
+      "children": [
+        { "id": "cuid", "label": "Lien he", "href": "/lien-he", ... }
+      ]
+    }
+  ]
+}
+```
+
+### POST /api/admin/menu
+Tao menu item moi. Yeu cau: **ADMIN** (`canAdminWrite()` — INFINITE bi 403).
+
+**Body:**
+```json
+{
+  "label": "Tin tuc",
+  "href": "/tin-tuc",
+  "parentId": null,
+  "sortOrder": 30,
+  "isVisible": true,
+  "isNew": false,
+  "comingSoon": false,
+  "openInNewTab": false,
+  "matchPrefixes": ["/tin-tuc"],
+  "menuKey": "news"
+}
+```
+
+**Validate:**
+- `label`, `href` bat buoc
+- `parentId` neu co: phai ton tai va phai la top-level (khong cho submenu cua submenu)
+- `menuKey` neu co: unique toan bang
+
+**Response:** `201 { item: MenuItem }`
+
+**Errors:**
+- `403` — Khong phai ADMIN
+- `400` — Parent la submenu (depth > 1) hoac menuKey trung
+- `409` — menuKey duplicate
+
+### PATCH /api/admin/menu/{id}
+Cap nhat menu item. Yeu cau: **ADMIN**.
+
+**Body:** partial — bat cu field nao trong `label, href, parentId, sortOrder, isVisible,
+isNew, comingSoon, openInNewTab, matchPrefixes, menuKey`.
+
+**Validate:**
+- Chan vong: `parentId` khong duoc la chinh `id` hoac descendant
+- Chan submenu cap 2
+- `menuKey` unique
+
+**Response:** `{ item: MenuItem }`
+
+### DELETE /api/admin/menu/{id}
+Xoa menu item. Yeu cau: **ADMIN**. Cascade xoa children (neu co).
+
+**Response:** `{ success: true }`
+
+**Side effects (tat ca write endpoints)**:
+- `revalidateTag("menu-tree")` → navbar cong khai cap nhat trong vong ~60s (thuc te ngay
+  khi tag invalidate).
 
 ---
 

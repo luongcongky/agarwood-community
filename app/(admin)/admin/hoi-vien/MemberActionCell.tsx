@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 export function MemberActionCell({
   memberId,
@@ -16,6 +17,7 @@ export function MemberActionCell({
   isRegistration?: boolean
 }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [loading, setLoading] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [showReject, setShowReject] = useState(false)
@@ -73,7 +75,7 @@ export function MemberActionCell({
           />
           <div className="flex gap-2 justify-end">
             <button onClick={() => setShowReject(false)} className="rounded-md border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50">Huỷ</button>
-            <button onClick={handleReject} disabled={loading || !rejectReason.trim()} className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">Xác nhận từ chối</button>
+            <button onClick={handleReject} disabled={loading || !rejectReason.trim() || readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">Xác nhận từ chối</button>
           </div>
         </div>
       )
@@ -81,10 +83,10 @@ export function MemberActionCell({
 
     return (
       <div className="flex items-center justify-end gap-2">
-        <button onClick={() => setShowReject(true)} disabled={loading} className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">
+        <button onClick={() => setShowReject(true)} disabled={loading || readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">
           Từ chối
         </button>
-        <button onClick={handleApprove} disabled={loading} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+        <button onClick={handleApprove} disabled={loading || readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
           {loading ? "..." : "Duyệt"}
         </button>
       </div>
@@ -99,7 +101,8 @@ export function MemberActionCell({
       </Link>
       <button
         onClick={toggleActive}
-        disabled={loading}
+        disabled={loading || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className={isActive
           ? "rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
           : "rounded-md border border-green-300 px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50 disabled:opacity-50"

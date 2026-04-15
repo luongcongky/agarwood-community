@@ -2,11 +2,13 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier, getTierThresholds } from "@/lib/tier"
 import { MemberDetailTabs } from "./MemberDetailTabs"
+import { InfiniteToggle } from "./InfiniteToggle"
 
-export const revalidate = 60
+export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 
 export default async function MemberDetailPage({
@@ -15,14 +17,14 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const { id } = await params
 
   const [user, memberships, payments, posts, certifications] = await Promise.all([
     prisma.user.findFirst({
       // Admin xem được cả VIP + GUEST (tài khoản cơ bản) — chỉ loại admin
-      where: { id, role: { in: ["VIP", "GUEST"] } },
+      where: { id, role: { in: ["VIP", "GUEST", "INFINITE"] } },
       select: {
         id: true,
         name: true,
@@ -161,6 +163,11 @@ export default async function MemberDetailPage({
             <span className={`inline-flex items-center rounded-full px-2 py-1 text-sm font-medium ${user.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
               {user.isActive ? "Active" : "Inactive"}
             </span>
+            {user.role === "INFINITE" && (
+              <span className="inline-flex items-center rounded-full bg-gray-900 text-amber-200 px-2 py-1 text-xs font-semibold">
+                ∞ Infinite
+              </span>
+            )}
           </div>
           <p className="text-sm text-brand-500 mt-0.5">{user.email}</p>
           <p className="text-sm text-brand-400 mt-0.5">
@@ -169,6 +176,9 @@ export default async function MemberDetailPage({
             {daysLeft > 0 && <span className="ml-2">· Còn {daysLeft} ngày</span>}
           </p>
         </div>
+        {session.user.role === "ADMIN" && (
+          <InfiniteToggle userId={user.id} currentRole={user.role} />
+        )}
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}

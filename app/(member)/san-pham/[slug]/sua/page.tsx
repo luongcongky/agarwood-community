@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
@@ -31,7 +32,7 @@ export default async function EditProductPage({
   })
 
   if (!product) notFound()
-  if (product.ownerId !== session.user.id && session.user.role !== "ADMIN") {
+  if (product.ownerId !== session.user.id && !isAdmin(session.user.role)) {
     redirect("/")
   }
 

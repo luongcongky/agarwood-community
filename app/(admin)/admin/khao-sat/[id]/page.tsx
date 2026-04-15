@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -9,7 +10,7 @@ export const revalidate = 0
 
 export default async function EditSurveyPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const { id } = await params
   const survey = await prisma.survey.findUnique({ where: { id } })

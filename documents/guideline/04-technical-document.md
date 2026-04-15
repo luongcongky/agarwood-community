@@ -225,6 +225,9 @@ enum DocumentCategory {
 - `add_post_product_relation` — `Product.postId String? @unique` (1-1 voi Post, Cascade tu Post)
 - `add_news_category_legal` — them gia tri `LEGAL` vao `NewsCategory`
 - `add_partner_model` — model `Partner` + enum `PartnerCategory` (gom MEDIA cho bao chi)
+- `20260415000000_add_infinite_role` — them gia tri `INFINITE` vao enum `Role`
+- `20260415100000_add_menu_items` — model `MenuItem` (navbar CMS) + self-relation parent/children
+- `20260415110000_add_menu_key` — them cot `menuKey` (unique, nullable) cho `MenuItem`
 
 > Cac migration nay duoc apply qua `prisma db push` (khong tao migration file rieng) — schema drift duoc dong bo truc tiep tu schema.prisma.
 
@@ -254,6 +257,23 @@ enum DocumentCategory {
 - `GUEST` = Tai khoan co ban — dang ky xong dung duoc ngay, post duoc voi quota thap (5 bai/thang)
 - `VIP` = Hoi vien dong phi — quota cao + uu tien hien thi trang chu
 - `ADMIN` = ban quan tri — toan quyen + quota khong gioi han
+- `INFINITE` = **admin chi-doc** — xem moi trang admin nhu ADMIN, nhung moi API mutation
+  tra 403. UI disable cac nut sua/xoa. Bo qua check `membershipExpires`. Card hang nen den
+  vien vang. Xem ADR-024.
+
+**Role helpers (`lib/roles.ts`)**:
+```ts
+isAdmin(role)          // true cho ADMIN + INFINITE (view)
+canAdminWrite(role)    // true chi cho ADMIN (mutation guard)
+hasGoldPrivileges(...) // Vang tier + INFINITE
+```
+- Moi admin API route: dung `canAdminWrite()` thay cho check `role === "ADMIN"` trong
+  guard mutation. Route chi doc (GET) dung `isAdmin()`.
+- `app/(admin)/layout.tsx` render banner canh bao read-only khi role=INFINITE.
+- Admin list/detail pages chuyen `export const revalidate = 0` de tranh cache cross-user
+  gay hydration mismatch giua ADMIN va INFINITE.
+
+**Migration**: `20260415000000_add_infinite_role` — them gia tri `INFINITE` vao enum `Role`.
 
 **Env vars can thiet:**
 ```
@@ -698,6 +718,79 @@ area quan tri.
 
 **Admin sidebar** van co link "Ve trang cong khai" o cuoi nav (sau Dang xuat)
 voi styling accent nen de phat hien.
+
+---
+
+## 10.55 Navbar CMS (dynamic menu + hybrid active highlight)
+
+Navbar cong khai khong con hard-code 5 muc (Trang chu / Gioi thieu / Nghien cuu / MXH /
+Hoi vien) — chuyen sang **DB-driven** qua model `MenuItem`. Xem ADR-025.
+
+### Model `MenuItem`
+```prisma
+model MenuItem {
+  id             String     @id @default(cuid())
+  label          String
+  href           String
+  parentId       String?
+  parent         MenuItem?  @relation("MenuItemChildren", fields: [parentId], references: [id])
+  children       MenuItem[] @relation("MenuItemChildren")
+  sortOrder      Int        @default(0)
+  isVisible      Boolean    @default(true)
+  isNew          Boolean    @default(false)
+  comingSoon     Boolean    @default(false)
+  openInNewTab   Boolean    @default(false)
+  matchPrefixes  String[]   @default([])
+  menuKey        String?    @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+```
+- **1 cap submenu**: API chan tao submenu cua submenu (depth > 2).
+- API chan vong: `parentId` khong the la chinh node (truc tiep hoac gian tiep).
+
+### Libraries
+- **`lib/menu.ts` — `getMenuTree()`**
+  - `unstable_cache` 60s, tag `menu-tree`
+  - Tra ve top-level + `children` da sort theo `sortOrder`
+  - Clear cache tu dong moi khi API admin write (`revalidateTag("menu-tree")`)
+
+- **`lib/menu-active.ts` — `getActiveNodeIds(tree, pathname)`**
+  - Algorithm admin-first, mutually exclusive:
+    1. Neu registry (`lib/route-menu-map.ts`) khai `menuKey: null` cho pathname → khong
+       highlight gi (dung cho auth/legal/404)
+    2. Else: thu match qua `href` hoac `matchPrefixes` cua tung node / child.
+       Neu co >= 1 match → chi cac node do active (registry bi bo qua)
+    3. Else: fallback registry — node co `menuKey` trung registry key duoc active
+  - Tinh 1 lan per tree, tra ve `Set<string>` id
+
+- **`lib/route-menu-map.ts`**
+  - Type `MenuKey = "home" | "about" | "research" | "social" | "members" | null`
+  - List `{prefix, menuKey}` cho 34 public route
+  - `null` cho auth/legal de **khong** highlight gi
+
+### Client components
+- `NavDesktopMenu` (moi) + `NavMobile` dung `usePathname()` + `getActiveNodeIds()` →
+  active highlight re-render moi khi route thay doi trong layout group (truoc day navbar
+  server component trong layout group khong re-render giua cac route, highlight bi ket).
+
+### Admin UI
+- `/admin/menu` — CRUD (list trai, form phai), nut "+ Them submenu" per node cha
+- API:
+  - `GET /api/admin/menu` — tra ve tree
+  - `POST /api/admin/menu` — tao item
+  - `PATCH /api/admin/menu/[id]` — sua (label/href/parentId/sortOrder/isVisible/isNew/
+    comingSoon/openInNewTab/matchPrefixes/menuKey)
+  - `DELETE /api/admin/menu/[id]` — xoa (cascade xoa children)
+
+### Coverage guard
+- `scripts/check-route-menu-coverage.ts` scan `app/(public)/**/page.tsx`, exit code ≠ 0
+  neu route moi chua khai registry — chay o pre-commit / CI
+
+### Seeding
+- `scripts/seed-menu.ts` — 5 menu cha default (idempotent)
+- `scripts/backfill-menu-keys.ts` — gan `menuKey` cho 5 menu cha
+- `scripts/seed-menu-children.ts` — 14 submenu duoi 3 nhom
 
 ---
 

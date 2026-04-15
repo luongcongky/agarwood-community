@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { ConsultationRow } from "./ConsultationRow"
@@ -14,7 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function ConsultationListPage() {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const items = await prisma.consultationRequest.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],

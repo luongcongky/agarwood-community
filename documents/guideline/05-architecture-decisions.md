@@ -774,3 +774,116 @@ full-width desktop 2560px+.
   lang phi byte)
 - Neu Cloudinary ho tro responsive breakpoints rong hon → cos nhac chuyen sang
   `w_auto` + DPR-aware thay vi cap cung
+
+---
+
+## ADR-024: Role INFINITE = admin read-only (tai su dung enum Role)
+
+### Boi canh
+Lanh dao Hoi (Chu tich, Pho Chu tich) can xem moi du lieu admin (hoi vien, thanh toan,
+chung nhan, bao cao) de giam sat, nhung khong tham gia tac nghiep → khong duoc sua/xoa/
+duyet. Co 2 huong:
+1. **Separate permission system**: them bang `Permission`, `RolePermission` → RBAC day du.
+2. **Them 1 gia tri Role moi**: `INFINITE` = admin chi-doc, reuse flow auth hien tai.
+
+### Quyet dinh
+Chon (2) — them gia tri `INFINITE` vao enum `Role`. 2 helper trong `lib/roles.ts`:
+```ts
+isAdmin(role)        // ADMIN + INFINITE → cho phep vao view admin
+canAdminWrite(role)  // chi ADMIN → cho phep mutation
+```
+Mutation API dung `canAdminWrite()`, view API/page dung `isAdmin()`.
+
+### Ly do
+- **RBAC full** qua moi so voi nhu cau: chi 1 "use case" duy nhat (read-only admin) — khong
+  can bang `Permission` cho 1 diem phan quyen.
+- **Reuse JWT**: role da co trong JWT, khong can thay doi auth shape. Session callback
+  khong thay doi.
+- **Proxy/middleware de xu ly**: `proxy.ts` cho phep INFINITE vao `/admin/*` giong ADMIN,
+  ko phai rewrite route matching.
+- **Hien bao cao/log roi rang**: log mutation kem role snapshot — INFINITE khong bao gio
+  xuat hien trong audit mutation.
+- **UX nhat quan**: disable nut kem tooltip + banner top page → user hieu ngay minh o
+  che do chi-doc, khong kich chi ra error 403.
+
+### Cach thuc hien
+- Migration `20260415000000_add_infinite_role` them gia tri vao enum.
+- Layout `app/(admin)/layout.tsx` render banner canh bao khi role=INFINITE.
+- Moi admin API route mutation (POST/PATCH/DELETE) replace `role === "ADMIN"` bang
+  `canAdminWrite(role)`.
+- UI button mutation wrap voi check `canAdminWrite()` → `disabled` + `title` tooltip.
+- Admin list/detail pages: `export const revalidate = 0` → tranh cache cross-user cho
+  hydration mismatch giua ADMIN va INFINITE.
+- INFINITE bo qua check `membershipExpires` trong proxy (khong phai VIP).
+
+### Trade-offs
+- (+) Thay doi toi thieu, roll-forward an toan, Prisma type generation tu dong.
+- (+) Dev moi chi can doc `lib/roles.ts` la hieu model phan quyen.
+- (-) Neu tuong lai can them role thu 5 (vd "Editor" chi sua News), se phai pattern-repeat
+  helper. Khi do moi can cos nhac refactor sang RBAC table.
+- (-) Bat buoc audit moi API route mutation: quen 1 endpoint la INFINITE co the ghi duoc.
+  Giam thieu bang grep `session.user.role === "ADMIN"` va replace toan bo.
+
+### Khi nao review lai
+- Khi co > 2 role read-only khac nhau (vd "Editor", "Auditor") → chuyen sang bang
+  `Permission` va map qua role.
+
+---
+
+## ADR-025: Navbar Menu CMS — hybrid DB + code registry
+
+### Boi canh
+Navbar cong khai truoc day hard-code trong `lib/nav-links.ts` — thay doi label hoac them
+muc phai re-deploy. Admin yeu cau co the tu quan ly menu (them/an/sort/submenu).
+Dong thoi van can highlight "active" menu chinh xac khi user vao sub-page (vd
+`/tin-tuc/[slug]` phai highlight "Nghien cuu" hoac "MXH Tram Huong").
+
+### Quyet dinh
+**Hybrid**:
+1. **DB-driven** cho noi dung: model `MenuItem` (label, href, parent, sortOrder,
+   isVisible, badges...) admin CRUD qua `/admin/menu`.
+2. **Registry code** cho active highlight fallback: `lib/route-menu-map.ts` map
+   `{prefix → menuKey}` cho 34 public route.
+3. **Admin-first priority**: neu `MenuItem.matchPrefixes` co match → thang registry.
+
+### Ly do
+**DB-driven cho noi dung**:
+- Admin khong can deploy de doi navbar — nhu News, Partner, Banner.
+- Submenu 1 cap du dung cho 3 nhom lon (Gioi thieu / MXH / Hoi vien) — khong can deeper
+  tree gay phuc tap UX.
+
+**Registry code cho active highlight**:
+- Public page co hang chuc route khong tuong ung 1-1 voi menu item (vd `/privacy`,
+  `/login`, `/tin-tuc/[slug]`). Neu luu trong DB: admin phai biet moi route → de sai.
+- Code biet ro app routes (co coverage script check).
+- `menuKey: null` trong registry → co quyen "khong highlight gi" cho auth/legal/404.
+
+**Admin-first priority**:
+- Admin ghi `matchPrefixes` → override code. Vi du admin muon "Nghien cuu" active khi
+  user vao `/tai-lieu-khoa-hoc` — just add prefix, khong can code change.
+- Neu admin khong set → fallback registry code (default behavior).
+- Mutually exclusive: neu co bat ky node nao match `href`/`matchPrefixes` → KHONG fallback
+  registry → tranh conflict 2 menu cung active.
+
+### Cach thuc hien
+- `lib/menu-active.ts` → `getActiveNodeIds(tree, pathname)` thuc thi thuat toan 3 buoc.
+- `NavDesktopMenu` + `NavMobile` la client component dung `usePathname()` → re-render khi
+  route doi trong layout group (van de cu: navbar server component trong layout group
+  khong re-render giua cac route cung group).
+- Cache menu tree 60s, tu clear khi admin write.
+- Coverage guard: `scripts/check-route-menu-coverage.ts` fail CI neu public route moi
+  chua khai registry.
+
+### Trade-offs
+- (+) Admin tu quan ly noi dung + override highlight ma khong deploy.
+- (+) Default behavior (registry) van dung cho ~95% case.
+- (+) Mutually exclusive: 0 risk conflict 2 menu cung active.
+- (+) Coverage script bat route moi chua khai registry — tranh silent regression.
+- (-) 2 nguon su that cho active (DB + code) → dev moi phai hieu "admin-first priority".
+  Mitigate bang comment day du trong `lib/menu-active.ts` + ADR nay.
+- (-) Client-side active detection tang bundle navbar ~2KB (usePathname + algorithm).
+
+### Khi nao review lai
+- Neu cay menu sau nay can deeper (> 1 cap) → schema can `depth` guard + UI redesign.
+- Neu registry ngay cang phuc tap (> 100 route) → cos nhac chuyen hoan toan sang
+  `matchPrefixes` trong DB + admin UI de them bulk.

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { QuestionType, SurveyQuestion } from "@/lib/survey/types"
 import { listAllowedFields } from "@/lib/survey/allowed-fields"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface Props {
   /** undefined = create mode */
@@ -37,6 +38,7 @@ function emptyQuestion(): SurveyQuestion {
 
 export function SurveyEditor({ initial }: Props) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [slug, setSlug] = useState(initial?.slug ?? "")
   const [title, setTitle] = useState(initial?.title ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
@@ -157,7 +159,7 @@ export function SurveyEditor({ initial }: Props) {
       <section className="rounded-xl border border-brand-200 bg-white p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-brand-900">Câu hỏi ({questions.length})</h2>
-          <button onClick={addQ} className="text-sm font-semibold text-brand-700 hover:underline">+ Thêm câu</button>
+          <button onClick={addQ} disabled={readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="text-sm font-semibold text-brand-700 hover:underline disabled:opacity-50">+ Thêm câu</button>
         </div>
         {questions.length === 0 && (
           <p className="text-sm text-brand-500 italic">Chưa có câu hỏi nào.</p>
@@ -180,11 +182,11 @@ export function SurveyEditor({ initial }: Props) {
       {error && <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
 
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="rounded-md bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50">
+        <button onClick={save} disabled={saving || readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="rounded-md bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50">
           {saving ? "Đang lưu..." : initial ? "Lưu thay đổi" : "Tạo khảo sát"}
         </button>
         {initial && (
-          <button onClick={remove} className="text-sm text-red-600 hover:underline">Xóa</button>
+          <button onClick={remove} disabled={readOnly} title={readOnly ? READ_ONLY_TOOLTIP : undefined} className="text-sm text-red-600 hover:underline disabled:opacity-50">Xóa</button>
         )}
       </div>
     </div>

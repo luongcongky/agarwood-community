@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 export type PartnerRow = {
   id: string
@@ -40,6 +41,7 @@ const EMPTY: Omit<PartnerRow, "id"> = {
 }
 
 export function PartnerManager({ initialPartners }: { initialPartners: PartnerRow[] }) {
+  const readOnly = useAdminReadOnly()
   const [partners, setPartners] = useState<PartnerRow[]>(initialPartners)
   const [editingId, setEditingId] = useState<string | "new" | null>(null)
   const [draft, setDraft] = useState<Omit<PartnerRow, "id">>({ ...EMPTY })
@@ -165,7 +167,8 @@ export function PartnerManager({ initialPartners }: { initialPartners: PartnerRo
         <button
           type="button"
           onClick={startCreate}
-          disabled={editingId !== null}
+          disabled={editingId !== null || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           + Thêm đối tác
@@ -259,7 +262,8 @@ export function PartnerManager({ initialPartners }: { initialPartners: PartnerRo
                   <button
                     type="button"
                     onClick={() => startEdit(p)}
-                    disabled={editingId !== null}
+                    disabled={editingId !== null || readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                     className="rounded-lg border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
                   >
                     Sửa
@@ -267,14 +271,18 @@ export function PartnerManager({ initialPartners }: { initialPartners: PartnerRo
                   <button
                     type="button"
                     onClick={() => toggleActive(p)}
-                    className="rounded-lg border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="rounded-lg border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
                   >
                     {p.isActive ? "Ẩn" : "Hiện"}
                   </button>
                   <button
                     type="button"
                     onClick={() => remove(p)}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                   >
                     Xoá
                   </button>

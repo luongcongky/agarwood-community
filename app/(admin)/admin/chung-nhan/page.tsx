@@ -3,7 +3,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import type { CertStatus } from "@prisma/client"
 
-export const revalidate = 60
+export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 const PAGE_SIZE = 20
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type ProductRow = {
   id: string
@@ -35,6 +36,7 @@ interface Props {
 type Tab = "products" | "companies"
 
 export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
+  const readOnly = useAdminReadOnly()
   const [tab, setTab] = useState<Tab>("products")
   const [products, setProducts] = useState(initialProducts)
   const [companies, setCompanies] = useState(initialCompanies)
@@ -191,7 +193,9 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                           type="checkbox"
                           checked={p.isFeatured}
                           onChange={() => handleProductToggle(p.id, p.isFeatured)}
-                          className="w-4 h-4 accent-brand-700 cursor-pointer"
+                          disabled={readOnly}
+                          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                          className="w-4 h-4 accent-brand-700 cursor-pointer disabled:opacity-50"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -199,7 +203,8 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                           type="number"
                           min={1}
                           value={p.featuredOrder ?? ""}
-                          disabled={!p.isFeatured}
+                          disabled={!p.isFeatured || readOnly}
+                          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                           onChange={(e) => handleProductOrderChange(p.id, e.target.value)}
                           placeholder="—"
                           className="w-16 rounded-md border border-brand-200 px-2 py-1 text-sm disabled:bg-brand-50 disabled:text-brand-300"
@@ -264,7 +269,9 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                           type="checkbox"
                           checked={c.isFeatured}
                           onChange={() => handleCompanyToggle(c.id, c.isFeatured)}
-                          className="w-4 h-4 accent-brand-700 cursor-pointer"
+                          disabled={readOnly}
+                          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                          className="w-4 h-4 accent-brand-700 cursor-pointer disabled:opacity-50"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -272,7 +279,8 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                           type="number"
                           min={1}
                           value={c.featuredOrder ?? ""}
-                          disabled={!c.isFeatured}
+                          disabled={!c.isFeatured || readOnly}
+                          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                           onChange={(e) => handleCompanyOrderChange(c.id, e.target.value)}
                           placeholder="—"
                           className="w-16 rounded-md border border-brand-200 px-2 py-1 text-sm disabled:bg-brand-50 disabled:text-brand-300"

@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { PaymentActionRow } from "./PaymentActionRow"
 
-export const revalidate = 30
+export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
   MEMBERSHIP_FEE:    { label: "Membership",    cls: "bg-blue-100 text-blue-700" },
@@ -35,7 +36,7 @@ export default async function AdminPaymentPage({
   searchParams: Promise<{ type?: string; period?: string }>
 }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const params = await searchParams
   const filterType = params.type ?? ""

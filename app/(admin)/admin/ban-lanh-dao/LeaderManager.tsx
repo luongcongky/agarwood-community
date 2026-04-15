@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type LeaderCategory = "BTV" | "BCH" | "BKT"
 
@@ -65,6 +66,7 @@ export function LeaderManager({
   initialTerms: string[]
 }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [leaders, setLeaders] = useState(initialLeaders)
   const [terms] = useState(initialTerms)
   const [selectedTerm, setSelectedTerm] = useState(terms[0] ?? "")
@@ -288,7 +290,8 @@ export function LeaderManager({
           <button
             type="button"
             onClick={save}
-            disabled={saving}
+            disabled={saving || readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
             className="rounded-lg bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
           >
             {saving ? "Đang lưu..." : "Lưu"}
@@ -336,7 +339,9 @@ export function LeaderManager({
         <button
           type="button"
           onClick={startCreate}
-          className="ml-auto rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800 transition-colors"
+          disabled={readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+          className="ml-auto rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
         >
           + Thêm thành viên
         </button>
@@ -460,21 +465,27 @@ export function LeaderManager({
                   <button
                     type="button"
                     onClick={() => startEdit(leader)}
-                    className="rounded-md px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="rounded-md px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50 transition-colors"
                   >
                     Sửa
                   </button>
                   <button
                     type="button"
                     onClick={() => toggleActive(leader)}
-                    className="rounded-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="rounded-md px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50 transition-colors"
                   >
                     {leader.isActive ? "Ẩn" : "Hiện"}
                   </button>
                   <button
                     type="button"
                     onClick={() => remove(leader.id)}
-                    className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    disabled={readOnly}
+                    title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                    className="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
                   >
                     Xóa
                   </button>

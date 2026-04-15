@@ -32,11 +32,12 @@ const getFooterData = unstable_cache(
           OR: [
             { title: { contains: "Chủ tịch", mode: "insensitive" } },
             { title: { contains: "Tổng Thư ký", mode: "insensitive" } },
+            { title: { contains: "Chánh Văn Phòng", mode: "insensitive" } },
           ],
         },
         orderBy: [{ sortOrder: "asc" }],
         select: { id: true, name: true, title: true },
-        take: 5,
+        take: 6,
       }),
       prisma.siteConfig.findMany({
         where: {
@@ -74,6 +75,7 @@ export async function Footer() {
   const chuTich = leaders.find((l) => /^Chủ tịch/i.test(l.title))
   const phoChuTich = leaders.filter((l) => /Phó Chủ tịch/i.test(l.title)).slice(0, 3)
   const tongThuKy = leaders.find((l) => /Tổng Thư ký/i.test(l.title))
+  const chanhVanPhong = leaders.find((l) => /Chánh Văn Phòng/i.test(l.title))
 
   const brandDesc =
     cfg.footer_brand_desc ||
@@ -197,6 +199,12 @@ export async function Footer() {
                   <li>
                     <span className="block text-xs text-brand-400">Tổng Thư ký</span>
                     <span className="text-brand-100 font-medium">{tongThuKy.name}</span>
+                  </li>
+                )}
+                {chanhVanPhong && (
+                  <li>
+                    <span className="block text-xs text-brand-400">Chánh Văn Phòng</span>
+                    <span className="text-brand-100 font-medium">{chanhVanPhong.name}</span>
                   </li>
                 )}
                 {leaders.length === 0 && (

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 
@@ -9,7 +10,7 @@ export async function POST(
 ) {
   const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

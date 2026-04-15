@@ -5,7 +5,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { MemberActionCell } from "./MemberActionCell"
 
-export const revalidate = 30 // 30s — admin list refreshes on actions
+export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 const PAGE_SIZE = 20
 
@@ -55,7 +55,7 @@ export default async function AdminMembersPage({
   const thirtyDaysLater = new Date(now.getTime() + 30 * 86400000)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let where: any = { role: { in: ["VIP", "GUEST"] } }
+  let where: any = { role: { in: ["VIP", "GUEST", "INFINITE"] } }
 
   if (status === "active") {
     where = { role: "VIP", isActive: true, membershipExpires: { gt: thirtyDaysLater } }

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type ApplicationData = {
   id: string
@@ -54,6 +55,7 @@ export function ApplicationCard({
   application: ApplicationData
 }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<"none" | "approve" | "reject">("none")
   const [rejectReason, setRejectReason] = useState("")
@@ -187,13 +189,17 @@ export function ApplicationCard({
             <div className="flex gap-2">
               <button
                 onClick={() => setMode("approve")}
-                className="flex-1 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold hover:bg-green-700 transition-colors"
+                disabled={readOnly}
+                title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                className="flex-1 rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 ✓ Phê duyệt
               </button>
               <button
                 onClick={() => setMode("reject")}
-                className="flex-1 rounded-lg border border-red-300 text-red-700 px-4 py-2 text-sm font-semibold hover:bg-red-50 transition-colors"
+                disabled={readOnly}
+                title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+                className="flex-1 rounded-lg border border-red-300 text-red-700 px-4 py-2 text-sm font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors"
               >
                 ✗ Từ chối
               </button>
@@ -222,7 +228,8 @@ export function ApplicationCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSubmit("APPROVE")}
-                  disabled={loading}
+                  disabled={loading || readOnly}
+                  title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                   className="flex-1 rounded-md bg-green-600 text-white px-4 py-2 text-sm font-semibold hover:bg-green-700 disabled:opacity-60"
                 >
                   {loading ? "Đang xử lý..." : "Xác nhận phê duyệt"}
@@ -258,7 +265,8 @@ export function ApplicationCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSubmit("REJECT")}
-                  disabled={loading}
+                  disabled={loading || readOnly}
+                  title={readOnly ? READ_ONLY_TOOLTIP : undefined}
                   className="flex-1 rounded-md bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
                 >
                   {loading ? "Đang xử lý..." : "Xác nhận từ chối"}

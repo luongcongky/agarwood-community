@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type DocData = {
   id: string
@@ -37,6 +38,7 @@ function toDateInput(iso: string | null): string {
 
 export function DocumentCard({ doc }: { doc: DocData }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -134,14 +136,17 @@ export function DocumentCard({ doc }: { doc: DocData }) {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50"
+              disabled={readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+              className="rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
             >
               ✎ Sửa
             </button>
             <button
               type="button"
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || readOnly}
+              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
               className="rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
               {deleting ? "..." : "🗑"}
@@ -238,7 +243,8 @@ export function DocumentCard({ doc }: { doc: DocData }) {
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
           className="rounded-md bg-brand-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
         >
           {saving ? "Đang lưu..." : "Lưu"}

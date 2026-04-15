@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
+import { isAdmin } from "@/lib/roles"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,7 +247,7 @@ export function PostDetailClient({
         )}
 
         {/* Content */}
-        {isLocked && currentUserRole !== "ADMIN" ? (
+        {isLocked && !isAdmin(currentUserRole) ? (
           <p className="text-sm text-brand-400 italic">Nội dung đã bị ẩn do vi phạm quy định.</p>
         ) : (
           <div
@@ -388,8 +389,8 @@ function CommentItem({
   isReply?: boolean
 }) {
   const isOwn = currentUserId === comment.author.id
-  const isAdmin = currentUserRole === "ADMIN"
-  const canDelete = isOwn || isAdmin
+  const viewerIsAdmin = isAdmin(currentUserRole)
+  const canDelete = isOwn || viewerIsAdmin
   const isLoggedIn = !!currentUserId
 
   return (
@@ -405,7 +406,7 @@ function CommentItem({
         <div className="bg-brand-50 rounded-lg px-3 py-2">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-semibold text-brand-900">{comment.author.name}</span>
-            {comment.author.role === "ADMIN" && (
+            {isAdmin(comment.author.role) && (
               <span className="text-[10px] font-bold bg-brand-700 text-white rounded-full px-1.5 py-0.5">Admin</span>
             )}
           </div>

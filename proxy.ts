@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import { NextResponse } from "next/server"
 import { authConfig } from "@/lib/auth.config"
+import { isAdmin } from "@/lib/roles"
 import type { Role } from "@prisma/client"
 
 // Khởi tạo với authConfig (Edge-safe, không có prisma)
@@ -83,7 +84,7 @@ export const proxy = auth((req) => {
       if (pathname === "/cho-duyet") return NextResponse.next()
 
       const dest =
-        role === "ADMIN" ? "/admin"
+        isAdmin(role) ? "/admin"
         : role === "VIP" ? "/tong-quan"
         : "/feed"
       return NextResponse.redirect(new URL(dest, req.url))
@@ -96,7 +97,7 @@ export const proxy = auth((req) => {
     if (!session) {
       return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
     }
-    if (role !== "ADMIN") {
+    if (!isAdmin(role)) {
       return NextResponse.redirect(new URL("/", req.url))
     }
     return passThrough()
@@ -111,6 +112,7 @@ export const proxy = auth((req) => {
       // GUEST không có quyền vào VIP-only routes — hướng tới landing page nâng cấp VIP
       return NextResponse.redirect(new URL("/landing", req.url))
     }
+    // INFINITE & ADMIN: bỏ qua check hạn membership
     if (role === "VIP" && !isMembershipValid(membershipExpires)) {
       // Hội viên hết hạn — cần gia hạn
       return NextResponse.redirect(new URL("/membership-expired", req.url))

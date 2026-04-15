@@ -4,11 +4,13 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type CreateMode = "password" | "invite"
 
 export default function TaoMoiHoiVienPage() {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -154,7 +156,8 @@ export default function TaoMoiHoiVienPage() {
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
             className="rounded-lg bg-brand-700 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
           >
             {loading ? "Đang tạo..." : mode === "invite" ? "Tạo & Gửi email mời" : "Tạo tài khoản"}

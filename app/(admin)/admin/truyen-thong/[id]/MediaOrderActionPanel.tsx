@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { MediaOrderStatus } from "@prisma/client"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 const STATUS_LABELS: Record<MediaOrderStatus, string> = {
   NEW: "Mới",
@@ -40,6 +41,7 @@ export function MediaOrderActionPanel({
   initialDeliveryFileUrls,
 }: MediaOrderActionPanelProps) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [status, setStatus] = useState<MediaOrderStatus>(initialStatus)
   const [assignedTo, setAssignedTo] = useState(initialAssignedTo ?? "")
   const [quotedPrice, setQuotedPrice] = useState(
@@ -247,7 +249,8 @@ export function MediaOrderActionPanel({
 
       <button
         onClick={handleSave}
-        disabled={loading}
+        disabled={loading || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="w-full rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
       >
         {loading ? "Đang lưu..." : "Lưu thay đổi"}

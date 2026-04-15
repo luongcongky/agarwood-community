@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
+import { isAdmin, canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 
 /**
@@ -14,7 +15,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -34,7 +35,7 @@ export async function PATCH(
     if (!product) {
       return NextResponse.json({ error: "Sản phẩm không tồn tại" }, { status: 404 })
     }
-    if (product.owner.role !== "VIP" && product.owner.role !== "ADMIN") {
+    if (product.owner.role !== "VIP" && !isAdmin(product.owner.role)) {
       return NextResponse.json(
         { error: "Chỉ có thể chọn sản phẩm tiêu biểu từ hội viên VIP" },
         { status: 400 },

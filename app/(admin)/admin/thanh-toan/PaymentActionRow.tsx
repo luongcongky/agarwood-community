@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 export function PaymentActionRow({
   id,
@@ -17,6 +18,7 @@ export function PaymentActionRow({
   userBankInfo?: { bankName: string | null; accountNumber: string | null; accountName: string | null } | null
 }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "rejected" | "rejecting">("idle")
   const [rejectReason, setRejectReason] = useState("")
   const [rejectError, setRejectError] = useState("")
@@ -92,7 +94,9 @@ export function PaymentActionRow({
           </button>
           <button
             onClick={handleReject}
-            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+            disabled={readOnly}
+            title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             Xác nhận từ chối
           </button>
@@ -105,14 +109,16 @@ export function PaymentActionRow({
     <div className="flex gap-2">
       <button
         onClick={() => setStatus("rejecting")}
-        disabled={status === "loading"}
+        disabled={status === "loading" || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
       >
         Từ chối ✕
       </button>
       <button
         onClick={handleConfirm}
-        disabled={status === "loading"}
+        disabled={status === "loading" || readOnly}
+        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
         className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
       >
         {status === "loading" ? "Đang xử lý..." : "Xác nhận ✓"}

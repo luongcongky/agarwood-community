@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import type { SurveyAnswers, SurveyQuestion } from "@/lib/survey"
 
@@ -12,7 +13,7 @@ function csvEscape(v: unknown): string {
 // GET /api/admin/khao-sat/[id]/export — trả CSV
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!session?.user || !isAdmin(session.user.role)) {
     return new Response("Forbidden", { status: 403 })
   }
   const { id } = await params

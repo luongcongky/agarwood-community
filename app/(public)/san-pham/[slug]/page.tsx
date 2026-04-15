@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
@@ -88,7 +89,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   // Role-based CTA logic
   const isOwner = session?.user?.id === product.owner.id
-  const isAdmin = session?.user?.role === "ADMIN"
+  const viewerIsAdmin = isAdmin(session?.user?.role)
   const hasCompany = !!product.company
 
   const productJsonLd = {
@@ -251,7 +252,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 )}
               </>
             )}
-            {isAdmin && (
+            {viewerIsAdmin && (
               <Link
                 href={`/san-pham/${slug}/sua`}
                 className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
@@ -259,7 +260,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 Chỉnh sửa
               </Link>
             )}
-            {!isOwner && !isAdmin && hasCompany && (
+            {!isOwner && !viewerIsAdmin && hasCompany && (
               <Link
                 href={`/doanh-nghiep/${product.company!.slug}`}
                 className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
@@ -267,7 +268,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 Liên hệ doanh nghiệp
               </Link>
             )}
-            {!isOwner && !isAdmin && !hasCompany && product.owner.phone && (
+            {!isOwner && !viewerIsAdmin && !hasCompany && product.owner.phone && (
               <a
                 href={`tel:${product.owner.phone}`}
                 className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 interface Item {
   id: string
@@ -23,6 +24,7 @@ const STATUSES = ["PENDING", "CONTACTED", "DONE", "CANCELLED"]
 
 export function ConsultationRow({ item }: { item: Item }) {
   const router = useRouter()
+  const readOnly = useAdminReadOnly()
   const [updating, setUpdating] = useState(false)
 
   async function update(status: string) {
@@ -66,8 +68,9 @@ export function ConsultationRow({ item }: { item: Item }) {
         <select
           value={item.status}
           onChange={(e) => update(e.target.value)}
-          disabled={updating}
-          className="rounded border border-brand-300 px-2 py-1 text-xs"
+          disabled={updating || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+          className="rounded border border-brand-300 px-2 py-1 text-xs disabled:opacity-50"
         >
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>

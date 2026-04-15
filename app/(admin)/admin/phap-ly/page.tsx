@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { ChevronDown, Upload } from "lucide-react"
 import { DocumentCategory } from "@prisma/client"
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { UploadForm } from "./UploadForm"
 import { DocumentCard } from "./DocumentCard"
@@ -25,7 +26,7 @@ export default async function AdminPhapLyPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const session = await auth()
-  if (!session?.user || session.user.role !== "ADMIN") notFound()
+  if (!session?.user || !isAdmin(session.user.role)) notFound()
 
   const params = await searchParams
   const query = (params.q || "").trim()
