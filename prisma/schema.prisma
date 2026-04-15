@@ -139,6 +139,14 @@ enum BannerPosition {
   MID   // Giữa trang chủ — sau section Sản phẩm chứng nhận
 }
 
+// Danh mục đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
+enum HonoraryCategory {
+  RESEARCH           // Nghiên cứu khoa học, báo cáo học thuật
+  LOGISTICS          // Hậu cần sự kiện, tổ chức hoạt động
+  EXTERNAL_RELATIONS // Đối ngoại, kết nối đối tác
+  OTHER              // Khác
+}
+
 // ============================================================
 // USER & AUTH
 // ============================================================
@@ -192,6 +200,8 @@ model User {
   surveyResponses   SurveyResponse[]
   consultationRequests ConsultationRequest[] @relation("ConsultationRequester")
   consultationsHandled ConsultationRequest[] @relation("ConsultationHandler")
+  honoraryContributions        HonoraryContribution[] @relation("HonoraryRecipient")
+  honoraryContributionsCreated HonoraryContribution[] @relation("HonoraryCreatedBy")
 
   @@index([role])
   @@index([accountType])
@@ -300,6 +310,28 @@ model Payment {
   @@index([createdAt])
   @@index([bannerId])
   @@map("payments")
+}
+
+// Đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
+// mà không cần chuyển khoản (NCKH, hậu cần sự kiện, đối ngoại...)
+model HonoraryContribution {
+  id             String           @id @default(cuid())
+  userId         String           // hội viên được ghi nhận
+  creditAmount   Int              // số tiền quy đổi (VND) — cộng vào contributionTotal
+  reason         String           @db.Text
+  category       HonoraryCategory
+  extendMonths   Int              @default(12) // số tháng gia hạn membershipExpires
+  createdByAdminId String         // admin nào tạo record này
+
+  createdAt      DateTime         @default(now())
+
+  user           User             @relation("HonoraryRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation("HonoraryCreatedBy", fields: [createdByAdminId], references: [id])
+
+  @@index([userId])
+  @@index([createdByAdminId])
+  @@index([createdAt])
+  @@map("honorary_contributions")
 }
 
 // ============================================================

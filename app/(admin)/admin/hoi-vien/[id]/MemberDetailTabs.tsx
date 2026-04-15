@@ -66,15 +66,33 @@ type Cert = {
   product: { name: string; slug: string }
 }
 
-type Tab = "membership" | "payments" | "posts" | "certs" | "info"
+type Honorary = {
+  id: string
+  creditAmount: number
+  reason: string
+  category: "RESEARCH" | "LOGISTICS" | "EXTERNAL_RELATIONS" | "OTHER"
+  extendMonths: number
+  createdAt: string
+  createdBy: { name: string } | null
+}
+
+type Tab = "membership" | "payments" | "honorary" | "posts" | "certs" | "info"
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "membership", label: "Membership" },
   { key: "payments",   label: "Thanh toán" },
+  { key: "honorary",   label: "Đóng góp danh dự" },
   { key: "posts",      label: "Bài viết" },
   { key: "certs",      label: "Chứng nhận" },
   { key: "info",       label: "Thông tin" },
 ]
+
+const honoraryCategoryLabel: Record<Honorary["category"], string> = {
+  RESEARCH:           "Nghiên cứu khoa học",
+  LOGISTICS:          "Hậu cần sự kiện",
+  EXTERNAL_RELATIONS: "Đối ngoại",
+  OTHER:              "Khác",
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +143,7 @@ export function MemberDetailTabs({
   user,
   memberships,
   payments,
+  honoraries,
   posts,
   certifications,
   tierSilver,
@@ -133,6 +152,7 @@ export function MemberDetailTabs({
   user: User
   memberships: Membership[]
   payments: Payment[]
+  honoraries: Honorary[]
   posts: Post[]
   certifications: Cert[]
   tierSilver?: number
@@ -142,6 +162,54 @@ export function MemberDetailTabs({
   const readOnly = useAdminReadOnly()
   const [activeTab, setActiveTab] = useState<Tab>("membership")
   const [actionLoading, setActionLoading] = useState(false)
+  const [showHonoraryModal, setShowHonoraryModal] = useState(false)
+  const [honoraryForm, setHonoraryForm] = useState({
+    creditAmount: "",
+    reason: "",
+    category: "RESEARCH" as Honorary["category"],
+    extendMonths: "12",
+  })
+  const [honoraryError, setHonoraryError] = useState<string | null>(null)
+
+  async function handleSubmitHonorary() {
+    setHonoraryError(null)
+    const creditAmount = Number(honoraryForm.creditAmount)
+    const extendMonths = Number(honoraryForm.extendMonths)
+    if (!Number.isFinite(creditAmount) || creditAmount <= 0) {
+      setHonoraryError("Số tiền quy đổi phải lớn hơn 0")
+      return
+    }
+    if (honoraryForm.reason.trim().length < 10) {
+      setHonoraryError("Lý do phải ít nhất 10 ký tự")
+      return
+    }
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/honorary-contributions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          creditAmount,
+          reason: honoraryForm.reason.trim(),
+          category: honoraryForm.category,
+          extendMonths: Number.isFinite(extendMonths) ? extendMonths : 12,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setHonoraryError(j.error ?? "Có lỗi xảy ra")
+        return
+      }
+      setShowHonoraryModal(false)
+      setHonoraryForm({ creditAmount: "", reason: "", category: "RESEARCH", extendMonths: "12" })
+      router.refresh()
+    } catch {
+      setHonoraryError("Có lỗi xảy ra")
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   const daysLeft = user.membershipExpires
     ? Math.max(0, Math.ceil((new Date(user.membershipExpires).getTime() - Date.now()) / 86400000))
@@ -226,6 +294,14 @@ export function MemberDetailTabs({
           className="rounded-lg border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
         >
           Đặt lại mật khẩu
+        </button>
+        <button
+          onClick={() => setShowHonoraryModal(true)}
+          disabled={actionLoading || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+          className="rounded-lg border border-purple-300 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors disabled:opacity-50"
+        >
+          Ghi nhận đóng góp phi tài chính
         </button>
       </div>
 
@@ -362,6 +438,45 @@ export function MemberDetailTabs({
           </div>
         )}
 
+        {/* ── Honorary contributions ───────────────────────────────────── */}
+        {activeTab === "honorary" && (
+          <div className="space-y-4">
+            <p className="text-sm text-brand-500">
+              Ghi nhận đóng góp phi tài chính (nghiên cứu, hậu cần, đối ngoại...) — cộng vào tổng đóng góp để thăng hạng hội viên.
+            </p>
+            {honoraries.length === 0 ? (
+              <p className="text-sm text-brand-400 py-4 text-center">Chưa có ghi nhận đóng góp danh dự nào.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-brand-200 text-left">
+                      <th className="py-2.5 pr-4 font-medium text-brand-500">Ngày</th>
+                      <th className="py-2.5 pr-4 font-medium text-brand-500">Danh mục</th>
+                      <th className="py-2.5 pr-4 font-medium text-brand-500">Quy đổi</th>
+                      <th className="py-2.5 pr-4 font-medium text-brand-500">Gia hạn</th>
+                      <th className="py-2.5 pr-4 font-medium text-brand-500">Lý do</th>
+                      <th className="py-2.5 font-medium text-brand-500">Ghi bởi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-100">
+                    {honoraries.map((h) => (
+                      <tr key={h.id}>
+                        <td className="py-3 pr-4 text-brand-700 whitespace-nowrap">{fmtDate(h.createdAt)}</td>
+                        <td className="py-3 pr-4 text-brand-600">{honoraryCategoryLabel[h.category]}</td>
+                        <td className="py-3 pr-4 text-brand-900 font-medium whitespace-nowrap">{fmtVND(h.creditAmount)}</td>
+                        <td className="py-3 pr-4 text-brand-600 whitespace-nowrap">{h.extendMonths > 0 ? `+${h.extendMonths} tháng` : "—"}</td>
+                        <td className="py-3 pr-4 text-brand-700 max-w-sm whitespace-pre-wrap wrap-break-word">{h.reason}</td>
+                        <td className="py-3 text-brand-500 text-xs whitespace-nowrap">{h.createdBy?.name ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Posts ──────────────────────────────────────────────────────── */}
         {activeTab === "posts" && (
           <div>
@@ -478,6 +593,85 @@ export function MemberDetailTabs({
           </div>
         )}
       </div>
+
+      {/* ── Honorary modal ────────────────────────────────────────────── */}
+      {showHonoraryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-brand-200">
+              <h3 className="text-lg font-bold text-brand-900">Ghi nhận đóng góp phi tài chính</h3>
+              <p className="text-xs text-brand-500 mt-1">Cộng vào tổng đóng góp của {user.name} để thăng hạng.</p>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-brand-700 mb-1">Danh mục</label>
+                <select
+                  value={honoraryForm.category}
+                  onChange={(e) => setHonoraryForm((f) => ({ ...f, category: e.target.value as Honorary["category"] }))}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                >
+                  <option value="RESEARCH">Nghiên cứu khoa học</option>
+                  <option value="LOGISTICS">Hậu cần sự kiện</option>
+                  <option value="EXTERNAL_RELATIONS">Đối ngoại</option>
+                  <option value="OTHER">Khác</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-700 mb-1">Số tiền quy đổi (VND)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={100000}
+                  value={honoraryForm.creditAmount}
+                  onChange={(e) => setHonoraryForm((f) => ({ ...f, creditAmount: e.target.value }))}
+                  placeholder="Ví dụ: 5000000"
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                />
+                <p className="text-xs text-brand-400 mt-1">Mức quy đổi này sẽ cộng vào tổng đóng góp để tính hạng Bạc/Vàng.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-700 mb-1">Số tháng gia hạn membership</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={honoraryForm.extendMonths}
+                  onChange={(e) => setHonoraryForm((f) => ({ ...f, extendMonths: e.target.value }))}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                />
+                <p className="text-xs text-brand-400 mt-1">Mặc định 12 tháng. Đặt 0 nếu chỉ muốn cộng đóng góp mà không gia hạn.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-brand-700 mb-1">Lý do <span className="text-red-500">*</span></label>
+                <textarea
+                  value={honoraryForm.reason}
+                  onChange={(e) => setHonoraryForm((f) => ({ ...f, reason: e.target.value }))}
+                  rows={3}
+                  placeholder="Mô tả cụ thể đóng góp của hội viên..."
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100 resize-none"
+                />
+              </div>
+              {honoraryError && <p className="text-sm text-red-600">{honoraryError}</p>}
+            </div>
+            <div className="px-6 py-4 border-t border-brand-200 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowHonoraryModal(false); setHonoraryError(null) }}
+                disabled={actionLoading}
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={handleSubmitHonorary}
+                disabled={actionLoading}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+              >
+                {actionLoading ? "Đang lưu..." : "Ghi nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
