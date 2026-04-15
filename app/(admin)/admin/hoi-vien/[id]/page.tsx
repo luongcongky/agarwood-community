@@ -21,7 +21,7 @@ export default async function MemberDetailPage({
 
   const { id } = await params
 
-  const [user, memberships, payments, posts, certifications] = await Promise.all([
+  const [user, memberships, payments, honoraries, posts, certifications] = await Promise.all([
     prisma.user.findFirst({
       // Admin xem được cả VIP + GUEST (tài khoản cơ bản) — chỉ loại admin
       where: { id, role: { in: ["VIP", "GUEST", "INFINITE"] } },
@@ -79,6 +79,19 @@ export default async function MemberDetailPage({
         payosOrderCode: true,
       },
     }),
+    prisma.honoraryContribution.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        creditAmount: true,
+        reason: true,
+        category: true,
+        extendMonths: true,
+        createdAt: true,
+        createdBy: { select: { name: true } },
+      },
+    }),
     prisma.post.findMany({
       where: { authorId: id },
       orderBy: { createdAt: "desc" },
@@ -130,6 +143,10 @@ export default async function MemberDetailPage({
     payments: payments.map((p) => ({
       ...p,
       createdAt: p.createdAt.toISOString(),
+    })),
+    honoraries: honoraries.map((h) => ({
+      ...h,
+      createdAt: h.createdAt.toISOString(),
     })),
     posts: posts.map((p) => ({
       ...p,
@@ -186,6 +203,7 @@ export default async function MemberDetailPage({
         user={serialized.user}
         memberships={serialized.memberships}
         payments={serialized.payments}
+        honoraries={serialized.honoraries}
         posts={serialized.posts}
         certifications={serialized.certifications}
         tierSilver={silver}
