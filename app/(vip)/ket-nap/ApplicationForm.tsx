@@ -81,7 +81,7 @@ export function ApplicationForm({
         </p>
         {isAlreadyOfficial && (
           <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
-            Bạn hiện đã là Hội viên Chính thức. Nộp đơn mới chỉ cần thiết nếu muốn thay đổi hạng.
+            Bạn hiện CHƯA là Hội viên Chính thức. Nộp đơn là bước cần cần thiết để Hội xác nhận và thay đổi hạng.
           </p>
         )}
       </div>

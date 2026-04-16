@@ -8,9 +8,10 @@ import { z } from "zod"
 const profileSchema = z.object({
   name:  z.string().min(2, "Ten toi thieu 2 ky tu"),
   phone: z.string().regex(/^(0|\+84)[0-9]{8,9}$/, "So dien thoai khong hop le").or(z.literal("")),
+  bio:   z.string().max(2000, "Tieu su toi da 2000 ky tu").optional().default(""),
 })
 
-export async function updateProfile(formData: { name: string; phone: string }) {
+export async function updateProfile(formData: { name: string; phone: string; bio?: string }) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Chua dang nhap" }
 
@@ -22,6 +23,7 @@ export async function updateProfile(formData: { name: string; phone: string }) {
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone || null,
+      bio: parsed.data.bio?.trim() || null,
     },
   })
 

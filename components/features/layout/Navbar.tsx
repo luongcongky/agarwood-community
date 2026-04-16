@@ -68,6 +68,11 @@ export async function Navbar() {
   ])
 
   const accountType = role === "VIP" ? dbUser?.accountType ?? "BUSINESS" : null
+  const expires = session?.user?.membershipExpires
+  const membershipActive =
+    role === "INFINITE" || role === "ADMIN"
+      ? true
+      : role === "VIP" && !!expires && new Date(expires) > new Date()
   const socialMap = Object.fromEntries(socialConfigs.map((c) => [c.key, c.value]))
   const facebookUrl = socialMap.facebook_url || null
   const youtubeUrl = socialMap.youtube_url || null
@@ -116,6 +121,7 @@ export async function Navbar() {
                 role={user.role}
                 accountType={accountType}
                 mode={mode}
+                membershipActive={membershipActive}
               />
             ) : (
               <div className="hidden lg:flex items-center gap-2">

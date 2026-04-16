@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import { COMPANY_FIELDS } from "@/lib/constants/agarwood"
 
 type FormState = {
-  accountType: "BUSINESS" | "INDIVIDUAL"
   name: string
   email: string
   phone: string
@@ -34,9 +33,13 @@ function validateField(name: keyof FormState, value: string, accountType?: strin
   }
 }
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  /** Loại tài khoản do RegisterSection quản lý (radio nằm ngoài form) */
+  accountType: "BUSINESS" | "INDIVIDUAL"
+}
+
+export function RegisterForm({ accountType }: RegisterFormProps) {
   const [form, setForm] = useState<FormState>({
-    accountType: "BUSINESS",
     name: "", email: "", phone: "", companyName: "",
     companyField: "", address: "", reason: "", honeypot: "",
   })
@@ -48,25 +51,25 @@ export function RegisterForm() {
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
-    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, form.accountType) }))
+    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, accountType) }))
   }
 
   function handleBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target
-    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, form.accountType) }))
+    setErrors(prev => ({ ...prev, [name]: validateField(name as keyof FormState, value, accountType) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setServerError("")
 
-    const required: (keyof FormState)[] = form.accountType === "BUSINESS"
+    const required: (keyof FormState)[] = accountType === "BUSINESS"
       ? ["name", "email", "phone", "companyName", "companyField", "reason"]
       : ["name", "email", "phone", "reason"]
     const newErrors: FormErrors = {}
     let hasError = false
     for (const field of required) {
-      const err = validateField(field, form[field], form.accountType)
+      const err = validateField(field, form[field], accountType)
       if (err) { newErrors[field] = err; hasError = true }
     }
     if (hasError) { setErrors(newErrors); return }
@@ -76,7 +79,7 @@ export function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, accountType }),
       })
       if (res.ok) {
         setSubmitted(true)
@@ -97,14 +100,14 @@ export function RegisterForm() {
         <div className="text-4xl">✅</div>
         <h2 className="text-xl font-bold text-brand-900">Đăng ký thành công!</h2>
         <p className="text-sm text-brand-600">
-          Tài khoản của bạn đã được <strong>kích hoạt ngay</strong>. Bạn có thể đăng nhập và bắt đầu chia sẻ bài viết.
+          Tài khoản của bạn đã được tạo thành công. Vui lòng kiểm tra email để <strong>đặt mật khẩu đăng nhập</strong>.
         </p>
         <p className="text-sm text-brand-500">
-          Email xác nhận đã được gửi đến <strong>{form.email}</strong>.
+          Email hướng dẫn đã được gửi đến <strong>{form.email}</strong>.
         </p>
-        <Link href="/login" className="inline-block rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors">
-          Đăng nhập ngay
-        </Link>
+        <p className="text-xs text-brand-400">
+          Không thấy email? Kiểm tra thư mục Spam hoặc thử lại sau vài phút.
+        </p>
       </div>
     )
   }
@@ -118,35 +121,6 @@ export function RegisterForm() {
       {serverError && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{serverError}</div>
       )}
-
-      {/* Account type selector */}
-      <div>
-        <p className={labelClass}>Bạn đăng ký với tư cách <span className="text-red-500">*</span></p>
-        <div className="grid grid-cols-2 gap-3 mt-1">
-          <button
-            type="button"
-            onClick={() => setForm(prev => ({ ...prev, accountType: "BUSINESS" }))}
-            className={cn(
-              "rounded-lg border-2 p-3 text-left transition-colors",
-              form.accountType === "BUSINESS" ? "border-brand-600 bg-brand-50" : "border-brand-200 hover:border-brand-400",
-            )}
-          >
-            <p className="font-semibold text-brand-900 text-sm">Doanh nghiệp</p>
-            <p className="text-xs text-brand-500 mt-0.5">Có công ty, sản phẩm, cần chứng nhận</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => setForm(prev => ({ ...prev, accountType: "INDIVIDUAL" }))}
-            className={cn(
-              "rounded-lg border-2 p-3 text-left transition-colors",
-              form.accountType === "INDIVIDUAL" ? "border-brand-600 bg-brand-50" : "border-brand-200 hover:border-brand-400",
-            )}
-          >
-            <p className="font-semibold text-brand-900 text-sm">Cá nhân / Chuyên gia</p>
-            <p className="text-xs text-brand-500 mt-0.5">Kết nối, chia sẻ kinh nghiệm</p>
-          </button>
-        </div>
-      </div>
 
       {/* Honeypot */}
       <input type="text" name="honeypot" value={form.honeypot} onChange={handleChange} className="hidden" tabIndex={-1} autoComplete="off" />
@@ -174,7 +148,7 @@ export function RegisterForm() {
       </div>
 
       {/* Company info — only for BUSINESS */}
-      {form.accountType === "BUSINESS" && (
+      {accountType === "BUSINESS" && (
         <>
           <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide pt-2">Thông tin doanh nghiệp</p>
 
@@ -202,7 +176,7 @@ export function RegisterForm() {
       )}
 
       {/* Expertise — only for INDIVIDUAL */}
-      {form.accountType === "INDIVIDUAL" && (
+      {accountType === "INDIVIDUAL" && (
         <div>
           <label htmlFor="reg-address" className={labelClass}>Chuyên môn / Lĩnh vực quan tâm</label>
           <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Ví dụ: Nghiên cứu trầm hương, Sưu tầm, Chế biến..." />

@@ -168,6 +168,9 @@ model User {
   displayPriority   Int       @default(0) // thứ tự ưu tiên hiển thị bài — tính từ contributionTotal
   reputationScore   Int       @default(100) // điểm uy tín — future use, schema sẵn sàng
 
+  // Giới thiệu bản thân / tiểu sử — hiển thị trên trang hồ sơ cá nhân
+  bio               String?   @db.Text
+
   // Refund info — dùng khi hoàn phí chứng nhận bị từ chối
   bankAccountName   String?
   bankAccountNumber String?

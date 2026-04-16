@@ -28,27 +28,42 @@ export interface VipNavItem {
 }
 
 export const VIP_NAV_ITEMS: VipNavItem[] = [
-  { label: "Tổng quan",        href: "/tong-quan",            icon: LayoutDashboard },
-  { label: "Hồ sơ cá nhân",    href: "/ho-so",                icon: User },
-  { label: "Doanh nghiệp",     href: "/doanh-nghiep-cua-toi", icon: Building2, businessOnly: true },
-  { label: "Chứng nhận SP",    href: "/chung-nhan/lich-su",   icon: BadgeCheck, businessOnly: true },
-  { label: "Đơn kết nạp",      href: "/ket-nap",              icon: FileCheck },
-  { label: "Tài liệu",         href: "/tai-lieu",             icon: FileText },
-  { label: "Gia hạn",          href: "/gia-han",              icon: RefreshCw },
-  { label: "Lịch sử CK",       href: "/thanh-toan/lich-su",   icon: CreditCard },
+  { label: "Tổng quan",          href: "/tong-quan",            icon: LayoutDashboard },
+  { label: "Hồ sơ cá nhân",      href: "/ho-so",                icon: User },
+  { label: "Hồ sơ doanh nghiệp", href: "/doanh-nghiep-cua-toi", icon: Building2, businessOnly: true },
+  { label: "Chứng nhận SP",      href: "/chung-nhan/lich-su",   icon: BadgeCheck, businessOnly: true },
+  { label: "Tài liệu",           href: "/tai-lieu",             icon: FileText },
+  { label: "Gia hạn",            href: "/gia-han",              icon: RefreshCw },
+  { label: "Lịch sử CK",         href: "/thanh-toan/lich-su",   icon: CreditCard },
+]
+
+/** VIP chưa kích hoạt / hết hạn — sidebar chỉ có Gia hạn. */
+const INACTIVE_VIP_NAV_ITEMS: VipNavItem[] = [
+  { label: "Gia hạn",            href: "/gia-han",              icon: RefreshCw },
+]
+
+/** GUEST chỉ vào được Đơn kết nạp. */
+const GUEST_NAV_ITEMS: VipNavItem[] = [
+  { label: "Đơn kết nạp",        href: "/ket-nap",              icon: FileCheck },
 ]
 
 interface VipNavLinksProps {
   accountType?: "BUSINESS" | "INDIVIDUAL" | null
+  /** Role hiện tại — GUEST chỉ thấy Đơn kết nạp */
+  role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
+  /** Hội viên còn hiệu lực — false → chỉ hiện mục Gia hạn */
+  membershipActive?: boolean
   onNavigate?: () => void
 }
 
 /** Dùng lại cả trong sidebar desktop và Sheet mobile */
-export function VipNavLinks({ accountType, onNavigate }: VipNavLinksProps) {
+export function VipNavLinks({ accountType, role, membershipActive = true, onNavigate }: VipNavLinksProps) {
   const pathname = usePathname()
-  const items = VIP_NAV_ITEMS.filter(
-    (it) => !it.businessOnly || accountType !== "INDIVIDUAL",
-  )
+  const items = role === "GUEST"
+    ? GUEST_NAV_ITEMS
+    : !membershipActive
+      ? INACTIVE_VIP_NAV_ITEMS
+      : VIP_NAV_ITEMS.filter((it) => !it.businessOnly || accountType !== "INDIVIDUAL")
 
   return (
     <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -101,13 +116,15 @@ export function VipNavLinks({ accountType, onNavigate }: VipNavLinksProps) {
 
 interface MemberSidebarProps {
   accountType?: "BUSINESS" | "INDIVIDUAL" | null
+  role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
+  membershipActive?: boolean
 }
 
 /**
  * Sidebar cố định cho khu vực quản lý Hội viên — chỉ hiển thị từ md (768px) trở lên.
  * Mobile dùng MemberMobileNav.
  */
-export function MemberSidebar({ accountType }: MemberSidebarProps) {
+export function MemberSidebar({ accountType, role, membershipActive = true }: MemberSidebarProps) {
   return (
     <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col bg-sidebar h-full">
       <Link
@@ -131,7 +148,7 @@ export function MemberSidebar({ accountType }: MemberSidebarProps) {
         </div>
       </Link>
 
-      <VipNavLinks accountType={accountType} />
+      <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} />
     </aside>
   )
 }

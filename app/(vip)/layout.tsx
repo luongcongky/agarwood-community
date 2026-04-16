@@ -30,14 +30,22 @@ export default async function VipLayout({
     | "INDIVIDUAL"
     | null
 
+  // Hội viên còn hiệu lực → hiện đủ sidebar; chưa kích hoạt / hết hạn → chỉ hiện "Gia hạn".
+  // INFINITE/ADMIN luôn coi là active (bỏ qua hạn).
+  const expires = session?.user?.membershipExpires
+  const membershipActive =
+    role === "INFINITE" || role === "ADMIN"
+      ? true
+      : role === "VIP" && !!expires && new Date(expires) > new Date()
+
   return (
     // h-screen (thay vì min-h-screen) để main thực sự scroll bên trong — giống
     // admin layout — giúp sticky element trong nội dung hoạt động.
     <div className="flex h-screen overflow-hidden">
-      <MemberSidebar accountType={accountType} />
+      <MemberSidebar accountType={accountType} role={role} membershipActive={membershipActive} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <MemberMobileNav accountType={accountType} />
+        <MemberMobileNav accountType={accountType} role={role} membershipActive={membershipActive} />
 
         <main className="flex-1 bg-muted/30 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}

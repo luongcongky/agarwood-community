@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { LogOut, User, Settings, FileCheck, LayoutDashboard, Globe } from "lucide-react"
+import { LogOut, FileCheck, LayoutDashboard, Globe, RefreshCw, ShieldCheck } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import type { Role } from "@prisma/client"
-import { isAdmin } from "@/lib/roles"
 
 export type NavMode = "public" | "vip-admin" | "admin"
 
@@ -27,6 +26,8 @@ interface UserMenuProps {
   accountType?: string | null
   /** Mode hiện tại của Navbar — quyết định menu item "Vào khu vực quản trị" / "Về trang công khai" */
   mode?: NavMode
+  /** Hội viên VIP còn hiệu lực — false → dropdown chỉ có item Gia hạn */
+  membershipActive?: boolean
 }
 
 const roleLabel: Record<Role, string> = {
@@ -43,17 +44,20 @@ const roleBadgeClass: Record<Role, string> = {
   INFINITE: "bg-primary text-primary-foreground",
 }
 
-export function UserMenu({ name, email, image, role, accountType, mode = "public" }: UserMenuProps) {
+export function UserMenu({ name, email, image, role, mode = "public", membershipActive = true }: UserMenuProps) {
   const router = useRouter()
   const initials = name?.trim()
     ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
     : "?"
 
-  // Quyết định destination cho "Vào khu vực quản trị" / "Trang quản lý"
-  const managementHref = isAdmin(role) ? "/admin" : "/tong-quan"
-  const managementLabel = isAdmin(role) ? "Vào trang quản trị" : "Trang quản lý"
-  const showEnterManagement = mode === "public" && (role === "VIP" || isAdmin(role))
   const showExitToPublic = mode === "vip-admin" || mode === "admin"
+
+  // VIP chưa kích hoạt / hết hạn → dropdown chỉ có "Gia hạn" (bỏ qua INFINITE/ADMIN)
+  const isInactiveVip = role === "VIP" && !membershipActive
+  // INFINITE thấy cả "Trang quản lý" + "Trang quản trị admin"
+  const isInfinite = role === "INFINITE"
+  // ADMIN chuyên dụng
+  const isPureAdmin = role === "ADMIN"
 
   return (
     <DropdownMenu>
@@ -82,43 +86,71 @@ export function UserMenu({ name, email, image, role, accountType, mode = "public
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={() => router.push("/ho-so")}>
-          <User className="mr-2 h-4 w-4" />
-          Hồ sơ cá nhân
-        </DropdownMenuItem>
-
-        {mode === "vip-admin" && role === "VIP" && accountType === "BUSINESS" && (
-          <DropdownMenuItem onClick={() => router.push("/doanh-nghiep-cua-toi")}>
-            <Settings className="mr-2 h-4 w-4" />
-            Hồ sơ doanh nghiệp
-          </DropdownMenuItem>
-        )}
-
-        {(role === "GUEST" || role === "VIP") && (
+        {/* GUEST: vẫn cho nộp đơn kết nạp để thành hội viên */}
+        {role === "GUEST" && (
           <DropdownMenuItem onClick={() => router.push("/ket-nap")}>
             <FileCheck className="mr-2 h-4 w-4" />
             Đơn kết nạp Hội viên
           </DropdownMenuItem>
         )}
 
-        {/* Public mode: Hội viên/ADMIN thấy option vào khu vực quản trị */}
-        {showEnterManagement && (
+        {/* VIP chưa kích hoạt / hết hạn: chỉ có duy nhất nút Gia hạn */}
+        {isInactiveVip && (
+          <DropdownMenuItem
+            onClick={() => router.push("/gia-han")}
+            className="font-semibold text-brand-700 focus:text-brand-800"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Gia hạn hội viên
+          </DropdownMenuItem>
+        )}
+
+        {/* VIP active, INFINITE, ADMIN: link vào khu vực tương ứng */}
+        {!isInactiveVip && role !== "GUEST" && mode === "public" && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => router.push(managementHref)}
-              className="font-semibold text-brand-700 focus:text-brand-800"
-            >
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              {managementLabel}
-            </DropdownMenuItem>
+            {(role === "VIP" || isInfinite) && (
+              <DropdownMenuItem
+                onClick={() => router.push("/tong-quan")}
+                className="font-semibold text-brand-700 focus:text-brand-800"
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Trang quản lý
+              </DropdownMenuItem>
+            )}
+            {(isInfinite || isPureAdmin) && (
+              <DropdownMenuItem
+                onClick={() => router.push("/admin")}
+                className="font-semibold text-brand-700 focus:text-brand-800"
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                {isInfinite ? "Trang quản trị admin" : "Vào trang quản trị"}
+              </DropdownMenuItem>
+            )}
           </>
         )}
 
-        {/* Member/admin mode: option về trang công khai */}
-        {showExitToPublic && (
+        {/* Khi đang ở bên trong khu vực quản lý/quản trị → cho đường ra trang công khai.
+            INFINITE đang ở một khu thì vẫn thấy link sang khu còn lại. */}
+        {!isInactiveVip && showExitToPublic && (
           <>
-            <DropdownMenuSeparator />
+            {isInfinite && mode === "vip-admin" && (
+              <DropdownMenuItem
+                onClick={() => router.push("/admin")}
+                className="font-semibold text-brand-700 focus:text-brand-800"
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Trang quản trị admin
+              </DropdownMenuItem>
+            )}
+            {isInfinite && mode === "admin" && (
+              <DropdownMenuItem
+                onClick={() => router.push("/tong-quan")}
+                className="font-semibold text-brand-700 focus:text-brand-800"
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Trang quản lý
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               onClick={() => router.push("/")}
               className="font-semibold text-brand-700 focus:text-brand-800"

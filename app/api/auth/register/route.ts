@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import { z } from "zod"
@@ -117,28 +118,42 @@ export async function POST(request: Request) {
       console.error("Failed to send registration email:", err)
     }
 
-    // Email confirmation to applicant
+    // Tạo token đặt mật khẩu (dùng chung flow /dat-mat-khau)
+    const token = crypto.randomBytes(32).toString("hex")
+    const tokenExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48h
+
+    await prisma.verificationToken.create({
+      data: { identifier: email, token, expires: tokenExpires },
+    })
+
+    const setPasswordUrl = `${process.env.NEXTAUTH_URL}/dat-mat-khau?token=${token}&email=${encodeURIComponent(email)}`
+
+    // Email chào mừng + link đặt mật khẩu
     try {
-      await resend.emails.send({
+      console.log("[Register] Sending set-password email to:", email)
+      const emailResult = await resend.emails.send({
         from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
         to: email,
-        subject: "Chào mừng đến với Hội Trầm Hương Việt Nam",
+        subject: "Chào mừng đến với Hội Trầm Hương Việt Nam — Đặt mật khẩu",
         html: `
           <div style="font-family:sans-serif;max-width:600px;">
             <h2>Xin chào ${name},</h2>
             <p>Tài khoản của bạn đã được tạo thành công và <strong>kích hoạt ngay</strong>.</p>
-            <p>Bạn có thể đăng nhập và bắt đầu chia sẻ bài viết trên cộng đồng ngay lập tức.</p>
-            <p>
-              <a href="${process.env.NEXTAUTH_URL}/login" style="display:inline-block;background:#1a5632;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Đăng nhập ngay</a>
+            <p>Vui lòng nhấn nút bên dưới để <strong>đặt mật khẩu đăng nhập</strong>:</p>
+            <p style="margin:24px 0;">
+              <a href="${setPasswordUrl}" style="display:inline-block;background:#1a5632;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Đặt mật khẩu ngay</a>
             </p>
-            <p style="margin-top:20px;">Để hưởng các quyền lợi nâng cao (hạn mức bài viết cao hơn, ưu tiên hiển thị trang chủ, chứng nhận sản phẩm...), bạn có thể nâng cấp lên hội viên VIP.</p>
+            <p style="color:#888;font-size:13px;">Liên kết có hiệu lực trong 48 giờ.</p>
+            <p style="margin-top:20px;">Sau khi đặt mật khẩu, bạn có thể đăng nhập và bắt đầu chia sẻ bài viết trên cộng đồng.</p>
+            <p>Để hưởng các quyền lợi nâng cao (hạn mức bài viết cao hơn, ưu tiên hiển thị trang chủ, chứng nhận sản phẩm...), bạn có thể nâng cấp lên hội viên VIP.</p>
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
             <p style="color:#888;font-size:12px;">Hội Trầm Hương Việt Nam</p>
           </div>
         `,
       })
+      console.log("[Register] Resend response:", JSON.stringify(emailResult))
     } catch (err) {
-      console.error("Failed to send confirmation email:", err)
+      console.error("[Register] Failed to send confirmation email:", err)
     }
 
     return NextResponse.json({ success: true, userId: user.id })
