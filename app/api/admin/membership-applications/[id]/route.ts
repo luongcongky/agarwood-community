@@ -103,9 +103,18 @@ export async function PATCH(
     prisma.user.update({
       where: { id: application.userId },
       data: {
+        // Nâng role GUEST → VIP. VIP chưa kích hoạt (membershipExpires null)
+        // sẽ chỉ thấy menu "Gia hạn" để nạp phí hội viên.
+        role: "VIP",
         memberCategory: finalCategory,
         isActive: true,
       },
+    }),
+    // Publish company (nếu có) để hiển thị ở /hoi-vien + /doanh-nghiep/[slug].
+    // updateMany vì user INDIVIDUAL không có company → no-op thay vì throw.
+    prisma.company.updateMany({
+      where: { ownerId: application.userId },
+      data: { isPublished: true },
     }),
   ])
 

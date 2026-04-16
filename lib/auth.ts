@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
+import { cookies } from "next/headers"
 import { prisma } from "./prisma"
 import { authConfig } from "./auth.config"
 import type { Role } from "@prisma/client"
@@ -60,14 +61,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return true
         }
 
+        // Đọc cookie `pending_account_type` do GoogleSignUpButton ghi trước khi
+        // redirect sang Google. Nếu không có → mặc định BUSINESS (backward-compat).
+        let selectedAccountType: "BUSINESS" | "INDIVIDUAL" = "BUSINESS"
+        try {
+          const cookieStore = await cookies()
+          const pending = cookieStore.get("pending_account_type")?.value
+          if (pending === "INDIVIDUAL" || pending === "BUSINESS") {
+            selectedAccountType = pending
+          }
+        } catch {
+          // cookies() có thể không khả dụng trong mọi context — fallback BUSINESS
+        }
+
         // Phase 2: tạo user kích hoạt ngay (free tier — post được nhưng quota thấp).
+        const userName = user.name ?? user.email.split("@")[0]
+
+        // Nếu BUSINESS → tạo kèm Company shell để user edit sau ở /doanh-nghiep/chinh-sua,
+        // đồng nhất với flow đăng ký manual. Tránh trường hợp user BUSINESS
+        // không có company → list /hoi-vien không có link "Xem chi tiết".
+        const companySlug = selectedAccountType === "BUSINESS"
+          ? userName
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/đ/g, "d")
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "")
+              + "-" + Date.now().toString(36)
+          : null
+
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
-            name: user.name ?? user.email.split("@")[0],
+            name: userName,
             avatarUrl: user.image ?? null,
             role: "GUEST",
-            accountType: "BUSINESS",
+            accountType: selectedAccountType,
             isActive: true,
             accounts: {
               create: {
@@ -82,6 +112,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 id_token: account.id_token,
               },
             },
+            ...(companySlug && {
+              company: {
+                create: {
+                  name: userName, // tạm lấy tên user, user tự edit sau
+                  slug: companySlug,
+                  description: "",
+                  isVerified: false,
+                  isPublished: false,
+                },
+              },
+            }),
           },
         })
 
@@ -132,7 +173,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (dbUser) {
           token.role = dbUser.role
           token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+          token.refreshedAt = Date.now()
         }
+        return token
       }
 
       // For Google OAuth new users, ensure we use the DB user id
@@ -145,6 +188,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.sub = dbUser.id
           token.role = dbUser.role
           token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+          token.refreshedAt = Date.now()
+        }
+        return token
+      }
+
+      // Subsequent requests — refresh role & membershipExpires từ DB tối đa 60s/lần
+      // để tránh session JWT bị stale khi admin thay đổi role hoặc xác nhận
+      // thanh toán (user không cần log out để thấy thay đổi).
+      const REFRESH_TTL_MS = 60_000
+      const refreshedAt = (token.refreshedAt as number | undefined) ?? 0
+      if (token.sub && Date.now() - refreshedAt > REFRESH_TTL_MS) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, membershipExpires: true },
+        })
+        if (dbUser) {
+          token.role = dbUser.role
+          token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+          token.refreshedAt = Date.now()
         }
       }
 

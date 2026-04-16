@@ -17,6 +17,21 @@ function displayWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
 }
 
+/** Strip HTML tags + decode entities cơ bản để hiển thị preview plain text trong card.
+ *  Description được lưu dưới dạng HTML (rich text editor), không render trực tiếp ở card. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 export default async function MembersPage({
   searchParams,
 }: {
@@ -137,10 +152,10 @@ export default async function MembersPage({
                   </div>
                 </div>
 
-                {/* Description */}
+                {/* Description — strip HTML để preview plain text trong card */}
                 {company.description && (
                   <p className="text-muted-foreground text-sm line-clamp-2">
-                    {company.description}
+                    {stripHtml(company.description)}
                   </p>
                 )}
 

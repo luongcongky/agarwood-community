@@ -84,9 +84,18 @@ export default async function KetNapPage() {
 
       {/* Current status */}
       <div className="rounded-xl border border-brand-200 bg-white p-6 space-y-3">
-        <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide">
-          Hạng Hội viên hiện tại
-        </h2>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide">
+            Hạng Hội viên hiện tại
+          </h2>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+            user.accountType === "INDIVIDUAL"
+              ? "bg-blue-50 text-blue-700 border border-blue-200"
+              : "bg-brand-50 text-brand-700 border border-brand-200"
+          }`}>
+            {user.accountType === "INDIVIDUAL" ? "👤 Hội viên Cá nhân" : "🏢 Hội viên Doanh nghiệp"}
+          </span>
+        </div>
         <p className="text-lg font-bold text-brand-900">
           {CATEGORY_LABEL[user.memberCategory] ?? "Chưa xác định"}
         </p>

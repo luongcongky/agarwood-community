@@ -208,7 +208,13 @@ export default async function VipMembersPage({
 
                     {/* Actions dưới card */}
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-brand-600 font-medium">{member.name}</span>
+                      <Link
+                        href={`/hoi-vien/${member.id}`}
+                        className="text-brand-600 font-medium hover:text-brand-900 hover:underline"
+                        title="Xem tiểu sử hội viên"
+                      >
+                        {member.name}
+                      </Link>
                       <div className="flex gap-3">
                         {member.company?.slug && (
                           <Link

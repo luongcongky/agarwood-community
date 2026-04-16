@@ -12,8 +12,12 @@ import { VipNavLinks } from "./MemberSidebar"
  */
 export function MemberMobileNav({
   accountType,
+  role,
+  membershipActive = true,
 }: {
   accountType?: "BUSINESS" | "INDIVIDUAL" | null
+  role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
+  membershipActive?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -46,7 +50,7 @@ export function MemberMobileNav({
             </div>
           </SheetHeader>
 
-          <VipNavLinks accountType={accountType} onNavigate={() => setOpen(false)} />
+          <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
 

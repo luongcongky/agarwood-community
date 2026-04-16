@@ -47,8 +47,13 @@ const ADMIN_PREFIXES = [
   "/admin",
 ]
 
-/** Redirect sang feed/dashboard nếu đã đăng nhập */
-const AUTH_PATHS = ["/login", "/register", "/dat-mat-khau", "/dang-ky", "/cho-duyet"]
+/**
+ * Redirect sang feed/dashboard nếu đã đăng nhập.
+ * CHỦ Ý: `/dat-mat-khau` KHÔNG nằm ở đây — trang này xác thực qua token trong URL,
+ * không phụ thuộc session. Nếu admin đang login mà click link đặt mật khẩu của
+ * tài khoản mới tạo, proxy không được redirect đi.
+ */
+const AUTH_PATHS = ["/login", "/register", "/dang-ky", "/cho-duyet"]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -114,8 +119,13 @@ export const proxy = auth((req) => {
     }
     // INFINITE & ADMIN: bỏ qua check hạn membership
     if (role === "VIP" && !isMembershipValid(membershipExpires)) {
-      // Hội viên hết hạn — cần gia hạn
-      return NextResponse.redirect(new URL("/membership-expired", req.url))
+      // Cho phép VIP chưa kích hoạt / hết hạn vào /gia-han (để nạp tiền) và
+      // /thanh-toan/lich-su (xem lịch sử CK). Các route VIP khác → chặn.
+      const allowInactive = pathname === "/gia-han" || pathname.startsWith("/gia-han/") ||
+                            pathname.startsWith("/thanh-toan")
+      if (!allowInactive) {
+        return NextResponse.redirect(new URL("/gia-han", req.url))
+      }
     }
     return passThrough()
   }

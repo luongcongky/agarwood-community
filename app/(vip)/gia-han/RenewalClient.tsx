@@ -270,13 +270,27 @@ export function RenewalClient({
             "rounded-2xl p-6 space-y-3 border",
             daysLeft > 0 ? "bg-white border-brand-200" : "bg-red-50 border-red-200",
           )}>
-            <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide">Membership của bạn</h2>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide">Membership của bạn</h2>
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+                isIndividual
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : "bg-brand-50 text-brand-700 border border-brand-200",
+              )}>
+                {isIndividual ? "👤 Hội viên Cá nhân" : "🏢 Hội viên Doanh nghiệp"}
+              </span>
+            </div>
             <p className="text-lg font-bold text-brand-900">
               {"★".repeat(tierStars)} {tierLabel}
             </p>
             <p className="text-sm text-brand-700">
               Hiệu lực đến: <span className="font-semibold">{expiryDisplay}</span>
               {daysLeft > 0 && <span className="text-brand-500"> (còn {daysLeft} ngày)</span>}
+            </p>
+            <p className="text-xs text-brand-500">
+              Mức phí áp dụng: <span className="font-semibold text-brand-700">{formatVND(feeMin)} – {formatVND(feeMax)}/năm</span>
+              {" "}(dành riêng cho {isIndividual ? "hội viên cá nhân" : "hội viên doanh nghiệp"})
             </p>
 
             {daysLeft <= 0 && (

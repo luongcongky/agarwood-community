@@ -15,6 +15,7 @@ type UserProfile = {
   name: string
   email: string
   phone: string | null
+  bio: string | null
   bankAccountName: string | null
   bankAccountNumber: string | null
   bankName: string | null
@@ -113,6 +114,7 @@ export function ProfileTabs({
   // ── Personal info state ──────────────────────────────────────────────
   const [name, setName] = useState(user.name)
   const [phone, setPhone] = useState(user.phone ?? "")
+  const [bio, setBio] = useState(user.bio ?? "")
   const [personalLoading, setPersonalLoading] = useState(false)
   const [personalMsg, setPersonalMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
@@ -137,7 +139,7 @@ export function ProfileTabs({
     setPersonalLoading(true)
     setPersonalMsg(null)
     try {
-      const result = await updateProfile({ name, phone })
+      const result = await updateProfile({ name, phone, bio })
       if (result.error) {
         setPersonalMsg({ type: "error", text: result.error })
       } else {
@@ -271,6 +273,19 @@ export function ProfileTabs({
               />
             </Field>
 
+            <Field
+              label="Giới thiệu bản thân / Tiểu sử"
+              hint={`Chia sẻ về chuyên môn, kinh nghiệm, lĩnh vực quan tâm... (${bio.length}/2000)`}
+            >
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value.slice(0, 2000))}
+                rows={5}
+                placeholder="Ví dụ: Tôi có 10 năm kinh nghiệm trong lĩnh vực trầm hương, chuyên về chế biến và phân phối..."
+                className={cn(inputClass, "resize-y min-h-[120px]")}
+              />
+            </Field>
+
             {/* Company link */}
             {user.company && (
               <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4">
@@ -278,7 +293,7 @@ export function ProfileTabs({
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-brand-900">{user.company.name}</p>
                   <Link
-                    href={`/doanh-nghiep/${user.company.slug}/chinh-sua`}
+                    href="/doanh-nghiep/chinh-sua"
                     className="text-xs text-brand-600 hover:text-brand-800 underline"
                   >
                     Chỉnh sửa

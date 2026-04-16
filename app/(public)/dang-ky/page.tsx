@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { RegisterForm } from "./RegisterForm"
-import { GoogleSignUpButton } from "./GoogleSignUpButton"
+import { RegisterSection } from "./RegisterSection"
 
 export const metadata = {
   title: "Đăng ký Hội viên | Hội Trầm Hương Việt Nam",
@@ -176,18 +175,7 @@ export default async function DangKyPage() {
       <section className="max-w-xl mx-auto px-4 py-14">
         <div className="bg-white rounded-2xl border border-brand-200 p-6 sm:p-8 shadow-sm space-y-6">
           <h2 className="text-xl font-bold text-brand-900 text-center">Nộp đơn đăng ký</h2>
-
-          {/* Google sign-up */}
-          <GoogleSignUpButton />
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-brand-200" />
-            <span className="text-xs text-brand-400">hoặc điền form đăng ký</span>
-            <div className="flex-1 h-px bg-brand-200" />
-          </div>
-
-          <RegisterForm />
+          <RegisterSection />
         </div>
       </section>
     </div>
