@@ -345,13 +345,19 @@ model Company {
   id               String    @id @default(cuid())
   ownerId          String    @unique  // 1 VIP = 1 company
   name             String
+  name_en          String?
+  name_zh          String?
   slug             String    @unique  // dùng cho URL: /companies/[slug]
   description      String?   @db.Text
+  description_en   String?   @db.Text
+  description_zh   String?   @db.Text
   logoUrl          String?
   coverImageUrl    String?
   website          String?
   phone            String?
   address          String?
+  address_en       String?
+  address_zh       String?
   foundedYear      Int?
   employeeCount    String?   // "1-10", "10-50", "50-200",...
   businessLicense  String?   // số ĐKKD
@@ -384,10 +390,16 @@ model Product {
   ownerId         String      // userId — ai đăng sản phẩm
   companyId       String?     // optional — chỉ có nếu owner có company (VIP)
   name            String
+  name_en         String?
+  name_zh         String?
   slug            String      @unique
   description     String?     @db.Text
+  description_en  String?     @db.Text
+  description_zh  String?     @db.Text
   imageUrls       String[]    // mảng URL ảnh sản phẩm (Cloudinary)
   category        String?     // loại trầm: trầm tự nhiên, trầm nuôi cấy, tinh dầu,...
+  category_en     String?
+  category_zh     String?
   priceRange      String?     // "500k-1tr", "1tr-5tr",...
   isPublished     Boolean     @default(true)
 
@@ -648,9 +660,15 @@ model Report {
 model News {
   id           String       @id @default(cuid())
   title        String
+  title_en     String?
+  title_zh     String?
   slug         String       @unique
   excerpt      String?
+  excerpt_en   String?
+  excerpt_zh   String?
   content      String       @db.Text
+  content_en   String?      @db.Text
+  content_zh   String?      @db.Text
   coverImageUrl String?
   category     NewsCategory @default(GENERAL)
   isPublished  Boolean      @default(false)
@@ -738,6 +756,8 @@ model MenuItem {
   /// Có thể null cho menu mới chưa cần gắn route nào.
   menuKey       String?    @unique
   label         String
+  label_en      String?
+  label_zh      String?
   href          String
   parentId      String?
   parent        MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
@@ -859,11 +879,17 @@ enum DocumentCategory {
 model Document {
   id                String            @id @default(cuid())
   title             String
+  title_en          String?
+  title_zh          String?
   description       String?           @db.Text
+  description_en    String?           @db.Text
+  description_zh    String?           @db.Text
   category          DocumentCategory
   documentNumber    String?           // số hiệu công văn (vd: CV-2026-001, 56/QĐ-VAWA)
   issuedDate        DateTime?         // ngày ban hành
   issuer            String?           // cơ quan / người ban hành (vd: "Chủ tịch VAWA", "Bộ Nội vụ")
+  issuer_en         String?
+  issuer_zh         String?
   sortOrder         Int               @default(0) // thứ tự hiển thị trên /phap-ly
   isPublic          Boolean           @default(false) // true = hiển thị trên /phap-ly (public)
 
@@ -878,6 +904,8 @@ model Document {
   // AI extracted content
   extractedText     String?           @db.Text
   summary           String?           @db.Text
+  summary_en        String?           @db.Text
+  summary_zh        String?           @db.Text
 
   // Metadata
   uploadedBy        String            // adminId
@@ -903,12 +931,22 @@ model Document {
 
 model Leader {
   id        String         @id @default(cuid())
-  name      String
-  honorific String?        // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
-  title     String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
-  category  LeaderCategory @default(BCH) // nhóm chính hiển thị
-  workTitle String?        // chức vụ đơn vị công tác
-  bio       String?        @db.Text
+  name         String
+  name_en      String?
+  name_zh      String?
+  honorific    String?        // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
+  honorific_en String?
+  honorific_zh String?
+  title        String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
+  title_en     String?
+  title_zh     String?
+  category     LeaderCategory @default(BCH) // nhóm chính hiển thị
+  workTitle    String?        // chức vụ đơn vị công tác
+  workTitle_en String?
+  workTitle_zh String?
+  bio          String?        @db.Text
+  bio_en       String?        @db.Text
+  bio_zh       String?        @db.Text
   photoUrl  String?
   term      String         // "Nhiệm kỳ III (2023–2028)"
   sortOrder Int            @default(0)
@@ -1007,11 +1045,17 @@ enum ConsultationStatus {
 model Survey {
   id          String         @id @default(cuid())
   slug        String         @unique
-  title       String
-  description String?        @db.Text
+  title          String
+  title_en       String?
+  title_zh       String?
+  description    String?        @db.Text
+  description_en String?        @db.Text
+  description_zh String?        @db.Text
   audience    SurveyAudience @default(BOTH_VIP)
   status      SurveyStatus   @default(DRAFT)
   questions   Json           // mảng câu hỏi (xem comment trên)
+  questions_en Json?         // translated questions array (same structure, labels in English)
+  questions_zh Json?         // translated questions array (same structure, labels in Chinese)
   config      Json?          // { scoring: {...}, recommendation: {...} } — tùy loại survey
   startsAt    DateTime?
   endsAt      DateTime?

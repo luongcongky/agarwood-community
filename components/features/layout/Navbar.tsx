@@ -10,6 +10,8 @@ import { NavDesktopMenu } from "./NavDesktopItem"
 import { SocialLinks } from "./SocialLinks"
 import { LocaleSwitcher } from "./LocaleSwitcher"
 import { isValidLocale, defaultLocale, type Locale } from "@/i18n/config"
+import { localize } from "@/i18n/localize"
+import type { MenuNode } from "@/lib/menu"
 
 // ── Mode detection ────────────────────────────────────────────────────────────
 
@@ -71,6 +73,16 @@ export async function Navbar() {
     getMenuTree(),
   ])
 
+  // Localize menu labels for the current locale
+  function localizeMenu(nodes: MenuNode[]): MenuNode[] {
+    return nodes.map((n) => ({
+      ...n,
+      label: localize(n, "label", locale) as string,
+      children: localizeMenu(n.children),
+    }))
+  }
+  const localizedMenu = localizeMenu(menuTree)
+
   const accountType = role === "VIP" ? dbUser?.accountType ?? "BUSINESS" : null
   const expires = session?.user?.membershipExpires
   const membershipActive =
@@ -107,7 +119,7 @@ export async function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1" aria-label="Navigation chính">
-            <NavDesktopMenu tree={menuTree} />
+            <NavDesktopMenu tree={localizedMenu} />
           </nav>
 
           {/* Right side */}
@@ -150,7 +162,7 @@ export async function Navbar() {
             )}
 
             {/* Mobile hamburger */}
-            <NavMobile menu={menuTree} isLoggedIn={!!session} />
+            <NavMobile menu={localizedMenu} isLoggedIn={!!session} />
           </div>
 
         </div>
