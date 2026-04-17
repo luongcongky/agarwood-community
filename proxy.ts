@@ -93,7 +93,6 @@ function isInternalRoute(pathname: string): boolean {
     matchesAny(pathname, ADMIN_PREFIXES) ||
     matchesAny(pathname, MEMBER_PREFIXES) ||
     matchesAny(pathname, LOGGED_IN_PREFIXES) ||
-    pathname.startsWith("/feed") ||
     pathname.startsWith("/thanh-toan/thanh-cong") ||
     pathname.startsWith("/api/")
   )
@@ -157,7 +156,7 @@ export const proxy = auth((req) => {
       const dest =
         isAdmin(role) ? "/admin"
         : role === "VIP" ? "/tong-quan"
-        : "/feed"
+        : `/${locale}/feed`
       return NextResponse.redirect(new URL(dest, req.url))
     }
     return passThrough()

@@ -75,7 +75,7 @@ export async function Navbar() {
 
   // Internal routes that live outside [locale] — must NOT get locale prefix
   const INTERNAL_PREFIXES = [
-    "/feed", "/tong-quan", "/admin", "/dashboard", "/ho-so",
+    "/tong-quan", "/admin", "/dashboard", "/ho-so",
     "/gia-han", "/chung-nhan", "/company", "/doanh-nghiep-cua-toi",
     "/doanh-nghiep/chinh-sua", "/san-pham/tao-moi", "/certification",
     "/thanh-toan", "/ket-nap", "/tai-lieu", "/members", "/certifications",
