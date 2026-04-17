@@ -2,26 +2,23 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+import { useTranslations } from "next-intl"
 
 interface Props {
-  /** Loại tài khoản user đã chọn trên radio — lưu vào cookie để lib/auth.ts đọc
-   *  khi tạo user mới qua Google OAuth. */
   accountType?: "BUSINESS" | "INDIVIDUAL"
 }
 
 export function GoogleSignUpButton({ accountType = "BUSINESS" }: Props) {
+  const t = useTranslations("googleSignUp")
   const [loading, setLoading] = useState(false)
 
   function handleClick() {
     setLoading(true)
-    // Ghi cookie để signIn callback trong lib/auth.ts biết loại tài khoản
-    // user đã chọn khi tạo user mới từ Google OAuth. Cookie sống 10 phút
-    // (đủ cho flow OAuth redirect về), SameSite=Lax để giữ qua redirect.
     document.cookie = `pending_account_type=${accountType}; Path=/; Max-Age=600; SameSite=Lax`
-    // prompt=select_account bắt Google hiện picker để user chọn account
-    // đăng ký, thay vì auto-login account cũ đang cached trong trình duyệt.
     signIn("google", { callbackUrl: "/tong-quan" }, { prompt: "select_account" })
   }
+
+  const typeLabel = accountType === "INDIVIDUAL" ? t("individual") : t("business")
 
   return (
     <div className="space-y-4">
@@ -36,12 +33,11 @@ export function GoogleSignUpButton({ accountType = "BUSINESS" }: Props) {
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
         </svg>
-        {loading ? "Đang chuyển hướng..." : `Đăng ký bằng Google (${accountType === "INDIVIDUAL" ? "Cá nhân" : "Doanh nghiệp"})`}
+        {loading ? t("redirecting") : t("buttonLabel", { type: typeLabel })}
       </button>
 
       <p className="text-xs text-brand-400 text-center">
-        Tài khoản Google sẽ được kích hoạt ngay sau khi đăng ký.
-        Bạn có thể bắt đầu chia sẻ bài viết trên cộng đồng ngay lập tức.
+        {t("note")}
       </p>
     </div>
   )

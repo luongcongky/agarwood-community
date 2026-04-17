@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 export function ContactForm() {
+  const t = useTranslations("contactForm")
   const [fields, setFields] = useState({
     name: "",
     email: "",
@@ -17,13 +19,13 @@ export function ContactForm() {
 
   function validate() {
     const errs: Partial<typeof fields> = {}
-    if (!fields.name.trim()) errs.name = "Vui lòng nhập họ tên."
+    if (!fields.name.trim()) errs.name = t("nameRequired")
     if (!fields.email.trim()) {
-      errs.email = "Vui lòng nhập email."
+      errs.email = t("emailRequired")
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
-      errs.email = "Địa chỉ email không hợp lệ."
+      errs.email = t("emailInvalid")
     }
-    if (!fields.message.trim()) errs.message = "Vui lòng nhập nội dung."
+    if (!fields.message.trim()) errs.message = t("contentRequired")
     return errs
   }
 
@@ -54,12 +56,12 @@ export function ContactForm() {
       })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        setServerError(json.error ?? "Không thể gửi liên hệ. Vui lòng thử lại.")
+        setServerError(json.error ?? t("submitError"))
         return
       }
       setSubmitted(true)
     } catch {
-      setServerError("Không thể gửi liên hệ. Vui lòng thử lại.")
+      setServerError(t("submitError"))
     } finally {
       setLoading(false)
     }
@@ -69,10 +71,8 @@ export function ContactForm() {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-green-200 bg-green-50 p-10 text-center">
         <div className="mb-3 text-4xl">✅</div>
-        <h3 className="text-lg font-bold text-green-800">Gửi thành công!</h3>
-        <p className="mt-2 text-sm text-green-700">
-          Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi trong vòng 1-2 ngày làm việc.
-        </p>
+        <h3 className="text-lg font-bold text-green-800">{t("successTitle")}</h3>
+        <p className="mt-2 text-sm text-green-700">{t("successDesc")}</p>
         <button
           onClick={() => {
             setSubmitted(false)
@@ -80,7 +80,7 @@ export function ContactForm() {
           }}
           className="mt-5 text-sm font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
         >
-          Gửi tin nhắn khác
+          {t("sendAnother")}
         </button>
       </div>
     )
@@ -95,11 +95,11 @@ export function ContactForm() {
       )}
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-brand-800 mb-1">
-          Họ và tên <span className="text-red-500">*</span>
+          {t("nameLabel")} <span className="text-red-500">*</span>
         </label>
         <input
           id="name" name="name" type="text" autoComplete="name"
-          value={fields.name} onChange={handleChange} placeholder="Nguyễn Văn A"
+          value={fields.name} onChange={handleChange} placeholder={t("namePlaceholder")}
           className={cn(
             "w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors",
             "placeholder:text-brand-400 text-brand-900",
@@ -125,21 +125,21 @@ export function ContactForm() {
       </div>
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-brand-800 mb-1">
-          Số điện thoại
+          {t("phoneLabel")}
         </label>
         <input
           id="phone" name="phone" type="tel" autoComplete="tel"
-          value={fields.phone} onChange={handleChange} placeholder="0901 234 567"
+          value={fields.phone} onChange={handleChange} placeholder={t("phonePlaceholder")}
           className="w-full rounded-lg border border-brand-200 bg-white px-4 py-2.5 text-sm text-brand-900 outline-none placeholder:text-brand-400 transition-colors focus:border-brand-500"
         />
       </div>
       <div>
         <label htmlFor="message" className="block text-sm font-medium text-brand-800 mb-1">
-          Nội dung <span className="text-red-500">*</span>
+          {t("contentLabel")} <span className="text-red-500">*</span>
         </label>
         <textarea
           id="message" name="message" rows={5}
-          value={fields.message} onChange={handleChange} placeholder="Nhập nội dung liên hệ..."
+          value={fields.message} onChange={handleChange} placeholder={t("contentPlaceholder")}
           className={cn(
             "w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition-colors resize-none",
             "placeholder:text-brand-400 text-brand-900",
@@ -156,7 +156,7 @@ export function ContactForm() {
           "disabled:opacity-50 disabled:cursor-not-allowed",
         )}
       >
-        {loading ? "Đang gửi..." : "Gửi liên hệ"}
+        {loading ? t("submitting") : t("submitBtn")}
       </button>
     </form>
   )

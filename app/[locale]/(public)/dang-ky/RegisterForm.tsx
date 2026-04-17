@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useTranslations, useLocale } from "next-intl"
 import { COMPANY_FIELDS } from "@/lib/constants/agarwood"
 
 type FormState = {
@@ -21,24 +22,30 @@ type FormErrors = Partial<Record<keyof FormState, string>>
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PHONE_RE = /^(0|\+84)[0-9]{8,9}$/
 
-function validateField(name: keyof FormState, value: string, accountType?: string): string {
-  switch (name) {
-    case "name": return !value ? "Vui lòng nhập họ tên" : value.length < 2 ? "Tên tối thiểu 2 ký tự" : ""
-    case "email": return !value ? "Vui lòng nhập email" : !EMAIL_RE.test(value) ? "Email không hợp lệ" : ""
-    case "phone": return !value ? "Vui lòng nhập SĐT" : !PHONE_RE.test(value) ? "SĐT không hợp lệ" : ""
-    case "companyName": return accountType === "INDIVIDUAL" ? "" : !value ? "Vui lòng nhập tên doanh nghiệp" : ""
-    case "companyField": return accountType === "INDIVIDUAL" ? "" : !value ? "Vui lòng chọn lĩnh vực" : ""
-    case "reason": return !value ? "Vui lòng nhập lý do" : value.length < 10 ? "Tối thiểu 10 ký tự" : ""
-    default: return ""
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeValidator(t: any) {
+  return function validateField(name: keyof FormState, value: string, accountType?: string): string {
+    switch (name) {
+      case "name": return !value ? t("nameRequired") : value.length < 2 ? t("nameMin") : ""
+      case "email": return !value ? t("emailRequired") : !EMAIL_RE.test(value) ? t("emailInvalid") : ""
+      case "phone": return !value ? t("phoneRequired") : !PHONE_RE.test(value) ? t("phoneInvalid") : ""
+      case "companyName": return accountType === "INDIVIDUAL" ? "" : !value ? t("companyRequired") : ""
+      case "companyField": return accountType === "INDIVIDUAL" ? "" : !value ? t("industryRequired") : ""
+      case "reason": return !value ? t("reasonRequired") : value.length < 10 ? t("reasonMin") : ""
+      default: return ""
+    }
   }
 }
 
 interface RegisterFormProps {
-  /** Loại tài khoản do RegisterSection quản lý (radio nằm ngoài form) */
   accountType: "BUSINESS" | "INDIVIDUAL"
 }
 
 export function RegisterForm({ accountType }: RegisterFormProps) {
+  const t = useTranslations("registerForm")
+  const locale = useLocale()
+  const validateField = makeValidator(t)
+
   const [form, setForm] = useState<FormState>({
     name: "", email: "", phone: "", companyName: "",
     companyField: "", address: "", reason: "", honeypot: "",
@@ -85,10 +92,10 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
         setSubmitted(true)
       } else {
         const data = await res.json()
-        setServerError(data.error ?? "Có lỗi xảy ra")
+        setServerError(data.error ?? t("genericError"))
       }
     } catch {
-      setServerError("Không thể kết nối. Vui lòng thử lại.")
+      setServerError(t("connectionError"))
     } finally {
       setLoading(false)
     }
@@ -98,16 +105,12 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
     return (
       <div className="bg-white rounded-2xl border border-brand-200 p-8 text-center space-y-4">
         <div className="text-4xl">✅</div>
-        <h2 className="text-xl font-bold text-brand-900">Đăng ký thành công!</h2>
-        <p className="text-sm text-brand-600">
-          Tài khoản của bạn đã được tạo thành công. Vui lòng kiểm tra email để <strong>đặt mật khẩu đăng nhập</strong>.
-        </p>
+        <h2 className="text-xl font-bold text-brand-900">{t("successTitle")}</h2>
+        <p className="text-sm text-brand-600">{t("successDesc")}</p>
         <p className="text-sm text-brand-500">
-          Email hướng dẫn đã được gửi đến <strong>{form.email}</strong>.
+          {t("emailSentTo")} <strong>{form.email}</strong>.
         </p>
-        <p className="text-xs text-brand-400">
-          Không thấy email? Kiểm tra thư mục Spam hoặc thử lại sau vài phút.
-        </p>
+        <p className="text-xs text-brand-400">{t("checkSpam")}</p>
       </div>
     )
   }
@@ -126,22 +129,22 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
       <input type="text" name="honeypot" value={form.honeypot} onChange={handleChange} className="hidden" tabIndex={-1} autoComplete="off" />
 
       {/* Personal info */}
-      <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide">Thông tin cá nhân</p>
+      <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide">{t("personalInfo")}</p>
 
       <div>
-        <label htmlFor="reg-name" className={labelClass}>Họ và tên <span className="text-red-500">*</span></label>
-        <input id="reg-name" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="Nguyễn Văn A" />
+        <label htmlFor="reg-name" className={labelClass}>{t("nameLabel")} <span className="text-red-500">*</span></label>
+        <input id="reg-name" name="name" value={form.name} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder={t("namePlaceholder")} />
         {errors.name && <p className={errorClass}>{errors.name}</p>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="reg-email" className={labelClass}>Email <span className="text-red-500">*</span></label>
+          <label htmlFor="reg-email" className={labelClass}>{t("emailLabel")} <span className="text-red-500">*</span></label>
           <input id="reg-email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="email@example.com" />
           {errors.email && <p className={errorClass}>{errors.email}</p>}
         </div>
         <div>
-          <label htmlFor="reg-phone" className={labelClass}>Số điện thoại <span className="text-red-500">*</span></label>
+          <label htmlFor="reg-phone" className={labelClass}>{t("phoneLabel")} <span className="text-red-500">*</span></label>
           <input id="reg-phone" name="phone" type="tel" value={form.phone} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="0901234567" />
           {errors.phone && <p className={errorClass}>{errors.phone}</p>}
         </div>
@@ -150,26 +153,26 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
       {/* Company info — only for BUSINESS */}
       {accountType === "BUSINESS" && (
         <>
-          <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide pt-2">Thông tin doanh nghiệp</p>
+          <p className="text-sm font-semibold text-brand-500 uppercase tracking-wide pt-2">{t("businessInfo")}</p>
 
           <div>
-            <label htmlFor="reg-companyName" className={labelClass}>Tên doanh nghiệp <span className="text-red-500">*</span></label>
-            <input id="reg-companyName" name="companyName" value={form.companyName} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder="Trầm Hương ABC" />
+            <label htmlFor="reg-companyName" className={labelClass}>{t("companyLabel")} <span className="text-red-500">*</span></label>
+            <input id="reg-companyName" name="companyName" value={form.companyName} onChange={handleChange} onBlur={handleBlur} className={inputClass} placeholder={t("companyPlaceholder")} />
             {errors.companyName && <p className={errorClass}>{errors.companyName}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="reg-companyField" className={labelClass}>Lĩnh vực <span className="text-red-500">*</span></label>
+              <label htmlFor="reg-companyField" className={labelClass}>{t("industryLabel")} <span className="text-red-500">*</span></label>
               <select id="reg-companyField" name="companyField" value={form.companyField} onChange={handleChange} onBlur={handleBlur} className={inputClass}>
-                <option value="">-- Chọn lĩnh vực --</option>
+                <option value="">{t("industryDefault")}</option>
                 {COMPANY_FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
               {errors.companyField && <p className={errorClass}>{errors.companyField}</p>}
             </div>
             <div>
-              <label htmlFor="reg-address" className={labelClass}>Địa chỉ</label>
-              <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Tỉnh / Thành phố" />
+              <label htmlFor="reg-address" className={labelClass}>{t("addressLabel")}</label>
+              <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder={t("addressPlaceholder")} />
             </div>
           </div>
         </>
@@ -178,17 +181,17 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
       {/* Expertise — only for INDIVIDUAL */}
       {accountType === "INDIVIDUAL" && (
         <div>
-          <label htmlFor="reg-address" className={labelClass}>Chuyên môn / Lĩnh vực quan tâm</label>
-          <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder="Ví dụ: Nghiên cứu trầm hương, Sưu tầm, Chế biến..." />
+          <label htmlFor="reg-address" className={labelClass}>{t("expertiseLabel")}</label>
+          <input id="reg-address" name="address" value={form.address} onChange={handleChange} className={inputClass} placeholder={t("expertisePlaceholder")} />
         </div>
       )}
 
       <div>
-        <label htmlFor="reg-reason" className={labelClass}>Lý do muốn gia nhập Hội <span className="text-red-500">*</span></label>
+        <label htmlFor="reg-reason" className={labelClass}>{t("reasonLabel")} <span className="text-red-500">*</span></label>
         <textarea
           id="reg-reason" name="reason" value={form.reason} onChange={handleChange} onBlur={handleBlur}
           rows={3} className={cn(inputClass, "resize-none")}
-          placeholder="Chia sẻ lý do bạn muốn gia nhập và những đóng góp bạn mong muốn mang đến cho cộng đồng..."
+          placeholder={t("reasonPlaceholder")}
         />
         {errors.reason && <p className={errorClass}>{errors.reason}</p>}
       </div>
@@ -198,12 +201,12 @@ export function RegisterForm({ accountType }: RegisterFormProps) {
         disabled={loading}
         className="w-full rounded-lg bg-brand-700 text-white font-semibold py-3 text-sm hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "Đang gửi..." : "Nộp đơn đăng ký"}
+        {loading ? t("submitting") : t("submitBtn")}
       </button>
 
       <p className="text-center text-sm text-brand-500">
-        Đã có tài khoản?{" "}
-        <Link href="/login" className="text-brand-700 font-medium hover:underline">Đăng nhập</Link>
+        {t("hasAccount")}{" "}
+        <Link href={`/${locale}/login`} className="text-brand-700 font-medium hover:underline">{t("loginLink")}</Link>
       </p>
     </form>
   )
