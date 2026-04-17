@@ -173,12 +173,9 @@ export default async function LandingPage() {
             {t("heroHeading")}{" "}
             <span className="text-brand-700">{t("heroHighlight")}</span>
           </h2>
-          <p
-            className="mt-4 mx-auto max-w-2xl text-base sm:text-lg text-brand-600"
-            dangerouslySetInnerHTML={{
-              __html: t("heroDesc", { count: vipCount }),
-            }}
-          />
+          <p className="mt-4 mx-auto max-w-2xl text-base sm:text-lg text-brand-600">
+            {t("heroDesc", { count: vipCount })}
+          </p>
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
