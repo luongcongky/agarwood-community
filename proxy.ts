@@ -212,7 +212,8 @@ export const config = {
      * - /api/auth/* (NextAuth handlers)
      * - /_next/static, /_next/image (Next.js assets)
      * - /favicon.ico, /robots.txt, /sitemap.xml (static files)
+     * - Static assets in /public (images, fonts, etc.)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:webp|jpg|jpeg|png|gif|svg|ico|css|js|woff2?|ttf|eot)).*)",
   ],
 }
