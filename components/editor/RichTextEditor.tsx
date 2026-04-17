@@ -112,7 +112,11 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
   ) {
     const editor = useEditor({
       extensions: [
-        StarterKit.configure({}),
+        StarterKit.configure({
+          // Disable Link + Underline từ StarterKit vì đã configure riêng bên dưới
+          link: false,
+          underline: false,
+        }),
         ResizableImage.configure({
           inline: false,
           allowBase64: false,

@@ -429,6 +429,7 @@ export default async function DieuLePage() {
         </div>
       </section>
 
+      <div className="bg-brand-50/60">
       <div className="mx-auto max-w-4xl px-4 py-16">
         {/* ── PDF Download (dynamic from SiteConfig) ── */}
         {pdfInfo ? (
@@ -556,6 +557,7 @@ export default async function DieuLePage() {
             ↑ Lên đầu trang
           </a>
         </div>
+      </div>
       </div>
     </>
   )

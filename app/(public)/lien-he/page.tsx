@@ -14,7 +14,7 @@ export const revalidate = 600
 
 export default function LienHePage() {
   return (
-    <>
+    <div className="min-h-screen bg-brand-50/60">
       {/* ── Hero ── */}
       <section className="bg-brand-800 text-white py-16">
         <div className="mx-auto max-w-4xl px-4">
@@ -30,9 +30,13 @@ export default function LienHePage() {
         </div>
       </section>
 
+      {/* ── Content card ── */}
+      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+
       {/* ── Contact Info + Form ── */}
-      <section className="bg-brand-50 py-20">
-        <div className="mx-auto max-w-6xl px-4">
+      <section className="py-16 px-6 sm:px-10">
+        <div>
           <div className="grid gap-12 md:grid-cols-2 md:items-start">
             {/* Left: Contact info */}
             <div>
@@ -119,7 +123,7 @@ export default function LienHePage() {
             </div>
 
             {/* Right: Quick form */}
-            <div className="rounded-xl border border-brand-200 bg-white p-8 shadow-sm">
+            <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-8">
               <h2 className="text-xl font-bold text-brand-900 mb-6">Gửi tin nhắn nhanh</h2>
               <ContactForm />
             </div>
@@ -128,15 +132,15 @@ export default function LienHePage() {
       </section>
 
       {/* ── Kênh chính thức + cảnh báo giả mạo ── */}
-      <section className="bg-white py-12 lg:py-16">
+      <section className="py-12 lg:py-16 border-t border-brand-100">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <OfficialChannelsBlock variant="full" />
         </div>
       </section>
 
       {/* ── Map ── */}
-      <section className="bg-white pb-20">
-        <div className="mx-auto max-w-6xl px-4">
+      <section className="pb-16 px-6 sm:px-10">
+        <div>
           <div className="overflow-hidden rounded-xl border border-brand-200 shadow-sm">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125411.87690118406!2d106.62966155!3d10.7544272!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f4670702e31%3A0xa25c43e2beaadca4!2zVFAuIEjhu5MgQ2jDrSBNaW5o!5e0!3m2!1svi!2svn!4v1700000000000"
@@ -146,6 +150,9 @@ export default function LienHePage() {
           </div>
         </div>
       </section>
-    </>
+
+      </div>
+      </div>
+    </div>
   )
 }

@@ -181,7 +181,7 @@ export default async function LandingPage() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-brand-50/60">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
@@ -203,8 +203,12 @@ export default async function LandingPage() {
         </p>
       </div>
 
+      {/* ── Content card — nền trắng bọc toàn bộ nội dung giữa banner và CTA cuối ── */}
+      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+
       {/* ── Hero intro + CTAs ───────────────────────────────────────────── */}
-      <section className="bg-white border-b border-brand-100 py-12 lg:py-16">
+      <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl lg:text-4xl leading-tight">
             Đưa thương hiệu trầm hương của bạn{" "}
@@ -238,7 +242,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Stats Bar ────────────────────────────────────────────────────── */}
-      <section className="bg-white border-b border-brand-100">
+      <section className="border-t border-brand-100">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
             {[
@@ -260,7 +264,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Top 10 Doanh nghiệp tiêu biểu ────────────────────────────────── */}
-      <section className="bg-brand-50 py-16 lg:py-20">
+      <section className="bg-brand-50/50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <header className="text-center mb-10">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
@@ -320,7 +324,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Top 20 Sản phẩm tiêu biểu ────────────────────────────────────── */}
-      <section className="bg-white py-16 lg:py-20">
+      <section className="py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <header className="text-center mb-10">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
@@ -398,7 +402,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Tài khoản cơ bản ──────────────────────────────────────────── */}
-      <section className="bg-white py-16 lg:py-20 border-b border-brand-100">
+      <section className="py-16 lg:py-20 border-t border-brand-100">
         <div className="mx-auto max-w-md px-4">
           <header className="text-center mb-8">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
@@ -452,7 +456,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Tier Comparison — Gói hội viên ─────────────────────────────── */}
-      <section id="tier-comparison" className="bg-linear-to-b from-brand-50 to-white py-16 lg:py-24 scroll-mt-20">
+      <section id="tier-comparison" className="bg-brand-50/30 py-16 lg:py-24 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-4">
           <header className="text-center mb-12">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
@@ -531,6 +535,9 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      </div>
+      </div>
 
       {/* ── Final CTA ────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-brand-900 text-white py-20">

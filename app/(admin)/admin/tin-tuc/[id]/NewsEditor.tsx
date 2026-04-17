@@ -11,6 +11,7 @@ import {
 
 import { slugify } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { CoverImageCropper } from "@/components/ui/CoverImageCropper"
 
 interface NewsData {
   title: string
@@ -92,10 +93,30 @@ export default function NewsEditorPage({
     }
   }
 
+  // Crop flow: chọn file → mở cropper → crop xong → set coverFile + preview
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+
   function handleCoverSelect(file: File) {
-    setCoverFile(file)
+    // Mở cropper với blob URL của ảnh gốc
     const blobUrl = URL.createObjectURL(file)
-    setCoverPreview(blobUrl)
+    setCropSrc(blobUrl)
+  }
+
+  function handleCropDone(croppedBlob: Blob) {
+    // Cleanup blob cũ
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    setCropSrc(null)
+
+    const croppedFile = new File([croppedBlob], "cover.jpg", { type: "image/jpeg" })
+    setCoverFile(croppedFile)
+    const previewUrl = URL.createObjectURL(croppedBlob)
+    setCoverPreview(previewUrl)
+  }
+
+  function handleCropCancel() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    setCropSrc(null)
+    if (coverInputRef.current) coverInputRef.current.value = ""
   }
 
   function handleCoverRemove() {
@@ -327,6 +348,16 @@ export default function NewsEditorPage({
                   </button>
                 )}
               </div>
+
+              {/* Crop modal */}
+              {cropSrc && (
+                <CoverImageCropper
+                  imageSrc={cropSrc}
+                  aspect={16 / 9}
+                  onCropDone={handleCropDone}
+                  onCancel={handleCropCancel}
+                />
+              )}
             </div>
 
             {/* Rich text editor */}

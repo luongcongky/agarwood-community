@@ -189,6 +189,7 @@ export function PostDetailClient({
   }
 
   return (
+    <div className="bg-brand-50/60 min-h-screen">
     <div className="max-w-3xl mx-auto space-y-6 py-6 px-4">
       {/* Back link */}
       <Link
@@ -361,6 +362,7 @@ export function PostDetailClient({
           </div>
         )}
       </section>
+    </div>
     </div>
   )
 }

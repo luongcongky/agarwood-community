@@ -94,7 +94,7 @@ export default async function LeadershipPage({
     : []
 
   return (
-    <div>
+    <div className="min-h-screen bg-brand-50/60">
       {/* Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
@@ -106,6 +106,7 @@ export default async function LeadershipPage({
       </section>
 
       <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
         {/* Term selector */}
         {terms.length > 1 && (
           <div className="mb-10 flex flex-wrap items-center justify-center gap-2">
@@ -209,6 +210,7 @@ export default async function LeadershipPage({
             ← Về trang Giới thiệu
           </Link>
         </div>
+      </div>
       </div>
     </div>
   )

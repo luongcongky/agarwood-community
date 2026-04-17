@@ -159,7 +159,7 @@ export default async function CertifiedProductsPage({
   if (view && view !== "grid") currentParams.set("view", view)
 
   return (
-    <div className="min-h-screen bg-brand-50">
+    <div className="min-h-screen bg-brand-50/60">
 
       {/* ── Tầng 1: Page Banner ──────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
@@ -180,8 +180,9 @@ export default async function CertifiedProductsPage({
         lastUpdated={lastUpdated}
       />
 
-      {/* ── Tầng 4: Kết quả ──────────────────────────────────────────────── */}
+      {/* ── Tầng 4: Kết quả — bọc trong card trắng ────────────────────── */}
       <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
 
         {/* Result count */}
         <div className="mb-5 flex items-center justify-between">
@@ -359,6 +360,7 @@ export default async function CertifiedProductsPage({
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* ── CTA ─────────────────────────────────────────────────────────────── */}

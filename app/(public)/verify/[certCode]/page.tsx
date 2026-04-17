@@ -36,7 +36,7 @@ export default async function VerifyPage({ params }: Props) {
   // Not found
   if (!product) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
+      <div className="bg-brand-50/60 min-h-screen"><div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
           <span className="text-2xl">✗</span>
         </div>
@@ -47,14 +47,14 @@ export default async function VerifyPage({ params }: Props) {
         <Link href="/" className="inline-block text-sm text-brand-600 hover:text-brand-800 underline">
           Về trang chủ
         </Link>
-      </div>
+      </div></div>
     )
   }
 
   // Not approved
   if (product.certStatus !== "APPROVED") {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
+      <div className="bg-brand-50/60 min-h-screen"><div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <div className="w-16 h-16 mx-auto rounded-full bg-yellow-100 flex items-center justify-center">
           <span className="text-2xl">⚠</span>
         </div>
@@ -62,7 +62,7 @@ export default async function VerifyPage({ params }: Props) {
         <p className="text-sm text-brand-500">
           Sản phẩm &quot;{product.name}&quot; chưa được Hội Trầm Hương Việt Nam chứng nhận hoặc đang trong quá trình xét duyệt.
         </p>
-      </div>
+      </div></div>
     )
   }
 
@@ -71,7 +71,7 @@ export default async function VerifyPage({ params }: Props) {
 
   if (isExpired) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
+      <div className="bg-brand-50/60 min-h-screen"><div className="max-w-lg mx-auto px-4 py-16 text-center space-y-4">
         <div className="w-16 h-16 mx-auto rounded-full bg-red-100 flex items-center justify-center">
           <span className="text-2xl">⏰</span>
         </div>
@@ -79,7 +79,7 @@ export default async function VerifyPage({ params }: Props) {
         <p className="text-sm text-brand-500">
           Chứng nhận cho sản phẩm &quot;{product.name}&quot; đã hết hạn. Doanh nghiệp cần nộp đơn gia hạn chứng nhận.
         </p>
-      </div>
+      </div></div>
     )
   }
 
@@ -92,7 +92,7 @@ export default async function VerifyPage({ params }: Props) {
     : "—"
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-16 space-y-6">
+    <div className="bg-brand-50/60 min-h-screen"><div className="max-w-lg mx-auto px-4 py-16 space-y-6">
       <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-8 text-center space-y-4">
         <div className="w-20 h-20 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
           <span className="text-4xl">✓</span>
@@ -134,6 +134,6 @@ export default async function VerifyPage({ params }: Props) {
           Xem chi tiết sản phẩm
         </Link>
       </div>
-    </div>
+    </div></div>
   )
 }

@@ -453,6 +453,11 @@ export function LeaderManager({
                       {leader.workTitle}
                     </p>
                   )}
+                  {leader.bio && (
+                    <p className="mt-1 text-xs text-brand-600 line-clamp-2 leading-relaxed">
+                      {leader.bio}
+                    </p>
+                  )}
                 </div>
 
                 {/* Sort order */}

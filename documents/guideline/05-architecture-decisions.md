@@ -296,7 +296,7 @@ Khach hang muon trang chu kieu bao chi, khong phai marketing landing. Co section
 
 ### Section 2 — rotating algorithm
 - 3 slot top: VIP cao nhat theo `authorPriority desc` (sticky)
-- 5 slot rotate: weighted random tu pool 50, refresh moi 5 phut
+- 6 slot rotate: weighted random tu pool 50, refresh moi 5 phut
 - Seed = 5-min bucket → mọi user trong cung window thay cung ket qua (deterministic)
 - Mulberry32 PRNG inline 8 dong code, khong dep moi
 

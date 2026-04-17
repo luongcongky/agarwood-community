@@ -394,7 +394,7 @@ model Product {
 |---------|-------------|-------|-------------|
 | 0. Banner TOP (sau menu) | `HomepageBannerSlot position="TOP"` | 60s | Banner ACTIVE + position=TOP |
 | 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished, sort isPinned + publishedAt |
-| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (5 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
+| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (6 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
 | 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP (Hoi vien) |
 | 4. Banner MID (giua trang) | `HomepageBannerSlot position="MID"` | 60s | Banner ACTIVE + position=MID |
 | 5. Tin DN moi nhat | `getLatestPostsByCategory("NEWS")` | 300s | isPremium=true, category=NEWS |

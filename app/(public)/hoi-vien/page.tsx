@@ -114,7 +114,7 @@ export default async function VipMembersPage({
   )
 
   return (
-    <div>
+    <div className="min-h-screen bg-brand-50/60">
       {/* Page Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
@@ -126,6 +126,7 @@ export default async function VipMembersPage({
       </section>
 
       <div className="max-w-7xl mx-auto px-4 py-10">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
         {/* Search */}
         <form
           method="GET"
@@ -239,6 +240,7 @@ export default async function VipMembersPage({
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   )
