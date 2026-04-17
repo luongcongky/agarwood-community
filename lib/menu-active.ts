@@ -39,9 +39,12 @@ export function isNodeActive(node: MenuNode, pathname: string): boolean {
   return getActiveNodeIds([node], pathname).has(node.id)
 }
 
+const LOCALE_ROOTS = new Set(["/vi", "/en", "/zh"])
+
 function matchSingle(node: MenuNode, pathname: string): boolean {
   if (node.href === pathname) return true
-  if (node.href !== "/" && pathname.startsWith(node.href + "/")) return true
+  // Don't let locale root (e.g. "/en") prefix-match all pages like "/en/gioi-thieu"
+  if (node.href !== "/" && !LOCALE_ROOTS.has(node.href) && pathname.startsWith(node.href + "/")) return true
   for (const p of node.matchPrefixes) {
     if (!p) continue
     if (pathname === p || pathname.startsWith(p + "/")) return true

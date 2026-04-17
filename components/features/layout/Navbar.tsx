@@ -73,12 +73,29 @@ export async function Navbar() {
     getMenuTree(),
   ])
 
-  // Localize menu labels + prefix locale into href for the current locale
+  // Internal routes that live outside [locale] — must NOT get locale prefix
+  const INTERNAL_PREFIXES = [
+    "/feed", "/tong-quan", "/admin", "/dashboard", "/ho-so",
+    "/gia-han", "/chung-nhan", "/company", "/doanh-nghiep-cua-toi",
+    "/doanh-nghiep/chinh-sua", "/san-pham/tao-moi", "/certification",
+    "/thanh-toan", "/ket-nap", "/tai-lieu", "/members", "/certifications",
+    "/media-orders",
+  ]
+  function isInternalHref(href: string): boolean {
+    return INTERNAL_PREFIXES.some((p) => href === p || href.startsWith(p + "/"))
+  }
+
+  // Localize menu labels + prefix locale into href + matchPrefixes (skip internal routes)
+  function prefixHref(href: string): string {
+    if (isInternalHref(href)) return href
+    return href === "/" ? `/${locale}` : `/${locale}${href}`
+  }
   function localizeMenu(nodes: MenuNode[]): MenuNode[] {
     return nodes.map((n) => ({
       ...n,
       label: localize(n, "label", locale) as string,
-      href: `/${locale}${n.href === "/" ? "" : n.href}`,
+      href: prefixHref(n.href),
+      matchPrefixes: n.matchPrefixes.map((p) => isInternalHref(p) ? p : `/${locale}${p}`),
       children: localizeMenu(n.children),
     }))
   }
