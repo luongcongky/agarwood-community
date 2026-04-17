@@ -73,11 +73,12 @@ export async function Navbar() {
     getMenuTree(),
   ])
 
-  // Localize menu labels for the current locale
+  // Localize menu labels + prefix locale into href for the current locale
   function localizeMenu(nodes: MenuNode[]): MenuNode[] {
     return nodes.map((n) => ({
       ...n,
       label: localize(n, "label", locale) as string,
+      href: `/${locale}${n.href === "/" ? "" : n.href}`,
       children: localizeMenu(n.children),
     }))
   }

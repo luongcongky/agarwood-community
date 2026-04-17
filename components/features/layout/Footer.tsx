@@ -3,7 +3,7 @@ import Image from "next/image"
 import { Separator } from "@/components/ui/separator"
 import { prisma } from "@/lib/prisma"
 import { unstable_cache } from "next/cache"
-import { getTranslations } from "next-intl/server"
+import { getTranslations, getLocale } from "next-intl/server"
 import { BackToTop } from "./BackToTop"
 
 // Brand icons — inline SVG (lucide-react 1.7 đã remove các brand icon)
@@ -70,9 +70,10 @@ const getFooterData = unstable_cache(
 )
 
 export async function Footer() {
-  const [{ leaders, cfg }, t] = await Promise.all([
+  const [{ leaders, cfg }, t, locale] = await Promise.all([
     getFooterData(),
     getTranslations("footer"),
+    getLocale(),
   ])
 
   // Tách Chủ tịch (unique) và Phó CT (nhiều)
@@ -107,7 +108,8 @@ export async function Footer() {
     .filter(Boolean)
     .map((line) => {
       const [label, href] = line.split("|").map((s) => s.trim())
-      return { label, href: href || "/" }
+      const raw = href || "/"
+      return { label, href: `/${locale}${raw === "/" ? "" : raw}` }
     })
     .filter((l) => l.label)
 
@@ -300,13 +302,13 @@ export async function Footer() {
               </span>
               <div className="flex gap-4">
                 <Link
-                  href="/privacy"
+                  href={`/${locale}/privacy`}
                   className="hover:text-brand-200 transition-colors"
                 >
                   {t("privacyPolicy")}
                 </Link>
                 <Link
-                  href="/terms"
+                  href={`/${locale}/terms`}
                   className="hover:text-brand-200 transition-colors"
                 >
                   {t("termsOfService")}
