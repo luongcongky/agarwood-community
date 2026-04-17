@@ -1,16 +1,13 @@
 import Image from "next/image"
 import Link from "next/link"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Doanh nghiệp",
-  description: "Danh sách doanh nghiệp thành viên Hội Trầm Hương Việt Nam — các doanh nghiệp trầm hương uy tín trên toàn quốc.",
-  alternates: { canonical: "/doanh-nghiep" },
+export async function generateMetadata() {
+  const t = await getTranslations("companies")
+  return { title: t("metaTitle"), alternates: { canonical: "/doanh-nghiep" } }
 }
 
 export const revalidate = 3600
@@ -40,7 +37,10 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ province?: string; q?: string }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([
+    getLocale() as Promise<Locale>,
+    getTranslations("companies"),
+  ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const q = params.q ?? ""
@@ -76,9 +76,9 @@ export default async function MembersPage({
     <div>
       {/* Page Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Doanh nghiệp</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
         <p className="mt-2 text-brand-300 text-lg">
-          Danh sách doanh nghiệp thành viên Hội Trầm Hương Việt Nam
+          {t("pageSubtitle")}
         </p>
       </section>
 
@@ -89,14 +89,14 @@ export default async function MembersPage({
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="Tìm kiếm doanh nghiệp..."
+            placeholder={t("searchPlaceholder")}
             className="flex-1 rounded-lg border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
           />
           <button
             type="submit"
             className="rounded-lg bg-brand-700 text-brand-100 px-5 py-2.5 text-sm font-medium hover:bg-brand-800 transition-colors"
           >
-            Tìm kiếm
+            {t("searchBtn")}
           </button>
         </form>
 
@@ -104,19 +104,19 @@ export default async function MembersPage({
         {companies.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-muted-foreground font-medium">
-              Không tìm thấy doanh nghiệp nào
+              {t("emptyTitle")}
             </p>
             <p className="mt-2 text-muted-foreground text-sm">
               {q
-                ? `Không có kết quả cho "${q}". Thử từ khóa khác nhé.`
-                : "Chưa có doanh nghiệp nào được đăng."}
+                ? t("emptySearch", { query: q })
+                : t("emptyDefault")}
             </p>
             {q && (
               <Link
                 href="/doanh-nghiep"
                 className="mt-4 inline-block text-brand-700 underline text-sm"
               >
-                Xem tất cả doanh nghiệp
+                {t("viewAll")}
               </Link>
             )}
           </div>
@@ -151,7 +151,7 @@ export default async function MembersPage({
                     </h2>
                     {company.isVerified && (
                       <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full mt-1">
-                        ✓ Đã xác minh
+                        {t("verified")}
                       </span>
                     )}
                   </div>

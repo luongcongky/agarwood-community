@@ -306,6 +306,35 @@
     "approvalTitle": "Quy trình xét duyệt chính thức",
     "submitForm": "Nộp đơn đăng ký"
   },
+  "companies": {
+    "metaTitle": "Doanh nghiệp",
+    "pageTitle": "Doanh nghiệp",
+    "pageSubtitle": "Danh sách doanh nghiệp thành viên Hội Trầm Hương Việt Nam",
+    "searchPlaceholder": "Tìm kiếm doanh nghiệp...",
+    "searchBtn": "Tìm kiếm",
+    "emptyTitle": "Không tìm thấy doanh nghiệp nào",
+    "emptySearch": "Không có kết quả cho \"{query}\". Thử từ khóa khác nhé.",
+    "emptyDefault": "Chưa có doanh nghiệp nào được đăng.",
+    "viewAll": "Xem tất cả doanh nghiệp",
+    "verified": "✓ Đã xác minh"
+  },
+  "research": {
+    "metaTitle": "Nghiên cứu khoa học | Hội Trầm Hương Việt Nam",
+    "metaDesc": "Các báo cáo nghiên cứu khoa học, bài báo học thuật về cây dó bầu, trầm hương và ngành trầm hương Việt Nam.",
+    "pageTitle": "Nghiên cứu khoa học",
+    "pageSubtitle": "Báo cáo khoa học, bài báo học thuật về cây dó bầu, trầm hương và ngành trầm hương Việt Nam",
+    "searchPlaceholder": "Tìm kiếm nghiên cứu...",
+    "searchBtn": "Tìm",
+    "searchResults": "{count} kết quả cho",
+    "sectionSearch": "Kết quả tìm kiếm",
+    "sectionLatest": "Bài nghiên cứu mới nhất",
+    "sectionPage": "Trang {page}",
+    "totalArticles": "{count} bài",
+    "emptySearch": "Không tìm thấy bài nghiên cứu phù hợp",
+    "emptyDefault": "Chưa có bài nghiên cứu nào được công bố",
+    "emptyNote": "Nội dung sẽ được cập nhật bởi Ban Quản trị Hội.",
+    "viewAll": "Xem tất cả nghiên cứu"
+  },
   "contact": {
     "metaTitle": "Liên hệ — Hội Trầm Hương Việt Nam",
     "metaDesc": "Liên hệ chính thức với Hội Trầm Hương Việt Nam (VAWA).",

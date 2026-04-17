@@ -1,17 +1,13 @@
 import Link from "next/link"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Nghiên cứu khoa học | Hội Trầm Hương Việt Nam",
-  description:
-    "Các báo cáo nghiên cứu khoa học, bài báo học thuật về cây dó bầu, trầm hương và ngành trầm hương Việt Nam.",
-  alternates: { canonical: "/nghien-cuu" },
+export async function generateMetadata() {
+  const t = await getTranslations("research")
+  return { title: t("metaTitle"), description: t("metaDesc"), alternates: { canonical: "/nghien-cuu" } }
 }
 
 export const revalidate = 3600
@@ -48,7 +44,10 @@ export default async function ResearchPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([
+    getLocale() as Promise<Locale>,
+    getTranslations("research"),
+  ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
@@ -93,11 +92,10 @@ export default async function ResearchPage({
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Nghiên cứu khoa học
+          {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
-          Báo cáo khoa học, bài báo học thuật về cây dó bầu, trầm hương và
-          ngành trầm hương Việt Nam
+          {t("pageSubtitle")}
         </p>
       </div>
 
@@ -110,14 +108,14 @@ export default async function ResearchPage({
               type="text"
               name="q"
               defaultValue={q}
-              placeholder="Tìm kiếm nghiên cứu..."
+              placeholder={t("searchPlaceholder")}
               className="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
             />
             <button
               type="submit"
               className="rounded-md bg-brand-800 text-brand-100 px-4 py-2 text-sm font-medium hover:bg-brand-900 transition-colors"
             >
-              Tìm
+              {t("searchBtn")}
             </button>
             {isSearch && (
               <Link
@@ -130,7 +128,7 @@ export default async function ResearchPage({
           </form>
           {isSearch && (
             <p className="mt-2 text-xs text-brand-500">
-              {total} kết quả cho &ldquo;{q}&rdquo;
+              {t("searchResults", { count: total })} &ldquo;{q}&rdquo;
             </p>
           )}
         </div>
@@ -142,11 +140,11 @@ export default async function ResearchPage({
         {/* Section heading */}
         <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-brand-800">
           <h2 className="font-bold text-brand-900 text-lg">
-            {isSearch ? "Kết quả tìm kiếm" : page === 1 ? "Bài nghiên cứu mới nhất" : `Trang ${page}`}
+            {isSearch ? t("sectionSearch") : page === 1 ? t("sectionLatest") : t("sectionPage", { page })}
           </h2>
           {!isSearch && (
             <span className="text-xs text-brand-500">
-              {total.toLocaleString("vi-VN")} bài
+              {t("totalArticles", { count: total })}
             </span>
           )}
         </div>
@@ -155,14 +153,14 @@ export default async function ResearchPage({
           <div className="bg-white rounded-2xl border border-brand-200 p-16 text-center">
             <AgarwoodPlaceholder className="w-20 h-20 mx-auto mb-4" size="lg" shape="full" tone="light" />
             <p className="text-brand-700 text-lg font-medium">
-              {isSearch ? "Không tìm thấy bài nghiên cứu phù hợp" : "Chưa có bài nghiên cứu nào được công bố"}
+              {isSearch ? t("emptySearch") : t("emptyDefault")}
             </p>
             <p className="text-brand-500 text-sm mt-2">
-              Nội dung sẽ được cập nhật bởi Ban Quản trị Hội.
+              {t("emptyNote")}
             </p>
             {isSearch && (
               <Link href="/nghien-cuu" className="mt-4 inline-block text-sm text-brand-700 underline">
-                Xem tất cả nghiên cứu
+                {t("viewAll")}
               </Link>
             )}
           </div>

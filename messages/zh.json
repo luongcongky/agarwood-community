@@ -306,6 +306,35 @@
     "approvalTitle": "正式审批流程",
     "submitForm": "提交申请"
   },
+  "companies": {
+    "metaTitle": "企业",
+    "pageTitle": "企业",
+    "pageSubtitle": "越南沉香协会会员企业名录",
+    "searchPlaceholder": "搜索企业...",
+    "searchBtn": "搜索",
+    "emptyTitle": "未找到企业",
+    "emptySearch": "没有 {query} 的结果，请尝试其他关键词。",
+    "emptyDefault": "暂无企业信息。",
+    "viewAll": "查看全部企业",
+    "verified": "✓ 已认证"
+  },
+  "research": {
+    "metaTitle": "科学研究 | 越南沉香协会",
+    "metaDesc": "关于沉香树、沉香及越南沉香产业的科研报告和学术论文。",
+    "pageTitle": "科学研究",
+    "pageSubtitle": "关于沉香树、沉香及越南沉香产业的科研报告和学术论文",
+    "searchPlaceholder": "搜索研究...",
+    "searchBtn": "搜索",
+    "searchResults": "{count} 个结果",
+    "sectionSearch": "搜索结果",
+    "sectionLatest": "最新研究",
+    "sectionPage": "第 {page} 页",
+    "totalArticles": "共 {count} 篇",
+    "emptySearch": "未找到相关研究",
+    "emptyDefault": "暂无已发布的研究",
+    "emptyNote": "内容将由协会管理委员会更新。",
+    "viewAll": "查看全部研究"
+  },
   "contact": {
     "metaTitle": "联系我们 — 越南沉香协会",
     "metaDesc": "越南沉香协会（VAWA）官方联系信息。",

@@ -306,6 +306,35 @@
     "approvalTitle": "Official Approval Process",
     "submitForm": "Submit Application"
   },
+  "companies": {
+    "metaTitle": "Companies",
+    "pageTitle": "Companies",
+    "pageSubtitle": "Member companies of the Vietnam Agarwood Association",
+    "searchPlaceholder": "Search companies...",
+    "searchBtn": "Search",
+    "emptyTitle": "No companies found",
+    "emptySearch": "No results for \"{query}\". Try a different keyword.",
+    "emptyDefault": "No companies listed yet.",
+    "viewAll": "View all companies",
+    "verified": "✓ Verified"
+  },
+  "research": {
+    "metaTitle": "Scientific Research | Vietnam Agarwood Association",
+    "metaDesc": "Scientific research reports and academic articles on aquilaria, agarwood and the Vietnamese agarwood industry.",
+    "pageTitle": "Scientific Research",
+    "pageSubtitle": "Scientific reports and academic articles on aquilaria, agarwood and the Vietnamese agarwood industry",
+    "searchPlaceholder": "Search research...",
+    "searchBtn": "Search",
+    "searchResults": "{count} results for",
+    "sectionSearch": "Search results",
+    "sectionLatest": "Latest research",
+    "sectionPage": "Page {page}",
+    "totalArticles": "{count} articles",
+    "emptySearch": "No matching research found",
+    "emptyDefault": "No research published yet",
+    "emptyNote": "Content will be updated by the Association's administration.",
+    "viewAll": "View all research"
+  },
   "contact": {
     "metaTitle": "Contact — Vietnam Agarwood Association",
     "metaDesc": "Official contact information for the Vietnam Agarwood Association (VAWA).",
