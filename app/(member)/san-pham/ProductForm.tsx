@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { PRODUCT_CATEGORIES, AGARWOOD_REGIONS } from "@/lib/constants/agarwood"
 import { createProduct, updateProduct } from "./_actions"
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
+import { MultiLangInput } from "@/components/ui/multi-lang-input"
 
 type ProductData = {
   id: string
@@ -40,10 +41,17 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
 
+  const p = product as unknown as Record<string, unknown> | undefined
   const [name, setName] = useState(product?.name ?? "")
+  const [name_en, setNameEn] = useState((p?.name_en as string) ?? "")
+  const [name_zh, setNameZh] = useState((p?.name_zh as string) ?? "")
   const [slug, setSlug] = useState(product?.slug ?? "")
   const descriptionRef = useRef<RichTextEditorHandle>(null)
+  const [description_en, setDescriptionEn] = useState((p?.description_en as string) ?? "")
+  const [description_zh, setDescriptionZh] = useState((p?.description_zh as string) ?? "")
   const [category, setCategory] = useState(product?.category ?? "")
+  const [category_en, setCategoryEn] = useState((p?.category_en as string) ?? "")
+  const [category_zh, setCategoryZh] = useState((p?.category_zh as string) ?? "")
   const [priceRange, setPriceRange] = useState(product?.priceRange ?? "")
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? [])
   const [isPublished, setIsPublished] = useState(product?.isPublished ?? true)
@@ -89,7 +97,13 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
 
     await descriptionRef.current?.processImages()
     const description = descriptionRef.current?.getHTML() ?? ""
-    const data = { name, slug, description, category, priceRange, imageUrls, isPublished }
+    const data = {
+      name, name_en: name_en || null, name_zh: name_zh || null,
+      slug, description,
+      description_en: description_en || null, description_zh: description_zh || null,
+      category, category_en: category_en || null, category_zh: category_zh || null,
+      priceRange, imageUrls, isPublished,
+    }
 
     try {
       const result = isEdit
@@ -124,10 +138,18 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
       <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
         <h2 className="font-semibold text-brand-900">Thông tin cơ bản</h2>
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-brand-800">Tên sản phẩm *</label>
-          <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} className={inputClass} required />
-        </div>
+        <MultiLangInput
+          name="name"
+          label="Tên sản phẩm *"
+          values={{ vi: name, en: name_en, zh: name_zh }}
+          onChange={(key, value) => {
+            if (key === "name") handleNameChange(value)
+            else if (key === "name_en") setNameEn(value)
+            else if (key === "name_zh") setNameZh(value)
+          }}
+          placeholder="Tên sản phẩm"
+          required
+        />
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-brand-800">Slug (URL)</label>
@@ -164,6 +186,37 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
             uploadFolder="san-pham"
           />
         </div>
+
+        {/* i18n translations */}
+        <details className="rounded-lg border border-brand-200 bg-brand-50/50">
+          <summary className="px-4 py-3 cursor-pointer text-xs font-semibold text-brand-700 hover:bg-brand-100 rounded-lg">
+            🌐 Bản dịch (EN / 中文) — không bắt buộc
+            {(name_en || name_zh || description_en || description_zh || category_en || category_zh) && (
+              <span className="ml-2 text-xs font-normal text-emerald-600">Đã có bản dịch</span>
+            )}
+          </summary>
+          <div className="px-4 pb-4 space-y-3">
+            <p className="text-[11px] text-brand-500">Nếu để trống, trang sẽ hiển thị nội dung tiếng Việt.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-brand-700 mb-1">🇬🇧 Danh mục (EN)</label>
+                <input type="text" value={category_en} onChange={(e) => setCategoryEn(e.target.value)} placeholder="e.g. Natural Agarwood" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-brand-700 mb-1">🇨🇳 Danh mục (中文)</label>
+                <input type="text" value={category_zh} onChange={(e) => setCategoryZh(e.target.value)} placeholder="例如：天然沉香" className={inputClass} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-medium text-brand-700 mb-1">🇬🇧 Mô tả (EN)</label>
+                <textarea value={description_en} onChange={(e) => setDescriptionEn(e.target.value)} rows={5} className={cn(inputClass, "font-mono resize-y")} placeholder="English description (HTML)..." />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-medium text-brand-700 mb-1">🇨🇳 Mô tả (中文)</label>
+                <textarea value={description_zh} onChange={(e) => setDescriptionZh(e.target.value)} rows={5} className={cn(inputClass, "font-mono resize-y")} placeholder="中文描述（HTML）..." />
+              </div>
+            </div>
+          </div>
+        </details>
 
         <div className="flex items-center gap-2">
           <input

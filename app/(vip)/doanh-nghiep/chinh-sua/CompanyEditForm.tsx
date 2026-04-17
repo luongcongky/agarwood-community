@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { EMPLOYEE_COUNTS, PROVINCES } from "@/lib/constants/agarwood"
 import { updateCompany } from "./_actions"
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
+import { MultiLangInput } from "@/components/ui/multi-lang-input"
 
 type Company = {
   id: string
@@ -43,13 +44,20 @@ export function CompanyEditForm({ company }: { company: Company }) {
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   // Form state
+  const c = company as unknown as Record<string, unknown>
   const [name, setName] = useState(company.name)
+  const [name_en, setNameEn] = useState((c.name_en as string) ?? "")
+  const [name_zh, setNameZh] = useState((c.name_zh as string) ?? "")
   const [slug, setSlug] = useState(company.slug)
   const descriptionRef = useRef<RichTextEditorHandle>(null)
   const [foundedYear, setFoundedYear] = useState(company.foundedYear?.toString() ?? "")
   const [employeeCount, setEmployeeCount] = useState(company.employeeCount ?? "")
   const [businessLicense, setBusinessLicense] = useState(company.businessLicense ?? "")
   const [address, setAddress] = useState(company.address ?? "")
+  const [address_en, setAddressEn] = useState((c.address_en as string) ?? "")
+  const [address_zh, setAddressZh] = useState((c.address_zh as string) ?? "")
+  const [description_en, setDescriptionEn] = useState((c.description_en as string) ?? "")
+  const [description_zh, setDescriptionZh] = useState((c.description_zh as string) ?? "")
   const [phone, setPhone] = useState(company.phone ?? "")
   const [website, setWebsite] = useState(company.website ?? "")
   const [logoUrl, setLogoUrl] = useState(company.logoUrl ?? "")
@@ -91,12 +99,18 @@ export function CompanyEditForm({ company }: { company: Company }) {
       const description = descriptionRef.current?.getHTML() ?? ""
       const result = await updateCompany({
         name,
+        name_en: name_en || null,
+        name_zh: name_zh || null,
         slug,
         description,
+        description_en: description_en || null,
+        description_zh: description_zh || null,
         foundedYear: foundedYear ? Number(foundedYear) : null,
         employeeCount,
         businessLicense,
         address,
+        address_en: address_en || null,
+        address_zh: address_zh || null,
         phone,
         website,
         logoUrl,
@@ -130,10 +144,18 @@ export function CompanyEditForm({ company }: { company: Company }) {
       <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
         <h2 className="font-semibold text-brand-900">Thông tin cơ bản</h2>
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-brand-800">Tên công ty *</label>
-          <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} className={inputClass} required />
-        </div>
+        <MultiLangInput
+          name="name"
+          label="Tên công ty *"
+          values={{ vi: name, en: name_en, zh: name_zh }}
+          onChange={(key, value) => {
+            if (key === "name") handleNameChange(value)
+            else if (key === "name_en") setNameEn(value)
+            else if (key === "name_zh") setNameZh(value)
+          }}
+          placeholder="Tên doanh nghiệp"
+          required
+        />
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-brand-800">Slug (URL)</label>
@@ -184,10 +206,40 @@ export function CompanyEditForm({ company }: { company: Company }) {
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-brand-800">Địa chỉ</label>
-          <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} placeholder="123 Đường ABC, Quận XYZ" />
-        </div>
+        {/* Description translations */}
+        <details className="rounded-lg border border-brand-200 bg-brand-50/50">
+          <summary className="px-4 py-3 cursor-pointer text-xs font-semibold text-brand-700 hover:bg-brand-100 rounded-lg">
+            🌐 Mô tả bản dịch (EN / 中文)
+            {(description_en || description_zh) && (
+              <span className="ml-2 text-xs font-normal text-emerald-600">
+                {[description_en && "EN", description_zh && "中文"].filter(Boolean).join(" + ")} đã có
+              </span>
+            )}
+          </summary>
+          <div className="px-4 pb-4 space-y-3">
+            <p className="text-[11px] text-brand-500">Dán nội dung HTML đã dịch. Nếu để trống, hiển thị tiếng Việt.</p>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">🇬🇧 Description (EN)</label>
+              <textarea value={description_en} onChange={(e) => setDescriptionEn(e.target.value)} rows={6} className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono resize-y focus:border-brand-500 focus:outline-none" placeholder="English description..." />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">🇨🇳 Description (中文)</label>
+              <textarea value={description_zh} onChange={(e) => setDescriptionZh(e.target.value)} rows={6} className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono resize-y focus:border-brand-500 focus:outline-none" placeholder="中文描述..." />
+            </div>
+          </div>
+        </details>
+
+        <MultiLangInput
+          name="address"
+          label="Địa chỉ"
+          values={{ vi: address, en: address_en, zh: address_zh }}
+          onChange={(key, value) => {
+            if (key === "address") setAddress(value)
+            else if (key === "address_en") setAddressEn(value)
+            else if (key === "address_zh") setAddressZh(value)
+          }}
+          placeholder="123 Đường ABC, Quận XYZ"
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
