@@ -1,11 +1,15 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { getTranslations } from "next-intl/server"
 
 export const metadata = {
-  title: "404 — Trang không tìm thấy | Hội Trầm Hương Việt Nam",
+  title: "404",
 }
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errors")
+  const tc = await getTranslations("common")
+
   return (
     <div
       className={cn(
@@ -20,12 +24,11 @@ export default function NotFound() {
       </p>
 
       <h1 className="mt-4 text-2xl font-bold text-brand-900 sm:text-3xl">
-        Trang không tìm thấy
+        {t("notFound")}
       </h1>
 
       <p className="mt-3 max-w-md text-brand-600">
-        Trang bạn đang tìm kiếm không tồn tại hoặc đã bị di chuyển. Vui lòng
-        kiểm tra lại đường dẫn hoặc quay về trang chủ.
+        {t("notFoundDesc")}
       </p>
 
       <div className="mt-8">
@@ -37,7 +40,7 @@ export default function NotFound() {
             "transition-colors hover:bg-brand-800 active:bg-brand-900"
           )}
         >
-          Về trang chủ
+          {tc("backToHome")}
         </Link>
       </div>
     </div>

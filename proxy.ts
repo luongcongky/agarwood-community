@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { authConfig } from "@/lib/auth.config"
 import { isAdmin } from "@/lib/roles"
 import type { Role } from "@prisma/client"
+import { locales, defaultLocale, isValidLocale, type Locale } from "@/i18n/config"
 
 // Khởi tạo với authConfig (Edge-safe, không có prisma)
 const { auth } = NextAuth(authConfig)
@@ -66,6 +67,38 @@ function isMembershipValid(membershipExpires: string | null | undefined): boolea
   return new Date(membershipExpires) > new Date()
 }
 
+// ── i18n helpers ─────────────────────────────────────────────────────────────
+
+/** Locale prefix regex: /vi, /en, /zh at the start of pathname */
+const localeRegex = new RegExp(`^/(${locales.join("|")})(?:/|$)`)
+
+/**
+ * Extract locale from pathname. Returns { locale, pathnameWithoutLocale }.
+ * If no locale prefix found, returns null (caller decides what to do).
+ */
+function extractLocale(pathname: string): { locale: Locale; rest: string } | null {
+  const match = pathname.match(localeRegex)
+  if (!match) return null
+  const locale = match[1] as Locale
+  const rest = pathname.slice(match[1].length + 1) || "/"
+  return { locale, rest }
+}
+
+/**
+ * Detect if a pathname (without locale prefix) belongs to an internal
+ * section that does NOT get locale routing (admin, member, vip).
+ */
+function isInternalRoute(pathname: string): boolean {
+  return (
+    matchesAny(pathname, ADMIN_PREFIXES) ||
+    matchesAny(pathname, MEMBER_PREFIXES) ||
+    matchesAny(pathname, LOGGED_IN_PREFIXES) ||
+    pathname.startsWith("/feed") ||
+    pathname.startsWith("/thanh-toan/thanh-cong") ||
+    pathname.startsWith("/api/")
+  )
+}
+
 // ── Proxy ────────────────────────────────────────────────────────────────────
 export const proxy = auth((req) => {
   const { pathname } = req.nextUrl
@@ -73,20 +106,47 @@ export const proxy = auth((req) => {
   const role = session?.user?.role as Role | undefined
   const membershipExpires = session?.user?.membershipExpires
 
-  // Attach pathname to response header để server component (Navbar)
-  // có thể đọc và quyết định mode
-  const passThrough = () => {
+  // ── 0. i18n locale routing ──────────────────────────────────────────────
+  //
+  // Internal routes (admin, member, vip, api, feed) bypass locale routing.
+  // Public/auth routes get locale prefix: /vi/..., /en/..., /zh/...
+  // Default locale = vi. If no prefix on a public route → redirect to /vi/...
+
+  // Skip locale logic for internal routes (no prefix needed)
+  if (isInternalRoute(pathname)) {
     const res = NextResponse.next()
     res.headers.set("x-pathname", pathname)
+    res.headers.set("x-locale", defaultLocale)
+    return res
+  }
+
+  // Extract locale from URL prefix
+  const localeInfo = extractLocale(pathname)
+  const locale: Locale = localeInfo?.locale ?? defaultLocale
+  // The real pathname after stripping locale prefix (used for auth checks below)
+  const realPathname: string = localeInfo?.rest ?? pathname
+
+  // If public/auth route has no locale prefix → redirect to /{defaultLocale}{pathname}
+  if (!localeInfo) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}${pathname}`
+    return NextResponse.redirect(url)
+  }
+
+  // Attach locale + original pathname for layout/components
+  const passThrough = () => {
+    const res = NextResponse.next()
+    res.headers.set("x-pathname", realPathname)
+    res.headers.set("x-locale", locale)
     return res
   }
 
   // ── 1. Auth routes: redirect nếu đã đăng nhập ──────────────────────────
-  if (AUTH_PATHS.includes(pathname)) {
+  if (AUTH_PATHS.includes(realPathname)) {
     if (session) {
       // Phase 2: GUEST không còn bị "chờ duyệt" — họ là member tự do, post được ngay.
       // /cho-duyet vẫn truy cập được nếu cần (legacy users), nhưng không bị force redirect.
-      if (pathname === "/cho-duyet") return NextResponse.next()
+      if (realPathname === "/cho-duyet") return NextResponse.next()
 
       const dest =
         isAdmin(role) ? "/admin"
@@ -97,32 +157,28 @@ export const proxy = auth((req) => {
     return passThrough()
   }
 
-  // ── 2. Admin routes: chỉ ADMIN ─────────────────────────────────────────
-  if (matchesAny(pathname, ADMIN_PREFIXES)) {
+  // ── 2. Admin routes: chỉ ADMIN (should not reach here, but safety check) ──
+  if (matchesAny(realPathname, ADMIN_PREFIXES)) {
     if (!session) {
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
+      return NextResponse.redirect(new URL(`/${locale}/login?callbackUrl=${realPathname}`, req.url))
     }
     if (!isAdmin(role)) {
-      return NextResponse.redirect(new URL("/", req.url))
+      return NextResponse.redirect(new URL(`/${locale}`, req.url))
     }
     return passThrough()
   }
 
   // ── 3. Member routes: VIP (còn hạn) + ADMIN ────────────────────────────
-  if (matchesAny(pathname, MEMBER_PREFIXES)) {
+  if (matchesAny(realPathname, MEMBER_PREFIXES)) {
     if (!session) {
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
+      return NextResponse.redirect(new URL(`/${locale}/login?callbackUrl=${realPathname}`, req.url))
     }
     if (role === "GUEST") {
-      // GUEST không có quyền vào VIP-only routes — hướng tới landing page nâng cấp VIP
-      return NextResponse.redirect(new URL("/landing", req.url))
+      return NextResponse.redirect(new URL(`/${locale}/landing`, req.url))
     }
-    // INFINITE & ADMIN: bỏ qua check hạn membership
     if (role === "VIP" && !isMembershipValid(membershipExpires)) {
-      // Cho phép VIP chưa kích hoạt / hết hạn vào /gia-han (để nạp tiền) và
-      // /thanh-toan/lich-su (xem lịch sử CK). Các route VIP khác → chặn.
-      const allowInactive = pathname === "/gia-han" || pathname.startsWith("/gia-han/") ||
-                            pathname.startsWith("/thanh-toan")
+      const allowInactive = realPathname === "/gia-han" || realPathname.startsWith("/gia-han/") ||
+                            realPathname.startsWith("/thanh-toan")
       if (!allowInactive) {
         return NextResponse.redirect(new URL("/gia-han", req.url))
       }
@@ -130,10 +186,10 @@ export const proxy = auth((req) => {
     return passThrough()
   }
 
-  // ── 4. Logged-in routes: bất kỳ user đã đăng nhập (Phase 2: /feed/tao-bai) ─
-  if (matchesAny(pathname, LOGGED_IN_PREFIXES)) {
+  // ── 4. Logged-in routes ─────────────────────────────────────────────────
+  if (matchesAny(realPathname, LOGGED_IN_PREFIXES)) {
     if (!session) {
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url))
+      return NextResponse.redirect(new URL(`/${locale}/login?callbackUrl=${realPathname}`, req.url))
     }
     return passThrough()
   }

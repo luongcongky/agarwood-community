@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 // In Next.js 16.2 the error boundary retry prop is `unstable_retry`.
 // The `reset` prop is kept in the type signature for compatibility.
@@ -12,6 +13,9 @@ export default function Error({
   error: Error & { digest?: string }
   unstable_retry: () => void
 }) {
+  const t = useTranslations("errors")
+  const tc = useTranslations("common")
+
   return (
     <div
       className={cn(
@@ -22,17 +26,16 @@ export default function Error({
       <div className="text-6xl mb-6">⚠️</div>
 
       <h1 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-        Đã xảy ra lỗi
+        {t("genericError")}
       </h1>
 
       <p className="mt-3 max-w-md text-brand-600">
-        Có lỗi không mong muốn xảy ra. Vui lòng thử lại hoặc quay về trang
-        chủ.
+        {t("genericErrorDesc")}
       </p>
 
       {error.digest && (
         <p className="mt-2 text-xs text-brand-400">
-          Mã lỗi: {error.digest}
+          {t("errorCode", { code: error.digest })}
         </p>
       )}
 
@@ -46,7 +49,7 @@ export default function Error({
             "transition-colors hover:bg-brand-800 active:bg-brand-900"
           )}
         >
-          Thử lại
+          {tc("retry")}
         </button>
 
         <Link
@@ -57,7 +60,7 @@ export default function Error({
             "transition-colors hover:bg-brand-100"
           )}
         >
-          Về trang chủ
+          {tc("backToHome")}
         </Link>
       </div>
     </div>

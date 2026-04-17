@@ -1,20 +1,26 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
+import { getTranslations, getLocale } from "next-intl/server"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { getLegalPage } from "@/lib/legal-pages"
 
 export const revalidate = 600
 
-export const metadata: Metadata = {
-  title: "Điều khoản sử dụng — Hội Trầm Hương Việt Nam",
-  description:
-    "Điều khoản sử dụng website Hội Trầm Hương Việt Nam (VAWA).",
-  alternates: { canonical: "/terms" },
+export async function generateMetadata() {
+  const t = await getTranslations("legal")
+  return {
+    title: t("termsTitle"),
+    alternates: { canonical: "/terms" },
+  }
 }
 
 export default async function TermsPage() {
   const page = await getLegalPage("terms")
+  const t = await getTranslations("legal")
+  const locale = await getLocale()
+
+  const dateLocaleMap = { vi: "vi-VN", en: "en-US", zh: "zh-CN" } as const
+  const dateLocale = dateLocaleMap[locale as keyof typeof dateLocaleMap] ?? "vi-VN"
 
   return (
     <div className="bg-brand-50/60 min-h-screen">
@@ -22,15 +28,15 @@ export default async function TermsPage() {
     <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-10 space-y-10">
       <header className="space-y-3 border-b border-brand-200 pb-6">
         <p className="text-xs uppercase tracking-wider font-semibold text-brand-500">
-          Văn bản pháp lý
+          {t("label")}
         </p>
         <h1 className="text-3xl sm:text-4xl font-bold text-brand-900">
-          {page?.title ?? "Điều khoản sử dụng"}
+          {page?.title ?? t("termsTitle")}
         </h1>
         {page && (
           <p className="text-sm text-brand-500">
-            Cập nhật lần cuối:{" "}
-            {page.updatedAt.toLocaleDateString("vi-VN", {
+            {t("lastUpdated")}{" "}
+            {page.updatedAt.toLocaleDateString(dateLocale, {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",

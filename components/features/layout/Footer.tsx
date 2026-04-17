@@ -3,6 +3,7 @@ import Image from "next/image"
 import { Separator } from "@/components/ui/separator"
 import { prisma } from "@/lib/prisma"
 import { unstable_cache } from "next/cache"
+import { getTranslations } from "next-intl/server"
 import { BackToTop } from "./BackToTop"
 
 // Brand icons — inline SVG (lucide-react 1.7 đã remove các brand icon)
@@ -69,7 +70,10 @@ const getFooterData = unstable_cache(
 )
 
 export async function Footer() {
-  const { leaders, cfg } = await getFooterData()
+  const [{ leaders, cfg }, t] = await Promise.all([
+    getFooterData(),
+    getTranslations("footer"),
+  ])
 
   // Tách Chủ tịch (unique) và Phó CT (nhiều)
   // Match chính xác "Chủ tịch" — không gồm "Chủ tịch danh dự" (thuộc vị trí danh dự)
@@ -138,7 +142,7 @@ export async function Footer() {
               {/* Social */}
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-brand-100">
-                  Theo dõi Hội trên
+                  {t("followUs")}
                 </p>
                 <div className="flex items-center gap-3">
                   {cfg.facebook_url && (
@@ -181,35 +185,35 @@ export async function Footer() {
             {/* ── Col 3 (span 1): Lãnh đạo Hội ── */}
             <div className="space-y-3 lg:col-span-1">
               <h4 className="text-brand-100 font-semibold text-sm uppercase tracking-wider">
-                Lãnh đạo Hội
+                {t("leadership")}
               </h4>
               <ul className="space-y-2 text-sm text-brand-300">
                 {chuTich && (
                   <li>
-                    <span className="block text-xs text-brand-400">Chủ tịch Hội</span>
+                    <span className="block text-xs text-brand-400">{t("chairman")}</span>
                     <span className="text-brand-100 font-medium">{chuTich.name}</span>
                   </li>
                 )}
                 {phoChuTich.map((l) => (
                   <li key={l.id}>
-                    <span className="block text-xs text-brand-400">Phó Chủ tịch</span>
+                    <span className="block text-xs text-brand-400">{t("viceChairman")}</span>
                     <span className="text-brand-100 font-medium">{l.name}</span>
                   </li>
                 ))}
                 {tongThuKy && (
                   <li>
-                    <span className="block text-xs text-brand-400">Tổng Thư ký</span>
+                    <span className="block text-xs text-brand-400">{t("secretaryGeneral")}</span>
                     <span className="text-brand-100 font-medium">{tongThuKy.name}</span>
                   </li>
                 )}
                 {chanhVanPhong && (
                   <li>
-                    <span className="block text-xs text-brand-400">Chánh Văn Phòng</span>
+                    <span className="block text-xs text-brand-400">{t("chiefOfOffice")}</span>
                     <span className="text-brand-100 font-medium">{chanhVanPhong.name}</span>
                   </li>
                 )}
                 {leaders.length === 0 && (
-                  <li className="text-brand-400 italic">Chưa cập nhật</li>
+                  <li className="text-brand-400 italic">{t("notUpdated")}</li>
                 )}
               </ul>
             </div>
@@ -255,7 +259,7 @@ export async function Footer() {
               {/* Căn cứ pháp lý — đặt ngay dưới thông tin liên hệ */}
               {legalBasis && (
                 <div className="rounded-md border border-brand-700 bg-brand-800/60 p-3 text-xs text-brand-300 leading-relaxed">
-                  <p className="text-brand-100 font-semibold mb-1">Căn cứ pháp lý</p>
+                  <p className="text-brand-100 font-semibold mb-1">{t("legalBasis")}</p>
                   <p className="whitespace-pre-line">{legalBasis}</p>
                 </div>
               )}
@@ -264,7 +268,7 @@ export async function Footer() {
             {/* ── Col 3 (span 1): Liên kết nhanh ── */}
             <div className="space-y-3 lg:col-span-1">
               <h4 className="text-brand-100 font-semibold text-sm uppercase tracking-wider">
-                Liên kết nhanh
+                {t("quickLinks")}
               </h4>
               <ul className="space-y-1">
                 {quickLinks.map((l) => (
@@ -292,20 +296,20 @@ export async function Footer() {
             )}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm text-brand-400 pt-2 border-t border-brand-800">
               <span>
-                © {new Date().getFullYear()} Hội Trầm Hương Việt Nam. Bảo lưu mọi quyền.
+                {t("copyright", { year: new Date().getFullYear() })}
               </span>
               <div className="flex gap-4">
                 <Link
                   href="/privacy"
                   className="hover:text-brand-200 transition-colors"
                 >
-                  Chính sách bảo mật
+                  {t("privacyPolicy")}
                 </Link>
                 <Link
                   href="/terms"
                   className="hover:text-brand-200 transition-colors"
                 >
-                  Điều khoản sử dụng
+                  {t("termsOfService")}
                 </Link>
               </div>
             </div>

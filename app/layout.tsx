@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
-import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google"
+import { Be_Vietnam_Pro, Noto_Sans_SC, Playfair_Display } from "next/font/google"
 import Script from "next/script"
+import { headers } from "next/headers"
 import { ProgressBar } from "@/components/features/layout/ProgressBar"
+import { isValidLocale } from "@/i18n/config"
 import "./globals.css"
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -15,6 +17,13 @@ const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
   variable: "--font-heading",
+  display: "swap",
+})
+
+const notoSansSC = Noto_Sans_SC({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-zh",
   display: "swap",
 })
 
@@ -53,15 +62,19 @@ export const metadata: Metadata = {
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const h = await headers()
+  const headerLocale = h.get("x-locale")
+  const lang = headerLocale && isValidLocale(headerLocale) ? headerLocale : "vi"
+
   return (
     <html
-      lang="vi"
-      className={`${beVietnamPro.variable} ${playfairDisplay.variable}`}
+      lang={lang}
+      className={`${beVietnamPro.variable} ${playfairDisplay.variable} ${notoSansSC.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col antialiased" suppressHydrationWarning>

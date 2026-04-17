@@ -2,8 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useTranslations, useLocale } from "next-intl"
 
 export default function QuenMatKhauPage() {
+  const t = useTranslations("auth")
+  const locale = useLocale()
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -13,7 +16,7 @@ export default function QuenMatKhauPage() {
     e.preventDefault()
     setError("")
     if (!email) {
-      setError("Vui lòng nhập email.")
+      setError(t("enterEmail"))
       return
     }
     setLoading(true)
@@ -25,12 +28,12 @@ export default function QuenMatKhauPage() {
       })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        setError(json.error ?? "Có lỗi xảy ra. Vui lòng thử lại.")
+        setError(json.error ?? t("genericError"))
         return
       }
       setSubmitted(true)
     } catch {
-      setError("Có lỗi xảy ra. Vui lòng thử lại.")
+      setError(t("genericError"))
     } finally {
       setLoading(false)
     }
@@ -40,16 +43,16 @@ export default function QuenMatKhauPage() {
     return (
       <div className="bg-white rounded-2xl shadow-lg border border-brand-200 p-8 space-y-4">
         <h2 className="text-brand-900 text-2xl font-bold text-center">
-          Kiểm tra email của bạn
+          {t("checkYourEmail")}
         </h2>
         <p className="text-sm text-brand-600 text-center">
-          Nếu email này đã đăng ký tài khoản, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư (kể cả thư mục Spam).
+          {t("resetEmailSent")}
         </p>
         <Link
-          href="/login"
+          href={`/${locale}/login`}
           className="block text-center text-brand-700 font-medium hover:underline text-sm"
         >
-          Quay lại đăng nhập
+          {t("backToLogin")}
         </Link>
       </div>
     )
@@ -59,10 +62,10 @@ export default function QuenMatKhauPage() {
     <div className="bg-white rounded-2xl shadow-lg border border-brand-200 p-8 space-y-6">
       <div>
         <h2 className="text-brand-900 text-2xl font-bold text-center">
-          Quên mật khẩu
+          {t("forgotPasswordTitle")}
         </h2>
         <p className="text-brand-500 text-sm text-center mt-1">
-          Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
+          {t("forgotPasswordDesc")}
         </p>
       </div>
 
@@ -75,7 +78,7 @@ export default function QuenMatKhauPage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-brand-800">
-            Email
+            {t("email")}
           </label>
           <input
             id="email"
@@ -93,13 +96,13 @@ export default function QuenMatKhauPage() {
           disabled={loading}
           className="w-full rounded-xl bg-brand-700 text-white font-semibold py-3 text-sm hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Đang gửi..." : "Gửi liên kết đặt lại"}
+          {loading ? "..." : t("sendResetLinkBtn")}
         </button>
       </form>
 
       <p className="text-center text-sm text-brand-500">
-        <Link href="/login" className="text-brand-700 font-medium hover:underline">
-          Quay lại đăng nhập
+        <Link href={`/${locale}/login`} className="text-brand-700 font-medium hover:underline">
+          {t("backToLogin")}
         </Link>
       </p>
     </div>

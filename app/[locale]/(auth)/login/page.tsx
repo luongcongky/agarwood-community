@@ -3,10 +3,13 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useTranslations, useLocale } from "next-intl"
 import { isAdmin } from "@/lib/roles"
 
 export default function LoginPage() {
   const router = useRouter()
+  const t = useTranslations("auth")
+  const locale = useLocale()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -17,7 +20,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     if (!email || !password) {
-      setError("Vui lòng nhập đầy đủ thông tin")
+      setError(t("fillAllFields"))
       return
     }
     setLoading(true)
@@ -28,7 +31,7 @@ export default function LoginPage() {
         redirect: false,
       })
       if (result?.error) {
-        setError("Email hoặc mật khẩu không chính xác.")
+        setError(t("invalidCredentials"))
       } else {
         // Fetch session to get role for redirect
         const res = await fetch("/api/auth/session")
@@ -36,10 +39,10 @@ export default function LoginPage() {
         const role = session?.user?.role
         if (isAdmin(role)) router.push("/admin")
         else if (role === "VIP") router.push("/tong-quan")
-        else router.push("/")
+        else router.push(`/${locale}`)
       }
     } catch {
-      setError("Đã xảy ra lỗi. Vui lòng thử lại.")
+      setError(t("genericError"))
     } finally {
       setLoading(false)
     }
@@ -54,9 +57,9 @@ export default function LoginPage() {
     <div className="bg-white rounded-2xl shadow-lg border border-brand-200 p-8 space-y-6">
       <div>
         <h2 className="text-brand-900 text-2xl font-bold text-center">
-          Đăng nhập
+          {t("loginTitle")}
         </h2>
-        <p className="text-brand-500 text-sm text-center mt-1">Chào mừng trở lại!</p>
+        <p className="text-brand-500 text-sm text-center mt-1">{t("welcome")}</p>
       </div>
 
       {error && (
@@ -77,20 +80,20 @@ export default function LoginPage() {
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
         </svg>
-        {googleLoading ? "Đang chuyển hướng..." : "Đăng nhập bằng Google"}
+        {googleLoading ? t("redirecting") : t("loginWithGoogle")}
       </button>
 
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-brand-200" />
-        <span className="text-xs text-brand-400">hoặc đăng nhập bằng email</span>
+        <span className="text-xs text-brand-400">{t("orLoginWithEmail")}</span>
         <div className="flex-1 h-px bg-brand-200" />
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="email" className="block text-sm font-medium text-brand-800">
-            Email
+            {t("email")}
           </label>
           <input
             id="email"
@@ -106,13 +109,13 @@ export default function LoginPage() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label htmlFor="password" className="block text-sm font-medium text-brand-800">
-              Mật khẩu
+              {t("password")}
             </label>
             <a
-              href="/quen-mat-khau"
+              href={`/${locale}/quen-mat-khau`}
               className="text-xs text-brand-700 font-medium hover:underline"
             >
-              Quên mật khẩu?
+              {t("forgotPassword")}
             </a>
           </div>
           <input
@@ -131,14 +134,14 @@ export default function LoginPage() {
           disabled={loading || googleLoading}
           className="w-full rounded-xl bg-brand-700 text-white font-semibold py-3 text-sm hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
         >
-          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+          {loading ? t("loggingIn") : t("loginTitle")}
         </button>
       </form>
 
       <p className="text-center text-sm text-brand-500">
-        Chưa có tài khoản?{" "}
-        <a href="/dang-ky" className="text-brand-700 font-medium hover:underline">
-          Đăng ký hội viên
+        {t("noAccount")}{" "}
+        <a href={`/${locale}/dang-ky`} className="text-brand-700 font-medium hover:underline">
+          {t("registerTitle")}
         </a>
       </p>
     </div>

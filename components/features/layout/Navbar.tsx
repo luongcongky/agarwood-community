@@ -8,6 +8,8 @@ import { UserMenu } from "./UserMenu"
 import { NavMobile } from "./NavMobile"
 import { NavDesktopMenu } from "./NavDesktopItem"
 import { SocialLinks } from "./SocialLinks"
+import { LocaleSwitcher } from "./LocaleSwitcher"
+import { isValidLocale, defaultLocale, type Locale } from "@/i18n/config"
 
 // ── Mode detection ────────────────────────────────────────────────────────────
 
@@ -52,6 +54,8 @@ export async function Navbar() {
   const user = session?.user
   const pathname = headersList.get("x-pathname") ?? "/"
   const mode = detectMode(pathname)
+  const headerLocale = headersList.get("x-locale")
+  const locale: Locale = headerLocale && isValidLocale(headerLocale) ? headerLocale : defaultLocale
 
   // Fetch accountType cho VIP users + social links + menu tree (1 round-trip)
   const [dbUser, socialConfigs, menuTree] = await Promise.all([
@@ -84,7 +88,7 @@ export async function Navbar() {
         <div className="flex h-16 items-center justify-between gap-4">
 
           {/* Logo — luôn về trang chủ */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
             <Image
               src="/logo.png"
               alt="Hội Trầm Hương Việt Nam"
@@ -108,6 +112,11 @@ export async function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            {/* Language switcher */}
+            {mode === "public" && (
+              <LocaleSwitcher current={locale} />
+            )}
+
             {/* Social icons luôn hiển thị ở navbar công khai */}
             <div className="hidden lg:flex">
               <SocialLinks facebookUrl={facebookUrl} youtubeUrl={youtubeUrl} variant="navbar" />
@@ -126,13 +135,13 @@ export async function Navbar() {
             ) : (
               <div className="hidden lg:flex items-center gap-2">
                 <Link
-                  href="/login"
+                  href={`/${locale}/login`}
                   className="px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
                 >
                   Đăng nhập
                 </Link>
                 <Link
-                  href="/dang-ky"
+                  href={`/${locale}/dang-ky`}
                   className="px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
                 >
                   Đăng ký hội viên

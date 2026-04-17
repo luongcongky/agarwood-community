@@ -1,20 +1,26 @@
-import type { Metadata } from "next"
 import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
+import { getTranslations, getLocale } from "next-intl/server"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { getLegalPage } from "@/lib/legal-pages"
 
 export const revalidate = 600
 
-export const metadata: Metadata = {
-  title: "Chính sách bảo mật — Hội Trầm Hương Việt Nam",
-  description:
-    "Chính sách bảo mật thông tin của Hội Trầm Hương Việt Nam (VAWA).",
-  alternates: { canonical: "/privacy" },
+export async function generateMetadata() {
+  const t = await getTranslations("legal")
+  return {
+    title: t("privacyTitle"),
+    alternates: { canonical: "/privacy" },
+  }
 }
 
 export default async function PrivacyPage() {
   const page = await getLegalPage("privacy")
+  const t = await getTranslations("legal")
+  const locale = await getLocale()
+
+  const dateLocaleMap = { vi: "vi-VN", en: "en-US", zh: "zh-CN" } as const
+  const dateLocale = dateLocaleMap[locale as keyof typeof dateLocaleMap] ?? "vi-VN"
 
   return (
     <div className="bg-brand-50/60 min-h-screen">
@@ -22,15 +28,15 @@ export default async function PrivacyPage() {
     <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-10 space-y-10">
       <header className="space-y-3 border-b border-brand-200 pb-6">
         <p className="text-xs uppercase tracking-wider font-semibold text-brand-500">
-          Văn bản pháp lý
+          {t("label")}
         </p>
         <h1 className="text-3xl sm:text-4xl font-bold text-brand-900">
-          {page?.title ?? "Chính sách bảo mật"}
+          {page?.title ?? t("privacyTitle")}
         </h1>
         {page && (
           <p className="text-sm text-brand-500">
-            Cập nhật lần cuối:{" "}
-            {page.updatedAt.toLocaleDateString("vi-VN", {
+            {t("lastUpdated")}{" "}
+            {page.updatedAt.toLocaleDateString(dateLocale, {
               day: "2-digit",
               month: "2-digit",
               year: "numeric",
@@ -59,7 +65,7 @@ function EmptyState({ target }: { target: "privacy" | "terms" }) {
   return (
     <div className="rounded-xl border-2 border-dashed border-brand-300 bg-brand-50/50 p-10 text-center space-y-3">
       <p className="text-brand-700 font-semibold">
-        Chưa có nội dung chính sách bảo mật.
+        {target === "privacy" ? "Chưa có nội dung chính sách bảo mật." : "Chưa có nội dung điều khoản sử dụng."}
       </p>
       <p className="text-sm text-brand-500">
         Admin cần tạo bài viết với category <strong>LEGAL</strong> và slug{" "}
