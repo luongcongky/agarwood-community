@@ -126,10 +126,13 @@ export const proxy = auth((req) => {
   // The real pathname after stripping locale prefix (used for auth checks below)
   const realPathname: string = localeInfo?.rest ?? pathname
 
-  // If public/auth route has no locale prefix → redirect to /{defaultLocale}{pathname}
+  // If public/auth route has no locale prefix → redirect with locale from cookie or default.
+  // This preserves the user's chosen language when internal links omit the locale prefix.
   if (!localeInfo) {
+    const cookieLocale = req.cookies.get("NEXT_LOCALE")?.value
+    const preferredLocale = cookieLocale && isValidLocale(cookieLocale) ? cookieLocale : defaultLocale
     const url = req.nextUrl.clone()
-    url.pathname = `/${defaultLocale}${pathname}`
+    url.pathname = `/${preferredLocale}${pathname}`
     return NextResponse.redirect(url)
   }
 

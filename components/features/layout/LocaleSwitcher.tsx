@@ -32,6 +32,9 @@ export function LocaleSwitcher({ current }: { current: Locale }) {
           <a
             key={locale}
             href={`/${locale}${pathnameWithoutLocale}`}
+            onClick={() => {
+              document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`
+            }}
             className={`
               px-1.5 py-1 rounded text-xs font-medium transition-colors
               ${isActive

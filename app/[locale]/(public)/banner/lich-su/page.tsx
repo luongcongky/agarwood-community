@@ -17,10 +17,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   EXPIRED: { label: "Đã hết hạn", color: "bg-brand-100 text-brand-600 border-brand-300" },
 }
 
-export default async function BannerHistoryPage() {
+export default async function BannerHistoryPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
   const session = await auth()
   if (!session?.user) {
-    redirect("/login?callbackUrl=/banner/lich-su")
+    redirect(`/${locale}/login?callbackUrl=/banner/lich-su`)
   }
 
   const banners = await prisma.banner.findMany({

@@ -7,10 +7,15 @@ export const metadata = {
   description: "Đăng ký banner quảng cáo trên trang chủ Hội Trầm Hương — quy trình tự phục vụ.",
 }
 
-export default async function BannerRegisterPage() {
+export default async function BannerRegisterPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
   const session = await auth()
   if (!session?.user) {
-    redirect("/login?callbackUrl=/banner/dang-ky")
+    redirect(`/${locale}/login?callbackUrl=/banner/dang-ky`)
   }
 
   return (

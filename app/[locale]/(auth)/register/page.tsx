@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation"
 
-export default function RegisterRedirect() {
-  redirect("/dang-ky")
+export default async function RegisterRedirect({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  redirect(`/${locale}/dang-ky`)
 }

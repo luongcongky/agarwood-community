@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation"
 
-export default function NewsPage() {
-  redirect("/tin-tuc")
+export default async function NewsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  redirect(`/${locale}/tin-tuc`)
 }
