@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { name, honorific, title, category, workTitle, bio, photoUrl, term, sortOrder } = body
+  const { name, name_en, name_zh, honorific, honorific_en, honorific_zh, title, title_en, title_zh, category, workTitle, workTitle_en, workTitle_zh, bio, bio_en, bio_zh, photoUrl, term, sortOrder } = body
 
   if (!name || !title || !term) {
     return NextResponse.json(
@@ -23,11 +23,21 @@ export async function POST(req: Request) {
   const leader = await prisma.leader.create({
     data: {
       name,
+      name_en: name_en || null,
+      name_zh: name_zh || null,
       honorific: honorific || null,
+      honorific_en: honorific_en || null,
+      honorific_zh: honorific_zh || null,
       title,
+      title_en: title_en || null,
+      title_zh: title_zh || null,
       category: category || "BCH",
       workTitle: workTitle || null,
+      workTitle_en: workTitle_en || null,
+      workTitle_zh: workTitle_zh || null,
       bio: bio || null,
+      bio_en: bio_en || null,
+      bio_zh: bio_zh || null,
       photoUrl: photoUrl || null,
       term,
       sortOrder: sortOrder ?? 0,

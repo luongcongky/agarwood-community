@@ -25,6 +25,11 @@ export async function POST(req: Request) {
     const description = (formData.get("description") as string | null)?.trim() || null
     const category = formData.get("category") as string | null
     const sortOrderStr = formData.get("sortOrder") as string | null
+    // i18n fields
+    const title_en = (formData.get("title_en") as string | null)?.trim() || null
+    const title_zh = (formData.get("title_zh") as string | null)?.trim() || null
+    const description_en = (formData.get("description_en") as string | null)?.trim() || null
+    const description_zh = (formData.get("description_zh") as string | null)?.trim() || null
 
     // Validate
     if (!file) {
@@ -64,7 +69,11 @@ export async function POST(req: Request) {
     const doc = await prisma.document.create({
       data: {
         title,
+        title_en,
+        title_zh,
         description,
+        description_en,
+        description_zh,
         category: category as LegalCategory,
         documentNumber,
         issuedDate,

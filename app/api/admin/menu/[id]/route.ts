@@ -18,6 +18,8 @@ export async function PATCH(
   const data: Record<string, unknown> = {}
 
   if (typeof body.label === "string") data.label = body.label.trim()
+  if ("label_en" in body) data.label_en = typeof body.label_en === "string" && body.label_en.trim() ? body.label_en.trim() : null
+  if ("label_zh" in body) data.label_zh = typeof body.label_zh === "string" && body.label_zh.trim() ? body.label_zh.trim() : null
   if (typeof body.href === "string") data.href = body.href.trim()
   if ("menuKey" in body) {
     const k = body.menuKey

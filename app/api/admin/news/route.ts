@@ -11,10 +11,10 @@ export async function POST(req: Request) {
   }
 
   const {
-    title,
+    title, title_en, title_zh,
     slug,
-    excerpt,
-    content,
+    excerpt, excerpt_en, excerpt_zh,
+    content, content_en, content_zh,
     coverImageUrl,
     category,
     isPublished,
@@ -35,9 +35,15 @@ export async function POST(req: Request) {
   const news = await prisma.news.create({
     data: {
       title,
+      title_en: title_en || null,
+      title_zh: title_zh || null,
       slug,
       excerpt: excerpt ?? null,
+      excerpt_en: excerpt_en || null,
+      excerpt_zh: excerpt_zh || null,
       content: content ? DOMPurify.sanitize(content) : "",
+      content_en: content_en ? DOMPurify.sanitize(content_en) : null,
+      content_zh: content_zh ? DOMPurify.sanitize(content_zh) : null,
       coverImageUrl: coverImageUrl ?? null,
       category: validCategory,
       isPublished: isPublished ?? false,

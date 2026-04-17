@@ -32,7 +32,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const data: Record<string, unknown> = {}
   if (typeof body.title === "string" && body.title.trim().length >= 3) data.title = body.title.trim()
+  if ("title_en" in body) data.title_en = body.title_en?.trim() || null
+  if ("title_zh" in body) data.title_zh = body.title_zh?.trim() || null
   if (body.description !== undefined) data.description = body.description?.trim() || null
+  if ("description_en" in body) data.description_en = body.description_en?.trim() || null
+  if ("description_zh" in body) data.description_zh = body.description_zh?.trim() || null
   if (body.audience && VALID_AUDIENCE.includes(body.audience)) data.audience = body.audience
   if (body.status && VALID_STATUS.includes(body.status)) data.status = body.status
   if (body.questions !== undefined) {

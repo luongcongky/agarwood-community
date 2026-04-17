@@ -32,24 +32,31 @@ export async function PATCH(
   }
 
   const { id } = await params
+  const body = await req.json()
   const {
-    title,
+    title, title_en, title_zh,
     slug,
-    excerpt,
-    content,
+    excerpt, excerpt_en, excerpt_zh,
+    content, content_en, content_zh,
     coverImageUrl,
     category,
     isPublished,
     isPinned,
     publishedAt,
-  } = await req.json()
+  } = body
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {}
   if (title !== undefined) data.title = title
+  if ("title_en" in body) data.title_en = title_en || null
+  if ("title_zh" in body) data.title_zh = title_zh || null
   if (slug !== undefined) data.slug = slug
   if (excerpt !== undefined) data.excerpt = excerpt
+  if ("excerpt_en" in body) data.excerpt_en = excerpt_en || null
+  if ("excerpt_zh" in body) data.excerpt_zh = excerpt_zh || null
   if (content !== undefined) data.content = content
+  if ("content_en" in body) data.content_en = content_en || null
+  if ("content_zh" in body) data.content_zh = content_zh || null
   if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl
   if (category !== undefined)
     data.category =

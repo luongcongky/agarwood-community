@@ -23,6 +23,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const {
     label,
+    label_en,
+    label_zh,
     href,
     menuKey,
     parentId,
@@ -44,6 +46,8 @@ export async function POST(req: Request) {
   const item = await prisma.menuItem.create({
     data: {
       label: label.trim(),
+      label_en: typeof label_en === "string" && label_en.trim() ? label_en.trim() : null,
+      label_zh: typeof label_zh === "string" && label_zh.trim() ? label_zh.trim() : null,
       href: href.trim(),
       menuKey: typeof menuKey === "string" && menuKey.trim() ? menuKey.trim() : null,
       parentId: typeof parentId === "string" && parentId ? parentId : null,

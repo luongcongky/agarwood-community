@@ -11,7 +11,11 @@ const VALID_STATUS: SurveyStatus[] = ["DRAFT", "ACTIVE", "CLOSED"]
 interface Body {
   slug?: string
   title?: string
+  title_en?: string | null
+  title_zh?: string | null
   description?: string | null
+  description_en?: string | null
+  description_zh?: string | null
   audience?: SurveyAudience
   status?: SurveyStatus
   questions?: unknown
@@ -51,7 +55,11 @@ export async function POST(request: Request) {
     data: {
       slug,
       title,
+      title_en: body.title_en?.trim() || null,
+      title_zh: body.title_zh?.trim() || null,
       description: body.description?.trim() || null,
+      description_en: body.description_en?.trim() || null,
+      description_zh: body.description_zh?.trim() || null,
       audience,
       status,
       questions: body.questions as object,

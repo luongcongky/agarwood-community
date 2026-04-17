@@ -30,6 +30,12 @@ export async function PATCH(
   if (issuedDate !== undefined) data.issuedDate = issuedDate ? new Date(issuedDate) : null
   if (issuer !== undefined) data.issuer = issuer || null
   if (description !== undefined) data.description = description || null
+  if ("title_en" in body) data.title_en = body.title_en || null
+  if ("title_zh" in body) data.title_zh = body.title_zh || null
+  if ("description_en" in body) data.description_en = body.description_en || null
+  if ("description_zh" in body) data.description_zh = body.description_zh || null
+  if ("issuer_en" in body) data.issuer_en = body.issuer_en || null
+  if ("issuer_zh" in body) data.issuer_zh = body.issuer_zh || null
   if (sortOrder !== undefined) data.sortOrder = Number(sortOrder) || 0
   if (isPublic !== undefined) data.isPublic = Boolean(isPublic)
 
