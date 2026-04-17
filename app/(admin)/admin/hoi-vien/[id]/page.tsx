@@ -30,6 +30,7 @@ export default async function MemberDetailPage({
         name: true,
         email: true,
         phone: true,
+        bio: true,
         avatarUrl: true,
         isActive: true,
         role: true,
@@ -129,6 +130,7 @@ export default async function MemberDetailPage({
   const serialized = {
     user: {
       ...user,
+      bio: user.bio ?? null,
       membershipExpires: user.membershipExpires?.toISOString() ?? null,
       createdAt: user.createdAt.toISOString(),
     },

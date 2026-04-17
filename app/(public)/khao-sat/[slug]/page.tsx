@@ -30,6 +30,7 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
   const submitterType = survey.audience === "BUSINESS" ? "BUSINESS" : survey.audience === "INDIVIDUAL" ? "INDIVIDUAL" : null
 
   return (
+    <div className="bg-brand-50/60 min-h-screen">
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-8 space-y-6">
       <Link href="/khao-sat" className="text-sm text-brand-600 hover:underline">← Chọn loại khác</Link>
 
@@ -55,6 +56,7 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
           logoUrl: loggedInUser.company?.logoUrl ?? "",
         } : null}
       />
+    </div>
     </div>
   )
 }

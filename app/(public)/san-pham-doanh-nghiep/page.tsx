@@ -139,7 +139,7 @@ export default async function MarketplacePage({
   const isLoggedIn = !!session?.user
 
   return (
-    <div className="min-h-screen bg-brand-50">
+    <div className="min-h-screen bg-brand-50/60">
       {/* ── Page Banner ─────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
@@ -213,8 +213,12 @@ export default async function MarketplacePage({
         </div>
       </div>
 
-      {/* ── Categories grid ──────────────────────────────────────────── */}
+      {/* ── Content card — bọc categories + grid + pagination ─────── */}
       <div className="mx-auto max-w-7xl px-4 pt-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
+
+      {/* ── Categories grid ──────────────────────────────────────────── */}
+      <div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {CATEGORIES.map((cat) => (
             <Link
@@ -248,7 +252,7 @@ export default async function MarketplacePage({
       </div>
 
       {/* ── Grid ──────────────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="pt-8">
         {sortedProducts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-brand-200 p-16 text-center">
             <AgarwoodPlaceholder className="w-20 h-20 mx-auto mb-4" size="lg" shape="full" tone="light" />
@@ -435,6 +439,8 @@ export default async function MarketplacePage({
             )}
           </div>
         )}
+      </div>
+      </div>
       </div>
 
       {/* ── CTA ──────────────────────────────────────────────────────── */}

@@ -83,7 +83,7 @@ export default async function ResearchPage({
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <div className="min-h-screen bg-brand-50">
+    <div className="min-h-screen bg-brand-50/60">
 
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
@@ -132,6 +132,7 @@ export default async function ResearchPage({
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
 
         {/* Section heading */}
         <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-brand-800">
@@ -264,6 +265,7 @@ export default async function ResearchPage({
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   )

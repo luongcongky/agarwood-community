@@ -827,6 +827,7 @@ export function FeedClient({
   const canPost = isMember
 
   return (
+    <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
     <div className="flex flex-col lg:flex-row gap-6">
       {/* ── Feed column ────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
@@ -953,6 +954,7 @@ export function FeedClient({
           </div>
         )}
       </aside>
+    </div>
     </div>
   )
 }

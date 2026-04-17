@@ -17,7 +17,9 @@ export default async function TermsPage() {
   const page = await getLegalPage("terms")
 
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 lg:py-14 space-y-10">
+    <div className="bg-brand-50/60 min-h-screen">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+    <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-10 space-y-10">
       <header className="space-y-3 border-b border-brand-200 pb-6">
         <p className="text-xs uppercase tracking-wider font-semibold text-brand-500">
           Văn bản pháp lý
@@ -62,6 +64,8 @@ export default async function TermsPage() {
       )}
 
       <OfficialChannelsBlock variant="full" />
+    </div>
+    </div>
     </div>
   )
 }

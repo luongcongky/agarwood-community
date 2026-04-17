@@ -60,6 +60,7 @@ export default async function GioiThieuPage() {
       photoUrl: true,
       term: true,
       category: true,
+      user: { select: { avatarUrl: true, bio: true } },
     },
   })
 
@@ -72,14 +73,15 @@ export default async function GioiThieuPage() {
       honorific: l.honorific,
       title: l.title,
       workTitle: l.workTitle,
-      bio: l.bio,
-      photoUrl: l.photoUrl,
+      // Ưu tiên data Leader, fallback về profile hội viên (user)
+      bio: l.bio ?? l.user?.bio ?? null,
+      photoUrl: l.photoUrl ?? l.user?.avatarUrl ?? null,
       term: l.term,
       category: l.category as "BTV" | "BCH" | "BKT",
     }))
 
   return (
-    <>
+    <div className="min-h-screen bg-brand-50/60">
       {/* JSON-LD */}
       <script
         type="application/ld+json"
@@ -99,8 +101,12 @@ export default async function GioiThieuPage() {
         </div>
       </section>
 
+      {/* ── Content card ── */}
+      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+
       {/* ── History / Mission / Vision ── */}
-      <section className="bg-white py-20">
+      <section className="py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid gap-8 md:grid-cols-3">
             {/* Lịch sử */}
@@ -154,7 +160,7 @@ export default async function GioiThieuPage() {
       </section>
 
       {/* ── Leadership — tabs cho BTV / BCH / BKT ── */}
-      <section className="bg-brand-50 py-16 lg:py-20">
+      <section className="bg-brand-50/50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Ban lãnh đạo Hội
@@ -165,7 +171,7 @@ export default async function GioiThieuPage() {
       </section>
 
       {/* ── Membership Benefits ── */}
-      <section className="bg-white py-20">
+      <section className="py-20">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Quyền lợi hội viên
@@ -223,7 +229,7 @@ export default async function GioiThieuPage() {
       </section>
 
       {/* ── Organization Chart ── */}
-      <section className="bg-brand-50 py-20">
+      <section className="bg-brand-50/50 py-20">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Cơ cấu tổ chức
@@ -278,7 +284,7 @@ export default async function GioiThieuPage() {
       </section>
 
       {/* ── Map & Address ── */}
-      <section className="bg-white py-20">
+      <section className="py-20">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-8 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             Địa chỉ trụ sở
@@ -318,11 +324,14 @@ export default async function GioiThieuPage() {
       </section>
 
       {/* ── Kênh truyền thông chính thức + cảnh báo giả mạo ── */}
-      <section className="py-12 lg:py-16 bg-white">
+      <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <OfficialChannelsBlock variant="compact" />
         </div>
       </section>
+
+      </div>
+      </div>
 
       {/* ── CTA ── */}
       <section className="bg-brand-800 py-16 text-white text-center">
@@ -346,6 +355,6 @@ export default async function GioiThieuPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   )
 }

@@ -130,6 +130,7 @@ export default async function MemberProfilePage({
       </section>
 
       {/* Main content */}
+      <div className="bg-brand-50/60">
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
         {/* Bio */}
         <section className="bg-white rounded-xl border border-brand-200 p-6">
@@ -178,6 +179,7 @@ export default async function MemberProfilePage({
             Quay lại danh sách
           </Link>
         </section>
+      </div>
       </div>
     </div>
   )

@@ -114,7 +114,7 @@ const getRotatingMemberPostsCached = unstable_cache(
         score: (p.authorPriority + 1) * (0.5 + rng()),
       }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
+      .slice(0, 6)
       .map((x) => x.post)
 
     return weighted

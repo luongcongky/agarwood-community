@@ -74,9 +74,12 @@ export default async function CompanyProfilePage({ params }: Props) {
   })
 
   return (
+    <div className="bg-brand-50/60 min-h-screen">
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* White card wrapping all company content */}
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
       {/* Cover image */}
-      <div className="relative w-full h-48 sm:h-64 md:h-72 rounded-xl overflow-hidden">
+      <div className="relative w-full h-48 sm:h-64 md:h-72 overflow-hidden">
         {company.coverImageUrl ? (
           <Image src={company.coverImageUrl} alt={company.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 1024px" priority />
         ) : (
@@ -110,7 +113,7 @@ export default async function CompanyProfilePage({ params }: Props) {
       </div>
 
       {/* Company info */}
-      <div className="mt-14 sm:mt-16">
+      <div className="mt-14 sm:mt-16 px-4 sm:px-6 lg:px-8 pb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-bold text-brand-900">{company.name}</h1>
           {company.isVerified && (
@@ -160,6 +163,8 @@ export default async function CompanyProfilePage({ params }: Props) {
           canEdit={canEdit}
         />
       </div>
+      </div>
+    </div>
     </div>
   )
 }

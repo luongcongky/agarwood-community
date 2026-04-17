@@ -12,6 +12,7 @@ type User = {
   name: string
   email: string
   phone: string | null
+  bio: string | null
   isActive: boolean
   accountType: string
   memberCategory: string
@@ -561,6 +562,14 @@ export function MemberDetailTabs({
             <InfoRow label="Họ tên" value={user.name} />
             <InfoRow label="Email" value={user.email} />
             <InfoRow label="Số điện thoại" value={user.phone} />
+            <InfoRow
+              label="Tiểu sử"
+              value={
+                user.bio?.trim()
+                  ? <span className="whitespace-pre-wrap">{user.bio}</span>
+                  : <span className="italic text-brand-400">Chưa cập nhật</span>
+              }
+            />
             <InfoRow
               label="Loại tài khoản"
               value={user.accountType === "INDIVIDUAL" ? "Cá nhân" : "Doanh nghiệp"}

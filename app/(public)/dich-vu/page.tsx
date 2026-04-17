@@ -69,7 +69,7 @@ const PROCESS_STEPS = [
 
 export default function MediaServicePage() {
   return (
-    <div>
+    <div className="min-h-screen bg-brand-50/60">
       {/* Hero */}
       <section className="bg-brand-800 py-20 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
@@ -81,33 +81,36 @@ export default function MediaServicePage() {
         </p>
       </section>
 
-      {/* Service Cards */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-foreground text-center mb-10">
-          Các dịch vụ của chúng tôi
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {SERVICES.map((svc) => (
-            <div
-              key={svc.serviceType}
-              className="bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow space-y-3"
-            >
-              <div className="text-3xl">{svc.icon}</div>
-              <h3 className="text-lg font-semibold text-foreground">{svc.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{svc.description}</p>
-              <p className="text-brand-700 font-semibold text-sm">{svc.price}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Content card — bọc toàn bộ nội dung giữa hero và form */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
 
-      {/* Process Steps */}
-      <section className="bg-brand-50 py-16 px-4">
-        <div className="max-w-4xl mx-auto">
+        {/* Service Cards */}
+        <section className="px-6 sm:px-10 py-12">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-10">
+            Các dịch vụ của chúng tôi
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {SERVICES.map((svc) => (
+              <div
+                key={svc.serviceType}
+                className="bg-brand-50/50 rounded-xl border border-brand-200 p-6 shadow-sm hover:shadow-md transition-shadow space-y-3"
+              >
+                <div className="text-3xl">{svc.icon}</div>
+                <h3 className="text-lg font-semibold text-foreground">{svc.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{svc.description}</p>
+                <p className="text-brand-700 font-semibold text-sm">{svc.price}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Process Steps */}
+        <section className="bg-brand-50/50 py-12 px-6 sm:px-10">
           <h2 className="text-2xl font-bold text-foreground text-center mb-10">
             Quy trình thực hiện
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {PROCESS_STEPS.map((s) => (
               <div key={s.step} className="text-center space-y-3">
                 <div className="w-12 h-12 rounded-full bg-brand-700 text-brand-100 flex items-center justify-center text-xl font-bold mx-auto">
@@ -118,21 +121,23 @@ export default function MediaServicePage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Order Form */}
-      <section className="max-w-2xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-foreground text-center mb-2">
-          Đặt dịch vụ ngay
-        </h2>
-        <p className="text-muted-foreground text-sm text-center mb-8">
-          Điền thông tin bên dưới, chúng tôi sẽ phản hồi trong vòng 24 giờ làm việc.
-        </p>
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
-          <MediaOrderForm />
-        </div>
-      </section>
+        {/* Order Form */}
+        <section className="px-6 sm:px-10 py-12">
+          <h2 className="text-2xl font-bold text-foreground text-center mb-2">
+            Đặt dịch vụ ngay
+          </h2>
+          <p className="text-muted-foreground text-sm text-center mb-8">
+            Điền thông tin bên dưới, chúng tôi sẽ phản hồi trong vòng 24 giờ làm việc.
+          </p>
+          <div className="max-w-2xl mx-auto bg-brand-50/50 rounded-xl border border-brand-200 p-6">
+            <MediaOrderForm />
+          </div>
+        </section>
+
+      </div>
+      </div>
     </div>
   )
 }

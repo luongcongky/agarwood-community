@@ -94,11 +94,11 @@ export default async function NewsPage({
   // On page 1 without search: first item is the hero, rest go to the list
   const isFirstPage = page === 1 && !isSearch
   const heroItem = isFirstPage && newsList[0] ? newsList[0] : null
-  const subHeroItems = isFirstPage ? newsList.slice(1, 4) : []
-  const listItems = isFirstPage ? newsList.slice(4) : newsList
+  const subHeroItems = isFirstPage ? newsList.slice(1, 5) : []
+  const listItems = isFirstPage ? newsList.slice(5) : newsList
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-brand-50/60">
 
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
@@ -144,52 +144,52 @@ export default async function NewsPage({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
 
         {/* ── HERO (chỉ trang 1, không search) ────────────────────────────── */}
         {heroItem && (
           <div className="mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border border-brand-200 rounded-xl overflow-hidden shadow-sm">
 
-              {/* Hero article — chiếm 2/3 */}
+              {/* Hero article — chiếm 2/3: ảnh trên + text dưới tách biệt */}
               <Link
                 href={`/tin-tuc/${heroItem.slug}`}
-                className="group lg:col-span-2 block relative"
+                className="group lg:col-span-2 flex flex-col"
               >
-                <div className="relative h-64 sm:h-80 lg:h-[400px] bg-brand-800">
+                {/* Ảnh bìa */}
+                <div className="relative h-52 sm:h-64 lg:h-[300px] bg-brand-800 overflow-hidden">
                   {heroItem.coverImageUrl ? (
                     <img
                       src={heroItem.coverImageUrl}
                       alt={heroItem.title}
-                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
                     <AgarwoodPlaceholder className="w-full h-full" size="xl" shape="square" tone="dark" />
                   )}
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-linear-to-t from-brand-950/90 via-brand-950/30 to-transparent" />
-                  {/* Content over image */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-7">
-                    {heroItem.isPinned && (
-                      <span className="inline-block bg-brand-400 text-brand-900 text-xs font-bold px-2 py-0.5 rounded mb-2 uppercase tracking-wide">
-                        Tin nổi bật
-                      </span>
-                    )}
-                    <h2 className="text-white text-xl sm:text-2xl lg:text-3xl font-bold leading-snug group-hover:text-brand-300 transition-colors line-clamp-3">
-                      {heroItem.title}
-                    </h2>
-                    {heroItem.excerpt && (
-                      <p className="mt-2 text-brand-200 text-sm line-clamp-2 hidden sm:block">
-                        {heroItem.excerpt}
-                      </p>
-                    )}
-                    <p className="mt-3 text-brand-400 text-xs">
-                      {formatDate(heroItem.publishedAt)}
+                  {heroItem.isPinned && (
+                    <span className="absolute top-3 left-3 bg-brand-400 text-brand-900 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow">
+                      Tin nổi bật
+                    </span>
+                  )}
+                </div>
+                {/* Text area — nền solid, nằm ngoài ảnh */}
+                <div className="bg-white p-5 sm:p-6 flex-1">
+                  <h2 className="text-brand-900 text-lg sm:text-xl lg:text-2xl font-bold leading-snug group-hover:text-brand-700 transition-colors line-clamp-3">
+                    {heroItem.title}
+                  </h2>
+                  {heroItem.excerpt && (
+                    <p className="mt-2 text-brand-600 text-sm line-clamp-2">
+                      {heroItem.excerpt}
                     </p>
-                  </div>
+                  )}
+                  <p className="mt-3 text-brand-400 text-xs">
+                    {formatDate(heroItem.publishedAt)}
+                  </p>
                 </div>
               </Link>
 
-              {/* Sub-hero — 3 bài dọc bên phải */}
+              {/* Sub-hero — 4 bài dọc bên phải */}
               {subHeroItems.length > 0 && (
                 <div className="flex flex-col divide-y divide-brand-100 border-l border-brand-200 bg-white">
                   {subHeroItems.map((item) => (
@@ -428,6 +428,7 @@ export default async function NewsPage({
           </aside>
 
         </div>
+      </div>
       </div>
     </div>
   )
