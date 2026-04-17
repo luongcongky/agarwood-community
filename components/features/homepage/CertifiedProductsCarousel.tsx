@@ -3,6 +3,7 @@ import Image from "next/image"
 import { getFeaturedProductsForHomepage } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
+import { getTranslations } from "next-intl/server"
 
 /**
  * Section 3 — Sản phẩm tiêu biểu (carousel).
@@ -15,7 +16,10 @@ import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
  * Width: constrain trong max-w-7xl (không full bleed) — match các section khác.
  */
 export async function CertifiedProductsCarousel() {
-  const products = await getFeaturedProductsForHomepage()
+  const [products, t] = await Promise.all([
+    getFeaturedProductsForHomepage(),
+    getTranslations("homepage"),
+  ])
 
   if (products.length === 0) {
     return (
@@ -23,14 +27,14 @@ export async function CertifiedProductsCarousel() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="mb-6">
             <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-              Sản phẩm tiêu biểu
+              {t("certProductsTitle")}
             </h2>
             <p className="text-sm text-brand-500 mt-1">
-              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
+              {t("certProductsSubtitle")}
             </p>
           </header>
           <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-            Chưa có sản phẩm tiêu biểu nào.
+            {t("certProductsEmpty")}
           </div>
         </div>
       </section>
@@ -46,17 +50,17 @@ export async function CertifiedProductsCarousel() {
         <div className="flex items-end justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-brand-900 sm:text-2xl">
-              Sản phẩm tiêu biểu
+              {t("certProductsTitle")}
             </h2>
             <p className="text-sm text-brand-500 mt-0.5">
-              Sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
+              {t("certProductsSubtitle")}
             </p>
           </div>
           <Link
             href="/san-pham-doanh-nghiep"
             className="hidden sm:inline-block text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
           >
-            Xem tất cả →
+            {t("certProductsViewAll")}
           </Link>
         </div>
 
@@ -92,11 +96,11 @@ export async function CertifiedProductsCarousel() {
                     <AgarwoodPlaceholder className="h-full w-full" size="lg" shape="square" />
                   )}
                   <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
-                    ⭐ Tiêu biểu
+                    {t("certProductsFeatured")}
                   </span>
                   {product.certStatus === "APPROVED" && (
                     <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white shadow">
-                      ✓ Chứng nhận
+                      {t("certProductsCertified")}
                     </span>
                   )}
                 </div>

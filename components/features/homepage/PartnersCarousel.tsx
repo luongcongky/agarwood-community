@@ -1,6 +1,7 @@
 import Image from "next/image"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 
 /**
  * Đối tác & Cơ quan liên kết — marquee chạy ngang (CSS-only, hover pause).
@@ -86,7 +87,10 @@ const CARD_BG_STYLE: React.CSSProperties = {
 }
 
 export async function PartnersCarousel() {
-  const partners = await getActivePartners()
+  const [partners, t] = await Promise.all([
+    getActivePartners(),
+    getTranslations("homepage"),
+  ])
 
   if (partners.length === 0) {
     return (
@@ -94,14 +98,14 @@ export async function PartnersCarousel() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <header className="mb-6">
             <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-              Đối tác &amp; Cơ quan liên kết
+              {t("partnersTitle")}
             </h2>
             <p className="text-sm text-brand-500 mt-1">
-              Các cơ quan, hiệp hội, đơn vị nghiên cứu đang đồng hành cùng Hội Trầm Hương Việt Nam
+              {t("partnersSubtitle")}
             </p>
           </header>
           <div className="rounded-xl border-2 border-dashed border-brand-300 bg-white p-12 text-center text-brand-500 italic">
-            Chưa có đối tác nào được công bố.
+            {t("partnersEmpty")}
           </div>
         </div>
       </section>
@@ -116,10 +120,10 @@ export async function PartnersCarousel() {
         <header className="mb-6 flex items-end justify-between">
           <div>
             <h2 className="text-xl font-bold text-brand-900 sm:text-2xl">
-              Đối tác &amp; Cơ quan liên kết
+              {t("partnersTitle")}
             </h2>
             <p className="text-sm text-brand-500 mt-0.5">
-              Các cơ quan, hiệp hội, đơn vị nghiên cứu đang đồng hành cùng Hội Trầm Hương Việt Nam
+              {t("partnersSubtitle")}
             </p>
           </div>
         </header>

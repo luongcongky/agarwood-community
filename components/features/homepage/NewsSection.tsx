@@ -3,6 +3,7 @@ import Image from "next/image"
 import { getAssociationNews, type HomepageNewsItem } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
+import { getTranslations } from "next-intl/server"
 
 function formatDate(d: Date | null | string): string {
   if (!d) return ""
@@ -15,7 +16,10 @@ function formatDate(d: Date | null | string): string {
 }
 
 export async function NewsSection() {
-  const associationNews = await getAssociationNews()
+  const [associationNews, t] = await Promise.all([
+    getAssociationNews(),
+    getTranslations("homepage"),
+  ])
   const heroNews = associationNews[0] ?? null
   const restNews = associationNews.slice(1)
 
@@ -23,18 +27,18 @@ export async function NewsSection() {
     <div className="min-w-0 lg:col-span-2 space-y-6">
       <header>
         <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-          Tin tức của Hội
+          {t("newsTitle")}
         </h2>
         <p className="text-sm text-brand-500 mt-1">
-          Cập nhật từ Ban quản trị Hội Trầm Hương Việt Nam
+          {t("newsSubtitle")}
         </p>
       </header>
 
       {heroNews ? (
-        <NewsHero news={heroNews} />
+        <NewsHero news={heroNews} featuredLabel={t("newsFeatured")} />
       ) : (
         <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-          Chưa có tin tức nào.
+          {t("newsEmpty")}
         </div>
       )}
 
@@ -51,14 +55,14 @@ export async function NewsSection() {
           href="/tin-tuc"
           className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
         >
-          Xem tất cả tin tức →
+          {t("newsViewAll")}
         </Link>
       </div>
     </div>
   )
 }
 
-function NewsHero({ news }: { news: HomepageNewsItem }) {
+function NewsHero({ news, featuredLabel }: { news: HomepageNewsItem; featuredLabel: string }) {
   return (
     <Link
       href={`/tin-tuc/${news.slug}`}
@@ -81,7 +85,7 @@ function NewsHero({ news }: { news: HomepageNewsItem }) {
         )}
         {news.isPinned && (
           <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
-            📌 Tin nổi bật
+            {featuredLabel}
           </span>
         )}
       </div>

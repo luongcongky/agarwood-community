@@ -2,6 +2,7 @@ import Link from "next/link"
 import type { PostCategory } from "@prisma/client"
 import { getLatestPostsByCategory } from "@/lib/homepage"
 import { PostCard } from "./PostCard"
+import { getTranslations } from "next-intl/server"
 
 export async function LatestPostsSection({
   category,
@@ -18,7 +19,10 @@ export async function LatestPostsSection({
   bgClass?: string
   take?: number
 }) {
-  const posts = await getLatestPostsByCategory(category, take)
+  const [posts, t] = await Promise.all([
+    getLatestPostsByCategory(category, take),
+    getTranslations("homepage"),
+  ])
 
   return (
     <section className={`${bgClass} py-12 lg:py-16`}>
@@ -32,7 +36,7 @@ export async function LatestPostsSection({
             href="/feed"
             className="hidden sm:inline-block text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
           >
-            Xem tất cả →
+            {t("viewAll")}
           </Link>
         </header>
 

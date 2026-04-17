@@ -1,26 +1,21 @@
 import Link from "next/link"
 import { getTopVipMemberPosts, getRotatingMemberPosts } from "@/lib/homepage"
 import { PostCard } from "./PostCard"
+import { getTranslations } from "next-intl/server"
 
-/**
- * Section 2 — Bản tin hội viên (right rail).
- *
- * Layout:
- *  - Top 5: bài Hội viên top theo authorPriority (sticky 5 phút)
- *  - Sau đó: 8 slot rotate (weighted random theo authorPriority + 1, refresh mỗi 5 phút)
- *
- * Khác với các section khác: rotating slots cho phép hiển thị bài tài khoản cơ bản nữa.
- */
 export async function MemberNewsRail() {
-  const topPosts = await getTopVipMemberPosts()
+  const [topPosts, t] = await Promise.all([
+    getTopVipMemberPosts(),
+    getTranslations("homepage"),
+  ])
   const rotatingPosts = await getRotatingMemberPosts(topPosts.map((p) => p.id))
 
   if (topPosts.length === 0 && rotatingPosts.length === 0) {
     return (
       <aside className="rounded-xl border border-brand-200 bg-white p-5">
-        <h2 className="text-base font-bold text-brand-900 mb-3">Bản tin hội viên</h2>
+        <h2 className="text-base font-bold text-brand-900 mb-3">{t("memberNewsTitle")}</h2>
         <p className="text-sm text-brand-500 italic py-6 text-center">
-          Chưa có bài viết nào từ hội viên.
+          {t("memberNewsEmpty")}
         </p>
       </aside>
     )
@@ -29,8 +24,8 @@ export async function MemberNewsRail() {
   return (
     <aside className="rounded-xl border border-brand-200 bg-white overflow-hidden">
       <div className="px-5 py-4 border-b border-brand-100 bg-brand-50/50">
-        <h2 className="text-base font-bold text-brand-900">Bản tin hội viên</h2>
-        <p className="text-xs text-brand-500 mt-0.5">Cập nhật từ doanh nghiệp & cá nhân</p>
+        <h2 className="text-base font-bold text-brand-900">{t("memberNewsTitle")}</h2>
+        <p className="text-xs text-brand-500 mt-0.5">{t("memberNewsSubtitle")}</p>
       </div>
 
       {/* Top Hội viên slots — horizontal cards */}
@@ -47,7 +42,7 @@ export async function MemberNewsRail() {
         <div className="px-5 pt-3 pb-4">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] uppercase tracking-wider font-semibold text-brand-500">
-              Tin xoay vòng
+              {t("memberNewsRotating")}
             </span>
             <div className="h-px flex-1 bg-brand-100" />
           </div>
@@ -66,7 +61,7 @@ export async function MemberNewsRail() {
           href="/feed"
           className="text-xs font-medium text-brand-600 hover:text-brand-800 underline underline-offset-2"
         >
-          Xem tất cả bản tin →
+          {t("memberNewsViewAll")}
         </Link>
       </div>
     </aside>
