@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -17,7 +18,7 @@ export async function generateMetadata({
     where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
     select: { name: true, bio: true },
   })
-  if (!member) return { title: "Hội viên không tồn tại" }
+  if (!member) return { title: "Not found" }
   return {
     title: `${member.name} — Hội viên Trầm Hương Việt Nam`,
     description: member.bio?.slice(0, 160) ?? `Thông tin hội viên ${member.name} — Hội Trầm Hương Việt Nam.`,
@@ -26,11 +27,7 @@ export async function generateMetadata({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-const MEMBER_CATEGORY_LABEL: Record<string, string> = {
-  OFFICIAL:  "Chính thức",
-  AFFILIATE: "Liên kết",
-  HONORARY:  "Danh dự",
-}
+// MEMBER_CATEGORY_LABEL moved inside component for t() access
 
 function fmtDate(d: Date | null): string {
   if (!d) return "—"
@@ -42,6 +39,11 @@ export default async function MemberProfilePage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const tM = await getTranslations("memberDetail")
+  const MEMBER_CATEGORY_LABEL: Record<string, string> = {
+    OFFICIAL: tM("official"), AFFILIATE: tM("affiliate"), HONORARY: tM("honorary"),
+  }
+
   const { id } = await params
 
   const [member, businessThresholds, individualThresholds] = await Promise.all([
@@ -107,7 +109,7 @@ export default async function MemberProfilePage({
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-brand-100">{member.name}</h1>
               <p className="text-sm text-brand-300 mt-1">
-                {isBusiness ? "🏢 Hội viên Doanh nghiệp" : "👤 Hội viên Cá nhân"}
+                {isBusiness ? tM("businessMember") : tM("individualMember")}
                 <span className="mx-2">·</span>
                 Hạng {categoryLabel}
                 {tierInfo.stars > 0 && <span className="ml-2 text-amber-300">{"★".repeat(tierInfo.stars)} {tierInfo.label}</span>}
@@ -149,15 +151,15 @@ export default async function MemberProfilePage({
         {/* Membership info grid */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-brand-200 p-5">
-            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">Tham gia từ</p>
+            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">{tM("joinedSince")}</p>
             <p className="text-base font-semibold text-brand-900">{fmtDate(member.createdAt)}</p>
           </div>
           <div className="bg-white rounded-xl border border-brand-200 p-5">
-            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">Hiệu lực đến</p>
+            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">{tM("validUntil")}</p>
             <p className="text-base font-semibold text-brand-900">{fmtDate(member.membershipExpires)}</p>
           </div>
           <div className="bg-white rounded-xl border border-brand-200 p-5">
-            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">Hạng</p>
+            <p className="text-xs text-brand-400 uppercase tracking-wide mb-1">{tM("tier")}</p>
             <p className="text-base font-semibold text-brand-900">{categoryLabel}</p>
           </div>
         </section>

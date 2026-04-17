@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import type { Metadata } from "next"
@@ -12,6 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function VerifyPage({ params }: Props) {
+  const tV = await getTranslations("verifyCert")
+
   const { certCode } = await params
 
   // Look up product by slug (certCode = product slug)
@@ -105,22 +108,22 @@ export default async function VerifyPage({ params }: Props) {
 
         <div className="text-left space-y-2 text-sm bg-white/60 rounded-xl p-5">
           <div className="flex justify-between py-1.5 border-b border-amber-200">
-            <span className="text-amber-700">Sản phẩm</span>
+            <span className="text-amber-700">{tV("product")}</span>
             <span className="font-semibold text-amber-900">{product.name}</span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-amber-200">
-            <span className="text-amber-700">Doanh nghiệp</span>
+            <span className="text-amber-700">{tV("company")}</span>
             <Link href={`/doanh-nghiep/${product.company!.slug}`} className="font-semibold text-amber-900 hover:underline">
               {product.company!.name}
             </Link>
           </div>
           <div className="flex justify-between py-1.5 border-b border-amber-200">
-            <span className="text-amber-700">Ngày cấp</span>
+            <span className="text-amber-700">{tV("dateIssued")}</span>
             <span className="font-semibold text-amber-900">{approvedDate}</span>
           </div>
           {cert?.isOnlineReview !== undefined && (
             <div className="flex justify-between py-1.5">
-              <span className="text-amber-700">Hình thức</span>
+              <span className="text-amber-700">{tV("method")}</span>
               <span className="font-semibold text-amber-900">
                 {cert.isOnlineReview ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}
               </span>

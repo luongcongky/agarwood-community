@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -81,6 +83,8 @@ export function PostDetailClient({
   currentUserName: string | null
   currentUserAvatar: string | null
 }) {
+  const t = useTranslations("postDetail")
+
   const [isMounted, setIsMounted] = useState(false)
   const [reactionCount, setReactionCount] = useState(post._count.reactions)
   const [hasReacted, setHasReacted] = useState(post.reactions.some((r) => r.type === "LIKE"))
@@ -165,7 +169,7 @@ export function PostDetailClient({
   }
 
   async function handleDeleteComment(commentId: string) {
-    if (!confirm("Xóa bình luận này?")) return
+    if (!confirm(t("deleteComment"))) return
     try {
       const res = await fetch(`/api/comments/${commentId}`, { method: "DELETE" })
       if (res.ok) {
@@ -196,7 +200,7 @@ export function PostDetailClient({
         href="/feed"
         className="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-800 transition-colors"
       >
-        ← Quay lại cộng đồng
+        {t("backToCommunity")}
       </Link>
 
       {/* Post */}
@@ -204,7 +208,7 @@ export function PostDetailClient({
         {/* Locked banner */}
         {isLocked && (
           <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            Bài viết đã bị tạm khoá
+            {t("postLocked")}
           </div>
         )}
 
@@ -238,7 +242,7 @@ export function PostDetailClient({
         {/* Promoted */}
         {post.isPromoted && (
           <span className="inline-flex text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">
-            Ghim bởi admin
+            {t("pinnedByAdmin")}
           </span>
         )}
 
@@ -249,7 +253,7 @@ export function PostDetailClient({
 
         {/* Content */}
         {isLocked && !isAdmin(currentUserRole) ? (
-          <p className="text-sm text-brand-400 italic">Nội dung đã bị ẩn do vi phạm quy định.</p>
+          <p className="text-sm text-brand-400 italic">{t("contentHidden")}</p>
         ) : (
           <div
             className="prose prose-sm max-w-none text-brand-800"
@@ -277,20 +281,20 @@ export function PostDetailClient({
                   hasReacted ? "bg-brand-100 text-brand-700" : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
                 )}
               >
-                {hasReacted ? "✓" : "○"} Hữu ích ({reactionCount})
+                {hasReacted ? "✓" : "○"} {t("helpful")} ({reactionCount})
               </button>
             ) : (
-              <span className="text-sm text-brand-400">Hữu ích ({reactionCount})</span>
+              <span className="text-sm text-brand-400">{t("helpful")} ({reactionCount})</span>
             )}
             <span className="text-sm text-brand-400">💬 {comments.length} bình luận</span>
           </div>
-          <span className="text-sm text-brand-500">{post.viewCount + 1} lượt xem</span>
+          <span className="text-sm text-brand-500">{post.viewCount + 1} {t("views")}</span>
         </div>
       </article>
 
       {/* Comments section */}
       <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-5">
-        <h2 className="font-semibold text-brand-900">Bình luận ({comments.length})</h2>
+        <h2 className="font-semibold text-brand-900">{t("comments")} ({comments.length})</h2>
 
         {/* Comment input */}
         {isLoggedIn ? (
@@ -307,14 +311,14 @@ export function PostDetailClient({
             <div className="flex-1 space-y-2">
               {replyTo && (
                 <div className="flex items-center gap-2 text-xs text-brand-500">
-                  <span>Trả lời <strong>{replyTo.name}</strong></span>
+                  <span>{t("reply")} <strong>{replyTo.name}</strong></span>
                   <button onClick={() => setReplyTo(null)} className="text-brand-400 hover:text-red-500">✕</button>
                 </div>
               )}
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder={replyTo ? `Trả lời ${replyTo.name}...` : "Viết bình luận..."}
+                placeholder={replyTo ? `Trả lời ${replyTo.name}...` : t("writePlaceholder")}
                 rows={2}
                 className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
               />
@@ -324,7 +328,7 @@ export function PostDetailClient({
                   disabled={!newComment.trim() || submitting}
                   className="rounded-lg bg-brand-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
                 >
-                  {submitting ? "Đang gửi..." : "Gửi"}
+                  {submitting ? t("sending") : "Gửi"}
                 </button>
               </div>
             </div>
@@ -332,7 +336,7 @@ export function PostDetailClient({
         ) : (
           <div className="text-center py-4">
             <Link href="/login" className="text-sm text-brand-600 hover:text-brand-800 font-medium">
-              Đăng nhập để bình luận
+              {t("loginToComment")}
             </Link>
           </div>
         )}
@@ -343,7 +347,7 @@ export function PostDetailClient({
             <div className="w-6 h-6 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : comments.length === 0 ? (
-          <p className="text-sm text-brand-400 text-center py-4">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+          <p className="text-sm text-brand-400 text-center py-4">{t("noComments")}</p>
         ) : (
           <div className="space-y-4">
             {rootComments.map((comment) => (
@@ -390,6 +394,7 @@ function CommentItem({
   isMounted: boolean
   isReply?: boolean
 }) {
+  const t = useTranslations("postDetail")
   const isOwn = currentUserId === comment.author.id
   const viewerIsAdmin = isAdmin(currentUserRole)
   const canDelete = isOwn || viewerIsAdmin
@@ -426,7 +431,7 @@ function CommentItem({
                 comment.isLiked ? "text-brand-700" : "text-brand-400 hover:text-brand-600",
               )}
             >
-              {comment.isLiked ? "Đã thích" : "Thích"}{comment.likeCount > 0 ? ` (${comment.likeCount})` : ""}
+              {comment.isLiked ? t("liked") : t("like")}{comment.likeCount > 0 ? ` (${comment.likeCount})` : ""}
             </button>
           )}
           {isLoggedIn && (
@@ -434,7 +439,7 @@ function CommentItem({
               onClick={() => onReply(comment.id, comment.author.name)}
               className="text-xs font-medium text-brand-400 hover:text-brand-600 transition-colors"
             >
-              Trả lời
+              {t("reply")}
             </button>
           )}
           {canDelete && (
@@ -442,7 +447,7 @@ function CommentItem({
               onClick={() => onDelete(comment.id)}
               className="text-xs font-medium text-red-400 hover:text-red-600 transition-colors"
             >
-              Xóa
+              {t("delete")}
             </button>
           )}
         </div>

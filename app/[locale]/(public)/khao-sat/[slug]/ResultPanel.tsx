@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { CheckCircle2 } from "lucide-react"
@@ -26,6 +28,8 @@ const TIER_LABEL: Record<string, string> = {
 }
 
 export function ResultPanel({ slug, recommendedTier, contact }: Props) {
+  const t = useTranslations("surveyResult")
+
   const tierLabel = TIER_LABEL[recommendedTier] ?? TIER_LABEL.BASIC
   const [note, setNote] = useState("")
   const [submitted, setSubmitted] = useState(false)
@@ -85,7 +89,7 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
             <button
               onClick={() => setShowToast(false)}
               className="text-brand-400 hover:text-brand-600 text-xl leading-none"
-              aria-label="Đóng"
+              aria-label={t("close")}
             >
               ×
             </button>
@@ -96,9 +100,9 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
       {/* Header */}
       <div className="rounded-2xl bg-linear-to-r from-brand-700 via-brand-600 to-amber-600 p-8 text-white shadow-xl text-center">
         <p className="text-sm uppercase tracking-wider opacity-90">Cảm ơn {contact.name}!</p>
-        <h2 className="text-3xl font-bold mt-2">Dựa trên câu trả lời của bạn</h2>
+        <h2 className="text-3xl font-bold mt-2">{t("subheader")} của bạn</h2>
         <p className="mt-3 text-lg">
-          Gói phù hợp: <span className="font-bold text-amber-200 text-2xl">{tierLabel}</span>
+          {t("recommendedPackage")} <span className="font-bold text-amber-200 text-2xl">{tierLabel}</span>
         </p>
       </div>
 
@@ -131,27 +135,27 @@ export function ResultPanel({ slug, recommendedTier, contact }: Props) {
               disabled={submitting}
               className="rounded-md bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
             >
-              {submitting ? "Đang gửi..." : "Đăng ký tư vấn"}
+              {submitting ? "Đang gửi..." : t("consultBtn")}
             </button>
             <Link
               href="/"
               className="rounded-md border border-brand-300 px-6 py-3 text-sm font-medium text-brand-700 hover:bg-white text-center"
             >
-              Để sau
+              {t("skipBtn")}
             </Link>
           </div>
         </div>
       ) : (
         <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-8 text-center">
           <div className="text-5xl mb-3">✓</div>
-          <h3 className="text-2xl font-bold text-emerald-800">Đã ghi nhận!</h3>
+          <h3 className="text-2xl font-bold text-emerald-800">{t("recordedTitle")}</h3>
           <p className="text-sm text-emerald-700 mt-2 max-w-md mx-auto">
             Ban Quản trị Hội Trầm Hương Việt Nam sẽ liên hệ với bạn trong vòng 2-3 ngày làm việc
             qua số <strong>{contact.phone}</strong>.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
             <Link href="/" className="rounded-md bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-800">
-              Về trang chủ
+              {t("backHome")}
             </Link>
             <Link href="/landing" className="rounded-md border border-brand-300 px-6 py-2.5 text-sm font-medium text-brand-700 hover:bg-white">
               Tìm hiểu Hội Trầm Hương VN

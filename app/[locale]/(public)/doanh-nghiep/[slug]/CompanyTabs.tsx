@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -49,12 +51,14 @@ export function CompanyTabs({
   postCount,
   canEdit,
 }: Props) {
+  const t = useTranslations("companyTabs")
+
   const [activeTab, setActiveTab] = useState<TabId>("intro")
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: "intro", label: "Giới thiệu" },
-    { id: "products", label: `Sản phẩm (${products.length})` },
-    { id: "info", label: "Thông tin" },
+    { id: "intro", label: t("tabIntro") },
+    { id: "products", label: `{t("tabProducts")} (${products.length})` },
+    { id: "info", label: t("tabInfo") },
   ]
 
   return (
@@ -78,18 +82,18 @@ export function CompanyTabs({
       </div>
 
       <div className="mt-6">
-        {/* ── Giới thiệu ──────────────────────────────────────────────── */}
+        {/* ── {t("tabIntro")} ──────────────────────────────────────────────── */}
         {activeTab === "intro" && (
           <div className="prose max-w-none text-brand-800 leading-relaxed">
             {description ? (
               <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description) }} />
             ) : (
-              <p className="text-brand-400 italic">Chưa có mô tả</p>
+              <p className="text-brand-400 italic">{t("noDescription")}</p>
             )}
           </div>
         )}
 
-        {/* ── Sản phẩm ────────────────────────────────────────────────── */}
+        {/* ── {t("tabProducts")} ────────────────────────────────────────────────── */}
         {activeTab === "products" && (
           <div>
             {canEdit && (
@@ -98,7 +102,7 @@ export function CompanyTabs({
                   href="/san-pham/tao-moi"
                   className="inline-flex items-center gap-2 rounded-lg bg-brand-700 text-white px-4 py-2 text-sm font-medium hover:bg-brand-800 transition-colors"
                 >
-                  + Thêm sản phẩm
+                  {t("addProduct")}
                 </Link>
               </div>
             )}
@@ -121,7 +125,7 @@ export function CompanyTabs({
                       )}
                       {product.certStatus === "APPROVED" && (
                         <span className="absolute top-2 right-2 inline-flex items-center gap-1 bg-brand-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
-                          ✓ Chứng nhận
+                          {t("certified")}
                         </span>
                       )}
                     </div>
@@ -139,18 +143,18 @@ export function CompanyTabs({
           </div>
         )}
 
-        {/* ── Thông tin ────────────────────────────────────────────────── */}
+        {/* ── {t("tabInfo")} ────────────────────────────────────────────────── */}
         {activeTab === "info" && (
           <dl className="divide-y divide-brand-100 text-sm">
-            <InfoRow label="Tên doanh nghiệp" value={companyName} />
-            {foundedYear && <InfoRow label="Năm thành lập" value={String(foundedYear)} />}
-            {employeeCount && <InfoRow label="Quy mô nhân sự" value={`${employeeCount} người`} />}
-            {businessLicense && <InfoRow label="Mã số ĐKKD" value={businessLicense} />}
-            {address && <InfoRow label="Địa chỉ" value={address} />}
-            {phone && <InfoRow label="Điện thoại" value={phone} />}
+            <InfoRow label={t("companyName")} value={companyName} />
+            {foundedYear && <InfoRow label={t("foundedYear")} value={String(foundedYear)} />}
+            {employeeCount && <InfoRow label={t("employeeCount")} value={`${employeeCount} người`} />}
+            {businessLicense && <InfoRow label={t("businessLicense")} value={businessLicense} />}
+            {address && <InfoRow label={t("address")} value={address} />}
+            {phone && <InfoRow label={t("phone")} value={phone} />}
             {website && (
               <div className="py-3 flex items-start gap-4">
-                <dt className="w-40 shrink-0 text-brand-500 font-medium">Website</dt>
+                <dt className="w-40 shrink-0 text-brand-500 font-medium">{t("website")}</dt>
                 <dd>
                   <a href={website} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline break-all">
                     {website}

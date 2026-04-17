@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
@@ -14,6 +16,8 @@ type BankInfo = {
 }
 
 export function BannerRowActions({ bannerId }: { bannerId: string }) {
+  const t = useTranslations("bannerRenew")
+
   const [open, setOpen] = useState(false)
   const [months, setMonths] = useState<RenewMonths>(1)
   const [submitting, setSubmitting] = useState(false)
@@ -32,12 +36,12 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? "Có lỗi xảy ra")
+        setError(data.error ?? t("error"))
         return
       }
       setBankInfo(data.bankInfo)
     } catch {
-      setError("Có lỗi xảy ra. Vui lòng thử lại.")
+      setError(t("error"))
     } finally {
       setSubmitting(false)
     }
@@ -58,7 +62,7 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
         onClick={() => setOpen(true)}
         className="inline-flex items-center rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800"
       >
-        Gia hạn
+        {t("renewBtn")}
       </button>
 
       {open && (
@@ -72,8 +76,8 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
           >
             {!bankInfo ? (
               <>
-                <h3 className="text-lg font-bold text-brand-900">Gia hạn banner</h3>
-                <p className="text-sm text-brand-500">Chọn số tháng muốn gia hạn (1.000.000đ/tháng):</p>
+                <h3 className="text-lg font-bold text-brand-900">{t("renewTitle")}</h3>
+                <p className="text-sm text-brand-500">Chọn số {t("months")} muốn gia hạn (1.000.000đ/tháng):</p>
                 <div className="grid grid-cols-4 gap-2">
                   {([1, 3, 6, 12] as const).map((m) => (
                     <button
@@ -86,12 +90,12 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
                           : "border-brand-200 text-brand-600 hover:border-brand-300"
                       }`}
                     >
-                      {m} tháng
+                      {m} {t("months")}
                     </button>
                   ))}
                 </div>
                 <div className="rounded-lg bg-brand-50/50 border border-brand-200 p-3 flex justify-between items-center">
-                  <span className="text-sm text-brand-600">Tổng tiền</span>
+                  <span className="text-sm text-brand-600">{t("total")}</span>
                   <span className="text-xl font-bold text-brand-700">
                     {(months * 1_000_000).toLocaleString("vi-VN")}đ
                   </span>
@@ -107,7 +111,7 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
                     onClick={handleClose}
                     className="rounded-lg border border-brand-300 px-4 py-2 text-sm text-brand-700 hover:bg-brand-50"
                   >
-                    Hủy
+                    {t("cancel")}
                   </button>
                   <button
                     type="button"
@@ -115,7 +119,7 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
                     disabled={submitting}
                     className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
                   >
-                    {submitting ? "Đang xử lý..." : "Lấy mã CK"}
+                    {submitting ? t("processing") : "Lấy mã CK"}
                   </button>
                 </div>
               </>
@@ -131,21 +135,21 @@ export function BannerRowActions({ bannerId }: { bannerId: string }) {
                     <span className="font-semibold">{bankInfo.bankName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-brand-600">STK:</span>
+                    <span className="text-brand-600">{t("accountLabel")}</span>
                     <span className="font-mono font-semibold">{bankInfo.accountNumber}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-brand-600">Chủ TK:</span>
+                    <span className="text-brand-600">{t("holderLabel")}</span>
                     <span className="font-semibold text-right">{bankInfo.accountName}</span>
                   </div>
                   <div className="flex justify-between border-t border-brand-200 pt-2">
-                    <span className="text-brand-600">Số tiền:</span>
+                    <span className="text-brand-600">{t("amountLabel")}</span>
                     <span className="text-lg font-bold text-brand-700">
                       {bankInfo.amount.toLocaleString("vi-VN")}đ
                     </span>
                   </div>
                   <div>
-                    <p className="text-xs text-brand-600 mb-1">Nội dung CK:</p>
+                    <p className="text-xs text-brand-600 mb-1">{t("transferLabel")}</p>
                     <code className="block rounded bg-white border border-brand-200 px-2 py-1.5 text-xs font-bold">
                       {bankInfo.description}
                     </code>

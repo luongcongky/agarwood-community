@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -36,6 +38,8 @@ function formatVnd(n: number): string {
 }
 
 export function BannerRegisterForm() {
+  const t = useTranslations("bannerForm")
+
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
@@ -100,7 +104,7 @@ export function BannerRegisterForm() {
       const data = await res.json()
       setImageUrl(data.secure_url ?? data.url)
     } catch {
-      setError("Tải ảnh thất bại. Vui lòng thử lại.")
+      setError(t("uploadFailed"))
     } finally {
       setUploading(false)
     }
@@ -127,14 +131,14 @@ export function BannerRegisterForm() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error ?? "Có lỗi xảy ra")
+        setError(data.error ?? t("genericError"))
         setSubmitting(false)
         return
       }
       setBankInfo(data.bankInfo)
       setStep(4)
     } catch {
-      setError("Có lỗi xảy ra. Vui lòng thử lại.")
+      setError(t("genericError"))
     } finally {
       setSubmitting(false)
     }
@@ -158,7 +162,7 @@ export function BannerRegisterForm() {
       {/* Quota chip */}
       {quota && (
         <div className="border-b border-brand-100 px-6 py-3 bg-brand-50/50 flex items-center justify-between">
-          <span className="text-xs text-brand-600">Quota tháng này</span>
+          <span className="text-xs text-brand-600">{t("quotaLabel")}</span>
           <span
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
@@ -169,7 +173,7 @@ export function BannerRegisterForm() {
                   : "bg-brand-50 text-brand-700 border border-brand-200",
             )}
           >
-            {quota.limit === -1 ? "∞ không giới hạn" : `Đã dùng ${quota.used}/${quota.limit} mẫu`}
+            {quota.limit === -1 ? t("quotaUnlimited") : `Đã dùng ${quota.used}/${quota.limit} mẫu`}
           </span>
         </div>
       )}
@@ -177,7 +181,7 @@ export function BannerRegisterForm() {
       {/* Step indicator */}
       <div className="px-6 pt-6">
         <ol className="flex items-center justify-between text-xs">
-          {(["Thời gian", "Nội dung", "Thanh toán", "Hoàn tất"] as const).map((label, idx) => {
+          {(["Thời gian", "Nội dung", t("stepPayment"), "Hoàn tất"] as const).map((label, idx) => {
             const stepNum = (idx + 1) as Step
             const active = step === stepNum
             const done = step > stepNum
@@ -207,18 +211,18 @@ export function BannerRegisterForm() {
         {step === 1 && (
           <>
             <div>
-              <h2 className="text-lg font-bold text-brand-900">Chọn thời gian hiển thị</h2>
+              <h2 className="text-lg font-bold text-brand-900">{t("step1Title")} hiển thị</h2>
               <p className="text-sm text-brand-500 mt-0.5">
                 Banner sẽ hiển thị trên trang chủ trong khoảng thời gian này (tối thiểu 1 tháng).
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-800 mb-2">Vị trí hiển thị</label>
+              <label className="block text-sm font-medium text-brand-800 mb-2">{t("positionLabel")} hiển thị</label>
               <div className="grid grid-cols-2 gap-3">
                 {([
-                  { value: "TOP", label: "Đầu trang chủ", desc: "Ngay sau thanh menu" },
-                  { value: "MID", label: "Giữa trang chủ", desc: "Sau khu sản phẩm chứng nhận" },
+                  { value: "TOP", label: t("positionTop"), desc: "Ngay sau thanh menu" },
+                  { value: "MID", label: t("positionMid"), desc: "Sau khu sản phẩm chứng nhận" },
                 ] as const).map((opt) => (
                   <button
                     key={opt.value}
@@ -240,7 +244,7 @@ export function BannerRegisterForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-brand-800 mb-1">Ngày bắt đầu</label>
+                <label className="block text-sm font-medium text-brand-800 mb-1">{t("startDate")}</label>
                 <input
                   type="date"
                   value={startDate}
@@ -250,7 +254,7 @@ export function BannerRegisterForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-brand-800 mb-1">Ngày kết thúc</label>
+                <label className="block text-sm font-medium text-brand-800 mb-1">{t("endDate")}</label>
                 <input
                   type="date"
                   value={endDate}
@@ -263,9 +267,9 @@ export function BannerRegisterForm() {
 
             <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-brand-600 uppercase tracking-wider">Tổng cộng</p>
+                <p className="text-xs text-brand-600 uppercase tracking-wider">{t("total")}</p>
                 <p className="text-2xl font-bold text-brand-900">
-                  {monthsCount} tháng × {formatVnd(pricePerMonth)}/tháng
+                  {monthsCount} tháng × {formatVnd(pricePerMonth)}{t("perMonth")}
                 </p>
               </div>
               <p className="text-2xl font-bold text-brand-700">{formatVnd(totalPrice)}</p>
@@ -295,7 +299,7 @@ export function BannerRegisterForm() {
                 }}
                 className="rounded-lg bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Tiếp theo →
+                {t("next")}
               </button>
             </div>
           </>
@@ -305,9 +309,9 @@ export function BannerRegisterForm() {
         {step === 2 && (
           <>
             <div>
-              <h2 className="text-lg font-bold text-brand-900">Nội dung banner</h2>
+              <h2 className="text-lg font-bold text-brand-900">{t("step2Title")}</h2>
               <p className="text-sm text-brand-500 mt-0.5">
-                Tải lên ảnh banner, nhập tiêu đề và link đích. Hệ thống tự cắt ảnh
+                {t("imageRequired")}, nhập tiêu đề và link đích. Hệ thống tự cắt ảnh
                 theo trọng tâm cho 3 kích thước hiển thị.
               </p>
             </div>
@@ -335,7 +339,7 @@ export function BannerRegisterForm() {
 
             {/* Image upload */}
             <div>
-              <label className="block text-sm font-medium text-brand-800 mb-2">Ảnh banner *</label>
+              <label className="block text-sm font-medium text-brand-800 mb-2">{t("bannerImageLabel")}</label>
               {imageUrl ? (
                 <div className="space-y-3">
                   <div
@@ -390,7 +394,7 @@ export function BannerRegisterForm() {
             {imageUrl && (
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-brand-900">
-                  👀 Xem trước hiển thị thực tế trên trang chủ
+                  {t("previewLabel")} hiển thị thực tế trên trang chủ
                 </p>
                 <BannerPreview imageUrl={imageUrl} />
               </div>
@@ -399,7 +403,7 @@ export function BannerRegisterForm() {
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-brand-800 mb-1">
-                Tiêu đề <span className="text-xs text-brand-500">(5-100 ký tự)</span>
+                {t("titleLabel")} <span className="text-xs text-brand-500">(5-100 ký tự)</span>
               </label>
               <input
                 type="text"
@@ -437,7 +441,7 @@ export function BannerRegisterForm() {
                 }}
                 className="rounded-lg border border-brand-300 px-6 py-3 text-sm font-medium text-brand-700 hover:bg-brand-50"
               >
-                ← Quay lại
+                {t("backBtn")}
               </button>
               <button
                 type="button"
@@ -449,7 +453,7 @@ export function BannerRegisterForm() {
                 }}
                 className="rounded-lg bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800"
               >
-                Tiếp theo →
+                {t("next")}
               </button>
             </div>
           </>
@@ -468,13 +472,13 @@ export function BannerRegisterForm() {
             {/* Summary */}
             <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-5 space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-brand-600">Vị trí:</span>
+                <span className="text-brand-600">{t("positionLabel")}:</span>
                 <span className="font-semibold text-brand-900">
-                  {position === "TOP" ? "Đầu trang chủ" : "Giữa trang chủ"}
+                  {position === "TOP" ? "Đầu trang chủ" : t("positionMid")}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-brand-600">Tiêu đề:</span>
+                <span className="text-brand-600">{t("titleLabel")}:</span>
                 <span className="font-semibold text-brand-900 text-right">{title}</span>
               </div>
               <div className="flex justify-between">
@@ -482,7 +486,7 @@ export function BannerRegisterForm() {
                 <span className="font-mono text-xs text-brand-700 truncate max-w-xs">{targetUrl}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-brand-600">Thời gian:</span>
+                <span className="text-brand-600">{t("stepTime")}:</span>
                 <span className="text-brand-900">
                   {new Date(startDate).toLocaleDateString("vi-VN")} -{" "}
                   {new Date(endDate).toLocaleDateString("vi-VN")} ({monthsCount} tháng)
@@ -506,7 +510,7 @@ export function BannerRegisterForm() {
                 disabled={submitting}
                 className="rounded-lg border border-brand-300 px-6 py-3 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
               >
-                ← Quay lại
+                {t("backBtn")}
               </button>
               <button
                 type="button"
@@ -514,7 +518,7 @@ export function BannerRegisterForm() {
                 disabled={submitting}
                 className="rounded-lg bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
               >
-                {submitting ? "Đang xử lý..." : "Xác nhận và lấy mã CK"}
+                {submitting ? t("processing") : "Xác nhận và lấy mã CK"}
               </button>
             </div>
           </>
@@ -525,19 +529,19 @@ export function BannerRegisterForm() {
           <>
             <div className="text-center">
               <div className="text-5xl mb-2">🏦</div>
-              <h2 className="text-lg font-bold text-brand-900">Chuyển khoản theo thông tin bên dưới</h2>
+              <h2 className="text-lg font-bold text-brand-900">{t("step4Title")} theo thông tin bên dưới</h2>
               <p className="text-sm text-brand-500 mt-0.5">
                 Sau khi chuyển khoản, ban quản trị sẽ xác nhận trong vòng 24h.
               </p>
             </div>
 
             <div className="rounded-xl border-2 border-brand-300 bg-brand-50/30 p-5 space-y-3 text-sm">
-              <BankRow label="Ngân hàng" value={bankInfo.bankName} />
-              <BankRow label="Số tài khoản" value={bankInfo.accountNumber} mono />
-              <BankRow label="Chủ tài khoản" value={bankInfo.accountName} />
-              <BankRow label="Số tiền" value={formatVnd(bankInfo.amount)} highlight />
+              <BankRow label={t("bankLabel")} value={bankInfo.bankName} />
+              <BankRow label={t("accountNumber")} value={bankInfo.accountNumber} mono />
+              <BankRow label={t("accountHolder")} value={bankInfo.accountName} />
+              <BankRow label={t("amountLabel")} value={formatVnd(bankInfo.amount)} highlight />
               <div>
-                <p className="text-xs text-brand-600 mb-1">Nội dung CK (quan trọng — copy chính xác)</p>
+                <p className="text-xs text-brand-600 mb-1">{t("transferDescLabel")} (quan trọng — copy chính xác)</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 rounded-lg bg-white border border-brand-200 px-3 py-2 text-sm font-bold text-brand-900">
                     {bankInfo.description}
@@ -547,7 +551,7 @@ export function BannerRegisterForm() {
                     onClick={handleCopyDescription}
                     className="rounded-lg bg-brand-700 text-white px-3 py-2 text-xs font-semibold hover:bg-brand-800"
                   >
-                    {copied ? "Đã copy ✓" : "Copy"}
+                    {copied ? t("copied") : "Copy"}
                   </button>
                 </div>
               </div>

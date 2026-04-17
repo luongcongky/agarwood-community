@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import QRCode from "qrcode"
 import { prisma } from "@/lib/prisma"
@@ -7,9 +8,9 @@ import { MemberCardFront } from "@/components/features/member-card/MemberCardFro
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { PrintButton } from "./PrintButton"
 
-export const metadata = {
-  title: "In thẻ Hội viên",
-  robots: { index: false, follow: false },
+export async function generateMetadata() {
+  const t = await getTranslations("printCard")
+  return { title: t("title"), robots: { index: false, follow: false } }
 }
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://hoitramhuong.vn"
@@ -19,6 +20,8 @@ export default async function PrintMemberCardPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const tP = await getTranslations("printCard")
+
   const { id } = await params
 
   const [member, businessThresholds, individualThresholds, configs] =

@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
 import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -43,8 +45,10 @@ async function deleteOrphanedImages(beforeUrls: string[], afterHtml: string) {
 // ─── Page Component ──────────────────────────────────────────────────────────
 
 export default function TaoBaiPage() {
+  const t = useTranslations("postEditor")
+
   return (
-    <Suspense fallback={<div className="max-w-3xl mx-auto py-12 text-center text-brand-400">Đang tải...</div>}>
+    <Suspense fallback={<div className="max-w-3xl mx-auto py-12 text-center text-brand-400">{t("loading")}</div>}>
       <TaoBaiContent />
     </Suspense>
   )
@@ -52,17 +56,20 @@ export default function TaoBaiPage() {
 
 type PostCategoryClient = "GENERAL" | "NEWS" | "PRODUCT"
 
-const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
-  { value: "GENERAL", label: "Bài viết chung", hint: "Hiển thị ở Bản tin hội viên" },
-  { value: "NEWS",    label: "Tin doanh nghiệp", hint: "Có thể lên section tin DN trang chủ (nếu là Hội viên)" },
-  { value: "PRODUCT", label: "Sản phẩm", hint: "Tạo sản phẩm mới — kèm thẻ giá, chứng nhận, liên kết marketplace" },
-]
+// CATEGORY_OPTIONS moved inside component to access t()
 
 type QuotaInfo = { used: number; limit: number; remaining: number; resetAt: string }
 
 function TaoBaiContent() {
+  const t = useTranslations("postEditor")
   const router = useRouter()
   const searchParams = useSearchParams()
+  const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
+    { value: "GENERAL", label: t("categoryGeneral"), hint: t("categoryGeneralHint") },
+    { value: "NEWS",    label: t("categoryNews"), hint: t("categoryNewsHint") },
+    { value: "PRODUCT", label: t("categoryProduct"), hint: t("categoryProductHint") },
+  ]
+
   const editId = searchParams.get("edit")
   const initialCategory = searchParams.get("category") as PostCategoryClient | null
   const editorRef = useRef<RichTextEditorHandle>(null)
@@ -170,7 +177,7 @@ function TaoBaiContent() {
           setEditLoaded(true)
         }
       } catch {
-        setError("Không thể tải bài viết.")
+        setError(t("loadError"))
       }
     }
     loadPost()
@@ -211,7 +218,7 @@ function TaoBaiContent() {
       editor.chain().focus().setImage({ src: imgUrl }).run()
       setUploadedImages((prev) => [...prev, imgUrl])
     } catch {
-      setError("Tải ảnh thất bại. Vui lòng thử lại.")
+      setError(t("uploadFailed"))
     } finally {
       setUploadingImage(false)
     }
@@ -228,7 +235,7 @@ function TaoBaiContent() {
       const res = await fetch("/api/upload/docx", { method: "POST", body: formData })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error ?? "Import thất bại")
+        setError(data.error ?? t("importFailed"))
         return
       }
       const data = await res.json()
@@ -329,10 +336,10 @@ function TaoBaiContent() {
           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Quay lại feed
+          {t("backToFeed")}
         </button>
         <span className="text-brand-500">/</span>
-        <h1 className="font-semibold text-brand-900 text-lg">{editId ? "Chỉnh sửa bài viết" : "Tạo bài viết mới"}</h1>
+        <h1 className="font-semibold text-brand-900 text-lg">{editId ? t("editTitle") : "Tạo bài viết mới"}</h1>
 
         {!editId && quota && (
           <span
@@ -353,7 +360,7 @@ function TaoBaiContent() {
             }
           >
             {quota.limit === -1
-              ? "Hạn mức: ∞"
+              ? t("quotaLabelUnlimited")
               : `Đã dùng ${quota.used}/${quota.limit} bài tháng này`}
           </span>
         )}
@@ -362,7 +369,7 @@ function TaoBaiContent() {
       {/* Category selector — chỉ khi tạo mới */}
       {!editId && (
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="text-xs font-medium text-brand-600 mr-1">Loại bài:</label>
+          <label className="text-xs font-medium text-brand-600 mr-1">{t("postTypeLabel")}</label>
           {CATEGORY_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -386,7 +393,7 @@ function TaoBaiContent() {
       {!editId && category === "PRODUCT" && (
         <div className="bg-white rounded-xl border border-brand-200 p-5 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-brand-900">Thông tin sản phẩm</h3>
+            <h3 className="text-sm font-semibold text-brand-900">{t("productInfoTitle")}</h3>
             <p className="text-xs text-brand-500 mt-0.5">
               Bài này sẽ đồng thời được tạo dưới dạng sản phẩm trên marketplace và hiển thị trong feed với thẻ giá + nút xem chi tiết.
             </p>
@@ -394,19 +401,19 @@ function TaoBaiContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">
-                Tên sản phẩm <span className="text-red-500">*</span>
+                {t("productNameLabel")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
-                placeholder="VD: Nhang trầm cao cấp Khánh Hòa"
+                placeholder={t("productNamePlaceholder")}
                 className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">
-                Slug (URL) <span className="text-red-500">*</span>
+                {t("slugLabel")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -421,25 +428,25 @@ function TaoBaiContent() {
               <p className="text-[11px] text-brand-400 mt-0.5">Tự sinh từ tên; có thể chỉnh thủ công.</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-brand-700 mb-1">Danh mục</label>
+              <label className="block text-xs font-medium text-brand-700 mb-1">{t("categoryLabel")}</label>
               <select
                 value={productCategory}
                 onChange={(e) => setProductCategory(e.target.value)}
                 className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm bg-white"
               >
-                <option value="">— Chọn danh mục —</option>
+                <option value="">{t("categoryPlaceholder")}</option>
                 {PRODUCT_CATEGORIES.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-brand-700 mb-1">Khoảng giá</label>
+              <label className="block text-xs font-medium text-brand-700 mb-1">{t("priceRangeLabel")}</label>
               <input
                 type="text"
                 value={productPriceRange}
                 onChange={(e) => setProductPriceRange(e.target.value)}
-                placeholder="500k - 2tr, Liên hệ,..."
+                placeholder={t("priceRangePlaceholder")}
                 className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
               />
             </div>
@@ -474,7 +481,7 @@ function TaoBaiContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             )}
-            Upload ảnh
+            {t("uploadImage")}
           </button>
           <button
             type="button"
@@ -487,7 +494,7 @@ function TaoBaiContent() {
             ) : (
               <span className="text-xs font-bold">DOC</span>
             )}
-            Import DOCX
+            {t("importDocx")}
           </button>
         </div>
       )}
@@ -521,7 +528,7 @@ function TaoBaiContent() {
         <div className="bg-white rounded-xl border border-brand-200 min-h-[300px]">
           <div
             className="px-5 py-4 min-h-[300px] prose prose-sm max-w-none text-brand-800"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml || "<p class='text-muted-foreground italic'>Chưa có nội dung...</p>") }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml || `<p class='text-muted-foreground italic'>${t("noContent")}</p>`) }}
           />
         </div>
       ) : (
@@ -540,7 +547,7 @@ function TaoBaiContent() {
         <div className="flex items-center gap-3">
           {draftSavedAt && (
             <span className="text-xs text-muted-foreground">
-              Đã lưu nháp lúc {draftSavedAt}
+              {t("draftSaved")} {draftSavedAt}
             </span>
           )}
         </div>
@@ -550,14 +557,14 @@ function TaoBaiContent() {
             onClick={() => setPreview((v) => !v)}
             className="text-sm text-brand-600 hover:text-brand-800 font-medium transition-colors"
           >
-            {preview ? "Chỉnh sửa" : "Xem trước"}
+            {preview ? t("editBtn") : "Xem trước"}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="text-sm text-muted-foreground hover:text-brand-800 transition-colors"
           >
-            Hủy
+            {t("cancelBtn")}
           </button>
           <button
             type="button"
@@ -578,7 +585,7 @@ function TaoBaiContent() {
             {submitting && (
               <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            {editId ? "Cập nhật" : "Đăng bài"}
+            {editId ? t("updateBtn") : "Đăng bài"}
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     where: { slug, isPublished: true },
     select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, logoUrl: true, coverImageUrl: true, address: true, address_en: true, address_zh: true, foundedYear: true },
   })
-  if (!company) return { title: "Không tìm thấy" }
+  if (!company) return { title: "Not found" }
   return {
     title: `${company.name} | Hội Trầm Hương Việt Nam`,
     description: company.description?.slice(0, 160) ?? undefined,
@@ -43,6 +43,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CompanyProfilePage({ params }: Props) {
+  const tC = await getTranslations("companyDetail")
+
   const locale = await getLocale() as Locale
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params

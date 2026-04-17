@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useState } from "react"
 import type { SurveyAnswers, SurveyQuestion } from "@/lib/survey/types"
 import { ResultPanel } from "./ResultPanel"
@@ -33,6 +35,8 @@ interface ContactData {
 type Step = "contact" | "questions"
 
 export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Props) {
+  const t = useTranslations("surveyForm")
+
   const isBusiness = submitterType === "BUSINESS"
 
   const [step, setStep] = useState<Step>("contact")
@@ -56,8 +60,8 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
   function goToQuestions(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    if (contact.name.trim().length < 2) return setError("Vui lòng nhập họ tên")
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) return setError("Email không hợp lệ")
+    if (contact.name.trim().length < 2) return setError(t("nameRequired"))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) return setError(t("emailInvalid"))
     if (!/^[\d\s+()-]{8,15}$/.test(contact.phone.trim())) return setError("Số điện thoại không hợp lệ")
     if (isBusiness && contact.companyName.trim().length < 2) return setError("Vui lòng nhập tên doanh nghiệp")
     setStep("questions")
@@ -86,7 +90,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Lỗi không xác định")
+      if (!res.ok) throw new Error(data.error || t("unknownError"))
       setResult({ score: data.score, recommendedTier: data.recommendedTier, contact })
       window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (e) {
@@ -110,17 +114,17 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
     return (
       <form onSubmit={goToQuestions} className="space-y-5">
         <div className="rounded-xl border border-brand-200 bg-white p-6">
-          <h2 className="font-bold text-brand-900 text-lg mb-1">Bước 1/2 — Thông tin liên hệ</h2>
+          <h2 className="font-bold text-brand-900 text-lg mb-1">{t("step1Title")}</h2>
           <p className="text-sm text-brand-500 mb-5">
             Thông tin này sẽ được dùng để cập nhật hồ sơ hội viên &amp; liên hệ tư vấn sau khi khảo sát.
           </p>
 
           <div className="space-y-4">
-            <Field label="Họ và tên *">
+            <Field label={t("nameLabel")}>
               <input required value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} className={inp} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Email *">
+              <Field label={t("emailLabel")}>
                 <input required type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} className={inp} />
               </Field>
               <Field label="Số điện thoại *">
@@ -129,12 +133,12 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
             </div>
 
             {!isBusiness && (
-              <Field label="Ảnh đại diện" hint="Ảnh chân dung, tối đa 3MB. Không bắt buộc nhưng giúp Hội nhận diện bạn tốt hơn.">
+              <Field label={t("avatarLabel")} hint="Ảnh chân dung, tối đa 3MB. Không bắt buộc nhưng giúp Hội nhận diện bạn tốt hơn.">
                 <ImageUpload
                   sub="avatar"
                   value={contact.avatarUrl}
                   onChange={(url) => setContact({ ...contact, avatarUrl: url })}
-                  label="Chọn ảnh đại diện"
+                  label={t("selectAvatar")}
                 />
               </Field>
             )}
@@ -144,12 +148,12 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
                 <Field label="Tên doanh nghiệp đang công tác *">
                   <input required value={contact.companyName} onChange={(e) => setContact({ ...contact, companyName: e.target.value })} className={inp} />
                 </Field>
-                <Field label="Logo doanh nghiệp" hint="Tối đa 3MB. Không bắt buộc.">
+                <Field label="Logo doanh nghiệp" hint={t("avatarHint")}>
                   <ImageUpload
                     sub="logo"
                     value={contact.logoUrl}
                     onChange={(url) => setContact({ ...contact, logoUrl: url })}
-                    label="Chọn ảnh logo"
+                    label={t("selectLogo")}
                   />
                 </Field>
               </>
@@ -161,7 +165,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
 
         <div className="flex items-center gap-3">
           <button type="submit" className="rounded-md bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800">
-            Tiếp tục →
+            {t("continue")}
           </button>
         </div>
       </form>
@@ -174,7 +178,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-brand-900 text-lg">Bước 2/2 — Các câu hỏi chuyên môn</h2>
         <button type="button" onClick={() => setStep("contact")} className="text-sm text-brand-600 hover:underline">
-          ← Sửa thông tin
+          {t("editInfo")}
         </button>
       </div>
 
@@ -190,7 +194,7 @@ export function SurveyTakeForm({ slug, submitterType, questions, prefill }: Prop
           disabled={submitting}
           className="rounded-md bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
         >
-          {submitting ? "Đang gửi..." : "Gửi khảo sát"}
+          {submitting ? "Đang gửi..." : t("submit")}
         </button>
       </div>
     </form>

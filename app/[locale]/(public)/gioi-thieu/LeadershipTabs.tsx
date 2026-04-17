@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useMemo, useState, useEffect } from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
@@ -130,6 +132,7 @@ function LeaderCard({
 // ── Modal ──────────────────────────────────────────────────────────────────
 
 function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => void }) {
+  const t = useTranslations("leadershipTabs")
   // Close on ESC
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -156,7 +159,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-white/90 border border-brand-200 hover:bg-brand-100 transition-colors"
-          aria-label="Đóng"
+          aria-label={t("close")}
         >
           <X className="w-5 h-5" />
         </button>
@@ -192,7 +195,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
             {leader.bio ? (
               <div className="mt-5 pt-5 border-t border-brand-200">
                 <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-                  Tiểu sử / Lý lịch trích ngang
+                  {t("biography")} / Lý lịch trích ngang
                 </p>
                 <div
                   className="prose prose-sm max-w-none text-brand-800 whitespace-pre-line leading-relaxed"
@@ -203,7 +206,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
             ) : (
               <div className="mt-5 pt-5 border-t border-brand-200">
                 <p className="text-sm italic text-brand-400">
-                  Tiểu sử đang được cập nhật.
+                  {t("biography")} đang được cập nhật.
                 </p>
               </div>
             )}
@@ -217,6 +220,8 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
 // ── Main component ─────────────────────────────────────────────────────────
 
 export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
+  const t = useTranslations("leadershipTabs")
+
   // Default tab — BTV if có, fallback sang tab đầu tiên có data
   const availableTabs = useMemo<TabKey[]>(() => {
     const all = new Set(leaders.map((l) => l.category))

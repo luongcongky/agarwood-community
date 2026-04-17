@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     where: { slug, isPublished: true },
     select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, imageUrls: true, category: true },
   })
-  if (!product) return { title: "Không tìm thấy sản phẩm" }
+  if (!product) return { title: "Not found" }
   return {
     title: `${product.name} | Hội Trầm Hương Việt Nam`,
     description: product.description?.slice(0, 160) ?? undefined,
@@ -36,6 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
+  const tP = await getTranslations("productDetail")
+
   const locale = await getLocale() as Locale
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
@@ -167,7 +169,7 @@ export default async function ProductDetailPage({ params }: Props) {
                       {product.company!.name}
                     </Link>
                     {product.company!.isVerified && (
-                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">✓ Đã xác minh</span>
+                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">{tP("verified")}</span>
                     )}
                   </>
                 ) : (
@@ -183,7 +185,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     </div>
                     <span className="text-sm text-brand-600">{product.owner.name}</span>
                     {product.owner.role === "VIP" && (
-                      <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Hội viên</span>
+                      <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">{tP("member")}</span>
                     )}
                   </>
                 )}
@@ -302,7 +304,7 @@ export default async function ProductDetailPage({ params }: Props) {
       {/* Related products — outside the card, on page background */}
       {relatedProducts.length > 0 && (
         <section className="pt-8">
-          <h2 className="text-xl font-semibold text-brand-900 mb-5">Sản phẩm liên quan</h2>
+          <h2 className="text-xl font-semibold text-brand-900 mb-5">{tP("relatedProducts")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {relatedProducts.map((rp) => {
               const rpImages = rp.imageUrls as string[]

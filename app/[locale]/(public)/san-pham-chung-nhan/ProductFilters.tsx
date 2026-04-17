@@ -1,5 +1,7 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import { cn } from "@/lib/utils"
@@ -13,6 +15,8 @@ type Props = {
 }
 
 export function ProductFilters({ categories, provinces, totalProducts, totalCompanies, lastUpdated }: Props) {
+  const t = useTranslations("productFilters")
+
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -50,14 +54,14 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
           {/* Loại */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
-              Loại:
+              {t("typeLabel")}
             </span>
             <div className="flex gap-1.5 flex-wrap">
               <button
                 onClick={() => update({ loai: "" })}
                 className={cn(chipBase, !loai ? chipActive : chipInactive)}
               >
-                Tất cả
+                {t("all")}
               </button>
               {categories.map((cat) => (
                 <button
@@ -74,14 +78,14 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
           {/* Vùng + Tìm kiếm */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-brand-500 uppercase tracking-wide w-10 shrink-0">
-              Vùng:
+              {t("regionLabel")}
             </span>
             <div className="flex gap-1.5 flex-wrap flex-1">
               <button
                 onClick={() => update({ vung: "" })}
                 className={cn(chipBase, !vung ? chipActive : chipInactive)}
               >
-                Tất cả
+                {t("all")}
               </button>
               {provinces.map((p) => (
                 <button
@@ -105,7 +109,7 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
                 <input
                   name="q"
                   defaultValue={q}
-                  placeholder="🔍 Tìm kiếm..."
+                  placeholder={t("searchPlaceholder")}
                   className="rounded-full border border-brand-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent w-36 sm:w-48"
                 />
               </form>
@@ -120,12 +124,12 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
 
           {/* Sort */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-sm text-brand-500 mr-1">Sắp xếp:</span>
+            <span className="text-sm text-brand-500 mr-1">{t("sortLabel")}</span>
             {[
-              { value: "moi-nhat", label: "Mới nhất" },
-              { value: "ten-az", label: "Tên A–Z" },
-              { value: "cong-ty", label: "Công ty" },
-              { value: "noi-bat", label: "Nổi bật" },
+              { value: "moi-nhat", label: t("sortNewest") },
+              { value: "ten-az", label: t("sortName") },
+              { value: "cong-ty", label: t("sortCompany") },
+              { value: "noi-bat", label: t("sortFeatured") },
             ].map((opt) => (
               <button
                 key={opt.value}
@@ -145,17 +149,17 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
           {/* Trust bar + View toggle */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-brand-500 hidden sm:block">
-              <span className="font-semibold text-brand-700">{totalProducts}</span> sản phẩm
+              <span className="font-semibold text-brand-700">{totalProducts}</span> {t("products")}
               {" · "}
-              <span className="font-semibold text-brand-700">{totalCompanies}</span> doanh nghiệp
+              <span className="font-semibold text-brand-700">{totalCompanies}</span> {t("companies")}
               {" · "}
-              Cập nhật {lastUpdated}
+              {t("updated")} {lastUpdated}
             </span>
 
             <div className="flex items-center gap-1 border border-brand-200 rounded-lg overflow-hidden bg-white">
               <button
                 onClick={() => update({ view: "grid" })}
-                title="Dạng lưới"
+                title={t("gridView")}
                 className={cn(
                   "px-3 py-1.5 text-sm transition-colors",
                   view !== "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
@@ -165,7 +169,7 @@ export function ProductFilters({ categories, provinces, totalProducts, totalComp
               </button>
               <button
                 onClick={() => update({ view: "list" })}
-                title="Dạng danh sách"
+                title={t("listView")}
                 className={cn(
                   "px-3 py-1.5 text-sm transition-colors",
                   view === "list" ? "bg-brand-800 text-white" : "text-brand-600 hover:bg-brand-50"
