@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import type { QuestionType, SurveyQuestion } from "@/lib/survey/types"
 import { listAllowedFields } from "@/lib/survey/allowed-fields"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { MultiLangInput, MultiLangTextarea } from "@/components/ui/multi-lang-input"
 
 interface Props {
   /** undefined = create mode */
@@ -41,7 +42,11 @@ export function SurveyEditor({ initial }: Props) {
   const readOnly = useAdminReadOnly()
   const [slug, setSlug] = useState(initial?.slug ?? "")
   const [title, setTitle] = useState(initial?.title ?? "")
+  const [title_en, setTitleEn] = useState((initial as Record<string, unknown>)?.title_en as string ?? "")
+  const [title_zh, setTitleZh] = useState((initial as Record<string, unknown>)?.title_zh as string ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
+  const [description_en, setDescriptionEn] = useState((initial as Record<string, unknown>)?.description_en as string ?? "")
+  const [description_zh, setDescriptionZh] = useState((initial as Record<string, unknown>)?.description_zh as string ?? "")
   const [audience, setAudience] = useState(initial?.audience ?? "BOTH_VIP")
   const [status, setStatus] = useState(initial?.status ?? "DRAFT")
   const [questions, setQuestions] = useState<SurveyQuestion[]>(initial?.questions ?? [])
@@ -75,7 +80,11 @@ export function SurveyEditor({ initial }: Props) {
     const body = {
       slug,
       title,
+      title_en: title_en || null,
+      title_zh: title_zh || null,
       description,
+      description_en: description_en || null,
+      description_zh: description_zh || null,
       audience,
       status,
       questions,
@@ -113,16 +122,34 @@ export function SurveyEditor({ initial }: Props) {
       <section className="rounded-xl border border-brand-200 bg-white p-5 space-y-4">
         <h2 className="font-semibold text-brand-900">Thông tin chung</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tiêu đề *">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inp} />
-          </Field>
+          <MultiLangInput
+            name="title"
+            label="Tiêu đề *"
+            values={{ vi: title, en: title_en, zh: title_zh }}
+            onChange={(key, value) => {
+              if (key === "title") setTitle(value)
+              else if (key === "title_en") setTitleEn(value)
+              else if (key === "title_zh") setTitleZh(value)
+            }}
+            placeholder="Tiêu đề khảo sát"
+            required
+          />
           <Field label="Slug (URL) *" hint="VD: khao-sat-hoi-vien-2026">
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={inp} disabled={!!initial} />
           </Field>
         </div>
-        <Field label="Mô tả">
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={inp} rows={3} />
-        </Field>
+        <MultiLangTextarea
+          name="description"
+          label="Mô tả"
+          values={{ vi: description, en: description_en, zh: description_zh }}
+          onChange={(key, value) => {
+            if (key === "description") setDescription(value)
+            else if (key === "description_en") setDescriptionEn(value)
+            else if (key === "description_zh") setDescriptionZh(value)
+          }}
+          placeholder="Mô tả khảo sát"
+          rows={3}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Đối tượng">
             <select value={audience} onChange={(e) => setAudience(e.target.value)} className={inp}>

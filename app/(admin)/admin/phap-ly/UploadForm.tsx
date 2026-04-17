@@ -149,6 +149,34 @@ export function UploadForm() {
         />
       </div>
 
+      {/* i18n fields */}
+      <details className="rounded-lg border border-brand-200 bg-brand-50/50">
+        <summary className="px-4 py-3 cursor-pointer text-xs font-semibold text-brand-700 hover:bg-brand-100 rounded-lg">
+          🌐 Bản dịch (EN / 中文) — không bắt buộc
+        </summary>
+        <div className="px-4 pb-4 space-y-3">
+          <p className="text-[11px] text-brand-500">Nếu để trống, trang sẽ hiển thị nội dung tiếng Việt.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-brand-700 mb-1">🇬🇧 Tiêu đề (EN)</label>
+              <input type="text" name="title_en" placeholder="English title" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-brand-700 mb-1">🇨🇳 Tiêu đề (中文)</label>
+              <input type="text" name="title_zh" placeholder="中文标题" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-brand-700 mb-1">🇬🇧 Mô tả (EN)</label>
+              <textarea name="description_en" rows={2} placeholder="English description" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-brand-700 mb-1">🇨🇳 Mô tả (中文)</label>
+              <textarea name="description_zh" rows={2} placeholder="中文描述" className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none resize-none" />
+            </div>
+          </div>
+        </div>
+      </details>
+
       {/* File */}
       <div>
         <label className="block text-xs font-medium text-brand-700 mb-1">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { MultiLangInput, MultiLangTextarea, extractLangValues } from "@/components/ui/multi-lang-input"
 
 type LeaderCategory = "BTV" | "BCH" | "BKT"
 
@@ -24,11 +25,19 @@ type Leader = {
 
 type FormData = {
   name: string
+  name_en: string
+  name_zh: string
   honorific: string
   title: string
+  title_en: string
+  title_zh: string
   category: LeaderCategory
   workTitle: string
+  workTitle_en: string
+  workTitle_zh: string
   bio: string
+  bio_en: string
+  bio_zh: string
   photoUrl: string
   term: string
   sortOrder: number
@@ -36,11 +45,19 @@ type FormData = {
 
 const EMPTY_FORM: FormData = {
   name: "",
+  name_en: "",
+  name_zh: "",
   honorific: "Ông",
   title: "",
+  title_en: "",
+  title_zh: "",
   category: "BCH",
   workTitle: "",
+  workTitle_en: "",
+  workTitle_zh: "",
   bio: "",
+  bio_en: "",
+  bio_zh: "",
   photoUrl: "",
   term: "",
   sortOrder: 0,
@@ -91,11 +108,19 @@ export function LeaderManager({
     setEditing(leader.id)
     setForm({
       name: leader.name,
+      name_en: (leader as Record<string, unknown>).name_en as string ?? "",
+      name_zh: (leader as Record<string, unknown>).name_zh as string ?? "",
       honorific: leader.honorific ?? "Ông",
       title: leader.title,
+      title_en: (leader as Record<string, unknown>).title_en as string ?? "",
+      title_zh: (leader as Record<string, unknown>).title_zh as string ?? "",
       category: leader.category,
       workTitle: leader.workTitle ?? "",
+      workTitle_en: (leader as Record<string, unknown>).workTitle_en as string ?? "",
+      workTitle_zh: (leader as Record<string, unknown>).workTitle_zh as string ?? "",
       bio: leader.bio ?? "",
+      bio_en: (leader as Record<string, unknown>).bio_en as string ?? "",
+      bio_zh: (leader as Record<string, unknown>).bio_zh as string ?? "",
       photoUrl: leader.photoUrl ?? "",
       term: leader.term,
       sortOrder: leader.sortOrder,
@@ -184,32 +209,22 @@ export function LeaderManager({
               <option value="">(Không hiển thị)</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Họ tên *
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="VD: Phạm Văn Du"
-            />
-          </div>
+          <MultiLangInput
+            name="name"
+            label="Họ tên *"
+            values={extractLangValues(form as unknown as Record<string, unknown>, "name")}
+            onChange={(key, value) => setForm({ ...form, [key]: value })}
+            placeholder="VD: Phạm Văn Du"
+          />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Chức danh trong Hội *
-            </label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="VD: Chủ tịch, Phó Chủ tịch, Ủy viên..."
-            />
-          </div>
+          <MultiLangInput
+            name="title"
+            label="Chức danh trong Hội *"
+            values={extractLangValues(form as unknown as Record<string, unknown>, "title")}
+            onChange={(key, value) => setForm({ ...form, [key]: value })}
+            placeholder="VD: Chủ tịch, Phó Chủ tịch, Ủy viên..."
+          />
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
               Nhóm *
@@ -238,14 +253,11 @@ export function LeaderManager({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Chức vụ đơn vị công tác
-            </label>
-            <input
-              type="text"
-              value={form.workTitle}
-              onChange={(e) => setForm({ ...form, workTitle: e.target.value })}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            <MultiLangInput
+              name="workTitle"
+              label="Chức vụ đơn vị công tác"
+              values={extractLangValues(form as unknown as Record<string, unknown>, "workTitle")}
+              onChange={(key, value) => setForm({ ...form, [key]: value })}
               placeholder="VD: Giám đốc Công ty TNHH..."
             />
           </div>
@@ -274,15 +286,13 @@ export function LeaderManager({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs font-medium text-muted-foreground mb-1">
-              Tiểu sử
-            </label>
-            <textarea
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              rows={3}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+            <MultiLangTextarea
+              name="bio"
+              label="Tiểu sử"
+              values={extractLangValues(form as unknown as Record<string, unknown>, "bio")}
+              onChange={(key, value) => setForm({ ...form, [key]: value })}
               placeholder="Mô tả ngắn về vai trò, kinh nghiệm..."
+              rows={3}
             />
           </div>
         </div>

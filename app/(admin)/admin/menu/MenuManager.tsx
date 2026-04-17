@@ -3,11 +3,14 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { MultiLangInput, extractLangValues } from "@/components/ui/multi-lang-input"
 
 type Item = {
   id: string
   menuKey: string | null
   label: string
+  label_en: string | null
+  label_zh: string | null
   href: string
   parentId: string | null
   sortOrder: number
@@ -24,6 +27,8 @@ type FormState = Omit<Item, "id" | "createdAt" | "updatedAt"> & { id?: string }
 
 const EMPTY_FORM: FormState = {
   label: "",
+  label_en: null,
+  label_zh: null,
   href: "",
   menuKey: null,
   parentId: null,
@@ -160,15 +165,14 @@ export function MenuManager({ initialItems }: { initialItems: Item[] }) {
           {form.id ? "Sửa menu" : "Tạo menu mới"}
         </h2>
 
-        <Field label="Label">
-          <input
-            value={form.label}
-            onChange={(e) => setForm({ ...form, label: e.target.value })}
-            disabled={readOnly}
-            className="input"
-            placeholder="MXH Trầm Hương"
-          />
-        </Field>
+        <MultiLangInput
+          name="label"
+          label="Label"
+          values={extractLangValues(form as unknown as Record<string, unknown>, "label")}
+          onChange={(key, value) => setForm({ ...form, [key]: value })}
+          placeholder="MXH Trầm Hương"
+          disabled={readOnly}
+        />
 
         <Field label="Href (đường dẫn)">
           <input

@@ -12,6 +12,7 @@ import {
 import { slugify } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 import { CoverImageCropper } from "@/components/ui/CoverImageCropper"
+import { MultiLangInput, MultiLangTextarea } from "@/components/ui/multi-lang-input"
 
 interface NewsData {
   title: string
@@ -36,8 +37,12 @@ export default function NewsEditorPage({
   const readOnly = useAdminReadOnly()
 
   const [title, setTitle] = useState("")
+  const [title_en, setTitleEn] = useState("")
+  const [title_zh, setTitleZh] = useState("")
   const [slug, setSlug] = useState("")
   const [excerpt, setExcerpt] = useState("")
+  const [excerpt_en, setExcerptEn] = useState("")
+  const [excerpt_zh, setExcerptZh] = useState("")
   const [coverImageUrl, setCoverImageUrl] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState("")
@@ -46,6 +51,8 @@ export default function NewsEditorPage({
   const [isPinned, setIsPinned] = useState(false)
   const [publishedAt, setPublishedAt] = useState("")
   const [initialContent, setInitialContent] = useState<string>("")
+  const [content_en, setContentEn] = useState("")
+  const [content_zh, setContentZh] = useState("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
@@ -78,6 +85,14 @@ export default function NewsEditorPage({
             : ""
         )
         setInitialContent(news.content ?? "")
+        // i18n fields
+        const n = news as unknown as Record<string, unknown>
+        setTitleEn((n.title_en as string) ?? "")
+        setTitleZh((n.title_zh as string) ?? "")
+        setExcerptEn((n.excerpt_en as string) ?? "")
+        setExcerptZh((n.excerpt_zh as string) ?? "")
+        setContentEn((n.content_en as string) ?? "")
+        setContentZh((n.content_zh as string) ?? "")
       } finally {
         setFetching(false)
       }
@@ -170,10 +185,16 @@ export default function NewsEditorPage({
 
       const body = {
         title,
+        title_en: title_en || null,
+        title_zh: title_zh || null,
         slug,
         excerpt,
+        excerpt_en: excerpt_en || null,
+        excerpt_zh: excerpt_zh || null,
         coverImageUrl: finalCoverUrl,
         content,
+        content_en: content_en || null,
+        content_zh: content_zh || null,
         category,
         isPublished,
         isPinned,
@@ -251,18 +272,18 @@ export default function NewsEditorPage({
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
               {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-brand-800 mb-1">
-                  Tiêu đề *
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                />
-              </div>
+              <MultiLangInput
+                name="title"
+                label="Tiêu đề *"
+                values={{ vi: title, en: title_en, zh: title_zh }}
+                onChange={(key, value) => {
+                  if (key === "title") handleTitleChange(value)
+                  else if (key === "title_en") setTitleEn(value)
+                  else if (key === "title_zh") setTitleZh(value)
+                }}
+                placeholder="Tiêu đề bài viết"
+                required
+              />
 
               {/* Slug */}
               <div>
@@ -278,17 +299,18 @@ export default function NewsEditorPage({
               </div>
 
               {/* Excerpt */}
-              <div>
-                <label className="block text-sm font-medium text-brand-800 mb-1">
-                  Tóm tắt
-                </label>
-                <textarea
-                  value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
-                />
-              </div>
+              <MultiLangTextarea
+                name="excerpt"
+                label="Tóm tắt"
+                values={{ vi: excerpt, en: excerpt_en, zh: excerpt_zh }}
+                onChange={(key, value) => {
+                  if (key === "excerpt") setExcerpt(value)
+                  else if (key === "excerpt_en") setExcerptEn(value)
+                  else if (key === "excerpt_zh") setExcerptZh(value)
+                }}
+                placeholder="Tóm tắt nội dung"
+                rows={3}
+              />
 
               {/* Cover image — file picker */}
               <div>
@@ -362,6 +384,47 @@ export default function NewsEditorPage({
 
             {/* Rich text editor */}
             <RichTextEditor ref={editorRef} initialContent={initialContent} uploadFolder="tin-tuc" />
+
+            {/* Translated content (EN / ZH) */}
+            <details className="rounded-xl border bg-white shadow-sm">
+              <summary className="px-6 py-4 cursor-pointer text-sm font-semibold text-brand-800 hover:bg-brand-50 rounded-xl">
+                🌐 Nội dung bản dịch (EN / 中文)
+                {(content_en || content_zh) && (
+                  <span className="ml-2 text-xs font-normal text-emerald-600">
+                    {[content_en && "EN", content_zh && "中文"].filter(Boolean).join(" + ")} đã có
+                  </span>
+                )}
+              </summary>
+              <div className="px-6 pb-6 space-y-4">
+                <p className="text-xs text-brand-500">
+                  Dán nội dung HTML đã dịch. Nếu để trống, trang sẽ hiển thị nội dung tiếng Việt.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-brand-800 mb-1">
+                    🇬🇧 Content (English)
+                  </label>
+                  <textarea
+                    value={content_en}
+                    onChange={(e) => setContentEn(e.target.value)}
+                    rows={8}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
+                    placeholder="Paste translated HTML content here..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-brand-800 mb-1">
+                    🇨🇳 Content (中文)
+                  </label>
+                  <textarea
+                    value={content_zh}
+                    onChange={(e) => setContentZh(e.target.value)}
+                    rows={8}
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
+                    placeholder="在此粘贴翻译后的HTML内容..."
+                  />
+                </div>
+              </div>
+            </details>
           </div>
 
           {/* Sidebar */}
