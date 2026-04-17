@@ -1,35 +1,24 @@
 import Link from "next/link"
 import Image from "next/image"
-import type { Metadata } from "next"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 import { getTierThresholds } from "@/lib/tier"
 
 export const revalidate = 600
 
-export const metadata: Metadata = {
-  title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
-  description:
-    "Quyền lợi dành cho hội viên: hiển thị nổi bật trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới doanh nghiệp trầm hương toàn quốc.",
-  alternates: { canonical: "/landing" },
-  openGraph: {
-    title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
-    description:
-      "Hơn 100 doanh nghiệp trầm hương đã tham gia. Hiển thị trang chủ, chứng nhận sản phẩm, banner quảng cáo và mạng lưới đối tác toàn quốc. Quyền lợi bổ sung trên nền tảng số cho hội viên.",
-    type: "website",
-    images: [
-      {
-        url: "/landing-og.jpg",
-        width: 1200,
-        height: 630,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Quyền lợi Hội viên — Hội Trầm Hương Việt Nam",
-    description:
-      "Quyền lợi dành cho hội viên: hiển thị nổi bật trang chủ, chứng nhận sản phẩm và nhiều ưu đãi khác trên nền tảng số.",
-  },
+export async function generateMetadata() {
+  const t = await getTranslations("landing")
+  return {
+    title: t("metaTitle"),
+    description: t("metaDesc"),
+    alternates: { canonical: "/landing" },
+    openGraph: {
+      title: t("metaTitle"),
+      description: t("metaDesc"),
+      type: "website",
+      images: [{ url: "/landing-og.jpg", width: 1200, height: 630 }],
+    },
+  }
 }
 
 function formatVnd(n: number): string {
@@ -39,6 +28,9 @@ function formatVnd(n: number): string {
 }
 
 export default async function LandingPage() {
+  const t = await getTranslations("landing")
+  const tc = await getTranslations("common")
+
   const [
     vipCount,
     productCount,
@@ -53,38 +45,18 @@ export default async function LandingPage() {
     prisma.company.count({ where: { isPublished: true } }),
     prisma.news.count({ where: { isPublished: true, category: "RESEARCH" } }),
     prisma.company.findMany({
-      where: {
-        isFeatured: true,
-        isPublished: true,
-        owner: { role: "VIP" },
-      },
+      where: { isFeatured: true, isPublished: true, owner: { role: "VIP" } },
       orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
       take: 10,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        logoUrl: true,
-        isVerified: true,
-      },
+      select: { id: true, name: true, slug: true, logoUrl: true, isVerified: true },
     }),
     prisma.product.findMany({
-      where: {
-        isFeatured: true,
-        isPublished: true,
-        owner: { role: { in: ["VIP", "ADMIN"] } },
-      },
+      where: { isFeatured: true, isPublished: true, owner: { role: { in: ["VIP", "ADMIN"] } } },
       orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
       take: 20,
       select: {
-        id: true,
-        name: true,
-        slug: true,
-        imageUrls: true,
-        priceRange: true,
-        certStatus: true,
-        owner: { select: { name: true } },
-        company: { select: { name: true } },
+        id: true, name: true, slug: true, imageUrls: true, priceRange: true, certStatus: true,
+        owner: { select: { name: true } }, company: { select: { name: true } },
       },
     }),
     getTierThresholds("BUSINESS"),
@@ -96,8 +68,7 @@ export default async function LandingPage() {
     name: "Hội Trầm Hương Việt Nam",
     alternateName: "VAWA — Vietnam Agarwood Association",
     url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://hoitramhuong.vn",
-    description:
-      "Cộng đồng kết nối, chứng nhận và truyền thông sản phẩm trầm hương Việt Nam.",
+    description: tc("siteDescription"),
     foundingDate: "2010-01-11",
     address: {
       "@type": "PostalAddress",
@@ -106,79 +77,69 @@ export default async function LandingPage() {
       addressCountry: "VN",
     },
     sameAs: ["https://www.facebook.com/hoitramhuongvietnam.org"],
-    member: {
-      "@type": "QuantitativeValue",
-      value: vipCount,
-      unitText: "doanh nghiệp hội viên",
-    },
+    member: { "@type": "QuantitativeValue", value: vipCount, unitText: "members" },
   }
 
-  // Tài khoản cơ bản — tách biệt khỏi các gói hội viên
   const basicAccount = {
-    name: "Tài khoản cơ bản",
-    stars: "—",
-    price: "Miễn phí",
+    name: t("basicTitle"),
+    price: t("basicPrice"),
     color: "border-brand-200 bg-white",
     features: {
-      quota: "5 bài/tháng",
-      homepage: false,
-      certification: false,
-      bannerQuota: "1 mẫu/tháng",
-      prioritySupport: false,
-      verifiedBadge: false,
+      quota: t("quota5"), homepage: false, certification: false,
+      bannerQuota: t("banner1"), prioritySupport: false, verifiedBadge: false,
     },
-    cta: { label: "Đăng ký tài khoản ngay", href: "/dang-ky" },
+    cta: { label: t("basicCta"), href: "/dang-ky" },
   }
 
-  // Tier comparison data — quota từ Phase 2 + Phase 6 banner quota
   const tiers = [
     {
-      name: "Hội viên ★",
-      stars: "★",
-      price: "Hội phí cơ bản",
+      name: t("tierStar1"), stars: "★",
+      price: t("tierStar1Price"),
       color: "border-brand-300 bg-brand-50",
       features: {
-        quota: "15 bài/tháng",
-        homepage: true,
-        certification: true,
-        bannerQuota: "5 mẫu/tháng",
-        prioritySupport: false,
-        verifiedBadge: true,
+        quota: t("quota15"), homepage: true, certification: true,
+        bannerQuota: t("banner5"), prioritySupport: false, verifiedBadge: true,
       },
-      cta: { label: "Đăng ký Hội viên", href: "/dang-ky" },
+      cta: { label: t("tierStar1Cta"), href: "/dang-ky" },
     },
     {
-      name: "Hội viên ★★ Bạc",
-      stars: "★★",
-      price: `Tổng đóng góp từ ${formatVnd(businessThresholds.silver)}đ`,
+      name: t("tierStar2"), stars: "★★",
+      price: t("tierStar2Price", { amount: formatVnd(businessThresholds.silver) }),
       color: "border-amber-300 bg-amber-50 ring-2 ring-amber-200",
       popular: true,
       features: {
-        quota: "30 bài/tháng",
-        homepage: true,
-        certification: true,
-        bannerQuota: "10 mẫu/tháng",
-        prioritySupport: true,
-        verifiedBadge: true,
+        quota: t("quota30"), homepage: true, certification: true,
+        bannerQuota: t("banner10"), prioritySupport: true, verifiedBadge: true,
       },
-      cta: { label: "Đăng ký Hội viên Bạc", href: "/dang-ky" },
+      cta: { label: t("tierStar2Cta"), href: "/dang-ky" },
     },
     {
-      name: "Hội viên ★★★ Vàng",
-      stars: "★★★",
-      price: `Tổng đóng góp từ ${formatVnd(businessThresholds.gold)}đ`,
+      name: t("tierStar3"), stars: "★★★",
+      price: t("tierStar3Price", { amount: formatVnd(businessThresholds.gold) }),
       color: "border-yellow-400 bg-yellow-50",
       features: {
-        quota: "Không giới hạn",
-        homepage: true,
-        certification: true,
-        bannerQuota: "20 mẫu/tháng",
-        prioritySupport: true,
-        verifiedBadge: true,
+        quota: t("quotaUnlimited"), homepage: true, certification: true,
+        bannerQuota: t("banner20"), prioritySupport: true, verifiedBadge: true,
       },
-      cta: { label: "Đăng ký Hội viên Vàng", href: "/dang-ky" },
+      cta: { label: t("tierStar3Cta"), href: "/dang-ky" },
     },
   ] as const
+
+  const stats = [
+    { value: vipCount, label: t("statMembers"), icon: "👥", href: "/hoi-vien" },
+    { value: companyCount, label: t("statCompanies"), icon: "🏢", href: "/doanh-nghiep" },
+    { value: productCount, label: t("statProducts"), icon: "✓", href: "/san-pham-chung-nhan" },
+    { value: researchCount, label: t("statResearch"), icon: "📰", href: "/nghien-cuu" },
+  ]
+
+  const featureLabels = {
+    quota: t("featureQuota"),
+    homepage: t("featureHomepage"),
+    cert: t("featureCert"),
+    badge: t("featureBadge"),
+    banner: t("featureBanner"),
+    support: t("featureSupport"),
+  }
 
   return (
     <div className="min-h-screen bg-brand-50/60">
@@ -187,70 +148,62 @@ export default async function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      {/* ── Page Banner ─────────────────────────────────────────────────── */}
+      {/* ── Page Banner ── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <Image
           src="/logo.png"
-          alt="Hội Trầm Hương Việt Nam"
+          alt={tc("siteName")}
           width={96}
           height={96}
           className="h-20 w-20 mx-auto mb-3"
           priority
         />
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Quyền lợi Hội viên</h1>
-        <p className="mt-2 text-brand-300 text-base">
-          Đặc quyền độc quyền dành cho doanh nghiệp trầm hương Việt Nam
-        </p>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("bannerTitle")}</h1>
+        <p className="mt-2 text-brand-300 text-base">{t("bannerSubtitle")}</p>
       </div>
 
-      {/* ── Content card — nền trắng bọc toàn bộ nội dung giữa banner và CTA cuối ── */}
+      {/* ── Content card ── */}
       <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
 
-      {/* ── Hero intro + CTAs ───────────────────────────────────────────── */}
+      {/* ── Hero intro + CTAs ── */}
       <section className="py-12 lg:py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl lg:text-4xl leading-tight">
-            Đưa thương hiệu trầm hương của bạn{" "}
-            <span className="text-brand-700">vươn tầm quốc gia</span>
+            {t("heroHeading")}{" "}
+            <span className="text-brand-700">{t("heroHighlight")}</span>
           </h2>
-          <p className="mt-4 mx-auto max-w-2xl text-base sm:text-lg text-brand-600">
-            Tham gia cộng đồng <strong className="text-brand-900">{vipCount}+ hội viên</strong>{" "}
-            trầm hương uy tín nhất Việt Nam. Hiển thị trang chủ, chứng nhận sản phẩm,
-            banner quảng cáo và mạng lưới đối tác toàn quốc.
-          </p>
+          <p
+            className="mt-4 mx-auto max-w-2xl text-base sm:text-lg text-brand-600"
+            dangerouslySetInnerHTML={{
+              __html: t("heroDesc", { count: vipCount }),
+            }}
+          />
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/dang-ky"
               className="inline-flex items-center justify-center rounded-lg bg-brand-700 px-8 py-5 text-base font-bold text-white shadow-sm transition-all hover:bg-brand-800 hover:shadow-md hover:-translate-y-0.5"
             >
-              Đăng ký Hội viên →
+              {t("heroCta")}
             </Link>
             <Link
               href="#tier-comparison"
               className="inline-flex items-center justify-center rounded-lg border-2 border-brand-300 px-8 py-5 text-base font-medium text-brand-700 transition-colors hover:bg-brand-50"
             >
-              Xem các gói hội viên
+              {t("heroCtaSecondary")}
             </Link>
           </div>
 
-          <p className="mt-5 text-xs text-brand-500">
-            Đăng ký tài khoản ngay • Miễn phí • Không cần thẻ tín dụng
-          </p>
+          <p className="mt-5 text-xs text-brand-500">{t("heroNote")}</p>
         </div>
       </section>
 
-      {/* ── Stats Bar ────────────────────────────────────────────────────── */}
+      {/* ── Stats Bar ── */}
       <section className="border-t border-brand-100">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
-            {[
-              { value: vipCount, label: "Hội viên", icon: "👥", href: "/hoi-vien" },
-              { value: companyCount, label: "Doanh nghiệp", icon: "🏢", href: "/doanh-nghiep" },
-              { value: productCount, label: "SP đã chứng nhận", icon: "✓", href: "/san-pham-chung-nhan" },
-              { value: researchCount, label: "Nghiên cứu khoa học", icon: "📰", href: "/nghien-cuu" },
-            ].map(({ value, label, icon, href }) => (
+            {stats.map(({ value, label, icon, href }) => (
               <Link key={label} href={href} className="text-center group cursor-pointer transition-transform hover:scale-105">
                 <div className="text-3xl mb-1">{icon}</div>
                 <p className="text-3xl font-bold text-brand-900 sm:text-4xl group-hover:text-brand-700 transition-colors">
@@ -263,24 +216,18 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Top 10 Doanh nghiệp tiêu biểu ────────────────────────────────── */}
+      {/* ── Top 10 Companies ── */}
       <section className="bg-brand-50/50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <header className="text-center mb-10">
-            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Top 10
-            </p>
-            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">
-              Doanh nghiệp tiêu biểu
-            </h2>
-            <p className="mt-2 text-brand-600 max-w-2xl mx-auto">
-              Những thương hiệu trầm hương được Hội Trầm Hương Việt Nam tuyển chọn
-            </p>
+            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">{t("top10Label")}</p>
+            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">{t("top10Title")}</h2>
+            <p className="mt-2 text-brand-600 max-w-2xl mx-auto">{t("top10Desc")}</p>
           </header>
 
           {featuredCompanies.length === 0 ? (
             <div className="rounded-2xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-              Top doanh nghiệp tiêu biểu sẽ được công bố sớm.
+              {t("top10Empty")}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -295,26 +242,14 @@ export default async function LandingPage() {
                   </span>
                   <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-brand-100 mb-3 bg-brand-50">
                     {company.logoUrl ? (
-                      <Image
-                        src={company.logoUrl}
-                        alt={company.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 64px, 80px"
-                      />
+                      <Image src={company.logoUrl} alt={company.name} fill className="object-cover" sizes="(max-width: 640px) 64px, 80px" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-brand-700 text-2xl font-bold text-brand-100">
-                        {company.name[0]}
-                      </div>
+                      <div className="flex h-full w-full items-center justify-center bg-brand-700 text-2xl font-bold text-brand-100">{company.name[0]}</div>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-brand-900 line-clamp-2 group-hover:text-brand-700">
-                    {company.name}
-                  </h3>
+                  <h3 className="text-sm font-semibold text-brand-900 line-clamp-2 group-hover:text-brand-700">{company.name}</h3>
                   {company.isVerified && (
-                    <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                      ✓ Verified
-                    </span>
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">✓ Verified</span>
                   )}
                 </Link>
               ))}
@@ -323,24 +258,18 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Top 20 Sản phẩm tiêu biểu ────────────────────────────────────── */}
+      {/* ── Top 20 Products ── */}
       <section className="py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <header className="text-center mb-10">
-            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Top 20
-            </p>
-            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">
-              Sản phẩm hot trend
-            </h2>
-            <p className="mt-2 text-brand-600 max-w-2xl mx-auto">
-              Bộ sưu tập sản phẩm trầm hương được tuyển chọn từ các doanh nghiệp hội viên
-            </p>
+            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">{t("top20Label")}</p>
+            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">{t("top20Title")}</h2>
+            <p className="mt-2 text-brand-600 max-w-2xl mx-auto">{t("top20Desc")}</p>
           </header>
 
           {featuredProducts.length === 0 ? (
             <div className="rounded-2xl border border-brand-200 bg-brand-50 p-12 text-center text-brand-500 italic">
-              Top sản phẩm hot trend sẽ được công bố sớm.
+              {t("top20Empty")}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -354,35 +283,19 @@ export default async function LandingPage() {
                   >
                     <div className="relative aspect-square bg-brand-100 overflow-hidden">
                       {cover ? (
-                        <Image
-                          src={cover}
-                          alt={product.name}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        />
+                        <Image src={cover} alt={product.name} fill className="object-cover transition-transform duration-300 group-hover:scale-110" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-brand-700 text-3xl">🌿</div>
                       )}
-                      <span className="absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs shadow-md">
-                        #{idx + 1}
-                      </span>
+                      <span className="absolute top-2 left-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs shadow-md">#{idx + 1}</span>
                       {product.certStatus === "APPROVED" && (
-                        <span className="absolute top-2 right-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
-                          ✓
-                        </span>
+                        <span className="absolute top-2 right-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">✓</span>
                       )}
                     </div>
                     <div className="p-3">
-                      <h3 className="line-clamp-2 text-sm font-semibold text-brand-900 group-hover:text-brand-700">
-                        {product.name}
-                      </h3>
-                      <p className="mt-0.5 text-xs text-brand-500 line-clamp-1">
-                        {product.company?.name ?? product.owner.name}
-                      </p>
-                      {product.priceRange && (
-                        <p className="mt-1 text-xs font-bold text-brand-700">{product.priceRange}</p>
-                      )}
+                      <h3 className="line-clamp-2 text-sm font-semibold text-brand-900 group-hover:text-brand-700">{product.name}</h3>
+                      <p className="mt-0.5 text-xs text-brand-500 line-clamp-1">{product.company?.name ?? product.owner.name}</p>
+                      {product.priceRange && <p className="mt-1 text-xs font-bold text-brand-700">{product.priceRange}</p>}
                     </div>
                   </Link>
                 )
@@ -391,29 +304,20 @@ export default async function LandingPage() {
           )}
 
           <div className="mt-8 text-center">
-            <Link
-              href="/san-pham-doanh-nghiep"
-              className="inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-4"
-            >
-              Xem tất cả sản phẩm tiêu biểu →
+            <Link href="/san-pham-doanh-nghiep" className="inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-4">
+              {t("viewAllProducts")}
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Tài khoản cơ bản ──────────────────────────────────────────── */}
+      {/* ── Basic Account ── */}
       <section className="py-16 lg:py-20 border-t border-brand-100">
         <div className="mx-auto max-w-md px-4">
           <header className="text-center mb-8">
-            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Bắt đầu
-            </p>
-            <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-              Tài khoản cơ bản
-            </h2>
-            <p className="mt-3 text-brand-600">
-              Tạo tài khoản miễn phí để khám phá nền tảng và kết nối với cộng đồng trầm hương.
-            </p>
+            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">{t("basicLabel")}</p>
+            <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">{t("basicTitle")}</h2>
+            <p className="mt-3 text-brand-600">{t("basicDesc")}</p>
           </header>
 
           <div className={`relative flex flex-col rounded-2xl border-2 p-6 shadow-sm ${basicAccount.color}`}>
@@ -423,26 +327,12 @@ export default async function LandingPage() {
             </div>
 
             <ul className="flex-1 space-y-3 text-sm border-t border-brand-200 pt-5">
-              <FeatureRow label="Hạn mức bài viết">
-                <span className="font-semibold text-brand-900">{basicAccount.features.quota}</span>
-              </FeatureRow>
-              <FeatureRow label="Hiển thị trang chủ">
-                <FeatureCheck on={basicAccount.features.homepage} />
-              </FeatureRow>
-              <FeatureRow label="Chứng nhận sản phẩm">
-                <FeatureCheck on={basicAccount.features.certification} />
-              </FeatureRow>
-              <FeatureRow label="Badge xác minh">
-                <FeatureCheck on={basicAccount.features.verifiedBadge} />
-              </FeatureRow>
-              <FeatureRow label="Banner quảng cáo">
-                <span className="text-xs font-semibold text-brand-900">
-                  {basicAccount.features.bannerQuota}
-                </span>
-              </FeatureRow>
-              <FeatureRow label="Hỗ trợ ưu tiên">
-                <FeatureCheck on={basicAccount.features.prioritySupport} />
-              </FeatureRow>
+              <FeatureRow label={featureLabels.quota}><span className="font-semibold text-brand-900">{basicAccount.features.quota}</span></FeatureRow>
+              <FeatureRow label={featureLabels.homepage}><FeatureCheck on={basicAccount.features.homepage} /></FeatureRow>
+              <FeatureRow label={featureLabels.cert}><FeatureCheck on={basicAccount.features.certification} /></FeatureRow>
+              <FeatureRow label={featureLabels.badge}><FeatureCheck on={basicAccount.features.verifiedBadge} /></FeatureRow>
+              <FeatureRow label={featureLabels.banner}><span className="text-xs font-semibold text-brand-900">{basicAccount.features.bannerQuota}</span></FeatureRow>
+              <FeatureRow label={featureLabels.support}><FeatureCheck on={basicAccount.features.prioritySupport} /></FeatureRow>
             </ul>
 
             <Link
@@ -455,62 +345,36 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Tier Comparison — Gói hội viên ─────────────────────────────── */}
+      {/* ── Tier Comparison ── */}
       <section id="tier-comparison" className="bg-brand-50/30 py-16 lg:py-24 scroll-mt-20">
         <div className="mx-auto max-w-6xl px-4">
           <header className="text-center mb-12">
-            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-              Quyền lợi hội viên
-            </p>
-            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">
-              Chọn gói hội viên phù hợp
-            </h2>
-            <p className="mt-3 text-brand-600 max-w-2xl mx-auto">
-              Hội viên được ưu tiên hiển thị trang chủ, hạn mức bài viết cao hơn
-              và nhiều quyền lợi trên nền tảng số.
-            </p>
+            <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">{t("tierLabel")}</p>
+            <h2 className="text-3xl font-bold text-brand-900 sm:text-4xl">{t("tierTitle")}</h2>
+            <p className="mt-3 text-brand-600 max-w-2xl mx-auto">{t("tierDesc")}</p>
           </header>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {tiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`relative flex flex-col rounded-2xl border-2 p-6 shadow-sm ${tier.color}`}
-              >
+              <div key={tier.name} className={`relative flex flex-col rounded-2xl border-2 p-6 shadow-sm ${tier.color}`}>
                 {"popular" in tier && tier.popular && (
                   <span className="absolute top-0 right-4 -translate-y-1/2 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-bold text-brand-900 shadow-lg ring-2 ring-white z-10">
-                    ⭐ Phổ biến nhất
+                    {t("popularBadge")}
                   </span>
                 )}
                 <div className="text-center mb-5">
-                  <p className="text-2xl font-bold text-amber-600 mb-1 min-h-8">
-                    {tier.stars}
-                  </p>
+                  <p className="text-2xl font-bold text-amber-600 mb-1 min-h-8">{tier.stars}</p>
                   <h3 className="text-lg font-bold text-brand-900">{tier.name}</h3>
                   <p className="mt-1 text-sm text-brand-600">{tier.price}</p>
                 </div>
 
                 <ul className="flex-1 space-y-3 text-sm border-t border-brand-200 pt-5">
-                  <FeatureRow label="Hạn mức bài viết">
-                    <span className="font-semibold text-brand-900">{tier.features.quota}</span>
-                  </FeatureRow>
-                  <FeatureRow label="Hiển thị trang chủ">
-                    <FeatureCheck on={tier.features.homepage} />
-                  </FeatureRow>
-                  <FeatureRow label="Chứng nhận sản phẩm">
-                    <FeatureCheck on={tier.features.certification} />
-                  </FeatureRow>
-                  <FeatureRow label="Badge xác minh">
-                    <FeatureCheck on={tier.features.verifiedBadge} />
-                  </FeatureRow>
-                  <FeatureRow label="Banner quảng cáo">
-                    <span className="text-xs font-semibold text-brand-900">
-                      {tier.features.bannerQuota}
-                    </span>
-                  </FeatureRow>
-                  <FeatureRow label="Hỗ trợ ưu tiên">
-                    <FeatureCheck on={tier.features.prioritySupport} />
-                  </FeatureRow>
+                  <FeatureRow label={featureLabels.quota}><span className="font-semibold text-brand-900">{tier.features.quota}</span></FeatureRow>
+                  <FeatureRow label={featureLabels.homepage}><FeatureCheck on={tier.features.homepage} /></FeatureRow>
+                  <FeatureRow label={featureLabels.cert}><FeatureCheck on={tier.features.certification} /></FeatureRow>
+                  <FeatureRow label={featureLabels.badge}><FeatureCheck on={tier.features.verifiedBadge} /></FeatureRow>
+                  <FeatureRow label={featureLabels.banner}><span className="text-xs font-semibold text-brand-900">{tier.features.bannerQuota}</span></FeatureRow>
+                  <FeatureRow label={featureLabels.support}><FeatureCheck on={tier.features.prioritySupport} /></FeatureRow>
                 </ul>
 
                 <Link
@@ -526,7 +390,7 @@ export default async function LandingPage() {
           <div className="mt-8 mx-auto max-w-2xl rounded-xl border border-brand-200 bg-brand-50/50 px-5 py-4 text-center text-xs text-brand-500 leading-relaxed">
             <p>
               * Hạng hội viên trên nền tảng số được xác định dựa trên tổng đóng góp tài chính
-              và tự động nâng cấp khi đạt ngưỡng tương ứng. Đây là quyền lợi bổ sung trên
+              và tự động nâng c���p khi đạt ngư��ng tương ứng. Đây là quyền lợi bổ sung trên
               nền tảng số, không thay thế quyền và nghĩa vụ hội viên theo{" "}
               <Link href="/dieu-le" className="underline underline-offset-2 text-brand-700 hover:text-brand-900">
                 Điều lệ Hội Trầm Hương Việt Nam
@@ -539,37 +403,31 @@ export default async function LandingPage() {
       </div>
       </div>
 
-      {/* ── Final CTA ────────────────────────────────────────────────────── */}
+      {/* ── Final CTA ── */}
       <section className="relative overflow-hidden bg-brand-900 text-white py-20">
         <div
           aria-hidden="true"
           className="absolute inset-0 opacity-5"
           style={{
-            backgroundImage:
-              "radial-gradient(circle at 50% 50%, white 2px, transparent 2px)",
+            backgroundImage: "radial-gradient(circle at 50% 50%, white 2px, transparent 2px)",
             backgroundSize: "60px 60px",
           }}
         />
         <div className="relative mx-auto max-w-3xl px-4 text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">
-            Sẵn sàng đưa thương hiệu của bạn lên tầm cao mới?
-          </h2>
-          <p className="mt-4 text-brand-200 text-lg">
-            Đăng ký miễn phí ngay hôm nay. Không cần thẻ tín dụng.
-            Bạn có thể nâng cấp lên Hội viên bất cứ lúc nào.
-          </p>
+          <h2 className="text-3xl font-bold sm:text-4xl">{t("finalCtaTitle")}</h2>
+          <p className="mt-4 text-brand-200 text-lg">{t("finalCtaDesc")}</p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
               href="/dang-ky"
               className="inline-flex items-center justify-center rounded-lg bg-brand-400 px-8 py-4 text-base font-bold text-brand-900 shadow-lg transition-all hover:bg-brand-300 hover:shadow-xl hover:-translate-y-0.5"
             >
-              Đăng ký ngay →
+              {t("finalCtaButton")}
             </Link>
             <Link
               href="/lien-he"
               className="inline-flex items-center justify-center rounded-lg border-2 border-brand-300 px-8 py-4 text-base font-medium text-brand-300 transition-colors hover:bg-brand-300/10"
             >
-              Liên hệ tư vấn
+              {t("finalCtaContact")}
             </Link>
           </div>
         </div>
@@ -591,12 +449,8 @@ function FeatureRow({ label, children }: { label: string; children: React.ReactN
 
 function FeatureCheck({ on }: { on: boolean }) {
   return on ? (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs">
-      ✓
-    </span>
+    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs">✓</span>
   ) : (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-100 text-brand-300 text-xs">
-      —
-    </span>
+    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-100 text-brand-300 text-xs">—</span>
   )
 }
