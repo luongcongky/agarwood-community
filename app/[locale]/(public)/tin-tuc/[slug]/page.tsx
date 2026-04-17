@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -42,8 +42,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function NewsDetailPage({ params }: Props) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([
+    getLocale() as Promise<Locale>,
+    getTranslations("news"),
+  ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
+  const tc = await getTranslations("common")
   const { slug } = await params
 
   const news = await prisma.news.findFirst({
@@ -102,11 +106,11 @@ export default async function NewsDetailPage({ params }: Props) {
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
           <Link href="/" className="hover:text-brand-700 transition-colors">
-            Trang chủ
+            {tc("home")}
           </Link>
           <span>/</span>
           <Link href="/tin-tuc" className="hover:text-brand-700 transition-colors">
-            Tin tức
+            {t("breadcrumbNews")}
           </Link>
           <span>/</span>
           <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
@@ -136,7 +140,7 @@ export default async function NewsDetailPage({ params }: Props) {
               </h1>
               {news.publishedAt && (
                 <p className="text-muted-foreground text-sm">
-                  Ngày đăng:{" "}
+                  {t("publishedAt")}{" "}
                   {new Date(news.publishedAt).toLocaleDateString("vi-VN", {
                     weekday: "long",
                     day: "2-digit",
@@ -151,13 +155,13 @@ export default async function NewsDetailPage({ params }: Props) {
             <article className="mb-10">
               <div
                 className="prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(l(news, "content") ?? "") }}
               />
             </article>
 
             {/* Share Buttons */}
             <div className="border-t border-border pt-6">
-              <p className="text-sm font-medium text-foreground mb-3">Chia sẻ bài viết:</p>
+              <p className="text-sm font-medium text-foreground mb-3">{t("shareArticle")}</p>
               <div className="flex flex-wrap gap-3">
                 <a
                   href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`}
@@ -185,7 +189,7 @@ export default async function NewsDetailPage({ params }: Props) {
         {related.length > 0 && (
           <section className="mt-10">
             <h2 className="text-xl font-semibold text-foreground mb-5">
-              Tin tức liên quan
+              {t("relatedNews")}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {related.map((item) => (

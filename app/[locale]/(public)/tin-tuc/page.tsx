@@ -2,15 +2,16 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Tin tức",
-  description: "Tin tức, thông báo và cập nhật mới nhất từ Hội Trầm Hương Việt Nam — thị trường, sự kiện, kiến thức chuyên ngành.",
-  alternates: { canonical: "/tin-tuc" },
+export async function generateMetadata() {
+  const t = await getTranslations("news")
+  return {
+    title: t("metaTitle"),
+    description: t("metaDesc"),
+    alternates: { canonical: "/tin-tuc" },
+  }
 }
 
 export const revalidate = 3600
@@ -49,7 +50,10 @@ export default async function NewsPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([
+    getLocale() as Promise<Locale>,
+    getTranslations("news"),
+  ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
 
   const params = await searchParams
@@ -108,9 +112,9 @@ export default async function NewsPage({
 
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Tin tức</h1>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
         <p className="mt-2 text-brand-300 text-base">
-          Thông tin &amp; Cập nhật từ Hội Trầm Hương Việt Nam
+          {t("pageSubtitle")}
         </p>
       </div>
 
@@ -123,14 +127,14 @@ export default async function NewsPage({
               type="text"
               name="q"
               defaultValue={q}
-              placeholder="Tìm kiếm tin tức..."
+              placeholder={t("searchPlaceholder")}
               className="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
             />
             <button
               type="submit"
               className="rounded-md bg-brand-800 text-brand-100 px-4 py-2 text-sm font-medium hover:bg-brand-900 transition-colors"
             >
-              Tìm
+              {t("searchBtn")}
             </button>
             {isSearch && (
               <Link
@@ -143,7 +147,7 @@ export default async function NewsPage({
           </form>
           {isSearch && (
             <p className="mt-2 text-xs text-brand-500">
-              {total} kết quả cho &ldquo;{q}&rdquo;
+              {t("searchResults", { count: total })} &ldquo;{q}&rdquo;
             </p>
           )}
         </div>
@@ -175,7 +179,7 @@ export default async function NewsPage({
                   )}
                   {heroItem.isPinned && (
                     <span className="absolute top-3 left-3 bg-brand-400 text-brand-900 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow">
-                      Tin nổi bật
+                      {t("featured")}
                     </span>
                   )}
                 </div>
@@ -240,19 +244,19 @@ export default async function NewsPage({
             {/* Section heading */}
             <div className="flex items-center gap-3 mb-5 pb-3 border-b-2 border-brand-800">
               <h2 className="font-bold text-brand-900 text-lg">
-                {isSearch ? `Kết quả tìm kiếm` : page === 1 ? "Tin mới nhất" : `Trang ${page}`}
+                {isSearch ? t("sectionSearch") : page === 1 ? t("sectionLatest") : t("sectionPage", { page })}
               </h2>
               {!isSearch && (
-                <span className="text-xs text-brand-500">{total.toLocaleString("vi-VN")} tin</span>
+                <span className="text-xs text-brand-500">{t("totalArticles", { count: total })}</span>
               )}
             </div>
 
             {listItems.length === 0 && !heroItem ? (
               <div className="py-20 text-center">
-                <p className="text-brand-500 text-lg font-medium">Không tìm thấy tin tức nào</p>
+                <p className="text-brand-500 text-lg font-medium">{t("emptySearch")}</p>
                 {isSearch && (
                   <Link href="/tin-tuc" className="mt-3 inline-block text-sm text-brand-700 underline">
-                    Xem tất cả tin tức
+                    {t("emptyViewAll")}
                   </Link>
                 )}
               </div>
@@ -282,7 +286,7 @@ export default async function NewsPage({
                       <div className="flex items-center gap-2 mb-1">
                         {item.isPinned && (
                           <span className="text-xs font-bold text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
-                            Ghim
+                            {t("pinned")}
                           </span>
                         )}
                         <span className="text-xs text-brand-400">{formatDate(item.publishedAt)}</span>
@@ -308,7 +312,7 @@ export default async function NewsPage({
                 <div className="flex sm:hidden gap-2 w-full justify-between">
                   {page > 1 ? (
                     <Link href={buildUrl(page - 1, q)} className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50">
-                      ← Trước
+                      {t("prevPage")}
                     </Link>
                   ) : <span />}
                   <span className="text-sm text-brand-500 self-center">
@@ -316,7 +320,7 @@ export default async function NewsPage({
                   </span>
                   {page < totalPages ? (
                     <Link href={buildUrl(page + 1, q)} className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50">
-                      Tiếp →
+                      {t("nextPage")}
                     </Link>
                   ) : <span />}
                 </div>
@@ -325,7 +329,7 @@ export default async function NewsPage({
                 <div className="hidden sm:flex items-center gap-1 flex-wrap">
                   {page > 1 && (
                     <Link href={buildUrl(page - 1, q)} className="px-3 py-1.5 rounded-md border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors">
-                      ← Trước
+                      {t("prevPage")}
                     </Link>
                   )}
                   {paginationRange(page, totalPages).map((p, i) =>
@@ -348,7 +352,7 @@ export default async function NewsPage({
                   )}
                   {page < totalPages && (
                     <Link href={buildUrl(page + 1, q)} className="px-3 py-1.5 rounded-md border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors">
-                      Tiếp →
+                      {t("nextPage")}
                     </Link>
                   )}
                 </div>
@@ -366,7 +370,7 @@ export default async function NewsPage({
             {/* Tin nổi bật */}
             <div>
               <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                <h3 className="font-bold text-brand-900">Tin nổi bật</h3>
+                <h3 className="font-bold text-brand-900">{t("sidebarFeatured")}</h3>
               </div>
               <ul className="space-y-4">
                 {featuredNews.map((item, i) => (
@@ -394,7 +398,7 @@ export default async function NewsPage({
             {totalPages > 1 && (
               <div>
                 <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                  <h3 className="font-bold text-brand-900">Chuyển trang nhanh</h3>
+                  <h3 className="font-bold text-brand-900">{t("sidebarPagination")}</h3>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: Math.min(totalPages, 20) }, (_, i) => i + 1).map((p) => (
@@ -412,7 +416,7 @@ export default async function NewsPage({
                     </Link>
                   ))}
                   {totalPages > 20 && (
-                    <span className="text-xs text-brand-400 self-center ml-1">... {totalPages} trang</span>
+                    <span className="text-xs text-brand-400 self-center ml-1">... {t("maxPages", { count: totalPages })}</span>
                   )}
                 </div>
               </div>
@@ -422,13 +426,13 @@ export default async function NewsPage({
             <div className="bg-brand-800 rounded-xl p-5 text-white text-center">
               <div className="text-3xl mb-2">🌿</div>
               <p className="text-sm font-medium text-brand-100 leading-snug">
-                Tham gia Hội Trầm Hương Việt Nam để nhận tin tức sớm nhất
+                {t("ctaText")}
               </p>
               <Link
                 href="/dang-ky"
                 className="mt-3 inline-block bg-brand-400 text-brand-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-300 transition-colors"
               >
-                Đăng ký hội viên
+                {t("ctaButton")}
               </Link>
             </div>
           </aside>
