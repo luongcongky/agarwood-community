@@ -1,12 +1,14 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import Image from "next/image"
 import { BannerRowActions } from "./BannerRowActions"
 
-export const metadata = {
-  title: "Banner của tôi | Hội Trầm Hương Việt Nam",
+export async function generateMetadata() {
+  const t = await getTranslations("bannerHistory")
+  return { title: t("metaTitle") }
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -23,7 +25,7 @@ export default async function BannerHistoryPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  const session = await auth()
+  const [session, t] = await Promise.all([auth(), getTranslations("bannerHistory")])
   if (!session?.user) {
     redirect(`/${locale}/login?callbackUrl=/banner/lich-su`)
   }
@@ -52,8 +54,8 @@ export default async function BannerHistoryPage({
   return (
     <div className="min-h-screen bg-brand-50">
       <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">Banner của tôi</h1>
-        <p className="mt-2 text-brand-300 text-base">Lịch sử đăng ký banner quảng cáo</p>
+        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
+        <p className="mt-2 text-brand-300 text-base">{t("pageSubtitle")}</p>
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-10">

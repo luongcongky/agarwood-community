@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -11,16 +11,9 @@ import { ProductFilters } from "./ProductFilters"
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: "Sản phẩm được Chứng nhận | Hội Trầm Hương Việt Nam",
-  description:
-    "Danh sách các sản phẩm trầm hương đã được Hội Trầm Hương Việt Nam kiểm định và cấp chứng nhận chất lượng chính thức.",
-  openGraph: {
-    title: "Sản phẩm được Chứng nhận | Hội Trầm Hương Việt Nam",
-    description:
-      "Danh sách các sản phẩm trầm hương đã được Hội Trầm Hương Việt Nam kiểm định và cấp chứng nhận chính thức.",
-    type: "website",
-  },
+export async function generateMetadata() {
+  const t = await getTranslations("certProducts")
+  return { title: t("metaTitle"), alternates: { canonical: "/san-pham-chung-nhan" } }
 }
 
 // Common Vietnamese provinces for agarwood industry
@@ -71,7 +64,7 @@ export default async function CertifiedProductsPage({
     view?: string
   }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([getLocale() as Promise<Locale>, getTranslations("certProducts")])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const sp = await searchParams
   const page = Math.max(1, Number(sp.page ?? 1))
@@ -169,10 +162,10 @@ export default async function CertifiedProductsPage({
       {/* ── Tầng 1: Page Banner ──────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Sản phẩm được Chứng nhận
+          {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-base">
-          Sản phẩm trầm hương đã được Hội Trầm Hương Việt Nam kiểm định và cấp chứng nhận
+          {t("pageSubtitle")}
         </p>
       </div>
 

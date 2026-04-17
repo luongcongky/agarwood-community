@@ -96,6 +96,49 @@
     "titleTemplate": "%s | 越南沉香协会",
     "description": "连接、认证和推广越南沉香产品。汇聚全国知名沉香企业的社区。"
   },
+  "members": {
+    "metaTitle": "会员名录",
+    "pageTitle": "会员名录",
+    "pageSubtitle": "{count}+ 位会员已加入越南沉香协会",
+    "searchPlaceholder": "搜索会员...",
+    "searchBtn": "搜索",
+    "emptyTitle": "未找到会员",
+    "emptyDefault": "暂无公开会员。",
+    "flipHint": "💡 点击卡片翻转查看详细信息",
+    "viewDetail": "查看详情 →"
+  },
+  "certProducts": {
+    "metaTitle": "认证产品",
+    "pageTitle": "认证产品",
+    "pageSubtitle": "经检验并获得越南沉香协会质量认证的沉香产品"
+  },
+  "marketplace": {
+    "metaTitle": "企业产品",
+    "pageTitle": "企业产品",
+    "pageSubtitle": "探索会员企业的沉香产品 — 按等级和认证优先排序"
+  },
+  "legalDocs": {
+    "metaTitle": "法规文件",
+    "pageTitle": "法规文件",
+    "pageSubtitle": "与越南沉香协会运营相关的章程、规章和许可证"
+  },
+  "surveys": {
+    "pageTitle": "问卷调查",
+    "pageSubtitle": "参与调查，帮助协会更好地了解会员需求"
+  },
+  "bannerRegister": {
+    "metaTitle": "广告横幅注册",
+    "pageTitle": "广告横幅注册",
+    "pageSubtitle": "在越南沉香协会首页投放企业广告"
+  },
+  "bannerHistory": {
+    "metaTitle": "我的横幅",
+    "pageTitle": "我的横幅",
+    "pageSubtitle": "广告横幅注册历史"
+  },
+  "verify": {
+    "metaTitle": "产品认证验证"
+  },
   "contactForm": {
     "nameRequired": "请输入姓名。",
     "emailRequired": "请输入邮箱。",

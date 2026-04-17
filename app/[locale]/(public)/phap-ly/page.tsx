@@ -1,17 +1,15 @@
 import Link from "next/link"
 import type { Metadata } from "next"
 import { DocumentCategory } from "@prisma/client"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 
-export const metadata: Metadata = {
-  title: "Văn bản pháp quy | Hội Trầm Hương Việt Nam",
-  description:
-    "Tổng hợp các văn bản pháp quy của Hội Trầm Hương Việt Nam (VAWA): Điều lệ Hội, Quy chế nội bộ và Giấy phép Đại hội.",
-  alternates: { canonical: "/phap-ly" },
+export async function generateMetadata() {
+  const t = await getTranslations("legalDocs")
+  return { title: t("metaTitle"), alternates: { canonical: "/phap-ly" } }
 }
 
 export const revalidate = 3600
@@ -40,7 +38,7 @@ export default async function PhapLyPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, tl] = await Promise.all([getLocale() as Promise<Locale>, getTranslations("legalDocs")])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const rawTab = params.tab ?? "dieu-le"
@@ -90,10 +88,10 @@ export default async function PhapLyPage({
       {/* ── Page Banner ──────────────────────────────────────────────────── */}
       <section className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Văn bản pháp quy
+          {tl("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
-          Tổng hợp Điều lệ, Quy chế và Giấy phép của Hội Trầm Hương Việt Nam (VAWA)
+          {tl("pageSubtitle")}
         </p>
       </section>
 

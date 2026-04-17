@@ -2,7 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
 import { auth } from "@/lib/auth"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -54,7 +54,7 @@ export default async function MarketplacePage({
 }: {
   searchParams: Promise<{ page?: string; filter?: string; category?: string }>
 }) {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([getLocale() as Promise<Locale>, getTranslations("marketplace")])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const [params, session] = await Promise.all([searchParams, auth()])
   const page = Math.max(1, Number(params.page ?? 1))
@@ -148,7 +148,7 @@ export default async function MarketplacePage({
       {/* ── Page Banner ─────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Chợ Sản phẩm Trầm Hương
+          {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
           Nơi hội viên và doanh nghiệp đăng sản phẩm quảng bá.

@@ -1,5 +1,6 @@
 import QRCode from "qrcode"
 import Link from "next/link"
+import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { calcTier } from "@/lib/tier"
 import { getTierThresholds } from "@/lib/tier"
@@ -7,13 +8,9 @@ import { MemberCardFlip } from "@/components/features/member-card/MemberCardFlip
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Danh sách Hội viên",
-  description:
-    "Danh sách hội viên đang hoạt động — Hội Trầm Hương Việt Nam.",
-  alternates: { canonical: "/hoi-vien" },
+export async function generateMetadata() {
+  const t = await getTranslations("members")
+  return { title: t("metaTitle"), alternates: { canonical: "/hoi-vien" } }
 }
 
 export const revalidate = 600
@@ -27,6 +24,7 @@ export default async function VipMembersPage({
 }) {
   const params = await searchParams
   const q = params.q ?? ""
+  const t = await getTranslations("members")
 
   const [members, businessThresholds, individualThresholds, configs] =
     await Promise.all([
@@ -118,10 +116,10 @@ export default async function VipMembersPage({
       {/* Page Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Danh sách Hội viên
+          {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-lg">
-          {members.length} hội viên đang hoạt động
+          {t("pageSubtitle", { count: members.length })}
         </p>
       </section>
 
@@ -137,14 +135,14 @@ export default async function VipMembersPage({
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="Tìm kiếm hội viên..."
+            placeholder={t("searchPlaceholder")}
             className="flex-1 rounded-lg border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
           />
           <button
             type="submit"
             className="rounded-lg bg-brand-700 text-brand-100 px-5 py-2.5 text-sm font-medium hover:bg-brand-800 transition-colors"
           >
-            Tìm kiếm
+            {t("searchBtn")}
           </button>
         </form>
 
@@ -152,7 +150,7 @@ export default async function VipMembersPage({
         {members.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-2xl text-muted-foreground font-medium">
-              Không tìm thấy hội viên nào
+              {t("emptyTitle")} nào
             </p>
             <p className="mt-2 text-muted-foreground text-sm">
               {q
@@ -222,7 +220,7 @@ export default async function VipMembersPage({
                             href={`/doanh-nghiep/${member.company.slug}`}
                             className="text-brand-600 hover:text-brand-900 hover:underline"
                           >
-                            Xem chi tiết →
+                            {t("viewDetail")}
                           </Link>
                         )}
                         <Link

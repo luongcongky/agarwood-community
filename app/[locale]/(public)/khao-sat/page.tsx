@@ -1,4 +1,4 @@
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -15,7 +15,7 @@ export const metadata = {
 }
 
 export default async function PublicSurveyLandingPage() {
-  const locale = await getLocale() as Locale
+  const [locale, t] = await Promise.all([getLocale() as Promise<Locale>, getTranslations("surveys")])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   // Lấy 2 survey ACTIVE theo audience BUSINESS / INDIVIDUAL
   const [businessSurvey, individualSurvey] = await Promise.all([
@@ -40,10 +40,10 @@ export default async function PublicSurveyLandingPage() {
       <section id="start" className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-brand-900">
-            Bạn đang tham gia với tư cách nào?
+            {t("pageTitle")}
           </h2>
           <p className="text-sm text-brand-600 mt-2">
-            Chọn đúng loại để Hội gửi bạn các câu hỏi phù hợp
+            {t("pageSubtitle")}
           </p>
         </div>
 

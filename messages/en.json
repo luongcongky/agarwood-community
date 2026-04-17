@@ -96,6 +96,49 @@
     "titleTemplate": "%s | Vietnam Agarwood Association",
     "description": "Connecting, certifying and promoting Vietnamese agarwood products. A community of reputable agarwood businesses nationwide."
   },
+  "members": {
+    "metaTitle": "Member Directory",
+    "pageTitle": "Member Directory",
+    "pageSubtitle": "{count}+ members have joined the Vietnam Agarwood Association",
+    "searchPlaceholder": "Search members...",
+    "searchBtn": "Search",
+    "emptyTitle": "No members found",
+    "emptyDefault": "No public members yet.",
+    "flipHint": "💡 Click on a card to flip and see details",
+    "viewDetail": "View details →"
+  },
+  "certProducts": {
+    "metaTitle": "Certified Products",
+    "pageTitle": "Certified Products",
+    "pageSubtitle": "Agarwood products inspected and certified by the Vietnam Agarwood Association"
+  },
+  "marketplace": {
+    "metaTitle": "Business Products",
+    "pageTitle": "Business Products",
+    "pageSubtitle": "Explore agarwood products from member businesses — prioritized by rank and certification"
+  },
+  "legalDocs": {
+    "metaTitle": "Legal Documents",
+    "pageTitle": "Legal Documents",
+    "pageSubtitle": "Charter, regulations and permits related to the Vietnam Agarwood Association"
+  },
+  "surveys": {
+    "pageTitle": "Surveys",
+    "pageSubtitle": "Take surveys to help the Association better understand member needs"
+  },
+  "bannerRegister": {
+    "metaTitle": "Banner Registration",
+    "pageTitle": "Banner Registration",
+    "pageSubtitle": "Advertise your business on the Vietnam Agarwood Association homepage"
+  },
+  "bannerHistory": {
+    "metaTitle": "My Banners",
+    "pageTitle": "My Banners",
+    "pageSubtitle": "Banner registration history"
+  },
+  "verify": {
+    "metaTitle": "Product Certification Verification"
+  },
   "contactForm": {
     "nameRequired": "Please enter your name.",
     "emailRequired": "Please enter your email.",

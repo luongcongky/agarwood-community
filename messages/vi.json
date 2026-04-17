@@ -96,6 +96,49 @@
     "titleTemplate": "%s | Hội Trầm Hương Việt Nam",
     "description": "Cộng đồng kết nối, chứng nhận và truyền thông sản phẩm trầm hương Việt Nam. Nơi quy tụ doanh nghiệp trầm hương uy tín trên toàn quốc."
   },
+  "members": {
+    "metaTitle": "Danh sách Hội viên",
+    "pageTitle": "Danh sách Hội viên",
+    "pageSubtitle": "{count}+ hội viên đã tham gia Hội Trầm Hương Việt Nam",
+    "searchPlaceholder": "Tìm kiếm hội viên...",
+    "searchBtn": "Tìm kiếm",
+    "emptyTitle": "Không tìm thấy hội viên",
+    "emptyDefault": "Chưa có hội viên nào được công khai.",
+    "flipHint": "💡 Click vào thẻ để lật và xem thông tin chi tiết",
+    "viewDetail": "Xem chi tiết →"
+  },
+  "certProducts": {
+    "metaTitle": "Sản phẩm được Chứng nhận",
+    "pageTitle": "Sản phẩm được Chứng nhận",
+    "pageSubtitle": "Sản phẩm trầm hương đã qua kiểm định và được Hội Trầm Hương Việt Nam cấp chứng nhận chất lượng"
+  },
+  "marketplace": {
+    "metaTitle": "Sản phẩm Doanh nghiệp",
+    "pageTitle": "Sản phẩm Doanh nghiệp",
+    "pageSubtitle": "Khám phá sản phẩm trầm hương từ các doanh nghiệp hội viên — được sắp xếp ưu tiên theo thứ hạng và chứng nhận"
+  },
+  "legalDocs": {
+    "metaTitle": "Văn bản pháp quy",
+    "pageTitle": "Văn bản pháp quy",
+    "pageSubtitle": "Điều lệ, quy chế và giấy phép liên quan đến hoạt động của Hội Trầm Hương Việt Nam"
+  },
+  "surveys": {
+    "pageTitle": "Khảo sát",
+    "pageSubtitle": "Tham gia khảo sát để giúp Hội hiểu rõ hơn về nhu cầu của hội viên"
+  },
+  "bannerRegister": {
+    "metaTitle": "Đăng ký Banner Quảng cáo",
+    "pageTitle": "Đăng ký Banner Quảng cáo",
+    "pageSubtitle": "Quảng cáo doanh nghiệp trên trang chủ Hội Trầm Hương Việt Nam"
+  },
+  "bannerHistory": {
+    "metaTitle": "Banner của tôi",
+    "pageTitle": "Banner của tôi",
+    "pageSubtitle": "Lịch sử đăng ký banner quảng cáo"
+  },
+  "verify": {
+    "metaTitle": "Xác minh chứng nhận sản phẩm"
+  },
   "contactForm": {
     "nameRequired": "Vui lòng nhập họ tên.",
     "emailRequired": "Vui lòng nhập email.",
