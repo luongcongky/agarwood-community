@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import type { Metadata } from "next"
+import { getTranslations } from "next-intl/server"
 import { MemberNewsRail } from "@/components/features/homepage/MemberNewsRail"
 import { CertifiedProductsCarousel } from "@/components/features/homepage/CertifiedProductsCarousel"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
@@ -13,21 +13,25 @@ import {
   PartnersCarouselSkeleton,
 } from "@/components/features/homepage/skeletons"
 
-export const metadata: Metadata = {
-  title: "Hội Trầm Hương Việt Nam — Cộng đồng Doanh nghiệp Trầm Hương",
-  description:
-    "Nền tảng kết nối doanh nghiệp trầm hương Việt Nam. Tin tức, sản phẩm chứng nhận, bản tin hội viên cập nhật liên tục.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "Hội Trầm Hương Việt Nam",
-    description: "Cộng đồng kết nối doanh nghiệp trầm hương uy tín trên toàn quốc.",
-    type: "website",
-  },
+export async function generateMetadata() {
+  const t = await getTranslations("meta")
+  return {
+    title: t("titleDefault"),
+    description: t("description"),
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: t("titleDefault"),
+      description: t("description"),
+      type: "website",
+    },
+  }
 }
 
 export const revalidate = 300
 
-export default function HomePage() {
+export default async function HomePage() {
+  const t = await getTranslations("homepage")
+
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -89,9 +93,9 @@ export default function HomePage() {
       <Suspense fallback={<LatestPostsSkeleton />}>
         <LatestPostsSection
           category="NEWS"
-          title="Tin doanh nghiệp mới nhất"
-          subtitle="Tin tức từ các doanh nghiệp hội viên"
-          emptyText="Chưa có tin tức nào từ doanh nghiệp hội viên."
+          title={t("businessNews")}
+          subtitle={t("businessNewsSubtitle")}
+          emptyText={t("businessNewsEmpty")}
         />
       </Suspense>
 
@@ -99,9 +103,9 @@ export default function HomePage() {
       <Suspense fallback={<LatestPostsSkeleton />}>
         <LatestPostsSection
           category="PRODUCT"
-          title="Tin sản phẩm mới nhất"
-          subtitle="Sản phẩm mới giới thiệu hoặc vừa được chứng nhận"
-          emptyText="Chưa có tin sản phẩm nào."
+          title={t("productNews")}
+          subtitle={t("productNewsSubtitle")}
+          emptyText={t("productNewsEmpty")}
         />
       </Suspense>
 

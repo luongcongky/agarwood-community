@@ -1,15 +1,18 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
+import { getTranslations } from "next-intl/server"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
 
 export const revalidate = 600
 
-export const metadata = {
-  title: "Giới thiệu — Hội Trầm Hương Việt Nam",
-  description:
-    "Tìm hiểu về lịch sử, sứ mệnh, tầm nhìn và ban lãnh đạo của Hội Trầm Hương Việt Nam.",
+export async function generateMetadata() {
+  const t = await getTranslations("about")
+  return {
+    title: t("metaTitle"),
+    description: t("metaDesc"),
+  }
 }
 
 const orgJsonLd = {
@@ -33,19 +36,21 @@ const orgJsonLd = {
     {
       "@type": "ContactPoint",
       telephone: "+84-913-810-060",
-      contactType: "Chủ tịch Hội",
+      contactType: "Chairman",
       email: "hoitramhuongvietnam2010@gmail.com",
     },
     {
       "@type": "ContactPoint",
       telephone: "+84-938-334-647",
-      contactType: "Phó Chủ tịch Hội",
+      contactType: "Vice Chairman",
     },
   ],
   sameAs: ["https://www.facebook.com/hoitramhuongvietnam.org"],
 }
 
 export default async function GioiThieuPage() {
+  const t = await getTranslations("about")
+
   // Fetch all leaders của nhiệm kỳ mới nhất — 3 category (BTV/BCH/BKT) cho tabs
   const rawLeaders = await prisma.leader.findMany({
     where: { isActive: true },
@@ -73,12 +78,26 @@ export default async function GioiThieuPage() {
       honorific: l.honorific,
       title: l.title,
       workTitle: l.workTitle,
-      // Ưu tiên data Leader, fallback về profile hội viên (user)
       bio: l.bio ?? l.user?.bio ?? null,
       photoUrl: l.photoUrl ?? l.user?.avatarUrl ?? null,
       term: l.term,
       category: l.category as "BTV" | "BCH" | "BKT",
     }))
+
+  const benefits = [
+    { icon: "🏅", title: t("benefit1Title"), desc: t("benefit1Desc") },
+    { icon: "📋", title: t("benefit2Title"), desc: t("benefit2Desc") },
+    { icon: "💬", title: t("benefit3Title"), desc: t("benefit3Desc") },
+    { icon: "📣", title: t("benefit4Title"), desc: t("benefit4Desc") },
+    { icon: "🤝", title: t("benefit5Title"), desc: t("benefit5Desc") },
+    { icon: "📰", title: t("benefit6Title"), desc: t("benefit6Desc") },
+  ]
+
+  const orgDepts = [
+    t("inspectionBoard"),
+    t("departments"),
+    t("affiliates"),
+  ]
 
   return (
     <div className="min-h-screen bg-brand-50/60">
@@ -92,11 +111,10 @@ export default async function GioiThieuPage() {
       <section className="bg-brand-800 text-white py-16">
         <div className="mx-auto max-w-4xl px-4">
           <h1 className="text-3xl font-bold sm:text-4xl">
-            Về Hội Trầm Hương Việt Nam
+            {t("heroTitle")}
           </h1>
           <p className="mt-3 text-brand-200 max-w-2xl">
-            Tổ chức xã hội nghề nghiệp đại diện cho cộng đồng doanh nghiệp,
-            cơ sở sản xuất và người yêu thích trầm hương trên toàn quốc.
+            {t("heroDesc")}
           </p>
         </div>
       </section>
@@ -109,50 +127,29 @@ export default async function GioiThieuPage() {
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="grid gap-8 md:grid-cols-3">
-            {/* Lịch sử */}
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">📜</div>
               <h2 className="text-lg font-bold text-brand-900">
-                Lịch sử hình thành
+                {t("historyTitle")}
               </h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                Hội Trầm Hương Việt Nam (tên viết tắt: <strong>VAWA</strong>{" "}
-                — Vietnam Agarwood Association) được thành lập ngày{" "}
-                <strong>11/01/2010</strong> theo Quyết định số{" "}
-                <strong>23/QĐ-BNV</strong> của Bộ Nội vụ. Điều lệ Hội được Bộ
-                Nội vụ phê duyệt theo Quyết định số{" "}
-                <strong>688/QĐ-BNV ngày 23/06/2010</strong>, và sửa đổi, bổ
-                sung theo Quyết định số{" "}
-                <strong>1086/QĐ-BNV ngày 29/12/2023</strong>. Hội hiện hoạt
-                động theo nhiệm kỳ III (2023–2028), không ngừng mở rộng mạng
-                lưới hội viên, xây dựng tiêu chuẩn ngành và đưa trầm hương Việt
-                Nam vươn ra thị trường quốc tế.
+                {t("historyContent")}
               </p>
             </div>
 
-            {/* Sứ mệnh */}
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">🎯</div>
-              <h2 className="text-lg font-bold text-brand-900">Sứ mệnh</h2>
+              <h2 className="text-lg font-bold text-brand-900">{t("missionTitle")}</h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                Kết nối doanh nghiệp trầm hương toàn quốc, chuẩn hóa chất lượng
-                sản phẩm và xây dựng hệ thống chứng nhận minh bạch. Chúng tôi
-                đồng hành cùng hội viên trong việc phát triển thương hiệu, mở
-                rộng thị trường và nâng cao giá trị của trầm hương Việt Nam trên
-                trường quốc tế.
+                {t("missionContent")}
               </p>
             </div>
 
-            {/* Tầm nhìn */}
             <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
               <div className="mb-4 text-3xl">🌏</div>
-              <h2 className="text-lg font-bold text-brand-900">Tầm nhìn</h2>
+              <h2 className="text-lg font-bold text-brand-900">{t("visionTitle")}</h2>
               <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                Trở thành tổ chức trầm hương uy tín nhất Đông Nam Á vào năm
-                2030. Hội Trầm Hương Việt Nam hướng tới xây dựng một hệ sinh
-                thái ngành trầm hương bền vững, nơi mà mọi doanh nghiệp đều có
-                cơ hội phát triển và đóng góp vào sự thịnh vượng chung của
-                ngành.
+                {t("visionContent")}
               </p>
             </div>
           </div>
@@ -163,7 +160,7 @@ export default async function GioiThieuPage() {
       <section className="bg-brand-50/50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Ban lãnh đạo Hội
+            {t("leadershipTitle")}
           </h2>
 
           <LeadershipTabs leaders={currentLeaders} />
@@ -174,41 +171,10 @@ export default async function GioiThieuPage() {
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Quyền lợi hội viên
+            {t("benefitsTitle")}
           </h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: "🏅",
-                title: "Badge chứng nhận sản phẩm",
-                desc: "Nhận badge chứng nhận chính thức từ Hội, khẳng định chất lượng sản phẩm trên thị trường.",
-              },
-              {
-                icon: "📋",
-                title: "Hiển thị trên danh sách hội viên",
-                desc: "Doanh nghiệp của bạn được niêm yết nổi bật trong danh sách hội viên công khai trên website.",
-              },
-              {
-                icon: "💬",
-                title: "Tham gia diễn đàn nội bộ",
-                desc: "Tiếp cận diễn đàn nội bộ dành riêng cho hội viên, nơi trao đổi kinh nghiệm và thông tin ngành.",
-              },
-              {
-                icon: "📣",
-                title: "Ưu đãi dịch vụ truyền thông",
-                desc: "Được hưởng mức chiết khấu đặc biệt khi sử dụng các gói dịch vụ truyền thông của Hội.",
-              },
-              {
-                icon: "🤝",
-                title: "Kết nối mạng lưới doanh nghiệp",
-                desc: "Mở rộng quan hệ kinh doanh với hàng trăm doanh nghiệp trầm hương trên toàn quốc.",
-              },
-              {
-                icon: "📰",
-                title: "Cập nhật tin tức ngành",
-                desc: "Nhận bản tin nội bộ và được cập nhật các chính sách, xu hướng mới nhất của ngành trầm hương.",
-              },
-            ].map((benefit) => (
+            {benefits.map((benefit) => (
               <div
                 key={benefit.title}
                 className="flex gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6"
@@ -232,44 +198,35 @@ export default async function GioiThieuPage() {
       <section className="bg-brand-50/50 py-20">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Cơ cấu tổ chức
+            {t("orgChartTitle")}
           </h2>
           <p className="mb-10 text-center text-sm text-brand-500">
-            Theo Điều 12 Điều lệ Hội (sửa đổi, bổ sung) 2023
+            {t("orgChartSubtitle")}
           </p>
           <div className="flex flex-col items-center gap-0">
-            {/* Top: Đại hội */}
             <div className="rounded-lg border-2 border-brand-600 bg-brand-700 px-8 py-3 text-center text-white font-semibold shadow">
-              Đại hội
+              {t("congress")}
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* Ban chấp hành */}
             <div className="rounded-lg border-2 border-brand-500 bg-brand-600 px-8 py-3 text-center text-white font-semibold shadow">
-              Ban Chấp hành
+              {t("executiveBoard")}
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* Ban Thường vụ */}
             <div className="rounded-lg border-2 border-brand-400 bg-brand-500 px-8 py-3 text-center text-white font-semibold shadow">
-              Ban Thường vụ
+              {t("standingBoard")}
             </div>
             <div className="h-8 w-px bg-brand-400" />
 
-            {/* 3 units: Ban Kiểm tra / Văn phòng & ban chuyên môn / Tổ chức trực thuộc */}
             <div className="relative w-full max-w-3xl mx-auto">
-              {/* Horizontal connector line */}
               <div
                 className="absolute top-0 h-0.5 bg-brand-400"
                 style={{ left: "calc(100% / 6)", right: "calc(100% / 6)" }}
               />
 
               <div className="grid grid-cols-3 gap-2">
-                {[
-                  "Ban Kiểm tra",
-                  "Văn phòng & các ban chuyên môn",
-                  "Tổ chức trực thuộc",
-                ].map((dept) => (
+                {orgDepts.map((dept) => (
                   <div key={dept} className="flex flex-col items-center">
                     <div className="h-8 w-px bg-brand-400" />
                     <div className="rounded-lg border border-brand-300 bg-white px-2 sm:px-4 py-2 sm:py-2.5 text-center text-xs sm:text-sm font-medium text-brand-800 shadow-sm min-h-12 flex items-center justify-center">
@@ -287,7 +244,7 @@ export default async function GioiThieuPage() {
       <section className="py-20">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-8 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            Địa chỉ trụ sở
+            {t("addressTitle")}
           </h2>
           <div className="overflow-hidden rounded-xl border border-brand-200 shadow-sm">
             <iframe
@@ -297,7 +254,7 @@ export default async function GioiThieuPage() {
               style={{ border: 0 }}
               loading="lazy"
               allow=""
-              title="Bản đồ Hội Trầm Hương Việt Nam"
+              title={t("mapTitle")}
             />
           </div>
           <div className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-6">
@@ -308,16 +265,13 @@ export default async function GioiThieuPage() {
               📍 Số 150, Đường Lý Chính Thắng, Phường Xuân Hòa, TP. Hồ Chí Minh
             </p>
             <p className="mt-1 text-brand-700">
-              📞 0913 810 060 (Chủ tịch) · 0938 334 647 (Phó Chủ tịch)
+              📞 0913 810 060 · 0938 334 647
             </p>
             <p className="mt-1 text-brand-700">
               📧 hoitramhuongvietnam2010@gmail.com
             </p>
             <p className="mt-1 text-brand-700">
               🌐 hoitramhuong.vn
-            </p>
-            <p className="mt-1 text-brand-700">
-              🕐 Thứ 2 - Thứ 6: 8:00 - 17:00
             </p>
           </div>
         </div>
@@ -336,10 +290,9 @@ export default async function GioiThieuPage() {
       {/* ── CTA ── */}
       <section className="bg-brand-800 py-16 text-white text-center">
         <div className="mx-auto max-w-xl px-4">
-          <h2 className="text-2xl font-bold">Sẵn sàng tham gia?</h2>
+          <h2 className="text-2xl font-bold">{t("ctaTitle")}</h2>
           <p className="mt-3 text-brand-200">
-            Đăng ký hội viên ngay hôm nay và cùng phát triển ngành trầm hương
-            Việt Nam.
+            {t("ctaDesc")}
           </p>
           <div className="mt-6">
             <Link
@@ -350,7 +303,7 @@ export default async function GioiThieuPage() {
                 "transition-colors hover:bg-brand-300"
               )}
             >
-              Đăng ký hội viên
+              {t("ctaButton")}
             </Link>
           </div>
         </div>

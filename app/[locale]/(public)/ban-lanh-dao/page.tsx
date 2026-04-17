@@ -2,41 +2,20 @@ import Image from "next/image"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
-import type { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Ban lãnh đạo — Hội Trầm Hương Việt Nam",
-  description:
-    "Danh sách Ban Thường vụ, Ban Chấp hành và Ban Kiểm tra Hội Trầm Hương Việt Nam qua các nhiệm kỳ.",
-  alternates: { canonical: "/ban-lanh-dao" },
-}
+import { getTranslations } from "next-intl/server"
 
 export const revalidate = 600
 
-type LeaderCategory = "BTV" | "BCH" | "BKT"
+export async function generateMetadata() {
+  const t = await getTranslations("leadership")
+  return {
+    title: t("metaTitle"),
+    description: t("metaDesc"),
+    alternates: { canonical: "/ban-lanh-dao" },
+  }
+}
 
-const SECTION_CONFIG: {
-  category: LeaderCategory
-  label: string
-  description: string
-}[] = [
-  {
-    category: "BTV",
-    label: "Ban Thường vụ",
-    description: "Lãnh đạo cấp cao điều hành mọi hoạt động của Hội",
-  },
-  {
-    category: "BKT",
-    label: "Ban Kiểm tra",
-    description: "Giám sát tài chính và hoạt động tuân thủ Điều lệ Hội",
-  },
-  {
-    category: "BCH",
-    label: "Ủy viên Ban Chấp hành",
-    description:
-      "Thành viên Ban Chấp hành tham gia quyết định các vấn đề quan trọng",
-  },
-]
+type LeaderCategory = "BTV" | "BCH" | "BKT"
 
 function InitialsAvatar({
   name,
@@ -69,6 +48,17 @@ export default async function LeadershipPage({
   searchParams: Promise<{ term?: string }>
 }) {
   const params = await searchParams
+  const t = await getTranslations("leadership")
+
+  const sectionConfig: {
+    category: LeaderCategory
+    label: string
+    description: string
+  }[] = [
+    { category: "BTV", label: t("btvLabel"), description: t("btvDesc") },
+    { category: "BKT", label: t("bktLabel"), description: t("bktDesc") },
+    { category: "BCH", label: t("bchLabel"), description: t("bchDesc") },
+  ]
 
   const allLeaders = await prisma.leader.findMany({
     where: { isActive: true },
@@ -98,10 +88,10 @@ export default async function LeadershipPage({
       {/* Banner */}
       <section className="bg-brand-800 py-16 px-4 text-center">
         <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          Ban lãnh đạo
+          {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-lg">
-          Hội Trầm Hương Việt Nam (VAWA)
+          {t("subtitle")}
         </p>
       </section>
 
@@ -110,18 +100,18 @@ export default async function LeadershipPage({
         {/* Term selector */}
         {terms.length > 1 && (
           <div className="mb-10 flex flex-wrap items-center justify-center gap-2">
-            {terms.map((t) => (
+            {terms.map((term) => (
               <Link
-                key={t}
-                href={`/ban-lanh-dao?term=${encodeURIComponent(t)}`}
+                key={term}
+                href={`/ban-lanh-dao?term=${encodeURIComponent(term)}`}
                 className={cn(
                   "rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors",
-                  t === selectedTerm
+                  term === selectedTerm
                     ? "border-brand-500 bg-brand-700 text-white"
                     : "border-brand-200 bg-white text-brand-700 hover:bg-brand-50",
                 )}
               >
-                {t}
+                {term}
               </Link>
             ))}
           </div>
@@ -129,12 +119,12 @@ export default async function LeadershipPage({
 
         {selectedTerm && (
           <p className="text-center text-sm text-brand-500 mb-10">
-            {selectedTerm} — {leaders.length} thành viên Ban Chấp hành
+            {selectedTerm} — {t("memberCount", { count: leaders.length })}
           </p>
         )}
 
         {/* Sections: BTV → BKT → BCH */}
-        {SECTION_CONFIG.map(({ category, label, description }) => {
+        {sectionConfig.map(({ category, label, description }) => {
           const members = leaders.filter((l) => l.category === category)
           if (members.length === 0) return null
 
@@ -207,7 +197,7 @@ export default async function LeadershipPage({
             href="/gioi-thieu"
             className="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-900 transition-colors"
           >
-            ← Về trang Giới thiệu
+            {t("backToAbout")}
           </Link>
         </div>
       </div>
