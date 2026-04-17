@@ -2,6 +2,9 @@ import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
 import { auth } from "@/lib/auth"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -51,6 +54,8 @@ export default async function MarketplacePage({
 }: {
   searchParams: Promise<{ page?: string; filter?: string; category?: string }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const [params, session] = await Promise.all([searchParams, auth()])
   const page = Math.max(1, Number(params.page ?? 1))
   const filter = (params.filter ?? "all") as SourceFilter
@@ -93,10 +98,10 @@ export default async function MarketplacePage({
       take: PAGE_SIZE,
       select: {
         id: true,
-        name: true,
+        name: true, name_en: true, name_zh: true,
         slug: true,
         imageUrls: true,
-        category: true,
+        category: true, category_en: true, category_zh: true,
         priceRange: true,
         certStatus: true,
         isFeatured: true,
@@ -108,7 +113,7 @@ export default async function MarketplacePage({
         },
         company: {
           select: {
-            name: true,
+            name: true, name_en: true, name_zh: true,
             slug: true,
             logoUrl: true,
             isVerified: true,
@@ -295,7 +300,7 @@ export default async function MarketplacePage({
                     {cover ? (
                       <Image
                         src={cover}
-                        alt={product.name}
+                        alt={l(product, "name")}
                         fill
                         placeholder="blur"
                         blurDataURL={BRAND_BLUR_DATA_URL}
@@ -334,7 +339,7 @@ export default async function MarketplacePage({
                           : "text-brand-800 group-hover:text-brand-700",
                       )}
                     >
-                      {product.name}
+                      {l(product, "name")}
                     </h2>
 
                     {/* Seller info */}
@@ -390,8 +395,8 @@ export default async function MarketplacePage({
                     {/* Meta */}
                     <div className="mt-auto pt-2 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        {product.category && (
-                          <span className="text-brand-500">{product.category}</span>
+                        {l(product, "category") && (
+                          <span className="text-brand-500">{l(product, "category")}</span>
                         )}
                         {product._count.comments > 0 && (
                           <span className="text-brand-400">{product._count.comments} bình luận</span>

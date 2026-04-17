@@ -1,3 +1,6 @@
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -8,11 +11,13 @@ import type { SurveyQuestion } from "@/lib/survey/types"
 export const revalidate = 0
 
 export default async function PublicTakeSurveyPage({ params }: { params: Promise<{ slug: string }> }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
   const survey = await prisma.survey.findUnique({
     where: { slug },
     select: {
-      slug: true, title: true, description: true, status: true,
+      slug: true, title: true, title_en: true, title_zh: true, description: true, description_en: true, description_zh: true, status: true,
       audience: true, questions: true, config: true,
     },
   })
@@ -35,10 +40,10 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
       <Link href="/khao-sat" className="text-sm text-brand-600 hover:underline">← Chọn loại khác</Link>
 
       <div className="rounded-2xl border-2 border-brand-300 bg-brand-50/50 p-6">
-        <h1 className="text-2xl font-bold text-brand-900">{survey.title}</h1>
-        {survey.description && (
+        <h1 className="text-2xl font-bold text-brand-900">{l(survey, "title")}</h1>
+        {l(survey, "description") && (
           <div className="text-sm text-brand-700 mt-3 whitespace-pre-line leading-relaxed">
-            {survey.description}
+            {l(survey, "description")}
           </div>
         )}
       </div>

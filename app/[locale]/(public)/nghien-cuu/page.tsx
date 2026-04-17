@@ -1,4 +1,7 @@
 import Link from "next/link"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -45,6 +48,8 @@ export default async function ResearchPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const q = params.q ?? ""
@@ -70,9 +75,9 @@ export default async function ResearchPage({
       take: PAGE_SIZE,
       select: {
         id: true,
-        title: true,
+        title: true, title_en: true, title_zh: true,
         slug: true,
-        excerpt: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true,
         coverImageUrl: true,
         isPinned: true,
         publishedAt: true,
@@ -175,7 +180,7 @@ export default async function ResearchPage({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={item.coverImageUrl}
-                      alt={item.title}
+                      alt={l(item, "title")}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
@@ -194,11 +199,11 @@ export default async function ResearchPage({
                 {/* Text */}
                 <div className="p-5 flex flex-col flex-1 gap-2">
                   <h3 className="font-bold text-brand-900 leading-snug group-hover:text-brand-700 transition-colors line-clamp-3">
-                    {item.title}
+                    {l(item, "title")}
                   </h3>
-                  {item.excerpt && (
+                  {l(item, "excerpt") && (
                     <p className="text-sm text-brand-600 line-clamp-3 flex-1">
-                      {item.excerpt}
+                      {l(item, "excerpt")}
                     </p>
                   )}
                   <p className="text-xs text-brand-400 mt-auto pt-1">

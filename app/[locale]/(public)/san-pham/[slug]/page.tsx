@@ -1,5 +1,8 @@
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
@@ -18,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await prisma.product.findUnique({
     where: { slug, isPublished: true },
-    select: { name: true, description: true, imageUrls: true, category: true },
+    select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, imageUrls: true, category: true },
   })
   if (!product) return { title: "Không tìm thấy sản phẩm" }
   return {
@@ -33,6 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
   const session = await auth()
 
@@ -47,7 +52,7 @@ export default async function ProductDetailPage({ params }: Props) {
       },
       company: {
         select: {
-          name: true, slug: true, logoUrl: true, isVerified: true,
+          name: true, name_en: true, name_zh: true, slug: true, logoUrl: true, isVerified: true,
           ownerId: true, phone: true, website: true,
         },
       },
@@ -75,8 +80,8 @@ export default async function ProductDetailPage({ params }: Props) {
     take: 3,
     orderBy: { certStatus: "desc" },
     select: {
-      id: true, name: true, slug: true, imageUrls: true,
-      category: true, priceRange: true, certStatus: true,
+      id: true, name: true, name_en: true, name_zh: true, slug: true, imageUrls: true,
+      category: true, category_en: true, category_zh: true, priceRange: true, certStatus: true,
       company: { select: { name: true } },
     },
   })
@@ -123,14 +128,14 @@ export default async function ProductDetailPage({ params }: Props) {
         <Link href="/" className="hover:text-brand-700">Trang chủ</Link>
         <span>/</span>
         <Link href="/san-pham-chung-nhan" className="hover:text-brand-700">Sản phẩm Chứng nhận</Link>
-        {product.category && (
+        {l(product, "category") && (
           <>
             <span>/</span>
-            <span className="text-brand-500">{product.category}</span>
+            <span className="text-brand-500">{l(product, "category")}</span>
           </>
         )}
         <span>/</span>
-        <span className="text-brand-800 font-medium line-clamp-1">{product.name}</span>
+        <span className="text-brand-800 font-medium line-clamp-1">{l(product, "name")}</span>
       </nav>
 
       {/* Main content card */}
@@ -138,13 +143,13 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* Two-column layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           {/* Left: gallery */}
-          <ProductGallery imageUrls={imageUrls} productName={product.name} />
+          <ProductGallery imageUrls={imageUrls} productName={l(product, "name")} />
 
           {/* Right: info */}
           <div className="space-y-5">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-brand-900 leading-tight">
-                {product.name}
+                {l(product, "name")}
               </h1>
               <div className="mt-2 flex items-center gap-2">
                 {hasCompany ? (
@@ -187,8 +192,8 @@ export default async function ProductDetailPage({ params }: Props) {
 
             {/* Category & price */}
             <div className="flex flex-wrap gap-3">
-              {product.category && (
-                <span className="bg-brand-100 text-brand-700 text-sm px-3 py-1 rounded-full">{product.category}</span>
+              {l(product, "category") && (
+                <span className="bg-brand-100 text-brand-700 text-sm px-3 py-1 rounded-full">{l(product, "category")}</span>
               )}
               {product.priceRange && (
                 <span className="bg-brand-500 text-white text-sm font-semibold px-3 py-1 rounded-full">{product.priceRange}</span>
@@ -196,10 +201,10 @@ export default async function ProductDetailPage({ params }: Props) {
             </div>
 
             {/* Description */}
-            {product.description && (
+            {l(product, "description") && (
               <div
                 className="prose prose-sm max-w-none text-brand-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(l(product, "description") ?? "") }}
               />
             )}
 
@@ -309,7 +314,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 >
                   <div className="relative aspect-square bg-brand-100">
                     {rpImages.length > 0 ? (
-                      <Image src={rpImages[0]} alt={rp.name} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
+                      <Image src={rpImages[0]} alt={l(rp, "name")} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
                     ) : (
                       <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
                     )}
@@ -318,9 +323,9 @@ export default async function ProductDetailPage({ params }: Props) {
                     )}
                   </div>
                   <div className="p-3 space-y-0.5">
-                    <p className="text-sm font-semibold text-brand-900 group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">{rp.name}</p>
+                    <p className="text-sm font-semibold text-brand-900 group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">{l(rp, "name")}</p>
                     <p className="text-xs text-brand-500">{rp.company?.name ?? ""}</p>
-                    {rp.category && <p className="text-xs text-brand-400">{rp.category}</p>}
+                    {l(rp, "category") && <p className="text-xs text-brand-400">{l(rp, "category")}</p>}
                   </div>
                 </Link>
               )

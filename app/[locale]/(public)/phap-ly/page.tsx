@@ -1,6 +1,9 @@
 import Link from "next/link"
 import type { Metadata } from "next"
 import { DocumentCategory } from "@prisma/client"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 
@@ -37,6 +40,8 @@ export default async function PhapLyPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const rawTab = params.tab ?? "dieu-le"
   const activeTab: Tab = TABS.some((t) => t.key === rawTab) ? (rawTab as Tab) : "dieu-le"
@@ -60,11 +65,11 @@ export default async function PhapLyPage({
       orderBy: [{ sortOrder: "asc" }, { issuedDate: "desc" }],
       select: {
         id: true,
-        title: true,
-        description: true,
+        title: true, title_en: true, title_zh: true,
+        description: true, description_en: true, description_zh: true,
         documentNumber: true,
         issuedDate: true,
-        issuer: true,
+        issuer: true, issuer_en: true, issuer_zh: true,
         driveFileId: true,
         driveViewUrl: true,
         driveDownloadUrl: true,
@@ -153,7 +158,7 @@ export default async function PhapLyPage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-lg font-bold text-brand-900 leading-snug">
-                      {doc.title}
+                      {l(doc, "title")}
                     </h2>
 
                     {/* Meta row */}
@@ -170,18 +175,18 @@ export default async function PhapLyPage({
                           {fmtDate(doc.issuedDate)}
                         </span>
                       )}
-                      {doc.issuer && (
+                      {l(doc, "issuer") && (
                         <span>
                           <span className="font-medium text-brand-700">Ban hành: </span>
-                          {doc.issuer}
+                          {l(doc, "issuer")}
                         </span>
                       )}
                     </div>
 
                     {/* Description */}
-                    {doc.description && (
+                    {l(doc, "description") && (
                       <p className="mt-3 text-sm text-brand-600 leading-relaxed">
-                        {doc.description}
+                        {l(doc, "description")}
                       </p>
                     )}
 

@@ -3,6 +3,9 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -17,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const news = await prisma.news.findFirst({
     where: { slug, category: "RESEARCH" },
     select: {
-      title: true,
-      excerpt: true,
+      title: true, title_en: true, title_zh: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true,
       coverImageUrl: true,
       publishedAt: true,
     },
@@ -39,6 +42,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ResearchDetailPage({ params }: Props) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
 
   const news = await prisma.news.findFirst({
@@ -67,9 +72,9 @@ export default async function ResearchDetailPage({ params }: Props) {
     take: 3,
     select: {
       id: true,
-      title: true,
+      title: true, title_en: true, title_zh: true,
       slug: true,
-      excerpt: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true,
       coverImageUrl: true,
       publishedAt: true,
     },
@@ -104,7 +109,7 @@ export default async function ResearchDetailPage({ params }: Props) {
             Nghiên cứu khoa học
           </Link>
           <span>/</span>
-          <span className="text-foreground font-medium line-clamp-1">{news.title}</span>
+          <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
         </nav>
 
         {/* Article card */}
@@ -114,7 +119,7 @@ export default async function ResearchDetailPage({ params }: Props) {
             <div className="relative w-full aspect-video bg-muted">
               <Image
                 src={news.coverImageUrl}
-                alt={news.title}
+                alt={l(news, "title")}
                 fill
                 className="object-cover"
                 priority
@@ -132,7 +137,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                 </span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-                {news.title}
+                {l(news, "title")}
               </h1>
               {news.publishedAt && (
                 <p className="text-muted-foreground text-sm">
@@ -198,7 +203,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                     <div className="relative w-full h-36">
                       <Image
                         src={item.coverImageUrl}
-                        alt={item.title}
+                        alt={l(item, "title")}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, 33vw"
@@ -209,7 +214,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                   )}
                   <div className="p-3 space-y-1">
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">
-                      {item.title}
+                      {l(item, "title")}
                     </h3>
                     {item.publishedAt && (
                       <p className="text-xs text-muted-foreground">

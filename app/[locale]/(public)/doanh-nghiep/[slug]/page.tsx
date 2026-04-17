@@ -1,4 +1,7 @@
 import { auth } from "@/lib/auth"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier } from "@/lib/tier"
 import { notFound } from "next/navigation"
@@ -15,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const company = await prisma.company.findUnique({
     where: { slug, isPublished: true },
-    select: { name: true, description: true, logoUrl: true, coverImageUrl: true, address: true, foundedYear: true },
+    select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, logoUrl: true, coverImageUrl: true, address: true, address_en: true, address_zh: true, foundedYear: true },
   })
   if (!company) return { title: "Không tìm thấy" }
   return {
@@ -40,6 +43,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CompanyProfilePage({ params }: Props) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
   const session = await auth()
   const currentUserId = session?.user?.id
@@ -53,7 +58,7 @@ export default async function CompanyProfilePage({ params }: Props) {
         where: { isPublished: true },
         orderBy: { certStatus: "desc" },
         select: {
-          id: true, name: true, slug: true, imageUrls: true,
+          id: true, name: true, name_en: true, name_zh: true, slug: true, imageUrls: true,
           category: true, priceRange: true, certStatus: true, badgeUrl: true,
         },
       },
@@ -81,7 +86,7 @@ export default async function CompanyProfilePage({ params }: Props) {
       {/* Cover image */}
       <div className="relative w-full h-48 sm:h-64 md:h-72 overflow-hidden">
         {company.coverImageUrl ? (
-          <Image src={company.coverImageUrl} alt={company.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 1024px" priority />
+          <Image src={company.coverImageUrl} alt={l(company, "name")} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 1024px" priority />
         ) : (
           <div className="w-full h-full bg-linear-to-br from-brand-800 via-brand-700 to-brand-900" />
         )}
@@ -90,7 +95,7 @@ export default async function CompanyProfilePage({ params }: Props) {
         <div className="absolute -bottom-10 left-6 sm:left-10">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-brand-700">
             {company.logoUrl ? (
-              <Image src={company.logoUrl} alt={company.name} fill className="object-cover" sizes="96px" />
+              <Image src={company.logoUrl} alt={l(company, "name")} fill className="object-cover" sizes="96px" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-100">
                 {company.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
@@ -115,7 +120,7 @@ export default async function CompanyProfilePage({ params }: Props) {
       {/* Company info */}
       <div className="mt-14 sm:mt-16 px-4 sm:px-6 lg:px-8 pb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-2xl sm:text-3xl font-bold text-brand-900">{company.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-brand-900">{l(company, "name")}</h1>
           {company.isVerified && (
             <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
               ✓ Đã xác minh
@@ -130,7 +135,7 @@ export default async function CompanyProfilePage({ params }: Props) {
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">
           {company.foundedYear && <span className="text-sm text-brand-700 font-medium">Thành lập {company.foundedYear}</span>}
-          {company.address && <span className="text-sm text-brand-600">{company.address}</span>}
+          {l(company, "address") && <span className="text-sm text-brand-600">{l(company, "address")}</span>}
           <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm font-semibold px-2 py-0.5 rounded-full">
             {"★".repeat(tier.stars)} {tier.label}
           </span>
@@ -149,14 +154,14 @@ export default async function CompanyProfilePage({ params }: Props) {
         </div>
 
         <CompanyTabs
-          description={company.description}
+          description={l(company, "description")}
           products={company.products.map((p) => ({ ...p, imageUrls: p.imageUrls as string[] }))}
-          companyName={company.name}
+          companyName={l(company, "name")}
           companySlug={company.slug}
           foundedYear={company.foundedYear}
           employeeCount={company.employeeCount}
           businessLicense={company.businessLicense}
-          address={company.address}
+          address={l(company, "address")}
           phone={company.phone}
           website={company.website}
           postCount={postCount}

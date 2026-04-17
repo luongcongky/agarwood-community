@@ -1,3 +1,6 @@
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { DigitalPlatformHero } from "@/components/features/survey/DigitalPlatformHero"
@@ -12,17 +15,19 @@ export const metadata = {
 }
 
 export default async function PublicSurveyLandingPage() {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   // Lấy 2 survey ACTIVE theo audience BUSINESS / INDIVIDUAL
   const [businessSurvey, individualSurvey] = await Promise.all([
     prisma.survey.findFirst({
       where: { status: "ACTIVE", audience: "BUSINESS" },
       orderBy: { createdAt: "desc" },
-      select: { slug: true, title: true, description: true },
+      select: { slug: true, title: true, title_en: true, title_zh: true, description: true },
     }),
     prisma.survey.findFirst({
       where: { status: "ACTIVE", audience: "INDIVIDUAL" },
       orderBy: { createdAt: "desc" },
-      select: { slug: true, title: true, description: true },
+      select: { slug: true, title: true, title_en: true, title_zh: true, description: true },
     }),
   ])
 

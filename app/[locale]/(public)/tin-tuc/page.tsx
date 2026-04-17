@@ -2,6 +2,9 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -46,6 +49,9 @@ export default async function NewsPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
+
   const params = await searchParams
   const page = Math.max(1, Number(params.page ?? 1))
   const q = params.q ?? ""
@@ -72,9 +78,9 @@ export default async function NewsPage({
       take: PAGE_SIZE,
       select: {
         id: true,
-        title: true,
+        title: true, title_en: true, title_zh: true,
         slug: true,
-        excerpt: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true,
         coverImageUrl: true,
         isPinned: true,
         publishedAt: true,
@@ -85,7 +91,7 @@ export default async function NewsPage({
       where: { isPublished: true, category: "GENERAL" },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
-      select: { id: true, title: true, slug: true, publishedAt: true, isPinned: true },
+      select: { id: true, title: true, title_en: true, title_zh: true, slug: true, publishedAt: true, isPinned: true },
     }),
   ])
 
@@ -161,7 +167,7 @@ export default async function NewsPage({
                   {heroItem.coverImageUrl ? (
                     <img
                       src={heroItem.coverImageUrl}
-                      alt={heroItem.title}
+                      alt={l(heroItem, "title")}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
@@ -176,11 +182,11 @@ export default async function NewsPage({
                 {/* Text area — nền solid, nằm ngoài ảnh */}
                 <div className="bg-white p-5 sm:p-6 flex-1">
                   <h2 className="text-brand-900 text-lg sm:text-xl lg:text-2xl font-bold leading-snug group-hover:text-brand-700 transition-colors line-clamp-3">
-                    {heroItem.title}
+                    {l(heroItem, "title")}
                   </h2>
-                  {heroItem.excerpt && (
+                  {l(heroItem, "excerpt") && (
                     <p className="mt-2 text-brand-600 text-sm line-clamp-2">
-                      {heroItem.excerpt}
+                      {l(heroItem, "excerpt")}
                     </p>
                   )}
                   <p className="mt-3 text-brand-400 text-xs">
@@ -202,7 +208,7 @@ export default async function NewsPage({
                         {item.coverImageUrl ? (
                           <img
                             src={item.coverImageUrl}
-                            alt={item.title}
+                            alt={l(item, "title")}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -211,7 +217,7 @@ export default async function NewsPage({
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-semibold text-brand-900 leading-snug group-hover:text-brand-700 line-clamp-3 transition-colors">
-                          {item.title}
+                          {l(item, "title")}
                         </h3>
                         <p className="mt-1.5 text-xs text-brand-400">
                           {formatDate(item.publishedAt)}
@@ -263,7 +269,7 @@ export default async function NewsPage({
                       {item.coverImageUrl ? (
                         <img
                           src={item.coverImageUrl}
-                          alt={item.title}
+                          alt={l(item, "title")}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
@@ -282,11 +288,11 @@ export default async function NewsPage({
                         <span className="text-xs text-brand-400">{formatDate(item.publishedAt)}</span>
                       </div>
                       <h3 className="font-semibold text-brand-900 text-sm sm:text-base leading-snug group-hover:text-brand-700 transition-colors line-clamp-2">
-                        {item.title}
+                        {l(item, "title")}
                       </h3>
-                      {item.excerpt && (
+                      {l(item, "excerpt") && (
                         <p className="mt-1 text-xs sm:text-sm text-brand-500 line-clamp-2 hidden sm:block">
-                          {item.excerpt}
+                          {l(item, "excerpt")}
                         </p>
                       )}
                     </div>
@@ -374,7 +380,7 @@ export default async function NewsPage({
                       </span>
                       <div>
                         <p className="text-sm font-medium text-brand-900 group-hover:text-brand-700 leading-snug line-clamp-2 transition-colors">
-                          {item.title}
+                          {l(item, "title")}
                         </p>
                         <p className="text-xs text-brand-400 mt-1">{formatDate(item.publishedAt)}</p>
                       </div>

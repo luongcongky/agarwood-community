@@ -1,5 +1,8 @@
 import Image from "next/image"
 import Link from "next/link"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import type { Metadata } from "next"
@@ -37,6 +40,8 @@ export default async function MembersPage({
 }: {
   searchParams: Promise<{ province?: string; q?: string }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const q = params.q ?? ""
 
@@ -53,11 +58,11 @@ export default async function MembersPage({
     orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
     select: {
       id: true,
-      name: true,
+      name: true, name_en: true, name_zh: true,
       slug: true,
       logoUrl: true,
-      description: true,
-      address: true,
+      description: true, description_en: true, description_zh: true,
+      address: true, address_en: true, address_zh: true,
       phone: true,
       website: true,
       isVerified: true,
@@ -128,7 +133,7 @@ export default async function MembersPage({
                     <div className="relative w-16 h-16 shrink-0">
                       <Image
                         src={company.logoUrl}
-                        alt={company.name}
+                        alt={l(company, "name")}
                         fill
                         className="rounded-full object-cover"
                       />
@@ -142,7 +147,7 @@ export default async function MembersPage({
                   )}
                   <div className="min-w-0">
                     <h2 className="font-bold text-foreground text-base leading-tight">
-                      {company.name}
+                      {l(company, "name")}
                     </h2>
                     {company.isVerified && (
                       <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full mt-1">
@@ -153,16 +158,16 @@ export default async function MembersPage({
                 </div>
 
                 {/* Description — strip HTML để preview plain text trong card */}
-                {company.description && (
+                {l(company, "description") && (
                   <p className="text-muted-foreground text-sm line-clamp-2">
-                    {stripHtml(company.description)}
+                    {stripHtml(l(company, "description"))}
                   </p>
                 )}
 
                 {/* Address */}
-                {company.address && (
+                {l(company, "address") && (
                   <p className="text-muted-foreground text-xs truncate flex items-center gap-1">
-                    📍 {company.address}
+                    📍 {l(company, "address")}
                   </p>
                 )}
 

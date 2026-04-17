@@ -1,6 +1,9 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -68,6 +71,8 @@ export default async function CertifiedProductsPage({
     view?: string
   }>
 }) {
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const sp = await searchParams
   const page = Math.max(1, Number(sp.page ?? 1))
   const q = sp.q ?? ""
@@ -107,14 +112,14 @@ export default async function CertifiedProductsPage({
         take: PAGE_SIZE,
         select: {
           id: true,
-          name: true,
+          name: true, name_en: true, name_zh: true,
           slug: true,
           imageUrls: true,
-          category: true,
+          category: true, category_en: true, category_zh: true,
           priceRange: true,
           certApprovedAt: true,
           company: {
-            select: { name: true, slug: true, logoUrl: true, isVerified: true, address: true },
+            select: { name: true, name_en: true, name_zh: true, slug: true, logoUrl: true, isVerified: true, address: true },
           },
         },
       }),
@@ -221,7 +226,7 @@ export default async function CertifiedProductsPage({
                   {/* Thumbnail */}
                   <div className="relative w-16 h-14 shrink-0 rounded-lg overflow-hidden bg-brand-100">
                     {firstImage ? (
-                      <Image src={firstImage} alt={product.name} fill className="object-cover" sizes="64px" />
+                      <Image src={firstImage} alt={l(product, "name")} fill className="object-cover" sizes="64px" />
                     ) : (
                       <AgarwoodPlaceholder className="w-full h-full" size="xs" shape="square" />
                     )}
@@ -231,7 +236,7 @@ export default async function CertifiedProductsPage({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2 flex-wrap">
                       <h2 className="font-semibold text-brand-900 text-sm leading-snug group-hover:text-brand-700 transition-colors">
-                        {product.name}
+                        {l(product, "name")}
                       </h2>
                       <span className="shrink-0 inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-green-200">
                         ✓ Chứng nhận
@@ -239,7 +244,7 @@ export default async function CertifiedProductsPage({
                     </div>
                     <p className="text-xs text-brand-500 mt-1">
                       {product.company!.name}
-                      {product.category && ` · ${product.category}`}
+                      {l(product, "category") && ` · ${l(product, "category")}`}
                       {product.company!.address && ` · ${product.company!.address.split(",").at(-1)?.trim()}`}
                       {product.certApprovedAt && ` · Cấp: ${new Date(product.certApprovedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`}
                     </p>
@@ -266,7 +271,7 @@ export default async function CertifiedProductsPage({
                     {firstImage ? (
                       <img
                         src={firstImage}
-                        alt={product.name}
+                        alt={l(product, "name")}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
@@ -281,7 +286,7 @@ export default async function CertifiedProductsPage({
                   {/* Info */}
                   <div className="p-4 flex flex-col flex-1 gap-1.5">
                     <h2 className="font-semibold text-brand-900 text-sm leading-snug group-hover:text-brand-700 transition-colors line-clamp-2">
-                      {product.name}
+                      {l(product, "name")}
                     </h2>
 
                     {/* Company */}
