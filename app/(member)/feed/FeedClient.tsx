@@ -5,6 +5,7 @@ import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,12 +55,7 @@ type Post = {
 
 type FilterKey = "all" | "NEWS" | "PRODUCT" | "CERTIFIED"
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "Tất cả" },
-  { key: "NEWS", label: "Tin tức" },
-  { key: "PRODUCT", label: "Sản phẩm" },
-  { key: "CERTIFIED", label: "Chứng nhận" },
-]
+// FILTERS moved inside component to access translations
 
 function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
   const params = new URLSearchParams()
@@ -103,17 +99,18 @@ type FeedClientProps = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeAgo(dateStr: string, now: number): string {
-  if (now === 0) return "" // Return empty during SSR/hydration to avoid mismatch
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function timeAgo(dateStr: string, now: number, t: any): string {
+  if (now === 0) return ""
   const diffMs = now - new Date(dateStr).getTime()
   const mins = Math.floor(diffMs / 60000)
-  if (mins < 1) return "Vừa xong"
-  if (mins < 60) return `${mins} phút trước`
+  if (mins < 1) return t("timeJustNow")
+  if (mins < 60) return t("timeMinutes", { count: mins })
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} giờ trước`
+  if (hours < 24) return t("timeHours", { count: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days} ngày trước`
-  return new Date(dateStr).toLocaleDateString("vi-VN")
+  if (days < 7) return t("timeDays", { count: days })
+  return new Date(dateStr).toLocaleDateString()
 }
 
 function getInitials(name: string) {
@@ -168,6 +165,7 @@ function PostCard({
   isMounted: boolean
   now: number
 }) {
+  const t = useTranslations("feed")
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const isLocked = post.status === "LOCKED"
@@ -187,19 +185,19 @@ function PostCard({
   // Menu options based on role
   const menuItems: { label: string; action: () => void; destructive?: boolean }[] = []
   if (isAuthor) {
-    menuItems.push({ label: "Chỉnh sửa", action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` } })
-    menuItems.push({ label: "Xoá bài", action: () => onDelete(post.id), destructive: true })
+    menuItems.push({ label: t("menuEdit"), action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` } })
+    menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
   }
   if (isAdmin) {
-    menuItems.push({ label: isLocked ? "Mở khoá" : "Khoá bài", action: () => onLock(post.id) })
-    if (!isAuthor) menuItems.push({ label: "Xoá bài", action: () => onDelete(post.id), destructive: true })
+    menuItems.push({ label: isLocked ? t("menuUnlock") : t("menuLock"), action: () => onLock(post.id) })
+    if (!isAuthor) menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
   }
   if (currentUserRole && currentUserRole !== "GUEST" && !isAuthor) {
-    menuItems.push({ label: "Báo cáo bài viết", action: () => handleReport(post.id) })
+    menuItems.push({ label: t("menuReport"), action: () => handleReport(post.id) })
   }
 
   async function handleReport(postId: string) {
-    const reason = window.prompt("Lý do báo cáo:")
+    const reason = window.prompt(t("reportPrompt"))
     if (!reason) return
     try {
       await fetch(`/api/posts/${postId}/report`, {
@@ -207,9 +205,9 @@ function PostCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       })
-      alert("Đã gửi báo cáo. Admin sẽ xem xét.")
+      alert(t("reportSent"))
     } catch {
-      alert("Có lỗi xảy ra.")
+      alert(t("genericError"))
     }
     setMenuOpen(false)
   }
@@ -248,7 +246,7 @@ function PostCard({
                 {tier.label}
               </span>
               <span className="text-xs text-brand-400" suppressHydrationWarning>
-                {timeAgo(post.createdAt, now)}
+                {timeAgo(post.createdAt, now, t)}
               </span>
             </div>
           </div>
@@ -418,6 +416,7 @@ function InlinePostCreator({
   membershipInfo: MembershipInfo | null
   onPostCreated: (post: Post) => void
 }) {
+  const t = useTranslations("feed")
   const [content, setContent] = useState("")
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -461,7 +460,7 @@ function InlinePostCreator({
   async function handleSubmit() {
     const plainText = content.trim()
     if (plainText.length < 50) {
-      setError(`Nội dung tối thiểu 50 ký tự (hiện tại: ${plainText.length})`)
+      setError(t("minContent", { count: plainText.length }))
       return
     }
 
@@ -476,7 +475,7 @@ function InlinePostCreator({
         formData.append("file", img.file)
         formData.append("folder", "bai-viet")
         const res = await fetch("/api/upload", { method: "POST", body: formData })
-        if (!res.ok) throw new Error("Upload ảnh thất bại")
+        if (!res.ok) throw new Error(t("uploadFailed"))
         const data = await res.json()
         uploadedUrls.push(data.secure_url)
       }
@@ -494,7 +493,7 @@ function InlinePostCreator({
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || "Đăng bài thất bại")
+        throw new Error(data.error || t("postFailed"))
       }
 
       const { post } = await res.json()
@@ -560,7 +559,7 @@ function InlinePostCreator({
         ref={textareaRef}
         value={content}
         onChange={(e) => { setContent(e.target.value); setError(null) }}
-        placeholder="Chia sẻ kiến thức, kinh nghiệm hoặc thông tin thị trường trầm hương..."
+        placeholder={t("placeholder")}
           className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
           disabled={submitting}
           rows={2}
@@ -603,7 +602,7 @@ function InlinePostCreator({
             onClick={() => fileInputRef.current?.click()}
             disabled={images.length >= 4 || submitting}
             className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
-            title="Thêm ảnh (tối đa 4)"
+            title={t("addImages")}
           >
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Zm7.5-12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
@@ -615,7 +614,7 @@ function InlinePostCreator({
           <Link
             href="/feed/tao-bai"
             className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors"
-            title="Trình soạn thảo đầy đủ"
+            title={t("fullEditor")}
           >
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -641,7 +640,7 @@ function InlinePostCreator({
               : "bg-brand-100 text-brand-400 cursor-not-allowed",
           )}
         >
-          {submitting ? "Đang đăng..." : "Đăng bài"}
+          {submitting ? t("posting") : t("post")}
         </button>
       </div>
     </div>
@@ -651,6 +650,7 @@ function InlinePostCreator({
 // ── Membership Card ──────────────────────────────────────────────────────────
 
 function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
+  const t = useTranslations("feed")
   const expires = info.expires ? new Date(info.expires) : null
   const daysLeft = expires && now ? Math.max(0, Math.ceil((expires.getTime() - now) / 86400000)) : 0
   const isActive = expires && now ? expires.getTime() > now : false
@@ -660,7 +660,7 @@ function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-brand-200">Hội viên</span>
         <span className={cn("text-xs font-semibold rounded-full px-2 py-0.5", isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300")}>
-          {isActive ? "Đang hoạt động" : "Hết hạn"}
+          {isActive ? t("statusActive") : t("statusExpired")}
         </span>
       </div>
       {expires && (
@@ -701,6 +701,15 @@ export function FeedClient({
   tierIndSilver,
   tierIndGold,
 }: FeedClientProps) {
+  const t = useTranslations("feed")
+
+  const FILTERS: { key: FilterKey; label: string }[] = [
+    { key: "all", label: t("filterAll") },
+    { key: "NEWS", label: t("filterNews") },
+    { key: "PRODUCT", label: t("filterProduct") },
+    { key: "CERTIFIED", label: t("filterCert") },
+  ]
+
   const [isMounted, setIsMounted] = useState(false)
   const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
@@ -808,7 +817,7 @@ export function FeedClient({
   }
 
   async function handleDelete(postId: string) {
-    if (!window.confirm("Xoá bài viết này?")) return
+    if (!window.confirm(t("deleteConfirm"))) return
     try {
       const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" })
       if (res.ok) {
@@ -911,8 +920,8 @@ export function FeedClient({
             <h3 className="font-semibold text-brand-900 text-sm">Tham gia Hội Trầm Hương</h3>
             <p className="text-xs text-brand-400">
               {isLoggedIn
-                ? "Tài khoản đang chờ duyệt. Bạn sẽ nhận email khi được phê duyệt."
-                : "Đăng nhập để tương tác, đăng bài và nhận quyền lợi hội viên."}
+                ? t("pendingMsg")
+                : t("guestMsg")}
             </p>
             {!isLoggedIn && (
               <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors">

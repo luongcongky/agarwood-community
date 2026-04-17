@@ -112,11 +112,14 @@ export const proxy = auth((req) => {
   // Public/auth routes get locale prefix: /vi/..., /en/..., /zh/...
   // Default locale = vi. If no prefix on a public route → redirect to /vi/...
 
-  // Skip locale logic for internal routes (no prefix needed)
+  // Internal routes: no locale prefix in URL, but still pass locale via header
+  // so server/client components can render translated static text.
   if (isInternalRoute(pathname)) {
+    const cookieLocale = req.cookies.get("NEXT_LOCALE")?.value
+    const internalLocale = cookieLocale && isValidLocale(cookieLocale) ? cookieLocale : defaultLocale
     const res = NextResponse.next()
     res.headers.set("x-pathname", pathname)
-    res.headers.set("x-locale", defaultLocale)
+    res.headers.set("x-locale", internalLocale)
     return res
   }
 
