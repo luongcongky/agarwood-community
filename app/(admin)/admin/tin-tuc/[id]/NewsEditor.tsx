@@ -12,7 +12,7 @@ import {
 import { slugify } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 import { CoverImageCropper } from "@/components/ui/CoverImageCropper"
-import { MultiLangInput, MultiLangTextarea } from "@/components/ui/multi-lang-input"
+import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
 
 interface NewsData {
   title: string
@@ -36,13 +36,12 @@ export default function NewsEditorPage({
   const router = useRouter()
   const readOnly = useAdminReadOnly()
 
-  const [title, setTitle] = useState("")
-  const [title_en, setTitleEn] = useState("")
-  const [title_zh, setTitleZh] = useState("")
+  const EMPTY_LANG: Record<Locale, string> = { vi: "", en: "", zh: "" }
+  const [title, setTitle] = useState<Record<Locale, string>>(EMPTY_LANG)
   const [slug, setSlug] = useState("")
-  const [excerpt, setExcerpt] = useState("")
-  const [excerpt_en, setExcerptEn] = useState("")
-  const [excerpt_zh, setExcerptZh] = useState("")
+  const [excerpt, setExcerpt] = useState<Record<Locale, string>>(EMPTY_LANG)
+  const [content, setContent] = useState<Record<Locale, string>>(EMPTY_LANG)
+  const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [coverImageUrl, setCoverImageUrl] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState("")
@@ -51,10 +50,6 @@ export default function NewsEditorPage({
   const [isPinned, setIsPinned] = useState(false)
   const [publishedAt, setPublishedAt] = useState("")
   const [initialContent, setInitialContent] = useState<string>("")
-  const [content_en, setContentEn] = useState("")
-  const [content_zh, setContentZh] = useState("")
-  const [aiTranslating, setAiTranslating] = useState<"en" | "zh" | null>(null)
-  const [aiError, setAiError] = useState("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
@@ -73,9 +68,7 @@ export default function NewsEditorPage({
         const res = await fetch(`/api/admin/news/${id}`)
         if (!res.ok) return
         const { news }: { news: NewsData } = await res.json()
-        setTitle(news.title)
         setSlug(news.slug)
-        setExcerpt(news.excerpt ?? "")
         setCoverImageUrl(news.coverImageUrl ?? "")
         setCoverPreview(news.coverImageUrl ?? "")
         setCategory(news.category ?? "GENERAL")
@@ -87,14 +80,22 @@ export default function NewsEditorPage({
             : ""
         )
         setInitialContent(news.content ?? "")
-        // i18n fields
         const n = news as unknown as Record<string, unknown>
-        setTitleEn((n.title_en as string) ?? "")
-        setTitleZh((n.title_zh as string) ?? "")
-        setExcerptEn((n.excerpt_en as string) ?? "")
-        setExcerptZh((n.excerpt_zh as string) ?? "")
-        setContentEn((n.content_en as string) ?? "")
-        setContentZh((n.content_zh as string) ?? "")
+        setTitle({
+          vi: news.title,
+          en: (n.title_en as string) ?? "",
+          zh: (n.title_zh as string) ?? "",
+        })
+        setExcerpt({
+          vi: news.excerpt ?? "",
+          en: (n.excerpt_en as string) ?? "",
+          zh: (n.excerpt_zh as string) ?? "",
+        })
+        setContent({
+          vi: news.content ?? "",
+          en: (n.content_en as string) ?? "",
+          zh: (n.content_zh as string) ?? "",
+        })
       } finally {
         setFetching(false)
       }
@@ -103,11 +104,26 @@ export default function NewsEditorPage({
     fetchNews()
   }, [isNew, id])
 
-  function handleTitleChange(value: string) {
-    setTitle(value)
-    if (isNew) {
+  function setTitleField(locale: Locale, value: string) {
+    setTitle((prev) => ({ ...prev, [locale]: value }))
+    if (locale === "vi" && isNew) {
       setSlug(slugify(value))
     }
+  }
+
+  async function handleLocaleSwitch(next: Locale) {
+    if (next === activeLocale) return
+    // Save editor HTML to outgoing locale state.
+    // If leaving VI, process pending image uploads first so subsequent AI
+    // translate (and save) doesn't carry stale blob: URLs into other locales.
+    if (activeLocale === "vi") {
+      try { await editorRef.current?.processImages() } catch { /* ignore upload errors; user will see on save */ }
+    }
+    const currentHtml = editorRef.current?.getHTML() ?? ""
+    setContent((prev) => ({ ...prev, [activeLocale]: currentHtml }))
+    const incoming = next === activeLocale ? currentHtml : content[next] ?? ""
+    editorRef.current?.setContent(incoming)
+    setActiveLocale(next)
   }
 
   // Crop flow: chọn file → mở cropper → crop xong → set coverFile + preview
@@ -156,43 +172,42 @@ export default function NewsEditorPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function handleAiTranslate(targetLocale: "en" | "zh") {
-    setAiError("")
-    // Get current content from rich text editor
-    const content = editorRef.current?.getHTML() ?? ""
-    if (!title.trim() && !excerpt.trim() && !content.trim()) {
-      setAiError("Vui lòng nhập tiêu đề / tóm tắt / nội dung trước khi dịch.")
-      return
+  async function handleAiTranslate(targetLocale: Locale) {
+    if (targetLocale === "vi") return
+    // Ensure VI image blobs are uploaded before the VI HTML is shipped to AI.
+    let viContent = content.vi
+    if (activeLocale === "vi") {
+      try { await editorRef.current?.processImages() } catch { /* surface on save */ }
+      viContent = editorRef.current?.getHTML() ?? viContent
+      setContent((prev) => ({ ...prev, vi: viContent }))
+    }
+    if (viContent.includes("blob:")) {
+      throw new Error("Ảnh trong bài chưa được upload. Quay lại tab VI và lưu bài trước khi dịch.")
+    }
+    if (!title.vi.trim() && !excerpt.vi.trim() && !viContent.trim()) {
+      throw new Error("Vui lòng nhập tiêu đề / tóm tắt / nội dung tiếng Việt trước khi dịch.")
     }
 
-    setAiTranslating(targetLocale)
-    try {
-      const res = await fetch("/api/admin/ai/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, excerpt, content, targetLocale }),
-      })
-      const data = await res.json()
+    const res = await fetch("/api/admin/ai/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: { title: title.vi, excerpt: excerpt.vi, content: viContent },
+        targetLocale,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? "Lỗi khi dịch.")
 
-      if (!res.ok) {
-        setAiError(data.error ?? "Lỗi khi dịch.")
-        return
+    const translated = (data.fields ?? {}) as Record<string, string>
+    if (translated.title) setTitle((prev) => ({ ...prev, [targetLocale]: translated.title }))
+    if (translated.excerpt) setExcerpt((prev) => ({ ...prev, [targetLocale]: translated.excerpt }))
+    if (translated.content) {
+      setContent((prev) => ({ ...prev, [targetLocale]: translated.content }))
+      // If the translated locale is what's currently shown, reflect in editor too
+      if (activeLocale === targetLocale) {
+        editorRef.current?.setContent(translated.content)
       }
-
-      // Fill translated fields
-      if (targetLocale === "en") {
-        if (data.title) setTitleEn(data.title)
-        if (data.excerpt) setExcerptEn(data.excerpt)
-        if (data.content) setContentEn(data.content)
-      } else {
-        if (data.title) setTitleZh(data.title)
-        if (data.excerpt) setExcerptZh(data.excerpt)
-        if (data.content) setContentZh(data.content)
-      }
-    } catch {
-      setAiError("Không thể kết nối tới AI. Vui lòng thử lại.")
-    } finally {
-      setAiTranslating(null)
     }
   }
 
@@ -221,22 +236,25 @@ export default function NewsEditorPage({
         setCoverFile(null)
       }
 
-      // Upload pending editor images
+      // Upload pending editor images (runs against whichever locale is
+      // currently loaded in the editor).
       await editorRef.current?.processImages()
-      const content = editorRef.current?.getHTML() ?? ""
+      const activeHtml = editorRef.current?.getHTML() ?? ""
+      // Sync the currently-active locale's content with what's in the editor now.
+      const finalContent = { ...content, [activeLocale]: activeHtml }
 
       const body = {
-        title,
-        title_en: title_en || null,
-        title_zh: title_zh || null,
+        title: title.vi,
+        title_en: title.en || null,
+        title_zh: title.zh || null,
         slug,
-        excerpt,
-        excerpt_en: excerpt_en || null,
-        excerpt_zh: excerpt_zh || null,
+        excerpt: excerpt.vi,
+        excerpt_en: excerpt.en || null,
+        excerpt_zh: excerpt.zh || null,
         coverImageUrl: finalCoverUrl,
-        content,
-        content_en: content_en || null,
-        content_zh: content_zh || null,
+        content: finalContent.vi,
+        content_en: finalContent.en || null,
+        content_zh: finalContent.zh || null,
         category,
         isPublished,
         isPinned,
@@ -313,21 +331,37 @@ export default function NewsEditorPage({
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
-              {/* Title */}
-              <MultiLangInput
-                name="title"
-                label="Tiêu đề *"
-                values={{ vi: title, en: title_en, zh: title_zh }}
-                onChange={(key, value) => {
-                  if (key === "title") handleTitleChange(value)
-                  else if (key === "title_en") setTitleEn(value)
-                  else if (key === "title_zh") setTitleZh(value)
-                }}
-                placeholder="Tiêu đề bài viết"
-                required
+              {/* Language tabs — controls title/excerpt/content together */}
+              <LangTabsBar
+                activeLocale={activeLocale}
+                onLocaleChange={(l) => void handleLocaleSwitch(l)}
+                hasContent={computeHasContent(title, excerpt, content)}
+                disabled={readOnly}
+                helperText={
+                  activeLocale === "vi"
+                    ? "Bản tiếng Việt là bản gốc — bắt buộc. Dùng nút AI dịch khi chuyển sang EN / 中文 để dịch toàn bộ tiêu đề + tóm tắt + nội dung trong 1 lần."
+                    : undefined
+                }
+                onAiTranslate={handleAiTranslate}
               />
 
-              {/* Slug */}
+              {/* Title — driven by active locale */}
+              <div>
+                <label className="block text-sm font-medium text-brand-800 mb-1">
+                  Tiêu đề {activeLocale === "vi" && <span className="text-red-500">*</span>}
+                </label>
+                <input
+                  type="text"
+                  value={title[activeLocale]}
+                  onChange={(e) => setTitleField(activeLocale, e.target.value)}
+                  placeholder={activeLocale === "vi" ? "Tiêu đề bài viết" : `Tiêu đề (${activeLocale.toUpperCase()})`}
+                  required={activeLocale === "vi"}
+                  disabled={readOnly}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                />
+              </div>
+
+              {/* Slug — common across locales */}
               <div>
                 <label className="block text-sm font-medium text-brand-800 mb-1">
                   Slug (URL)
@@ -340,19 +374,20 @@ export default function NewsEditorPage({
                 />
               </div>
 
-              {/* Excerpt */}
-              <MultiLangTextarea
-                name="excerpt"
-                label="Tóm tắt"
-                values={{ vi: excerpt, en: excerpt_en, zh: excerpt_zh }}
-                onChange={(key, value) => {
-                  if (key === "excerpt") setExcerpt(value)
-                  else if (key === "excerpt_en") setExcerptEn(value)
-                  else if (key === "excerpt_zh") setExcerptZh(value)
-                }}
-                placeholder="Tóm tắt nội dung"
-                rows={3}
-              />
+              {/* Excerpt — driven by active locale */}
+              <div>
+                <label className="block text-sm font-medium text-brand-800 mb-1">Tóm tắt</label>
+                <textarea
+                  value={excerpt[activeLocale]}
+                  onChange={(e) =>
+                    setExcerpt((prev) => ({ ...prev, [activeLocale]: e.target.value }))
+                  }
+                  rows={3}
+                  placeholder={activeLocale === "vi" ? "Tóm tắt nội dung" : `Tóm tắt (${activeLocale.toUpperCase()})`}
+                  disabled={readOnly}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
+                />
+              </div>
 
               {/* Cover image — file picker */}
               <div>
@@ -424,76 +459,8 @@ export default function NewsEditorPage({
               )}
             </div>
 
-            {/* Rich text editor */}
+            {/* Rich text editor — content for the currently-active locale */}
             <RichTextEditor ref={editorRef} initialContent={initialContent} uploadFolder="tin-tuc" />
-
-            {/* Translated content (EN / ZH) */}
-            <details className="rounded-xl border bg-white shadow-sm">
-              <summary className="px-6 py-4 cursor-pointer text-sm font-semibold text-brand-800 hover:bg-brand-50 rounded-xl">
-                🌐 Nội dung bản dịch (EN / 中文)
-                {(content_en || content_zh) && (
-                  <span className="ml-2 text-xs font-normal text-emerald-600">
-                    {[content_en && "EN", content_zh && "中文"].filter(Boolean).join(" + ")} đã có
-                  </span>
-                )}
-              </summary>
-              <div className="px-6 pb-6 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-brand-500">
-                    Dùng AI để dịch tự động từ tiếng Việt, hoặc dán HTML đã dịch thủ công. Nếu để trống, hiển thị tiếng Việt.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAiTranslate("en")}
-                      disabled={aiTranslating !== null}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-linear-to-r from-blue-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    >
-                      {aiTranslating === "en" ? "⏳ Đang dịch..." : "🤖 AI dịch sang EN"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAiTranslate("zh")}
-                      disabled={aiTranslating !== null}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-linear-to-r from-red-500 to-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    >
-                      {aiTranslating === "zh" ? "⏳ 翻译中..." : "🤖 AI dịch sang 中文"}
-                    </button>
-                  </div>
-                </div>
-
-                {aiError && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                    ⚠ {aiError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-brand-800 mb-1">
-                    🇬🇧 Content (English)
-                  </label>
-                  <textarea
-                    value={content_en}
-                    onChange={(e) => setContentEn(e.target.value)}
-                    rows={8}
-                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
-                    placeholder="Paste translated HTML content here, or click 🤖 AI dịch sang EN above..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-brand-800 mb-1">
-                    🇨🇳 Content (中文)
-                  </label>
-                  <textarea
-                    value={content_zh}
-                    onChange={(e) => setContentZh(e.target.value)}
-                    rows={8}
-                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
-                    placeholder="在此粘贴翻译后的HTML内容，或点击上方 🤖 AI dịch sang 中文..."
-                  />
-                </div>
-              </div>
-            </details>
           </div>
 
           {/* Sidebar */}
@@ -653,14 +620,14 @@ export default function NewsEditorPage({
                 </span>
                 <span>/</span>
                 <span className="text-foreground font-medium line-clamp-1">
-                  {title || "..."}
+                  {title[activeLocale] || title.vi || "..."}
                 </span>
               </nav>
 
               {/* Article Header */}
               <header className="mb-8 space-y-4">
                 <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-                  {title || <span className="text-brand-300 italic">Chưa có tiêu đề</span>}
+                  {title[activeLocale] || title.vi || <span className="text-brand-300 italic">Chưa có tiêu đề</span>}
                 </h1>
                 {publishedAt && (
                   <p className="text-muted-foreground text-sm">
@@ -678,7 +645,7 @@ export default function NewsEditorPage({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={displayCover}
-                      alt={title}
+                      alt={title.vi}
                       className="w-full h-full object-cover"
                     />
                   </div>

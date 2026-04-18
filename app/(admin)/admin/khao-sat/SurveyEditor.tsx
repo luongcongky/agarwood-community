@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import type { QuestionType, SurveyQuestion } from "@/lib/survey/types"
 import { listAllowedFields } from "@/lib/survey/allowed-fields"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
-import { MultiLangInput, MultiLangTextarea } from "@/components/ui/multi-lang-input"
+import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
 
 interface Props {
   /** undefined = create mode */
@@ -41,12 +41,18 @@ export function SurveyEditor({ initial }: Props) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
   const [slug, setSlug] = useState(initial?.slug ?? "")
-  const [title, setTitle] = useState(initial?.title ?? "")
-  const [title_en, setTitleEn] = useState((initial as Record<string, unknown>)?.title_en as string ?? "")
-  const [title_zh, setTitleZh] = useState((initial as Record<string, unknown>)?.title_zh as string ?? "")
-  const [description, setDescription] = useState(initial?.description ?? "")
-  const [description_en, setDescriptionEn] = useState((initial as Record<string, unknown>)?.description_en as string ?? "")
-  const [description_zh, setDescriptionZh] = useState((initial as Record<string, unknown>)?.description_zh as string ?? "")
+  const rec = initial as Record<string, unknown> | undefined
+  const [title, setTitle] = useState<Record<Locale, string>>({
+    vi: initial?.title ?? "",
+    en: (rec?.title_en as string) ?? "",
+    zh: (rec?.title_zh as string) ?? "",
+  })
+  const [description, setDescription] = useState<Record<Locale, string>>({
+    vi: initial?.description ?? "",
+    en: (rec?.description_en as string) ?? "",
+    zh: (rec?.description_zh as string) ?? "",
+  })
+  const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [audience, setAudience] = useState(initial?.audience ?? "BOTH_VIP")
   const [status, setStatus] = useState(initial?.status ?? "DRAFT")
   const [questions, setQuestions] = useState<SurveyQuestion[]>(initial?.questions ?? [])
@@ -79,12 +85,12 @@ export function SurveyEditor({ initial }: Props) {
     setError("")
     const body = {
       slug,
-      title,
-      title_en: title_en || null,
-      title_zh: title_zh || null,
-      description,
-      description_en: description_en || null,
-      description_zh: description_zh || null,
+      title: title.vi,
+      title_en: title.en || null,
+      title_zh: title.zh || null,
+      description: description.vi,
+      description_en: description.en || null,
+      description_zh: description.zh || null,
       audience,
       status,
       questions,
@@ -109,6 +115,26 @@ export function SurveyEditor({ initial }: Props) {
     }
   }
 
+  async function handleAiTranslate(target: Locale) {
+    if (target === "vi") return
+    if (!title.vi.trim() && !description.vi.trim()) {
+      throw new Error("Vui lòng nhập tiêu đề / mô tả tiếng Việt trước khi dịch.")
+    }
+    const res = await fetch("/api/admin/ai/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields: { title: title.vi, description: description.vi },
+        targetLocale: target,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? "Lỗi khi dịch.")
+    const tx = (data.fields ?? {}) as Record<string, string>
+    if (tx.title) setTitle((prev) => ({ ...prev, [target]: tx.title }))
+    if (tx.description) setDescription((prev) => ({ ...prev, [target]: tx.description }))
+  }
+
   async function remove() {
     if (!initial) return
     if (!confirm("Xóa khảo sát này? Tất cả câu trả lời cũng sẽ bị xóa.")) return
@@ -121,35 +147,47 @@ export function SurveyEditor({ initial }: Props) {
       {/* Meta */}
       <section className="rounded-xl border border-brand-200 bg-white p-5 space-y-4">
         <h2 className="font-semibold text-brand-900">Thông tin chung</h2>
+
+        <LangTabsBar
+          activeLocale={activeLocale}
+          onLocaleChange={setActiveLocale}
+          hasContent={computeHasContent(title, description)}
+          disabled={readOnly}
+          onAiTranslate={handleAiTranslate}
+          helperText={
+            activeLocale === "vi"
+              ? "Tiêu đề + mô tả tiếng Việt bắt buộc. Dùng nút AI dịch khi chuyển sang EN / 中文 để tự dịch cả 2 cùng lúc."
+              : undefined
+          }
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <MultiLangInput
-            name="title"
-            label="Tiêu đề *"
-            values={{ vi: title, en: title_en, zh: title_zh }}
-            onChange={(key, value) => {
-              if (key === "title") setTitle(value)
-              else if (key === "title_en") setTitleEn(value)
-              else if (key === "title_zh") setTitleZh(value)
-            }}
-            placeholder="Tiêu đề khảo sát"
-            required
-          />
+          <Field label={`Tiêu đề ${activeLocale === "vi" ? "*" : `(${activeLocale.toUpperCase()})`}`}>
+            <input
+              value={title[activeLocale]}
+              onChange={(e) => setTitle((prev) => ({ ...prev, [activeLocale]: e.target.value }))}
+              placeholder={activeLocale === "vi" ? "Tiêu đề khảo sát" : "Translated title"}
+              className={inp}
+              disabled={readOnly}
+              required={activeLocale === "vi"}
+            />
+          </Field>
           <Field label="Slug (URL) *" hint="VD: khao-sat-hoi-vien-2026">
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={inp} disabled={!!initial} />
           </Field>
         </div>
-        <MultiLangTextarea
-          name="description"
-          label="Mô tả"
-          values={{ vi: description, en: description_en, zh: description_zh }}
-          onChange={(key, value) => {
-            if (key === "description") setDescription(value)
-            else if (key === "description_en") setDescriptionEn(value)
-            else if (key === "description_zh") setDescriptionZh(value)
-          }}
-          placeholder="Mô tả khảo sát"
-          rows={3}
-        />
+        <Field label={`Mô tả ${activeLocale === "vi" ? "" : `(${activeLocale.toUpperCase()})`}`}>
+          <textarea
+            value={description[activeLocale]}
+            onChange={(e) =>
+              setDescription((prev) => ({ ...prev, [activeLocale]: e.target.value }))
+            }
+            rows={3}
+            placeholder={activeLocale === "vi" ? "Mô tả khảo sát" : "Translated description"}
+            className={inp}
+            disabled={readOnly}
+          />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Đối tượng">
             <select value={audience} onChange={(e) => setAudience(e.target.value)} className={inp}>

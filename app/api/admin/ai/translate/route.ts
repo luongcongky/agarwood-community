@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { generateJSON, AllModelsFailedError } from "@/lib/gemini-models"
 
 const LOCALE_NAMES: Record<string, string> = {
   en: "English",
@@ -10,7 +10,7 @@ const LOCALE_NAMES: Record<string, string> = {
 
 const TRANSLATION_PROMPT = `You are a professional translator for an agarwood industry association website (Hội Trầm Hương Việt Nam / Vietnam Agarwood Association).
 
-Translate the Vietnamese content below to {TARGET_LANGUAGE}.
+Translate the Vietnamese values below to {TARGET_LANGUAGE}.
 
 CRITICAL RULES:
 1. Preserve ALL HTML tags exactly (<p>, <strong>, <em>, <h1>-<h6>, <ul>, <ol>, <li>, <a>, <img>, <br>, <blockquote>, etc.)
@@ -20,21 +20,15 @@ CRITICAL RULES:
 5. Only translate the VISIBLE TEXT between tags
 6. Keep proper nouns, brand names, Vietnamese province names (Khánh Hòa, Quảng Nam) in original form unless they have well-known translations
 7. Keep technical terms consistent: "trầm hương" → "agarwood", "trầm tự nhiên" → "natural agarwood", "trầm nuôi cấy" → "cultivated agarwood", "kỳ nam" → "kynam", "tinh dầu" → "essential oil"
-8. Return ONLY a JSON object in this exact format — no markdown, no code fences, no explanations:
-{"title":"...","excerpt":"...","content":"..."}
+8. Return ONLY a JSON object with the EXACT SAME KEYS as the input, with translated values. No markdown, no code fences, no explanations.
 
-Input fields to translate (one or more may be empty):
-- title: plain text
-- excerpt: plain text
-- content: HTML with formatting
+Vietnamese source (JSON):
+{INPUT_JSON}
 
-Vietnamese source:
-TITLE: {TITLE}
+Return the translated JSON now:`
 
-EXCERPT: {EXCERPT}
-
-CONTENT:
-{CONTENT}`
+const MAX_FIELDS = 20
+const MAX_TOTAL_CHARS = 120_000
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -51,46 +45,53 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const { title, excerpt, content, targetLocale } = body as {
+  const { fields: rawFields, targetLocale, title, excerpt, content } = body as {
+    fields?: Record<string, string>
+    targetLocale?: string
+    // Legacy shape (backward compat for older clients)
     title?: string
     excerpt?: string
     content?: string
-    targetLocale?: string
   }
 
   if (!targetLocale || !LOCALE_NAMES[targetLocale]) {
     return NextResponse.json({ error: "targetLocale phải là 'en' hoặc 'zh'" }, { status: 400 })
   }
 
-  if (!title && !excerpt && !content) {
-    return NextResponse.json({ error: "Không có nội dung để dịch" }, { status: 400 })
+  // Accept both new generic shape (`fields`) and legacy shape (`title/excerpt/content`).
+  const fields: Record<string, string> = rawFields ?? {
+    ...(title !== undefined && { title }),
+    ...(excerpt !== undefined && { excerpt }),
+    ...(content !== undefined && { content }),
   }
 
+  const entries = Object.entries(fields).filter(([, v]) => typeof v === "string" && v.trim() !== "")
+  if (entries.length === 0) {
+    return NextResponse.json({ error: "Không có nội dung để dịch" }, { status: 400 })
+  }
+  if (entries.length > MAX_FIELDS) {
+    return NextResponse.json({ error: `Tối đa ${MAX_FIELDS} field / request` }, { status: 400 })
+  }
+  const totalChars = entries.reduce((n, [, v]) => n + v.length, 0)
+  if (totalChars > MAX_TOTAL_CHARS) {
+    return NextResponse.json(
+      { error: `Nội dung quá dài (${totalChars} ký tự, tối đa ${MAX_TOTAL_CHARS})` },
+      { status: 400 },
+    )
+  }
+
+  const nonEmptyFields = Object.fromEntries(entries)
   const prompt = TRANSLATION_PROMPT
     .replace("{TARGET_LANGUAGE}", LOCALE_NAMES[targetLocale])
-    .replace("{TITLE}", title || "")
-    .replace("{EXCERPT}", excerpt || "")
-    .replace("{CONTENT}", content || "")
+    .replace("{INPUT_JSON}", JSON.stringify(nonEmptyFields, null, 2))
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-      generationConfig: {
-        temperature: 0.3,
-        responseMimeType: "application/json",
-      },
-    })
+    const { text, modelUsed, attempts } = await generateJSON(apiKey, prompt)
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
-
-    // Parse JSON response
-    let parsed: { title?: string; excerpt?: string; content?: string }
+    let parsed: Record<string, unknown>
     try {
       parsed = JSON.parse(text)
     } catch {
-      // Fallback: try to extract JSON if model wrapped in code fences despite prompt
       const match = text.match(/\{[\s\S]*\}/)
       if (!match) {
         return NextResponse.json(
@@ -101,26 +102,41 @@ export async function POST(req: Request) {
       parsed = JSON.parse(match[0])
     }
 
-    return NextResponse.json({
-      title: parsed.title ?? "",
-      excerpt: parsed.excerpt ?? "",
-      content: parsed.content ?? "",
-    })
-  } catch (err: unknown) {
-    const error = err as { status?: number; message?: string }
-    console.error("[AI translate]", error)
+    // Build response: translated values for fields we sent; empty string for fields
+    // that were blank in the input so the caller can safely spread the result.
+    const translatedFields: Record<string, string> = {}
+    for (const key of Object.keys(fields)) {
+      const v = parsed[key]
+      translatedFields[key] = typeof v === "string" ? v : ""
+    }
 
-    // Rate limit / quota exhausted
-    if (error.status === 429 || (error.message && /quota|rate limit|RESOURCE_EXHAUSTED/i.test(error.message))) {
+    // Back-compat: also expose title/excerpt/content at top level if they were in input
+    const legacyShape: Record<string, string> = {}
+    if ("title" in fields) legacyShape.title = translatedFields.title ?? ""
+    if ("excerpt" in fields) legacyShape.excerpt = translatedFields.excerpt ?? ""
+    if ("content" in fields) legacyShape.content = translatedFields.content ?? ""
+
+    return NextResponse.json({
+      fields: translatedFields,
+      ...legacyShape,
+      _modelUsed: modelUsed,
+      _attempts: attempts.length,
+    })
+  } catch (err) {
+    if (err instanceof AllModelsFailedError) {
+      console.error("[AI translate] All models failed:", err.attempts)
       return NextResponse.json(
         {
-          error: "Đã hết quota Gemini free tier hôm nay. Vui lòng thử lại sau 24 giờ hoặc dịch thủ công.",
-          quotaExceeded: true,
+          error: err.allQuotaExceeded
+            ? "Tất cả model Gemini free tier đã hết quota hôm nay. Vui lòng thử lại vào ngày mai hoặc dịch thủ công."
+            : "Không có model Gemini nào khả dụng. Vui lòng liên hệ admin để kiểm tra API key.",
+          quotaExceeded: err.allQuotaExceeded,
+          attempts: err.attempts.map((a) => ({ model: a.model, status: a.status })),
         },
         { status: 429 },
       )
     }
-
+    console.error("[AI translate]", err)
     return NextResponse.json(
       { error: "Lỗi khi gọi AI. Vui lòng thử lại sau vài phút." },
       { status: 500 },

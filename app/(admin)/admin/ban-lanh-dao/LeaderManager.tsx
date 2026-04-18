@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
-import { MultiLangInput, MultiLangTextarea, extractLangValues } from "@/components/ui/multi-lang-input"
+import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
+
+const LANG_FIELDS = ["name", "title", "workTitle", "bio"] as const
+type LangFieldName = (typeof LANG_FIELDS)[number]
+
+function langKey(name: LangFieldName, locale: Locale): keyof FormData {
+  return (locale === "vi" ? name : `${name}_${locale}`) as keyof FormData
+}
 
 type LeaderCategory = "BTV" | "BCH" | "BKT"
 
@@ -90,7 +97,45 @@ export function LeaderManager({
   const [filterCat, setFilterCat] = useState<LeaderCategory | "ALL">("ALL")
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
+  const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [saving, setSaving] = useState(false)
+
+  function langValues(name: LangFieldName): { vi: string; en: string; zh: string } {
+    return {
+      vi: (form[langKey(name, "vi")] as string) ?? "",
+      en: (form[langKey(name, "en")] as string) ?? "",
+      zh: (form[langKey(name, "zh")] as string) ?? "",
+    }
+  }
+
+  function setLangValue(name: LangFieldName, locale: Locale, value: string) {
+    setForm((prev) => ({ ...prev, [langKey(name, locale)]: value }))
+  }
+
+  async function handleAiTranslate(target: Locale) {
+    if (target === "vi") return
+    const vi = Object.fromEntries(
+      LANG_FIELDS.map((n) => [n, (form[langKey(n, "vi")] as string) ?? ""]),
+    )
+    if (!vi.name?.trim() && !vi.title?.trim() && !vi.bio?.trim()) {
+      throw new Error("Vui lòng nhập họ tên / chức danh / tiểu sử tiếng Việt trước khi dịch.")
+    }
+    const res = await fetch("/api/admin/ai/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: vi, targetLocale: target }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? "Lỗi khi dịch.")
+    const tx = (data.fields ?? {}) as Record<string, string>
+    setForm((prev) => {
+      const next = { ...prev }
+      for (const n of LANG_FIELDS) {
+        if (tx[n]) next[langKey(n, target)] = tx[n] as FormData[keyof FormData] as never
+      }
+      return next
+    })
+  }
 
   const filtered = leaders
     .filter((l) => l.term === selectedTerm)
@@ -194,6 +239,25 @@ export function LeaderManager({
         <h3 className="font-semibold text-foreground">
           {editing === "new" ? "Thêm thành viên mới" : "Chỉnh sửa"}
         </h3>
+
+        <LangTabsBar
+          activeLocale={activeLocale}
+          onLocaleChange={setActiveLocale}
+          hasContent={computeHasContent(
+            langValues("name"),
+            langValues("title"),
+            langValues("workTitle"),
+            langValues("bio"),
+          )}
+          disabled={readOnly}
+          onAiTranslate={handleAiTranslate}
+          helperText={
+            activeLocale === "vi"
+              ? "Nhập thông tin tiếng Việt trước. Dùng AI dịch khi sang EN / 中文 để dịch cả 4 trường (họ tên, chức danh, chức vụ công tác, tiểu sử)."
+              : undefined
+          }
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-4">
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
@@ -209,22 +273,32 @@ export function LeaderManager({
               <option value="">(Không hiển thị)</option>
             </select>
           </div>
-          <MultiLangInput
-            name="name"
-            label="Họ tên *"
-            values={extractLangValues(form as unknown as Record<string, unknown>, "name")}
-            onChange={(key, value) => setForm({ ...form, [key]: value })}
-            placeholder="VD: Phạm Văn Du"
-          />
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Họ tên {activeLocale === "vi" && "*"}
+            </label>
+            <input
+              type="text"
+              value={langValues("name")[activeLocale]}
+              onChange={(e) => setLangValue("name", activeLocale, e.target.value)}
+              placeholder={activeLocale === "vi" ? "VD: Phạm Văn Du" : "Translated name"}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <MultiLangInput
-            name="title"
-            label="Chức danh trong Hội *"
-            values={extractLangValues(form as unknown as Record<string, unknown>, "title")}
-            onChange={(key, value) => setForm({ ...form, [key]: value })}
-            placeholder="VD: Chủ tịch, Phó Chủ tịch, Ủy viên..."
-          />
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Chức danh trong Hội {activeLocale === "vi" && "*"}
+            </label>
+            <input
+              type="text"
+              value={langValues("title")[activeLocale]}
+              onChange={(e) => setLangValue("title", activeLocale, e.target.value)}
+              placeholder={activeLocale === "vi" ? "VD: Chủ tịch, Phó Chủ tịch..." : "Translated title"}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">
               Nhóm *
@@ -253,12 +327,15 @@ export function LeaderManager({
             />
           </div>
           <div className="sm:col-span-2">
-            <MultiLangInput
-              name="workTitle"
-              label="Chức vụ đơn vị công tác"
-              values={extractLangValues(form as unknown as Record<string, unknown>, "workTitle")}
-              onChange={(key, value) => setForm({ ...form, [key]: value })}
-              placeholder="VD: Giám đốc Công ty TNHH..."
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Chức vụ đơn vị công tác
+            </label>
+            <input
+              type="text"
+              value={langValues("workTitle")[activeLocale]}
+              onChange={(e) => setLangValue("workTitle", activeLocale, e.target.value)}
+              placeholder={activeLocale === "vi" ? "VD: Giám đốc Công ty TNHH..." : "Translated work title"}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div>
@@ -286,13 +363,15 @@ export function LeaderManager({
             />
           </div>
           <div className="sm:col-span-2">
-            <MultiLangTextarea
-              name="bio"
-              label="Tiểu sử"
-              values={extractLangValues(form as unknown as Record<string, unknown>, "bio")}
-              onChange={(key, value) => setForm({ ...form, [key]: value })}
-              placeholder="Mô tả ngắn về vai trò, kinh nghiệm..."
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Tiểu sử
+            </label>
+            <textarea
+              value={langValues("bio")[activeLocale]}
+              onChange={(e) => setLangValue("bio", activeLocale, e.target.value)}
               rows={3}
+              placeholder={activeLocale === "vi" ? "Mô tả ngắn về vai trò, kinh nghiệm..." : "Translated bio"}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
             />
           </div>
         </div>
