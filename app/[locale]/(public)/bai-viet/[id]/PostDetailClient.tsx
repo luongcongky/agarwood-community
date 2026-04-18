@@ -194,7 +194,7 @@ export function PostDetailClient({
 
   return (
     <div className="bg-brand-50/60 min-h-screen">
-    <div className="max-w-3xl mx-auto space-y-6 py-6 px-4">
+    <div className="max-w-7xl mx-auto space-y-6 py-6 px-4 sm:px-6 lg:px-8">
       {/* Back link */}
       <Link
         href="/feed"
@@ -286,7 +286,7 @@ export function PostDetailClient({
             ) : (
               <span className="text-sm text-brand-400">{t("helpful")} ({reactionCount})</span>
             )}
-            <span className="text-sm text-brand-400">💬 {comments.length} bình luận</span>
+            <span className="text-sm text-brand-400">💬 {comments.length} {t("comments")}</span>
           </div>
           <span className="text-sm text-brand-500">{post.viewCount + 1} {t("views")}</span>
         </div>
@@ -328,7 +328,7 @@ export function PostDetailClient({
                   disabled={!newComment.trim() || submitting}
                   className="rounded-lg bg-brand-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
                 >
-                  {submitting ? t("sending") : "Gửi"}
+                  {submitting ? t("sending") : t("send")}
                 </button>
               </div>
             </div>
