@@ -185,9 +185,9 @@ export default async function NewsDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Related Articles — nằm ngoài card chính, trên nền trang */}
+        {/* Related Articles — cùng pattern card trắng như article chính */}
         {related.length > 0 && (
-          <section className="mt-10">
+          <section className="mt-6 bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
             <h2 className="text-xl font-semibold text-foreground mb-5">
               {t("relatedNews")}
             </h2>
@@ -196,7 +196,7 @@ export default async function NewsDetailPage({ params }: Props) {
                 <Link
                   key={item.id}
                   href={`/tin-tuc/${item.slug}`}
-                  className="group block bg-white rounded-xl overflow-hidden border border-brand-200 hover:shadow-md transition-shadow"
+                  className="group block bg-brand-50/40 rounded-xl overflow-hidden border border-brand-200 hover:shadow-md hover:border-brand-300 transition-all"
                 >
                   {item.coverImageUrl ? (
                     <div className="relative w-full h-36">
