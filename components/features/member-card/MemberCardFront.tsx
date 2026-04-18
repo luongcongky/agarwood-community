@@ -13,9 +13,23 @@ export type MemberCardData = {
   tier: TierKey
 }
 
-function formatDate(d: Date | null): string {
+/** Format as MM.YYYY (e.g. 04.2026). Locale-agnostic so it reads the same
+ *  in VI / EN / ZH. */
+function formatMonthYear(d: Date | null): string {
   if (!d) return ""
-  return d.toLocaleDateString("vi-VN", { month: "2-digit", year: "numeric" })
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  return `${m}.${d.getFullYear()}`
+}
+
+/** Default membership span in years when admin hasn't set an explicit expiry
+ *  date. Member cards are issued for 5 years (matches the association's
+ *  "Nhiệm kỳ 5 năm" term cycle). */
+const DEFAULT_MEMBERSHIP_YEARS = 5
+
+function addYears(d: Date, years: number): Date {
+  const next = new Date(d)
+  next.setFullYear(next.getFullYear() + years)
+  return next
 }
 
 export function MemberCardFront({
@@ -219,7 +233,11 @@ export function MemberCardFront({
                   fontSize: "clamp(8px, 1.8cqw, 11px)",
                 }}
               >
-                {formatDate(data.validFrom)} — {formatDate(data.validTo) || "∞"}
+                {formatMonthYear(data.validFrom)} —{" "}
+                {formatMonthYear(
+                  data.validTo ??
+                    (data.validFrom ? addYears(data.validFrom, DEFAULT_MEMBERSHIP_YEARS) : null),
+                )}
               </p>
             </div>
           )}
