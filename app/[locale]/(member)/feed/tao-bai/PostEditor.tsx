@@ -74,9 +74,24 @@ function TaoBaiContent() {
   const initialCategory = searchParams.get("category") as PostCategoryClient | null
   const editorRef = useRef<RichTextEditorHandle>(null)
   const [title, setTitle] = useState("")
-  const [category, setCategory] = useState<PostCategoryClient>(
+  const [category, setCategoryState] = useState<PostCategoryClient>(
     initialCategory === "NEWS" || initialCategory === "PRODUCT" ? initialCategory : "GENERAL",
   )
+  // Wrap setCategory so the `?category=` query param stays in sync with the
+  // selected tab. Without this, a reader who loaded with ?category=PRODUCT
+  // and then clicked "General" would still see PRODUCT in the URL — which is
+  // misleading if they share the link or refresh.
+  function setCategory(next: PostCategoryClient) {
+    setCategoryState(next)
+    const params = new URLSearchParams(searchParams.toString())
+    if (next === "GENERAL") {
+      params.delete("category")
+    } else {
+      params.set("category", next)
+    }
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : "?", { scroll: false })
+  }
   // Product sidecar — chỉ dùng khi category=PRODUCT
   const [productName, setProductName] = useState("")
   const [productSlug, setProductSlug] = useState("")
@@ -456,7 +471,7 @@ function TaoBaiContent() {
       <div className="bg-white rounded-xl border border-brand-200 px-5 py-4">
         <input
           type="text"
-          placeholder="Tiêu đề bài viết (tùy chọn)"
+          placeholder={t("titlePlaceholder")}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="w-full text-lg font-semibold text-brand-900 placeholder:text-brand-300 bg-transparent outline-none"
