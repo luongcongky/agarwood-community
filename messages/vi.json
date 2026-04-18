@@ -35,7 +35,12 @@
     "copyright": "© {year} Hội Trầm Hương Việt Nam. Bảo lưu mọi quyền.",
     "privacyPolicy": "Chính sách bảo mật",
     "termsOfService": "Điều khoản sử dụng",
-    "notUpdated": "Chưa cập nhật"
+    "notUpdated": "Chưa cập nhật",
+    "brandDescDefault": "Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm, chia sẻ tri thức và phát triển thị trường bền vững.",
+    "workingHoursDefault": "Thứ 2 - Thứ 6: 8:00 - 17:00",
+    "legalBasisDefault": "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ. Điều lệ Hội được phê duyệt qua Đại hội nhiệm kỳ.",
+    "copyrightNoticeDefault": "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này.",
+    "quickLinksDefault": "Trang chủ|/\nDoanh nghiệp|/doanh-nghiep\nDịch vụ|/dich-vu\nĐiều lệ Hội|/dieu-le\nVăn bản pháp quy|/phap-ly\nLiên hệ|/lien-he"
   },
   "auth": {
     "loginTitle": "Đăng nhập",

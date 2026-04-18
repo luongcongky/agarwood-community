@@ -102,29 +102,16 @@ export async function Footer() {
   const tongThuKy = leaders.find((l) => /Tổng Thư ký/i.test(l.title))
   const chanhVanPhong = leaders.find((l) => /Chánh Văn Phòng/i.test(l.title))
 
-  const brandDesc =
-    lCfg("footer_brand_desc") ||
-    "Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm, chia sẻ tri thức và phát triển thị trường bền vững."
-  const workingHours = lCfg("footer_working_hours") || "Thứ 2 - Thứ 6: 8:00 - 17:00"
-  const legalBasis =
-    lCfg("footer_legal_basis") ||
-    "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ. Điều lệ Hội được phê duyệt qua Đại hội nhiệm kỳ."
-  const copyrightNotice =
-    lCfg("footer_copyright_notice") ||
-    "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này."
+  // Admin config wins; falls back to locale-aware defaults from messages/*.json
+  // so a fresh deploy without any SiteConfig rows still renders coherently.
+  const brandDesc = lCfg("footer_brand_desc") || t("brandDescDefault")
+  const workingHours = lCfg("footer_working_hours") || t("workingHoursDefault")
+  const legalBasis = lCfg("footer_legal_basis") || t("legalBasisDefault")
+  const copyrightNotice = lCfg("footer_copyright_notice") || t("copyrightNoticeDefault")
   const contactAddress = lCfg("contact_address")
-  const quickLinksSource = lCfg("footer_quick_links")
-  const quickLinks: { label: string; href: string }[] = (quickLinksSource
-    ? quickLinksSource.split("\n")
-    : [
-        "Trang chủ|/",
-        "Doanh nghiệp|/doanh-nghiep",
-        "Dịch vụ|/dich-vu",
-        "Điều lệ Hội|/dieu-le",
-        "Văn bản pháp quy|/phap-ly",
-        "Liên hệ|/lien-he",
-      ]
-  )
+  const quickLinksSource = lCfg("footer_quick_links") || t("quickLinksDefault")
+  const quickLinks: { label: string; href: string }[] = quickLinksSource
+    .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {

@@ -35,7 +35,12 @@
     "copyright": "© {year} Vietnam Agarwood Association. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
-    "notUpdated": "Not yet updated"
+    "notUpdated": "Not yet updated",
+    "brandDescDefault": "Connecting the agarwood business community — certifying products, sharing knowledge, and developing a sustainable market.",
+    "workingHoursDefault": "Monday - Friday: 8:00 - 17:00",
+    "legalBasisDefault": "Established under Decision No. 23/QĐ-BNV dated January 11, 2010 of the Ministry of Home Affairs. The Association Charter is approved by each term's Congress.",
+    "copyrightNoticeDefault": "⚠ Reproduction in any form without written consent from the Vietnam Agarwood Association is prohibited. Please cite hoitramhuong.vn as the source when republishing information from this website.",
+    "quickLinksDefault": "Home|/\nBusinesses|/doanh-nghiep\nServices|/dich-vu\nCharter|/dieu-le\nLegal Documents|/phap-ly\nContact|/lien-he"
   },
   "auth": {
     "loginTitle": "Sign in",

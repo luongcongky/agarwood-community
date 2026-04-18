@@ -35,7 +35,12 @@
     "copyright": "© {year} 越南沉香协会。保留所有权利。",
     "privacyPolicy": "隐私政策",
     "termsOfService": "使用条款",
-    "notUpdated": "尚未更新"
+    "notUpdated": "尚未更新",
+    "brandDescDefault": "连接沉香企业社区——产品认证、知识共享、可持续市场发展。",
+    "workingHoursDefault": "周一至周五: 8:00 - 17:00",
+    "legalBasisDefault": "根据内政部2010年1月11日第23/QĐ-BNV号决定成立。协会章程经每届代表大会批准。",
+    "copyrightNoticeDefault": "⚠ 未经越南沉香协会书面同意，禁止以任何形式复制。转载本网站信息时请注明来源 hoitramhuong.vn。",
+    "quickLinksDefault": "首页|/\n企业|/doanh-nghiep\n服务|/dich-vu\n协会章程|/dieu-le\n法律文件|/phap-ly\n联系我们|/lien-he"
   },
   "auth": {
     "loginTitle": "登录",
