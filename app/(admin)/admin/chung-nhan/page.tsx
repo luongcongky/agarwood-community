@@ -25,6 +25,20 @@ const CERT_STATUS_CLASSES: Record<CertStatus, string> = {
   REFUNDED: "bg-purple-100 text-purple-700",
 }
 
+/** Unified row shape for both data sources (Certification applications and
+ *  already-approved Products) so the table template below doesn't fork. */
+type CertRow = {
+  id: string
+  productName: string
+  productSlug: string
+  applicantName: string
+  applicantEmail: string
+  status: CertStatus
+  createdAt: Date
+  detailHref: string
+  detailLabel: string
+}
+
 export default async function AdminCertificationsPage({
   searchParams,
 }: {
@@ -35,32 +49,79 @@ export default async function AdminCertificationsPage({
   const page = Number(params.page ?? 1)
   const skip = (page - 1) * PAGE_SIZE
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let where: any = {}
+  let rows: CertRow[] = []
+  let total = 0
 
-  if (statusFilter === "awaiting_payment") {
-    where = { status: "DRAFT" }
-  } else if (statusFilter === "pending") {
-    where = { status: { in: ["PENDING", "UNDER_REVIEW"] } }
-  } else if (statusFilter === "approved") {
-    where = { status: "APPROVED" }
-  } else if (statusFilter === "rejected") {
-    where = { status: "REJECTED" }
+  // Tab "Đã duyệt" reads from Product directly because seeded/legacy products
+  // carry certStatus=APPROVED without ever going through the Certification
+  // workflow. This keeps the admin list in sync with the viewer's
+  // /san-pham-chung-nhan page.
+  if (statusFilter === "approved") {
+    const [products, count] = await Promise.all([
+      prisma.product.findMany({
+        where: { certStatus: "APPROVED" },
+        orderBy: { createdAt: "desc" },
+        take: PAGE_SIZE,
+        skip,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          createdAt: true,
+          owner: { select: { name: true, email: true } },
+          company: { select: { name: true } },
+        },
+      }),
+      prisma.product.count({ where: { certStatus: "APPROVED" } }),
+    ])
+    rows = products.map((p) => ({
+      id: p.id,
+      productName: p.name,
+      productSlug: p.slug,
+      applicantName: p.company?.name ?? p.owner.name,
+      applicantEmail: p.owner.email,
+      status: "APPROVED" as const,
+      createdAt: p.createdAt,
+      detailHref: `/vi/san-pham/${p.slug}`,
+      detailLabel: "Xem sản phẩm",
+    }))
+    total = count
+  } else {
+    const where: { status?: CertStatus | { in: CertStatus[] } } = {}
+    if (statusFilter === "awaiting_payment") {
+      where.status = "DRAFT"
+    } else if (statusFilter === "pending") {
+      where.status = { in: ["PENDING", "UNDER_REVIEW"] }
+    } else if (statusFilter === "rejected") {
+      where.status = "REJECTED"
+    }
+
+    const [certs, count] = await Promise.all([
+      prisma.certification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: PAGE_SIZE,
+        skip,
+        include: {
+          product: { select: { name: true, slug: true } },
+          applicant: { select: { name: true, email: true } },
+        },
+      }),
+      prisma.certification.count({ where }),
+    ])
+    rows = certs.map((c) => ({
+      id: c.id,
+      productName: c.product.name,
+      productSlug: c.product.slug,
+      applicantName: c.applicant.name,
+      applicantEmail: c.applicant.email,
+      status: c.status,
+      createdAt: c.createdAt,
+      detailHref: `/admin/chung-nhan/${c.id}`,
+      detailLabel: "Xem xét",
+    }))
+    total = count
   }
-
-  const [certs, total] = await Promise.all([
-    prisma.certification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip,
-      include: {
-        product: { select: { name: true, slug: true } },
-        applicant: { select: { name: true, email: true } },
-      },
-    }),
-    prisma.certification.count({ where }),
-  ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -83,6 +144,8 @@ export default async function AdminCertificationsPage({
     const s = p.toString()
     return `/admin/chung-nhan${s ? `?${s}` : ""}`
   }
+
+  const isApprovedTab = statusFilter === "approved"
 
   return (
     <div className="space-y-6">
@@ -108,6 +171,15 @@ export default async function AdminCertificationsPage({
         ))}
       </div>
 
+      {isApprovedTab && (
+        <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-xs text-brand-700">
+          ℹ️ Tab này liệt kê trực tiếp các sản phẩm đang có trạng thái
+          <span className="font-semibold"> Chứng nhận = Đã duyệt</span>, bao gồm
+          cả sản phẩm seeded (không qua đơn) và đơn đã duyệt qua workflow. Dùng
+          các tab khác (Chờ xác nhận TT / Chờ duyệt / Từ chối) để xem đơn xét duyệt.
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
         <table className="w-full text-sm">
@@ -117,13 +189,13 @@ export default async function AdminCertificationsPage({
                 Sản phẩm
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800">
-                Người nộp đơn
+                {isApprovedTab ? "Chủ sở hữu" : "Người nộp đơn"}
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800">
                 Trạng thái
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800">
-                Ngày nộp
+                {isApprovedTab ? "Ngày tạo SP" : "Ngày nộp"}
               </th>
               <th className="px-4 py-3 text-right font-semibold text-brand-800">
                 Thao tác
@@ -131,51 +203,49 @@ export default async function AdminCertificationsPage({
             </tr>
           </thead>
           <tbody className="divide-y">
-            {certs.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td
                   colSpan={5}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
-                  Không có đơn nào
+                  {isApprovedTab ? "Chưa có sản phẩm nào được chứng nhận" : "Không có đơn nào"}
                 </td>
               </tr>
             )}
-            {certs.map((cert) => (
+            {rows.map((row) => (
               <tr
-                key={cert.id}
+                key={row.id}
                 className="hover:bg-brand-50/50 transition-colors"
               >
                 <td className="px-4 py-3">
-                  <p className="font-medium text-brand-900">
-                    {cert.product.name}
-                  </p>
+                  <p className="font-medium text-brand-900">{row.productName}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-medium">{cert.applicant.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {cert.applicant.email}
-                  </p>
+                  <p className="font-medium">{row.applicantName}</p>
+                  <p className="text-xs text-muted-foreground">{row.applicantEmail}</p>
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium",
-                      CERT_STATUS_CLASSES[cert.status]
+                      CERT_STATUS_CLASSES[row.status]
                     )}
                   >
-                    {CERT_STATUS_LABELS[cert.status]}
+                    {CERT_STATUS_LABELS[row.status]}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {new Date(cert.createdAt).toLocaleDateString("vi-VN")}
+                  {row.createdAt.toLocaleDateString("vi-VN")}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/admin/chung-nhan/${cert.id}`}
+                    href={row.detailHref}
+                    target={isApprovedTab ? "_blank" : undefined}
+                    rel={isApprovedTab ? "noopener noreferrer" : undefined}
                     className="rounded-md border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
                   >
-                    Xem xét
+                    {row.detailLabel}
                   </Link>
                 </td>
               </tr>
@@ -188,7 +258,8 @@ export default async function AdminCertificationsPage({
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">
-            {skip + 1}–{Math.min(skip + PAGE_SIZE, total)} / {total} đơn
+            {skip + 1}–{Math.min(skip + PAGE_SIZE, total)} / {total}{" "}
+            {isApprovedTab ? "sản phẩm" : "đơn"}
           </p>
           <div className="flex gap-1">
             {page > 1 && (
