@@ -196,7 +196,7 @@ export default async function MembersPage({
                     href={`/doanh-nghiep/${company.slug}`}
                     className="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors"
                   >
-                    Xem chi tiết →
+                    {t("viewDetails")}
                   </Link>
                   {company.website && (
                     <a
@@ -205,7 +205,7 @@ export default async function MembersPage({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
                     >
-                      ↗ Ghé website
+                      {t("visitWebsite")}
                     </a>
                   )}
                 </div>

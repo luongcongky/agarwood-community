@@ -366,7 +366,9 @@
     "emptySearch": "No results for \"{query}\". Try a different keyword.",
     "emptyDefault": "No companies listed yet.",
     "viewAll": "View all companies",
-    "verified": "✓ Verified"
+    "verified": "✓ Verified",
+    "viewDetails": "View details →",
+    "visitWebsite": "↗ Visit website"
   },
   "research": {
     "metaTitle": "Scientific Research | Vietnam Agarwood Association",

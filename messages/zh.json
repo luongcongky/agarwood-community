@@ -366,7 +366,9 @@
     "emptySearch": "没有 {query} 的结果，请尝试其他关键词。",
     "emptyDefault": "暂无企业信息。",
     "viewAll": "查看全部企业",
-    "verified": "✓ 已认证"
+    "verified": "✓ 已认证",
+    "viewDetails": "查看详情 →",
+    "visitWebsite": "↗ 访问网站"
   },
   "research": {
     "metaTitle": "科学研究 | 越南沉香协会",

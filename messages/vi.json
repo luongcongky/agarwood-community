@@ -366,7 +366,9 @@
     "emptySearch": "Không có kết quả cho \"{query}\". Thử từ khóa khác nhé.",
     "emptyDefault": "Chưa có doanh nghiệp nào được đăng.",
     "viewAll": "Xem tất cả doanh nghiệp",
-    "verified": "✓ Đã xác minh"
+    "verified": "✓ Đã xác minh",
+    "viewDetails": "Xem chi tiết →",
+    "visitWebsite": "↗ Ghé website"
   },
   "research": {
     "metaTitle": "Nghiên cứu khoa học | Hội Trầm Hương Việt Nam",
