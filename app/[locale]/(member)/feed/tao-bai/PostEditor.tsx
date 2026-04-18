@@ -341,6 +341,7 @@ function TaoBaiContent() {
   const previewHtml = editorRef.current?.getHTML() ?? ""
 
   return (
+    <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -602,6 +603,7 @@ function TaoBaiContent() {
           </button>
         </div>
       </div>
+    </div>
     </div>
   )
 }
