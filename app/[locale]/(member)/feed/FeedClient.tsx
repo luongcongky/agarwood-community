@@ -350,7 +350,7 @@ function PostCard({
           />
           {needsTruncation && !expanded && (
             <button onClick={() => setExpanded(true)} className="text-sm font-medium text-brand-600 hover:text-brand-800 mt-1">
-              Xem thêm
+              {t("readMore")}
             </button>
           )}
         </div>
@@ -380,19 +380,19 @@ function PostCard({
                   userHasReacted ? "bg-brand-100 text-brand-700" : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
                 )}
               >
-                {userHasReacted ? "✓" : "○"} Hữu ích ({post._count.reactions})
+                {userHasReacted ? "✓" : "○"} {t("useful", { count: post._count.reactions })}
               </button>
             ) : (
-              <span className="text-sm text-brand-400">Hữu ích ({post._count.reactions})</span>
+              <span className="text-sm text-brand-400">{t("useful", { count: post._count.reactions })}</span>
             )}
             <Link
               href={`/bai-viet/${post.id}`}
               className="flex items-center gap-1.5 text-sm font-medium text-brand-400 hover:text-brand-700 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors"
             >
-              💬 {post._count.comments > 0 ? post._count.comments : ""} Bình luận
+              💬 {post._count.comments > 0 ? `${post._count.comments} ` : ""}{t("comments")}
             </Link>
           </div>
-          <span className="text-sm text-brand-500">{post.viewCount} lượt xem</span>
+          <span className="text-sm text-brand-500">{post.viewCount} {t("views")}</span>
         </div>
       )}
     </article>
