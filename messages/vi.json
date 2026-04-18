@@ -124,7 +124,24 @@
   "marketplace": {
     "metaTitle": "Sản phẩm Doanh nghiệp",
     "pageTitle": "Sản phẩm Doanh nghiệp",
-    "pageSubtitle": "Khám phá sản phẩm trầm hương từ các doanh nghiệp hội viên — được sắp xếp ưu tiên theo thứ hạng và chứng nhận"
+    "pageSubtitle": "Khám phá sản phẩm trầm hương từ các doanh nghiệp hội viên — được sắp xếp ưu tiên theo thứ hạng và chứng nhận",
+    "subtitleBefore": "Nơi hội viên và doanh nghiệp đăng sản phẩm quảng bá. Sản phẩm có",
+    "subtitleAfter": "đã được Hội thẩm định chất lượng.",
+    "certifiedBadge": "✓ Chứng nhận",
+    "featuredBadge": "Nổi bật",
+    "registerProduct": "+ Đăng sản phẩm",
+    "registerProductNow": "+ Đăng sản phẩm ngay",
+    "filterAll": "Tất cả",
+    "filterBusiness": "Doanh nghiệp",
+    "filterIndividual": "Cá nhân",
+    "filteringBy": "Đang lọc",
+    "clearFilter": "✕ Bỏ lọc",
+    "emptyCertified": "Chưa có sản phẩm chứng nhận nào",
+    "emptyDefault": "Chưa có sản phẩm nào được công bố",
+    "emptySubtitle": "Hãy là người đầu tiên đăng sản phẩm trên chợ trầm hương!",
+    "ctaLoggedIn": "Bạn có sản phẩm trầm hương muốn quảng bá?",
+    "ctaGuest": "Đăng nhập để đăng sản phẩm trên chợ trầm hương. Nâng cấp hội viên để được ưu tiên hiển thị.",
+    "ctaLogin": "Đăng nhập"
   },
   "legalDocs": {
     "metaTitle": "Văn bản pháp quy",

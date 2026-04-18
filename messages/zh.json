@@ -124,7 +124,24 @@
   "marketplace": {
     "metaTitle": "企业产品",
     "pageTitle": "企业产品",
-    "pageSubtitle": "探索会员企业的沉香产品 — 按等级和认证优先排序"
+    "pageSubtitle": "探索会员企业的沉香产品 — 按等级和认证优先排序",
+    "subtitleBefore": "会员和企业发布产品宣传之处。标有",
+    "subtitleAfter": "的产品已通过协会质量审核。",
+    "certifiedBadge": "✓ 认证",
+    "featuredBadge": "精选",
+    "registerProduct": "+ 发布产品",
+    "registerProductNow": "+ 立即发布产品",
+    "filterAll": "全部",
+    "filterBusiness": "企业",
+    "filterIndividual": "个人",
+    "filteringBy": "筛选中",
+    "clearFilter": "✕ 清除筛选",
+    "emptyCertified": "暂无已认证产品",
+    "emptyDefault": "暂无产品发布",
+    "emptySubtitle": "成为在沉香市场发布产品的第一人！",
+    "ctaLoggedIn": "您有沉香产品想要推广吗？",
+    "ctaGuest": "登录以在沉香市场发布产品。升级会员以获得优先展示。",
+    "ctaLogin": "登录"
   },
   "legalDocs": {
     "metaTitle": "法规文件",

@@ -151,19 +151,18 @@ export default async function MarketplacePage({
           {t("pageTitle")}
         </h1>
         <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
-          Nơi hội viên và doanh nghiệp đăng sản phẩm quảng bá.
-          Sản phẩm có{" "}
+          {t("subtitleBefore")}{" "}
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-bold text-white align-middle">
-            ✓ Chứng nhận
+            {t("certifiedBadge")}
           </span>{" "}
-          đã được Hội thẩm định chất lượng.
+          {t("subtitleAfter")}
         </p>
         {isLoggedIn && (
           <Link
             href="/san-pham/tao-moi"
             className="mt-5 inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-2.5 hover:bg-brand-300 transition-colors text-sm"
           >
-            + Đăng sản phẩm
+            {t("registerProduct")}
           </Link>
         )}
       </div>
@@ -180,7 +179,7 @@ export default async function MarketplacePage({
                 : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50",
             )}
           >
-            Tất cả ({total})
+            {t("filterAll")} ({total})
           </Link>
           <Link
             href={buildUrl(1, "certified", categoryFilter)}
@@ -191,7 +190,7 @@ export default async function MarketplacePage({
                 : "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50",
             )}
           >
-            ✓ Chứng nhận ({certifiedCount})
+            {t("certifiedBadge")} ({certifiedCount})
           </Link>
           <Link
             href={buildUrl(1, "business", categoryFilter)}
@@ -202,7 +201,7 @@ export default async function MarketplacePage({
                 : "bg-white text-blue-700 border-blue-200 hover:bg-blue-50",
             )}
           >
-            Doanh nghiệp ({businessCount})
+            {t("filterBusiness")} ({businessCount})
           </Link>
           <Link
             href={buildUrl(1, "individual", categoryFilter)}
@@ -213,7 +212,7 @@ export default async function MarketplacePage({
                 : "bg-white text-amber-700 border-amber-200 hover:bg-amber-50",
             )}
           >
-            Cá nhân ({individualCount})
+            {t("filterIndividual")} ({individualCount})
           </Link>
         </div>
       </div>
@@ -244,13 +243,13 @@ export default async function MarketplacePage({
         {categoryFilter && (
           <div className="mt-3 flex items-center gap-2">
             <span className="text-sm text-brand-600">
-              Đang lọc: <strong>{categoryFilter}</strong>
+              {t("filteringBy")}: <strong>{categoryFilter}</strong>
             </span>
             <Link
               href={buildUrl(1, filter)}
               className="text-xs text-brand-400 hover:text-red-500 transition-colors"
             >
-              ✕ Bỏ lọc
+              {t("clearFilter")}
             </Link>
           </div>
         )}
@@ -262,19 +261,15 @@ export default async function MarketplacePage({
           <div className="bg-white rounded-2xl border border-brand-200 p-16 text-center">
             <AgarwoodPlaceholder className="w-20 h-20 mx-auto mb-4" size="lg" shape="full" tone="light" />
             <p className="text-brand-700 text-lg font-medium">
-              {filter === "certified"
-                ? "Chưa có sản phẩm chứng nhận nào"
-                : "Chưa có sản phẩm nào được công bố"}
+              {filter === "certified" ? t("emptyCertified") : t("emptyDefault")}
             </p>
-            <p className="text-brand-500 text-sm mt-2">
-              Hãy là người đầu tiên đăng sản phẩm trên chợ trầm hương!
-            </p>
+            <p className="text-brand-500 text-sm mt-2">{t("emptySubtitle")}</p>
             {isLoggedIn && (
               <Link
                 href="/san-pham/tao-moi"
                 className="mt-4 inline-flex items-center rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
               >
-                + Đăng sản phẩm
+                {t("registerProduct")}
               </Link>
             )}
           </div>
@@ -317,14 +312,14 @@ export default async function MarketplacePage({
                     {/* Certified badge */}
                     {isCertified && (
                       <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow-lg ring-2 ring-white">
-                        ✓ Chứng nhận
+                        {t("certifiedBadge")}
                       </span>
                     )}
 
                     {/* Featured badge */}
                     {product.isFeatured && !isCertified && (
                       <span className="absolute top-3 right-3 inline-flex items-center rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow">
-                        Nổi bật
+                        {t("featuredBadge")}
                       </span>
                     )}
                   </div>
@@ -452,26 +447,22 @@ export default async function MarketplacePage({
       <div className="bg-brand-800 py-12 text-center text-white">
         {isLoggedIn ? (
           <>
-            <p className="text-brand-200 mb-4 text-sm">
-              Bạn có sản phẩm trầm hương muốn quảng bá?
-            </p>
+            <p className="text-brand-200 mb-4 text-sm">{t("ctaLoggedIn")}</p>
             <Link
               href="/san-pham/tao-moi"
               className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
             >
-              + Đăng sản phẩm ngay
+              {t("registerProductNow")}
             </Link>
           </>
         ) : (
           <>
-            <p className="text-brand-200 mb-4 text-sm">
-              Đăng nhập để đăng sản phẩm trên chợ trầm hương. Nâng cấp hội viên để được ưu tiên hiển thị.
-            </p>
+            <p className="text-brand-200 mb-4 text-sm">{t("ctaGuest")}</p>
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
             >
-              Đăng nhập
+              {t("ctaLogin")}
             </Link>
           </>
         )}

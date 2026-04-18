@@ -124,7 +124,24 @@
   "marketplace": {
     "metaTitle": "Business Products",
     "pageTitle": "Business Products",
-    "pageSubtitle": "Explore agarwood products from member businesses — prioritized by rank and certification"
+    "pageSubtitle": "Explore agarwood products from member businesses — prioritized by rank and certification",
+    "subtitleBefore": "Where members and businesses promote their products. Items marked",
+    "subtitleAfter": "have been quality-assessed by the Association.",
+    "certifiedBadge": "✓ Certified",
+    "featuredBadge": "Featured",
+    "registerProduct": "+ List a product",
+    "registerProductNow": "+ List a product now",
+    "filterAll": "All",
+    "filterBusiness": "Businesses",
+    "filterIndividual": "Individuals",
+    "filteringBy": "Filtering by",
+    "clearFilter": "✕ Clear filter",
+    "emptyCertified": "No certified products yet",
+    "emptyDefault": "No products have been listed yet",
+    "emptySubtitle": "Be the first to list a product on the agarwood marketplace!",
+    "ctaLoggedIn": "Got an agarwood product to promote?",
+    "ctaGuest": "Sign in to list products on the agarwood marketplace. Upgrade your membership for priority placement.",
+    "ctaLogin": "Sign in"
   },
   "legalDocs": {
     "metaTitle": "Legal Documents",
