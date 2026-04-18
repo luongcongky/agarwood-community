@@ -104,6 +104,21 @@ const SETTINGS_GROUPS = [
   },
 ]
 
+// Keys with sibling {key}_en + {key}_zh pairs. Derived once so the admin
+// UI can show a "🤖 AI dịch" button on the VI base field for each triplet.
+const TRANSLATABLE_BASE_KEYS: ReadonlySet<string> = (() => {
+  const set = new Set<string>()
+  for (const group of SETTINGS_GROUPS) {
+    const declared = new Set(group.keys.map((k) => k.key))
+    for (const { key } of group.keys) {
+      if (declared.has(`${key}_en`) && declared.has(`${key}_zh`)) {
+        set.add(key)
+      }
+    }
+  }
+  return set
+})()
+
 export function SettingsForm({ configMap }: SettingsFormProps) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
@@ -111,10 +126,50 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
+  const [translatingKey, setTranslatingKey] = useState<string | null>(null)
+  const [translateError, setTranslateError] = useState("")
 
   function handleChange(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }))
     setSaved(false)
+  }
+
+  async function handleAiTranslate(baseKey: string) {
+    setTranslateError("")
+    const viValue = (values[baseKey] ?? "").trim()
+    if (!viValue) {
+      setTranslateError(`Vui lòng nhập nội dung tiếng Việt cho "${baseKey}" trước khi dịch.`)
+      return
+    }
+    setTranslatingKey(baseKey)
+    try {
+      const [enRes, zhRes] = await Promise.all([
+        fetch("/api/admin/ai/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: { [baseKey]: viValue }, targetLocale: "en" }),
+        }),
+        fetch("/api/admin/ai/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: { [baseKey]: viValue }, targetLocale: "zh" }),
+        }),
+      ])
+      const enData = await enRes.json()
+      const zhData = await zhRes.json()
+      if (!enRes.ok) throw new Error(enData.error ?? "Lỗi dịch EN")
+      if (!zhRes.ok) throw new Error(zhData.error ?? "Lỗi dịch 中文")
+      setValues((prev) => ({
+        ...prev,
+        [`${baseKey}_en`]: (enData.fields?.[baseKey] as string | undefined) ?? prev[`${baseKey}_en`] ?? "",
+        [`${baseKey}_zh`]: (zhData.fields?.[baseKey] as string | undefined) ?? prev[`${baseKey}_zh`] ?? "",
+      }))
+      setSaved(false)
+    } catch (e) {
+      setTranslateError(e instanceof Error ? e.message : "Lỗi khi dịch")
+    } finally {
+      setTranslatingKey(null)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -154,9 +209,25 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
             {group.description && <p className="text-xs text-brand-400 mt-0.5">{group.description}</p>}
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {group.keys.map(({ key, label, type }) => (
+            {group.keys.map(({ key, label, type }) => {
+              const isTranslatable = TRANSLATABLE_BASE_KEYS.has(key)
+              const isTranslatingThis = translatingKey === key
+              return (
               <div key={key} className={type === "textarea" ? "sm:col-span-2" : ""}>
-                <label className="block text-sm font-medium text-brand-800 mb-1">{label}</label>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <label className="block text-sm font-medium text-brand-800">{label}</label>
+                  {isTranslatable && (
+                    <button
+                      type="button"
+                      onClick={() => handleAiTranslate(key)}
+                      disabled={readOnly || translatingKey !== null}
+                      title="Dịch giá trị VI này sang EN + 中文 (điền 2 ô bên dưới)"
+                      className="shrink-0 inline-flex items-center gap-1 rounded-md bg-linear-to-r from-blue-500 to-purple-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      {isTranslatingThis ? "⏳ Đang dịch..." : "🤖 AI dịch VI → EN + 中文"}
+                    </button>
+                  )}
+                </div>
                 {type === "textarea" ? (
                   <textarea
                     rows={4}
@@ -177,11 +248,17 @@ export function SettingsForm({ configMap }: SettingsFormProps) {
                   />
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}
 
+      {translateError && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          ⚠ {translateError}
+        </div>
+      )}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
       )}
