@@ -509,7 +509,9 @@
     "partnersTitle": "合作伙伴与关联机构",
     "partnersSubtitle": "与越南沉香协会携手合作的政府机构、协会和科研单位",
     "partnersEmpty": "暂无合作伙伴公布。",
-    "viewAll": "查看全部 →"
+    "viewAll": "查看全部 →",
+    "memberBadge": "★ 会员",
+    "sponsored": "广告"
   },
   "feed": {
     "filterAll": "全部",

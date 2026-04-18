@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useTranslations } from "next-intl"
 import { cloudinaryFit } from "@/lib/cloudinary"
 
 type BannerItem = {
@@ -25,6 +26,7 @@ const ROTATION_INTERVAL_MS = 5000
  * - Smooth fade transition
  */
 export function BannerCarousel({ banners }: Props) {
+  const t = useTranslations("homepage")
   const [activeIdx, setActiveIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -52,7 +54,7 @@ export function BannerCarousel({ banners }: Props) {
     >
       {/* Sponsored label */}
       <p className="text-[10px] uppercase tracking-wider font-semibold text-brand-400 mb-1.5 text-right">
-        Quảng cáo
+        {t("sponsored")}
       </p>
 
       {/* Banner stack — fade transition */}

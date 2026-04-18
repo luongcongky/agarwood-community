@@ -32,7 +32,7 @@ export async function MemberNewsRail() {
       {topPosts.length > 0 && (
         <div className="p-3 space-y-2 bg-amber-50/30">
           {topPosts.map((post) => (
-            <PostCard key={post.id} post={post} variant="horizontal" />
+            <PostCard key={post.id} post={post} variant="horizontal" memberBadgeLabel={t("memberBadge")} />
           ))}
         </div>
       )}
@@ -49,7 +49,7 @@ export async function MemberNewsRail() {
           <ul>
             {rotatingPosts.map((post) => (
               <li key={post.id}>
-                <PostCard post={post} variant="compact" />
+                <PostCard post={post} variant="compact" memberBadgeLabel={t("memberBadge")} />
               </li>
             ))}
           </ul>

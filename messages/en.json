@@ -509,7 +509,9 @@
     "partnersTitle": "Partners & Affiliates",
     "partnersSubtitle": "Government agencies, associations and research institutions partnering with the Vietnam Agarwood Association",
     "partnersEmpty": "No partners announced yet.",
-    "viewAll": "View all →"
+    "viewAll": "View all →",
+    "memberBadge": "★ Member",
+    "sponsored": "Sponsored"
   },
   "feed": {
     "filterAll": "All",

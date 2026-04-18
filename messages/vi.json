@@ -509,7 +509,9 @@
     "partnersTitle": "Đối tác & Cơ quan liên kết",
     "partnersSubtitle": "Các cơ quan, hiệp hội, đơn vị nghiên cứu đang đồng hành cùng Hội Trầm Hương Việt Nam",
     "partnersEmpty": "Chưa có đối tác nào được công bố.",
-    "viewAll": "Xem tất cả →"
+    "viewAll": "Xem tất cả →",
+    "memberBadge": "★ Hội viên",
+    "sponsored": "Quảng cáo"
   },
   "feed": {
     "filterAll": "Tất cả",

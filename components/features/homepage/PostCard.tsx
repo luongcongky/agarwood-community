@@ -7,6 +7,8 @@ import type { HomepagePost } from "@/lib/homepage"
 interface PostCardProps {
   post: HomepagePost
   variant?: "horizontal" | "vertical" | "compact"
+  /** Localized "★ Hội viên" badge. Parent passes t("memberBadge"). */
+  memberBadgeLabel?: string
 }
 
 /** Strip HTML tags and truncate to ~140 chars for excerpt */
@@ -28,7 +30,7 @@ function formatDate(d: Date | string): string {
   return date.toLocaleDateString("vi-VN", { day: "numeric", month: "short" })
 }
 
-export function PostCard({ post, variant = "vertical" }: PostCardProps) {
+export function PostCard({ post, variant = "vertical", memberBadgeLabel = "★ Hội viên" }: PostCardProps) {
   const cover = getCoverImage(post)
   const excerpt = htmlToExcerpt(post.content)
   const authorName = post.author.company?.name ?? post.author.name
@@ -94,7 +96,7 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
             {post.title || excerpt.slice(0, 80)}
           </h4>
           <p className="mt-1 text-xs text-brand-500 truncate">
-            <span className="font-medium text-amber-600">★ Hội viên</span>
+            <span className="font-medium text-amber-600">{memberBadgeLabel}</span>
             <span className="mx-1">·</span>
             {authorName}
           </p>
@@ -125,7 +127,7 @@ export function PostCard({ post, variant = "vertical" }: PostCardProps) {
         )}
         {post.isPremium && (
           <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
-            ★ Hội viên
+            {memberBadgeLabel}
           </span>
         )}
       </div>
