@@ -219,4 +219,54 @@ export async function listDriveFolder(folderId?: string): Promise<{ id: string; 
   }))
 }
 
+// ── Parse + fetch metadata for an existing Drive file ───────────────────────
+
+/**
+ * Extract the Drive file ID from a variety of share-URL shapes:
+ *   https://drive.google.com/file/d/FILE_ID/view
+ *   https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+ *   https://drive.google.com/open?id=FILE_ID
+ *   https://drive.google.com/uc?id=FILE_ID&export=download
+ *   FILE_ID (raw)
+ *
+ * Returns null if no ID can be found.
+ */
+export function parseDriveFileId(input: string): string | null {
+  if (!input) return null
+  const trimmed = input.trim()
+  // /d/<id>/
+  const dMatch = trimmed.match(/\/d\/([a-zA-Z0-9_-]{20,})/)
+  if (dMatch) return dMatch[1]
+  // ?id=<id> or &id=<id>
+  const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]{20,})/)
+  if (idMatch) return idMatch[1]
+  // Raw file ID (Drive IDs are typically 25–44 chars of base64url-ish)
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(trimmed)) return trimmed
+  return null
+}
+
+/**
+ * Fetch file metadata (name, size, mimeType) from Drive for a known file ID.
+ * Throws if the file doesn't exist or the service account can't read it.
+ */
+export async function getDriveFileMetadata(
+  fileId: string,
+): Promise<{ id: string; name: string; size: number; mimeType: string }> {
+  const drive = getDrive()
+  const res = await drive.files.get({
+    fileId,
+    fields: "id,name,size,mimeType",
+  })
+  const { id, name, size, mimeType } = res.data
+  if (!id || !name) {
+    throw new Error(`Drive file ${fileId} không trả về metadata hợp lệ`)
+  }
+  return {
+    id,
+    name,
+    size: size ? Number(size) : 0,
+    mimeType: mimeType ?? "application/octet-stream",
+  }
+}
+
 export { CATEGORY_FOLDERS, ALLOWED_MIME_TYPES, MAX_FILE_SIZE }

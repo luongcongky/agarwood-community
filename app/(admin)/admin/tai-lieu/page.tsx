@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DocumentUploadButton } from "./DocumentUploadButton"
+import { CopyDriveUrlButton } from "./CopyDriveUrlButton"
 import { Prisma, DocumentCategory } from "@prisma/client"
 
 export const revalidate = 0
@@ -78,6 +79,7 @@ export default async function AdminDocumentsPage({
         fileSize: true,
         downloadCount: true,
         createdAt: true,
+        driveFileId: true,
       },
     }),
     prisma.document.count({ where }),
@@ -184,7 +186,7 @@ export default async function AdminDocumentsPage({
               <th className="px-4 py-3 text-left font-semibold text-brand-800 hidden md:table-cell w-[110px] whitespace-nowrap">Ngày ban hành</th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 hidden sm:table-cell w-[90px] whitespace-nowrap">Kích cỡ</th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[100px] whitespace-nowrap">Trạng thái</th>
-              <th className="px-4 py-3 text-right font-semibold text-brand-800 w-[120px] whitespace-nowrap">Thao tác</th>
+              <th className="px-4 py-3 text-right font-semibold text-brand-800 w-[200px] whitespace-nowrap">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-100">
@@ -223,12 +225,15 @@ export default async function AdminDocumentsPage({
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/admin/tai-lieu/${doc.id}`}
-                    className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-50 shadow-sm transition-all whitespace-nowrap"
-                  >
-                    Chi tiết
-                  </Link>
+                  <div className="inline-flex items-center gap-1.5">
+                    <CopyDriveUrlButton driveFileId={doc.driveFileId} />
+                    <Link
+                      href={`/admin/tai-lieu/${doc.id}`}
+                      className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-50 shadow-sm transition-all whitespace-nowrap"
+                    >
+                      Chi tiết
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
