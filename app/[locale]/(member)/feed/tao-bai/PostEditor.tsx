@@ -339,7 +339,7 @@ function TaoBaiContent() {
           {t("backToFeed")}
         </button>
         <span className="text-brand-500">/</span>
-        <h1 className="font-semibold text-brand-900 text-lg">{editId ? t("editTitle") : "Tạo bài viết mới"}</h1>
+        <h1 className="font-semibold text-brand-900 text-lg">{editId ? t("editTitle") : t("createTitle")}</h1>
 
         {!editId && quota && (
           <span
@@ -394,9 +394,7 @@ function TaoBaiContent() {
         <div className="bg-white rounded-xl border border-brand-200 p-5 space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-brand-900">{t("productInfoTitle")}</h3>
-            <p className="text-xs text-brand-500 mt-0.5">
-              Bài này sẽ đồng thời được tạo dưới dạng sản phẩm trên marketplace và hiển thị trong feed với thẻ giá + nút xem chi tiết.
-            </p>
+            <p className="text-xs text-brand-500 mt-0.5">{t("productInfoDesc")}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -425,7 +423,7 @@ function TaoBaiContent() {
                 placeholder="nhang-tram-cao-cap-khanh-hoa"
                 className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono"
               />
-              <p className="text-[11px] text-brand-400 mt-0.5">Tự sinh từ tên; có thể chỉnh thủ công.</p>
+              <p className="text-[11px] text-brand-400 mt-0.5">{t("slugHint")}</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">{t("categoryLabel")}</label>
@@ -557,7 +555,7 @@ function TaoBaiContent() {
             onClick={() => setPreview((v) => !v)}
             className="text-sm text-brand-600 hover:text-brand-800 font-medium transition-colors"
           >
-            {preview ? t("editBtn") : "Xem trước"}
+            {preview ? t("editBtn") : t("previewBtn")}
           </button>
           <button
             type="button"
@@ -585,7 +583,7 @@ function TaoBaiContent() {
             {submitting && (
               <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            {editId ? t("updateBtn") : "Đăng bài"}
+            {editId ? t("updateBtn") : t("postBtn")}
           </button>
         </div>
       </div>
