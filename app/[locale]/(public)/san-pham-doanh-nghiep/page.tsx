@@ -159,7 +159,7 @@ export default async function MarketplacePage({
         </p>
         {isLoggedIn && (
           <Link
-            href="/san-pham/tao-moi"
+            href={`/${locale}/feed/tao-bai?category=PRODUCT`}
             className="mt-5 inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-2.5 hover:bg-brand-300 transition-colors text-sm"
           >
             {t("registerProduct")}
@@ -266,7 +266,7 @@ export default async function MarketplacePage({
             <p className="text-brand-500 text-sm mt-2">{t("emptySubtitle")}</p>
             {isLoggedIn && (
               <Link
-                href="/san-pham/tao-moi"
+                href={`/${locale}/feed/tao-bai?category=PRODUCT`}
                 className="mt-4 inline-flex items-center rounded-lg bg-brand-700 text-white px-5 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
               >
                 {t("registerProduct")}
@@ -449,7 +449,7 @@ export default async function MarketplacePage({
           <>
             <p className="text-brand-200 mb-4 text-sm">{t("ctaLoggedIn")}</p>
             <Link
-              href="/san-pham/tao-moi"
+              href={`/${locale}/feed/tao-bai?category=PRODUCT`}
               className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
             >
               {t("registerProductNow")}
