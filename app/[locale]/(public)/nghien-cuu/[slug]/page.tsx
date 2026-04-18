@@ -98,22 +98,22 @@ export default async function ResearchDetailPage({ params }: Props) {
     <div className="bg-brand-50/60 min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
 
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
-          <Link href="/" className="hover:text-brand-700 transition-colors">
-            Trang chủ
-          </Link>
-          <span>/</span>
-          <Link href="/nghien-cuu" className="hover:text-brand-700 transition-colors">
-            Nghiên cứu khoa học
-          </Link>
-          <span>/</span>
-          <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
-        </nav>
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Article card */}
         <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+          {/* Breadcrumb — nằm trong card, phía trên cover ảnh */}
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap px-6 sm:px-10 pt-6 pb-4">
+            <Link href="/" className="hover:text-brand-700 transition-colors">
+              Trang chủ
+            </Link>
+            <span>/</span>
+            <Link href="/nghien-cuu" className="hover:text-brand-700 transition-colors">
+              Nghiên cứu khoa học
+            </Link>
+            <span>/</span>
+            <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
+          </nav>
+
           {/* Cover image — full-bleed inside card */}
           {news.coverImageUrl && (
             <div className="relative w-full aspect-video bg-muted">
@@ -123,7 +123,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                 fill
                 className="object-cover"
                 priority
-                sizes="(max-width: 896px) 100vw, 896px"
+                sizes="(max-width: 1280px) 100vw, 1280px"
               />
             </div>
           )}
@@ -186,9 +186,9 @@ export default async function ResearchDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Related Research — outside the card, on page background */}
+        {/* Related Research — cùng pattern card trắng như article chính */}
         {related.length > 0 && (
-          <section className="mt-10">
+          <section className="mt-6 bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
             <h2 className="text-xl font-semibold text-foreground mb-5">
               Nghiên cứu liên quan
             </h2>
@@ -197,7 +197,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                 <Link
                   key={item.id}
                   href={`/nghien-cuu/${item.slug}`}
-                  className="group block bg-white rounded-xl overflow-hidden border border-brand-200 hover:shadow-md transition-shadow"
+                  className="group block bg-brand-50/40 rounded-xl overflow-hidden border border-brand-200 hover:shadow-md hover:border-brand-300 transition-all"
                 >
                   {item.coverImageUrl ? (
                     <div className="relative w-full h-36">
