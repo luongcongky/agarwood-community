@@ -84,6 +84,7 @@ export default async function GioiThieuPage() {
       name: l(leader, "name") ?? leader.name,
       honorific: l(leader, "honorific"),
       title: l(leader, "title") ?? leader.title,
+      titleVi: leader.title,
       workTitle: l(leader, "workTitle"),
       bio: l(leader, "bio") ?? leader.user?.bio ?? null,
       photoUrl: leader.photoUrl ?? leader.user?.avatarUrl ?? null,

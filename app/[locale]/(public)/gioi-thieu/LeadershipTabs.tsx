@@ -13,7 +13,12 @@ export type LeaderItem = {
   id: string
   name: string
   honorific: string | null
+  /** Localized title shown to the user. */
   title: string
+  /** Original Vietnamese title — used as the language-agnostic key for rank
+   *  detection (chairman / vice / member). Rank inference can't run on the
+   *  translated title because "Chairman" / "会长" / "Chủ tịch" all differ. */
+  titleVi: string
   workTitle: string | null
   bio: string | null
   photoUrl: string | null
@@ -236,10 +241,10 @@ export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
     [leaders, activeTab],
   )
 
-  // Phân cấp
-  const chairman = currentLeaders.find((l) => rankFromTitle(l.title) === "chairman")
-  const vicePresidents = currentLeaders.filter((l) => rankFromTitle(l.title) === "vice")
-  const members = currentLeaders.filter((l) => rankFromTitle(l.title) === "member")
+  // Phân cấp — always infer from VI title so translated labels don't break it.
+  const chairman = currentLeaders.find((l) => rankFromTitle(l.titleVi) === "chairman")
+  const vicePresidents = currentLeaders.filter((l) => rankFromTitle(l.titleVi) === "vice")
+  const members = currentLeaders.filter((l) => rankFromTitle(l.titleVi) === "member")
 
   const currentTerm = currentLeaders[0]?.term
 
