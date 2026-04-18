@@ -1,32 +1,51 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
+import { getLocale, getTranslations } from "next-intl/server"
+import type { Locale } from "@/i18n/config"
 
-export const metadata = {
-  title: "Điều lệ Hội — Hội Trầm Hương Việt Nam",
-  description:
-    "Điều lệ (sửa đổi, bổ sung) Hội Trầm Hương Việt Nam — phê duyệt theo Quyết định số 1086/QĐ-BNV ngày 29/12/2023 của Bộ trưởng Bộ Nội vụ.",
+export async function generateMetadata() {
+  const t = await getTranslations("dieuLe")
+  return {
+    title: t("metaTitle"),
+    description: t("metaDesc"),
+  }
 }
 
-// Fetch file PDF metadata từ SiteConfig (admin upload qua /admin/cai-dat)
-async function getDieuLePdfInfo() {
-  const rows = await prisma.siteConfig.findMany({
-    where: {
-      key: {
-        in: ["dieu_le_drive_file_id", "dieu_le_file_name", "dieu_le_file_size"],
-      },
-    },
-  })
+// Fetch file PDF metadata từ SiteConfig, locale-aware với fallback chain:
+//   current locale → VI (legal source of truth)
+async function getDieuLePdfInfo(locale: Locale) {
+  const suffix = locale === "vi" ? "" : `_${locale}`
+  const keys = [
+    `dieu_le_drive_file_id${suffix}`,
+    `dieu_le_file_name${suffix}`,
+    `dieu_le_file_size${suffix}`,
+    // VI fallback keys — always fetch so we can fall back if localized PDF missing
+    "dieu_le_drive_file_id",
+    "dieu_le_file_name",
+    "dieu_le_file_size",
+  ]
+  const rows = await prisma.siteConfig.findMany({ where: { key: { in: keys } } })
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]))
-  const fileId = map.dieu_le_drive_file_id
+
+  const fileId = map[`dieu_le_drive_file_id${suffix}`] ?? map.dieu_le_drive_file_id
   if (!fileId) return null
+
+  const usedSuffix =
+    map[`dieu_le_drive_file_id${suffix}`] ? suffix : ""
+  const fileName =
+    map[`dieu_le_file_name${usedSuffix}`] ?? "dieu-le-hoi-tram-huong.pdf"
+  const fileSize = map[`dieu_le_file_size${usedSuffix}`]
+    ? Number(map[`dieu_le_file_size${usedSuffix}`])
+    : 0
   return {
     fileId,
-    fileName: map.dieu_le_file_name ?? "dieu-le-hoi-tram-huong.pdf",
-    fileSize: map.dieu_le_file_size ? Number(map.dieu_le_file_size) : 0,
-    // Direct download link từ Google Drive
+    fileName,
+    fileSize,
     downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
     viewUrl: `https://drive.google.com/file/d/${fileId}/view`,
+    /** true nếu đang dùng bản dịch locale đó; false nếu fallback về VI */
+    isLocalizedPdf: usedSuffix !== "" || locale === "vi",
   }
 }
 
@@ -36,35 +55,34 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+// Roman numerals I–VIII for chapter display (language-agnostic).
+const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const
+
 /**
- * Cấu trúc Điều lệ (sửa đổi, bổ sung) 2023:
- *  - 8 chương, 27 điều
- *  - Thông qua tại Đại hội đại biểu lần thứ III, nhiệm kỳ 2023–2028 (13/5/2023)
- *  - Phê duyệt: Quyết định 1086/QĐ-BNV ngày 29/12/2023
- *  - Thay thế Điều lệ cũ (QĐ 688/QĐ-BNV ngày 23/6/2010)
+ * Cấu trúc Điều lệ (sửa đổi, bổ sung) 2023 — 8 chương, 27 điều.
+ * Chapter/article titles are resolved at render time from the `dieuLe` message
+ * namespace (chapter{1..8}Title, article{1..27}Title). Paragraphs stay VI
+ * because the approved legal text is only authoritative in Vietnamese — EN/ZH
+ * readers get a disclaimer and are directed to the certified translated PDF.
  */
 type Article = {
   num: string      // "1", "2", ...
-  title: string    // "Tên gọi, biểu tượng"
-  paragraphs: (string | string[])[]  // chuỗi đoạn, mảng = list items
+  paragraphs: (string | string[])[]
 }
 
 type Chapter = {
   id: string
-  number: string   // "I"
-  title: string
+  idx: number      // 1..8 — used for i18n key lookup
   articles: Article[]
 }
 
 const chapters: Chapter[] = [
   {
     id: "chuong-1",
-    number: "I",
-    title: "Quy định chung",
+    idx: 1,
     articles: [
       {
         num: "1",
-        title: "Tên gọi, biểu tượng",
         paragraphs: [
           "Tên tiếng Việt: Hội Trầm hương Việt Nam.",
           "Tên tiếng Anh: Vietnam Agarwood Association.",
@@ -74,14 +92,12 @@ const chapters: Chapter[] = [
       },
       {
         num: "2",
-        title: "Tôn chỉ, mục đích",
         paragraphs: [
           "Hội Trầm hương Việt Nam (sau đây viết tắt là Hội) là tổ chức xã hội – nghề nghiệp của các doanh nghiệp, tổ chức và công dân Việt Nam hoạt động trong lĩnh vực trầm hương theo quy định của pháp luật, tự nguyện thành lập nhằm mục đích tập hợp, đoàn kết hội viên, bảo vệ quyền, lợi ích hợp pháp của hội viên, hỗ trợ nhau hoạt động có hiệu quả, góp phần vào sự phát triển kinh tế – xã hội của đất nước.",
         ],
       },
       {
         num: "3",
-        title: "Địa vị pháp lý, trụ sở",
         paragraphs: [
           "Hội Trầm hương Việt Nam có tư cách pháp nhân, có con dấu và tài khoản riêng; hoạt động theo quy định pháp luật Việt Nam và Điều lệ Hội được Bộ trưởng Bộ Nội vụ phê duyệt theo quy định của pháp luật.",
           "Trụ sở chính của Hội đặt tại: Số 150, Đường Lý Chính Thắng, Phường Xuân Hòa, Thành phố Hồ Chí Minh. Hội được lập văn phòng đại diện ở các tỉnh, thành phố trực thuộc Trung ương theo quy định của pháp luật.",
@@ -89,7 +105,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "4",
-        title: "Phạm vi, lĩnh vực hoạt động",
         paragraphs: [
           "Hội Trầm hương Việt Nam hoạt động trên phạm vi cả nước, trong lĩnh vực trầm hương theo quy định của pháp luật.",
           "Hội Trầm hương Việt Nam chịu sự quản lý nhà nước của Bộ Nội vụ; sự quản lý chuyên ngành của Bộ Nông nghiệp và Phát triển nông thôn về lĩnh vực chính của Hội và các Bộ ngành có liên quan đến lĩnh vực Hội hoạt động theo quy định của pháp luật.",
@@ -97,7 +112,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "5",
-        title: "Nguyên tắc tổ chức, hoạt động",
         paragraphs: [
           [
             "Tự nguyện, tự quản.",
@@ -112,12 +126,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-2",
-    number: "II",
-    title: "Quyền hạn và nhiệm vụ",
+    idx: 2,
     articles: [
       {
         num: "6",
-        title: "Quyền hạn",
         paragraphs: [
           "1. Tuyên truyền tôn chỉ, mục đích hoạt động của Hội theo quy định của pháp luật.",
           "2. Đại diện cho hội viên và tổ chức của Hội trong các quan hệ có liên quan đến mục đích, chức năng, nhiệm vụ của Hội theo quy định của pháp luật.",
@@ -134,7 +146,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "7",
-        title: "Nhiệm vụ",
         paragraphs: [
           "1. Chấp hành các quy định của pháp luật có liên quan đến tổ chức, hoạt động của Hội. Tổ chức, hoạt động theo Điều lệ Hội đã được Bộ trưởng Bộ Nội vụ phê duyệt. Không được lợi dụng hoạt động của Hội để làm phương hại đến an ninh quốc gia, trật tự xã hội, đạo đức, thuần phong mỹ tục, truyền thống của dân tộc, quyền và lợi ích hợp pháp của cá nhân, tổ chức.",
           "2. Tập hợp, đoàn kết hội viên; tổ chức, phối hợp hoạt động giữa các hội viên vì lợi ích chung của Hội; thực hiện đúng tôn chỉ, mục đích của Hội nhằm tham gia phát triển lĩnh vực hoạt động của Hội, góp phần xây dựng và phát triển đất nước.",
@@ -153,12 +164,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-3",
-    number: "III",
-    title: "Hội viên",
+    idx: 3,
     articles: [
       {
         num: "8",
-        title: "Hội viên, tiêu chuẩn hội viên",
         paragraphs: [
           "1. Hội viên của Hội gồm hội viên chính thức, hội viên liên kết và hội viên danh dự:",
           "a) Hội viên chính thức của Hội gồm có: Hội viên tổ chức và hội viên cá nhân.",
@@ -174,7 +183,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "9",
-        title: "Quyền của hội viên",
         paragraphs: [
           "1. Được Hội bảo vệ quyền và lợi ích hợp pháp theo quy định của pháp luật, trong hoạt động nghề nghiệp, sản xuất, kinh doanh trong phạm vi của Hội.",
           "2. Được Hội cung cấp các thông tin cần thiết có liên quan đến lĩnh vực hoạt động sản xuất, kinh doanh, khoa học kỹ thuật, đưa tiến bộ khoa học kỹ thuật vào sản xuất, chế biến và liên quan đến phát triển cây Dó bầu (trầm hương); được tham gia các hoạt động do Hội tổ chức theo quy định Điều lệ Hội.",
@@ -190,7 +198,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "10",
-        title: "Nghĩa vụ của hội viên",
         paragraphs: [
           [
             "Nghiêm chỉnh chấp hành chủ trương, đường lối của Đảng, chính sách, pháp luật của Nhà nước; chấp hành Điều lệ, quy định của Hội.",
@@ -203,7 +210,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "11",
-        title: "Thủ tục, thẩm quyền kết nạp hội viên; thủ tục ra khỏi Hội",
         paragraphs: [
           "1. Thủ tục gia nhập Hội:",
           "a) Các tổ chức, cá nhân có đủ tiêu chuẩn theo quy định tại Điều 8 có nguyện vọng tự nguyện gia nhập Hội, nộp hồ sơ gửi Ban Chấp hành Hội.",
@@ -218,12 +224,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-4",
-    number: "IV",
-    title: "Tổ chức, hoạt động",
+    idx: 4,
     articles: [
       {
         num: "12",
-        title: "Cơ cấu tổ chức của Hội",
         paragraphs: [
           [
             "Đại hội.",
@@ -237,7 +241,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "13",
-        title: "Đại hội",
         paragraphs: [
           "1. Cơ quan lãnh đạo cao nhất của Hội là Đại hội nhiệm kỳ hoặc Đại hội bất thường. Đại hội nhiệm kỳ được tổ chức 05 (năm) năm một lần, do Ban Chấp hành triệu tập. Đại hội bất thường được triệu tập khi có ít nhất 2/3 (hai phần ba) tổng số ủy viên Ban Chấp hành hoặc có ít nhất 1/2 (một phần hai) tổng số hội viên chính thức đề nghị.",
           "2. Đại hội nhiệm kỳ hoặc Đại hội bất thường được tổ chức dưới hình thức Đại hội toàn thể hoặc Đại hội đại biểu, số lượng, thành phần đại biểu do Ban Chấp hành quyết định. Đại hội toàn thể hoặc Đại hội đại biểu được tổ chức khi có trên 1/2 số hội viên chính thức hoặc có trên 1/2 số đại biểu chính thức có mặt.",
@@ -247,7 +250,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "14",
-        title: "Ban Chấp hành Hội",
         paragraphs: [
           "1. Ban Chấp hành Hội do Đại hội bầu trong số các hội viên chính thức của Hội. Số lượng, cơ cấu, tiêu chuẩn ủy viên Ban Chấp hành do Đại hội quyết định. Nhiệm kỳ của Ban Chấp hành cùng với nhiệm kỳ của Đại hội.",
           "2. Nhiệm vụ và quyền hạn của Ban Chấp hành: Tổ chức triển khai thực hiện Nghị quyết Đại hội, Điều lệ Hội, chỉ đạo mọi hoạt động của Hội giữa hai kỳ Đại hội; Chuẩn bị nội dung và quyết định triệu tập Đại hội; Quyết định chương trình, kế hoạch công tác hàng năm của Hội; Quyết định cơ cấu tổ chức bộ máy của Hội, ban hành Quy chế tổ chức và hoạt động của Hội; Quy chế quản lý, sử dụng tài chính, tài sản của Hội; Quy chế quản lý, sử dụng con dấu của Hội phù hợp quy định của pháp luật; Quy chế khen thưởng, kỷ luật; các quy chế khác trong nội bộ Hội phù hợp với quy định của pháp luật và Điều lệ Hội; Bầu, miễn nhiệm Chủ tịch, các Phó Chủ tịch, Tổng thư ký, ủy viên Ban Thường vụ, bầu bổ sung ủy viên Ban Chấp hành, Ban Kiểm tra. Số lượng ủy viên Ban Chấp hành bầu bổ sung không được quá số lượng ủy viên Ban Chấp hành đã được Đại hội quyết định; Xem xét, quyết định kết nạp hội viên, cho hội viên ra khỏi Hội; khai trừ và xóa tên hội viên; khen thưởng và kỷ luật hội viên theo Điều lệ Hội và quy định của pháp luật.",
@@ -256,7 +258,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "15",
-        title: "Ban Thường vụ Hội",
         paragraphs: [
           "1. Ban Thường vụ Hội do Ban Chấp hành bầu trong số các ủy viên Ban Chấp hành. Ban Thường vụ Hội gồm: Chủ tịch, các Phó Chủ tịch và các ủy viên. Số lượng, cơ cấu, tiêu chuẩn ủy viên Ban Thường vụ do Ban Chấp hành quyết định. Nhiệm kỳ của Ban Thường vụ cùng với nhiệm kỳ Đại hội.",
           "2. Nhiệm vụ và quyền hạn của Ban Thường vụ: Thay mặt Ban Chấp hành triển khai thực hiện Nghị quyết Đại hội, Điều lệ Hội; tổ chức thực hiện Nghị quyết, Quyết định của Ban Chấp hành; lãnh đạo hoạt động của Hội giữa hai kỳ họp Ban Chấp hành; Chuẩn bị nội dung và quyết định triệu tập họp Ban Chấp hành; Quyết định thành lập các tổ chức, đơn vị trực thuộc Hội theo nghị quyết của Ban Chấp hành; quy định chức năng, nhiệm vụ, quyền hạn cơ cấu tổ chức; quyết định bổ nhiệm, miễn nhiệm lãnh đạo các tổ chức, đơn vị thuộc Hội theo đúng quy định của pháp luật và Điều lệ Hội.",
@@ -265,7 +266,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "16",
-        title: "Ban Kiểm tra Hội",
         paragraphs: [
           "1. Ban Kiểm tra Hội do Đại hội bầu trong số các hội viên chính thức của Hội. Ban Kiểm tra gồm Trưởng ban, Phó Trưởng ban và một số ủy viên. Trưởng ban Kiểm tra được Ban Kiểm tra bầu, trúng cử theo nguyên tắc quá bán. Số lượng, cơ cấu, tiêu chuẩn ủy viên Ban Kiểm tra do Đại hội quyết định. Nhiệm kỳ của Ban Kiểm tra cùng với nhiệm kỳ của Đại hội.",
           "2. Nhiệm vụ và quyền hạn của Ban Kiểm tra: Bầu, miễn nhiệm Trưởng ban, Phó Trưởng ban; bổ sung, miễn nhiệm ủy viên Ban Kiểm tra; Kiểm tra, giám sát việc thực hiện Điều lệ Hội, Nghị quyết Đại hội; Nghị quyết, Quyết định của Ban Chấp hành, Ban Thường vụ Hội, các quy chế của Hội trong hoạt động của các tổ chức, đơn vị trực thuộc Hội, hội viên; Xem xét, giải quyết đơn, thư phản ánh kiến nghị, khiếu nại, tố cáo có liên quan đến Hội của các tổ chức, hội viên và công dân gửi đến Hội theo Điều lệ Hội.",
@@ -274,7 +274,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "17",
-        title: "Chủ tịch, Phó Chủ tịch Hội",
         paragraphs: [
           "1. Chủ tịch Hội là người đại diện pháp luật của Hội, chịu trách nhiệm trước Hội và trước pháp luật về mọi hoạt động của Hội. Chủ tịch Hội là ủy viên Ban Thường vụ do Ban Chấp hành bầu trong số các ủy viên Ban Thường vụ. Tiêu chuẩn Chủ tịch Hội do Ban Chấp hành Hội quy định theo Điều lệ Hội và phù hợp với quy định của pháp luật.",
           "2. Nhiệm vụ, quyền hạn của Chủ tịch Hội: Thực hiện nhiệm vụ, quyền hạn theo Quy chế hoạt động của Ban Chấp hành, Ban Thường vụ Hội; Chịu trách nhiệm toàn diện trước cơ quan có thẩm quyền cho phép thành lập Hội, cơ quan quản lý nhà nước về lĩnh vực hoạt động chính của Hội, trước Ban Chấp hành, Ban Thường vụ Hội về mọi hoạt động của Hội. Chỉ đạo, điều hành mọi hoạt động của Hội theo quy định Điều lệ Hội; Nghị quyết Đại hội; Nghị quyết, Quyết định của Ban Chấp hành, Ban Thường vụ; Chỉ đạo chuẩn bị, triệu tập và chủ trì các cuộc họp của Ban Chấp hành, Ban Thường vụ Hội; Thay mặt Ban Chấp hành, Ban Thường vụ ký các văn bản của Hội; Khi Chủ tịch Hội vắng mặt, việc chỉ đạo, điều hành giải quyết công việc của Hội được Ban Thường vụ thông qua việc ủy quyền bằng văn bản cho một Phó Chủ tịch Hội theo Quy chế làm việc do Ban Chấp hành quy định cụ thể.",
@@ -284,7 +283,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "18",
-        title: "Tổng thư ký Hội",
         paragraphs: [
           "1. Tổng thư ký Hội do Ban Chấp hành bầu trong số các ủy viên Ban Chấp hành Hội. Tiêu chuẩn, nhiệm vụ, quyền hạn của Tổng thư ký do Ban Chấp hành Hội quyết định theo Điều lệ Hội và quy định của pháp luật.",
           "2. Nhiệm vụ, quyền hạn của Tổng thư ký: Là người quản lý, điều hành trực tiếp các hoạt động của Văn phòng Hội; Xây dựng quy chế hoạt động của Văn phòng Hội trình Ban Chấp hành Hội phê duyệt; Chuẩn bị nội dung các kỳ họp của Ban Chấp hành và Ban Thường vụ; định kỳ báo cáo cho Ban Chấp hành và Ban Thường vụ về các hoạt động của Hội; lập báo cáo hàng năm, báo cáo nhiệm kỳ của Ban Chấp hành Hội; Quản lý và sử dụng tài sản, tài chính của Hội theo quy chế quản lý, sử dụng tài chính, tài sản của Hội do Ban Chấp hành Hội ban hành theo Điều lệ Hội và phù hợp với quy định của pháp luật; Chịu trách nhiệm trước Ban Chấp hành, Ban Thường vụ và trước pháp luật về các hoạt động của Văn phòng Hội.",
@@ -292,7 +290,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "19",
-        title: "Văn phòng Hội và các ban chuyên môn thuộc Hội",
         paragraphs: [
           "1. Văn phòng Hội và các ban chuyên môn của Hội do Ban Thường vụ xem xét thông qua đề nghị, Chủ tịch Hội quyết định.",
           "2. Nhân sự, tài chính của Văn phòng Hội do Ban Chấp hành thông qua, trước khi Chủ tịch Hội quyết định. Chánh văn phòng do Tổng thư ký đề nghị Chủ tịch xem xét, quyết định bổ nhiệm. Văn phòng Hội do Tổng thư ký phụ trách, điều hành theo Điều lệ Hội (trừ trường hợp quy định tại Khoản 4 Điều 17). Văn phòng Hội hoạt động theo quy chế do Ban Chấp hành ban hành theo Điều lệ Hội và phù hợp với quy định pháp luật.",
@@ -302,7 +299,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "20",
-        title: "Các tổ chức trực thuộc Hội",
         paragraphs: [
           "Việc thành lập các đơn vị trực thuộc Hội phải tuân thủ theo quy định của pháp luật và Điều lệ Hội. Các tổ chức trực thuộc Hội hoạt động theo Quy chế hoạt động riêng biệt phù hợp với từng tổ chức trực thuộc Hội do Ban Thường vụ Hội ban hành phù hợp với Điều lệ Hội và quy định của pháp luật.",
         ],
@@ -311,12 +307,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-5",
-    number: "V",
-    title: "Chia, tách; sáp nhập; hợp nhất; đổi tên và giải thể",
+    idx: 5,
     articles: [
       {
         num: "21",
-        title: "Chia, tách; sáp nhập; hợp nhất; đổi tên và giải thể Hội",
         paragraphs: [
           "1. Việc chia, tách; sáp nhập; hợp nhất; đổi tên và giải thể Hội thực hiện theo quy định của Bộ luật Dân sự, quy định của pháp luật về hội, Điều lệ Hội, nghị quyết Đại hội và các quy định pháp luật có liên quan.",
           "2. Khi chia, tách; sáp nhập; hợp nhất; đổi tên và giải thể phải tiến hành kiểm kê tài chính, tài sản của Hội chính xác, đầy đủ, kịp thời và thực hiện các thủ tục theo quy định của pháp luật.",
@@ -326,12 +320,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-6",
-    number: "VI",
-    title: "Tài chính và tài sản",
+    idx: 6,
     articles: [
       {
         num: "22",
-        title: "Tài chính và tài sản của Hội",
         paragraphs: [
           "1. Tài chính của Hội:",
           "a) Nguồn thu của Hội: Phí gia nhập Hội; hội phí hàng năm của hội viên theo quy định của Hội. Căn cứ theo các quy định của pháp luật hiện hành và tình hình thực tế, Hội xem xét, thông qua mức đóng phí gia nhập và hội phí hàng năm của hội viên; Thu từ các hoạt động của Hội theo quy định của pháp luật; Tiền tài trợ, ủng hộ của tổ chức, cá nhân trong và ngoài nước theo quy định của pháp luật; Ngân sách nhà nước hỗ trợ (nếu có) cho các nhiệm vụ Nhà nước giao theo quy định của pháp luật; Các khoản thu hợp pháp khác.",
@@ -341,7 +333,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "23",
-        title: "Quản lý, sử dụng tài chính, tài sản của Hội",
         paragraphs: [
           "1. Tài chính, tài sản của Hội chỉ được sử dụng cho các hoạt động của Hội.",
           "2. Tài chính, tài sản của Hội khi chia, tách, sáp nhập, hợp nhất và giải thể Hội được giải quyết theo quy định của pháp luật.",
@@ -353,12 +344,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-7",
-    number: "VII",
-    title: "Khen thưởng, kỷ luật",
+    idx: 7,
     articles: [
       {
         num: "24",
-        title: "Khen thưởng",
         paragraphs: [
           "1. Tổ chức, đơn vị thuộc Hội, hội viên có thành tích xuất sắc được Hội khen thưởng hoặc được Hội đề nghị cơ quan, tổ chức có thẩm quyền khen thưởng theo quy định của pháp luật.",
           "2. Ban Chấp hành Hội quy định cụ thể hình thức, thẩm quyền, thủ tục khen thưởng trong nội bộ Hội theo Điều lệ Hội và theo quy định của pháp luật.",
@@ -366,7 +355,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "25",
-        title: "Kỷ luật",
         paragraphs: [
           "1. Tổ chức, đơn vị thuộc Hội, hội viên vi phạm pháp luật, vi phạm Điều lệ Hội, quy định, quy chế hoạt động của Hội thì bị xem xét, thi hành kỷ luật bằng các hình thức: phê bình, khiển trách, cảnh cáo, khai trừ, xóa tên ra khỏi Hội theo quy định của Điều lệ Hội hoặc đề nghị cơ quan nhà nước có thẩm quyền xử lý vi phạm theo quy định của pháp luật.",
           "2. Ban Chấp hành Hội quy định cụ thể thẩm quyền, quy trình xem xét kỷ luật trong nội bộ Hội theo Điều lệ Hội và quy định của pháp luật.",
@@ -376,12 +364,10 @@ const chapters: Chapter[] = [
   },
   {
     id: "chuong-8",
-    number: "VIII",
-    title: "Điều khoản thi hành",
+    idx: 8,
     articles: [
       {
         num: "26",
-        title: "Sửa đổi, bổ sung",
         paragraphs: [
           "1. Việc sửa đổi, bổ sung Điều lệ được Đại hội đại biểu của Hội Trầm hương Việt Nam thông qua khi có trên 1/2 (một phần hai) tổng số đại biểu chính thức có mặt tại Đại hội biểu quyết tán thành.",
           "2. Điều lệ (sửa đổi, bổ sung) phải được Hội Trầm hương Việt Nam hoàn thiện đảm bảo phù hợp theo quy định của pháp luật và được Bộ trưởng Bộ Nội vụ phê duyệt mới có giá trị thực hiện.",
@@ -389,7 +375,6 @@ const chapters: Chapter[] = [
       },
       {
         num: "27",
-        title: "Hiệu lực thi hành",
         paragraphs: [
           "1. Điều lệ (sửa đổi, bổ sung) của Hội Trầm hương Việt Nam gồm 08 (tám) Chương và 27 (hai mươi bảy) Điều đã được Đại hội đại biểu lần thứ III, nhiệm kỳ 2023 – 2028 của Hội Trầm hương Việt Nam nhất trí thông qua ngày 13 tháng 5 năm 2023 tại Thành phố Hồ Chí Minh và có hiệu lực thi hành theo Quyết định phê duyệt của Bộ trưởng Bộ Nội vụ.",
           "2. Điều lệ (sửa đổi, bổ sung) này thay thế Điều lệ Hội đã được phê duyệt kèm theo Quyết định số 688/QĐ-BNV ngày 23 tháng 6 năm 2010 của Bộ trưởng Bộ Nội vụ.",
@@ -401,7 +386,12 @@ const chapters: Chapter[] = [
 ]
 
 export default async function DieuLePage() {
-  const pdfInfo = await getDieuLePdfInfo()
+  const [t, locale] = await Promise.all([
+    getTranslations("dieuLe"),
+    getLocale() as Promise<Locale>,
+  ])
+  const pdfInfo = await getDieuLePdfInfo(locale)
+  const showDisclaimer = locale !== "vi"
 
   return (
     <>
@@ -409,155 +399,153 @@ export default async function DieuLePage() {
       <section className="bg-brand-800 text-white py-16">
         <div className="mx-auto max-w-4xl px-4">
           <nav className="mb-4 text-sm text-brand-300" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-white">
-              Trang chủ
+            <Link href={`/${locale}`} className="hover:text-white">
+              {t("breadcrumbHome")}
             </Link>
             <span className="mx-2">/</span>
-            <span className="text-white">Điều lệ Hội</span>
+            <span className="text-white">{t("breadcrumbCurrent")}</span>
           </nav>
-          <h1 className="text-3xl font-bold sm:text-4xl">
-            Điều lệ (sửa đổi, bổ sung) Hội Trầm hương Việt Nam
-          </h1>
-          <p className="mt-3 text-brand-200 max-w-xl">
-            Phê duyệt kèm theo Quyết định số <strong>1086/QĐ-BNV</strong> ngày{" "}
-            <strong>29 tháng 12 năm 2023</strong> của Bộ trưởng Bộ Nội vụ.
-          </p>
-          <p className="mt-1 text-brand-300 text-sm">
-            Gồm 8 chương, 27 điều — Thông qua tại Đại hội đại biểu lần thứ III,
-            nhiệm kỳ 2023–2028 (ngày 13/5/2023).
-          </p>
+          <h1 className="text-3xl font-bold sm:text-4xl">{t("heroTitle")}</h1>
+          <p className="mt-3 text-brand-200 max-w-xl">{t("heroSubtitle1")}</p>
+          <p className="mt-1 text-brand-300 text-sm">{t("heroSubtitle2")}</p>
         </div>
       </section>
 
       <div className="bg-brand-50/60">
-      <div className="mx-auto max-w-4xl px-4 py-16">
-        {/* ── PDF Download (dynamic from SiteConfig) ── */}
-        {pdfInfo ? (
-          <div className="mb-12 flex flex-col items-center gap-3 rounded-xl border-2 border-brand-300 bg-brand-50 p-8 text-center">
-            <div className="text-4xl">📄</div>
-            <h2 className="text-lg font-bold text-brand-900">
-              Tải xuống Điều lệ Hội (bản PDF chính thức)
-            </h2>
-            <p className="text-sm text-brand-600">
-              Điều lệ (sửa đổi, bổ sung) Hội Trầm Hương Việt Nam năm 2023
-              {pdfInfo.fileSize > 0 && ` · ${formatBytes(pdfInfo.fileSize)}`}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-3 justify-center">
-              <a
-                href={pdfInfo.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg bg-brand-700 px-6 py-3",
-                  "text-sm font-semibold text-white transition-colors hover:bg-brand-800",
-                )}
-              >
-                <span>⬇</span>
-                Tải xuống PDF
-              </a>
-              <a
-                href={pdfInfo.viewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-white px-6 py-3",
-                  "text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100",
-                )}
-              >
-                <span>👁</span>
-                Xem trực tuyến
-              </a>
-            </div>
-          </div>
-        ) : (
-          <div className="mb-12 rounded-xl border border-dashed border-brand-300 bg-brand-50/50 p-8 text-center">
-            <div className="text-3xl mb-2">📄</div>
-            <p className="text-sm text-brand-600">
-              Bản PDF chính thức đang được cập nhật. Vui lòng xem nội dung bên dưới.
-            </p>
-          </div>
-        )}
-
-        {/* ── Table of Contents ── */}
-        <div className="mb-12 rounded-xl border border-brand-200 bg-white p-8 shadow-sm">
-          <h2 className="mb-5 text-xl font-bold text-brand-900">Mục lục</h2>
-          <ol className="space-y-2">
-            {chapters.map((ch) => (
-              <li key={ch.id}>
+        <div className="mx-auto max-w-4xl px-4 py-16">
+          {/* ── PDF Download (locale-aware, falls back to VI if localized PDF missing) ── */}
+          {pdfInfo ? (
+            <div className="mb-12 flex flex-col items-center gap-3 rounded-xl border-2 border-brand-300 bg-brand-50 p-8 text-center">
+              <div className="text-4xl">📄</div>
+              <h2 className="text-lg font-bold text-brand-900">{t("pdfSectionTitle")}</h2>
+              <p className="text-sm text-brand-600">
+                {t("pdfSectionDesc")}
+                {pdfInfo.fileSize > 0 && ` · ${formatBytes(pdfInfo.fileSize)}`}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-3 justify-center">
                 <a
-                  href={`#${ch.id}`}
-                  className="flex items-baseline gap-3 text-sm text-brand-700 hover:text-brand-900 hover:underline underline-offset-2 transition-colors"
+                  href={pdfInfo.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg bg-brand-700 px-6 py-3",
+                    "text-sm font-semibold text-white transition-colors hover:bg-brand-800",
+                  )}
                 >
-                  <span className="shrink-0 font-semibold text-brand-500">
-                    Chương {ch.number}.
-                  </span>
-                  <span>
-                    {ch.title}{" "}
-                    <span className="text-brand-400">
-                      ({ch.articles.length} điều — {ch.articles[0].num}
-                      {ch.articles.length > 1
-                        ? `–${ch.articles[ch.articles.length - 1].num}`
-                        : ""}
-                      )
-                    </span>
-                  </span>
+                  <span>⬇</span>
+                  {t("pdfDownloadButton")}
                 </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        {/* ── Chapters ── */}
-        <div className="space-y-12">
-          {chapters.map((ch) => (
-            <section
-              key={ch.id}
-              id={ch.id}
-              className="scroll-mt-24 rounded-xl border border-brand-200 bg-white p-8 shadow-sm"
-            >
-              <h2 className="text-xl font-bold text-brand-900 mb-1">
-                Chương {ch.number}
-              </h2>
-              <h3 className="text-base font-semibold text-brand-700 mb-6 pb-4 border-b border-brand-200 uppercase">
-                {ch.title}
-              </h3>
-
-              <div className="space-y-8">
-                {ch.articles.map((article) => (
-                  <div key={article.num} id={`dieu-${article.num}`} className="scroll-mt-24">
-                    <h4 className="text-base font-bold text-brand-900 mb-3">
-                      Điều {article.num}. {article.title}
-                    </h4>
-                    <div className="space-y-3 text-brand-700 leading-relaxed text-sm">
-                      {article.paragraphs.map((para, idx) =>
-                        Array.isArray(para) ? (
-                          <ol key={idx} className="list-decimal pl-5 space-y-1">
-                            {para.map((item, itemIdx) => (
-                              <li key={itemIdx}>{item}</li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <p key={idx}>{para}</p>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                ))}
+                <a
+                  href={pdfInfo.viewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg border border-brand-300 bg-white px-6 py-3",
+                    "text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100",
+                  )}
+                >
+                  <span>👁</span>
+                  {t("pdfViewButton")}
+                </a>
               </div>
-            </section>
-          ))}
-        </div>
+            </div>
+          ) : (
+            <div className="mb-12 rounded-xl border border-dashed border-brand-300 bg-brand-50/50 p-8 text-center">
+              <div className="text-3xl mb-2">📄</div>
+              <p className="text-sm text-brand-600">{t("pdfNotAvailable")}</p>
+            </div>
+          )}
 
-        {/* ── Back to top ── */}
-        <div className="mt-12 text-center">
-          <a
-            href="#"
-            className="inline-flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-2"
-          >
-            ↑ Lên đầu trang
-          </a>
+          {/* Legal disclaimer — only on non-VI locales, explains the body below stays in VI */}
+          {showDisclaimer && (
+            <div className="mb-10 rounded-xl border-2 border-amber-300 bg-amber-50 p-5 flex gap-3">
+              <span className="text-2xl shrink-0" aria-hidden>⚠️</span>
+              <p className="text-sm text-amber-900 leading-relaxed">{t("legalDisclaimer")}</p>
+            </div>
+          )}
+
+          {/* ── Table of Contents ── */}
+          <div className="mb-12 rounded-xl border border-brand-200 bg-white p-8 shadow-sm">
+            <h2 className="mb-5 text-xl font-bold text-brand-900">{t("tocTitle")}</h2>
+            <ol className="space-y-2">
+              {chapters.map((ch) => {
+                const first = ch.articles[0].num
+                const last = ch.articles[ch.articles.length - 1].num
+                const countLabel =
+                  ch.articles.length > 1
+                    ? t("articleCountRange", { count: ch.articles.length, first, last })
+                    : t("articleCountSingle", { count: ch.articles.length })
+                return (
+                  <li key={ch.id}>
+                    <a
+                      href={`#${ch.id}`}
+                      className="flex items-baseline gap-3 text-sm text-brand-700 hover:text-brand-900 hover:underline underline-offset-2 transition-colors"
+                    >
+                      <span className="shrink-0 font-semibold text-brand-500">
+                        {t("chapterPrefix")} {ROMAN[ch.idx]}.
+                      </span>
+                      <span>
+                        {t(`chapter${ch.idx}Title` as "chapter1Title")}{" "}
+                        <span className="text-brand-400">({countLabel})</span>
+                      </span>
+                    </a>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
+
+          {/* ── Chapters ── */}
+          <div className="space-y-12">
+            {chapters.map((ch) => (
+              <section
+                key={ch.id}
+                id={ch.id}
+                className="scroll-mt-24 rounded-xl border border-brand-200 bg-white p-8 shadow-sm"
+              >
+                <h2 className="text-xl font-bold text-brand-900 mb-1">
+                  {t("chapterPrefix")} {ROMAN[ch.idx]}
+                </h2>
+                <h3 className="text-base font-semibold text-brand-700 mb-6 pb-4 border-b border-brand-200 uppercase">
+                  {t(`chapter${ch.idx}Title` as "chapter1Title")}
+                </h3>
+
+                <div className="space-y-8">
+                  {ch.articles.map((article) => (
+                    <div key={article.num} id={`dieu-${article.num}`} className="scroll-mt-24">
+                      <h4 className="text-base font-bold text-brand-900 mb-3">
+                        {t("articlePrefix")} {article.num}. {t(`article${article.num}Title` as "article1Title")}
+                      </h4>
+                      <div className="space-y-3 text-brand-700 leading-relaxed text-sm">
+                        {article.paragraphs.map((para, idx) =>
+                          Array.isArray(para) ? (
+                            <ol key={idx} className="list-decimal pl-5 space-y-1">
+                              {para.map((item, itemIdx) => (
+                                <li key={itemIdx}>{item}</li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <p key={idx}>{para}</p>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          {/* ── Back to top ── */}
+          <div className="mt-12 text-center">
+            <a
+              href="#"
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-2"
+            >
+              {t("backToTop")}
+            </a>
+          </div>
         </div>
-      </div>
       </div>
     </>
   )

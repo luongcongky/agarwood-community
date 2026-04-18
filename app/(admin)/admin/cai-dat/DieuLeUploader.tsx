@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type Props = {
+  /** Locale for this uploader (vi/en/zh). Passed to upload API as query param. */
+  locale: "vi" | "en" | "zh"
   /** Drive file ID hiện tại (nếu có) */
   currentFileId: string | null
   /** Tên file hiện tại */
@@ -15,6 +17,12 @@ type Props = {
   currentUploadedAt: string | null
 }
 
+const LOCALE_LABEL: Record<"vi" | "en" | "zh", string> = {
+  vi: "🇻🇳 Bản tiếng Việt (gốc pháp lý)",
+  en: "🇬🇧 Bản tiếng Anh (công chứng)",
+  zh: "🇨🇳 Bản tiếng Trung (công chứng)",
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -22,6 +30,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function DieuLeUploader({
+  locale,
   currentFileId,
   currentFileName,
   currentFileSize,
@@ -62,7 +71,7 @@ export function DieuLeUploader({
       const formData = new FormData()
       formData.append("file", file)
 
-      const res = await fetch("/api/admin/dieu-le/upload", {
+      const res = await fetch(`/api/admin/dieu-le/upload?locale=${locale}`, {
         method: "POST",
         body: formData,
       })
@@ -90,7 +99,7 @@ export function DieuLeUploader({
     setError(null)
     setSuccess(false)
     try {
-      const res = await fetch("/api/admin/dieu-le/upload", { method: "DELETE" })
+      const res = await fetch(`/api/admin/dieu-le/upload?locale=${locale}`, { method: "DELETE" })
       const data = await res.json()
 
       if (!res.ok) {
@@ -110,12 +119,14 @@ export function DieuLeUploader({
     <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
       <div>
         <h2 className="text-base font-bold text-brand-900">
-          Điều lệ Hội (file PDF chính thức)
+          {LOCALE_LABEL[locale]}
         </h2>
         <p className="text-xs text-brand-400 mt-0.5">
-          Upload file PDF điều lệ để hiển thị nút &quot;Tải xuống&quot; trên trang{" "}
-          <code className="text-brand-700">/dieu-le</code>. File lưu trên Google
-          Drive của Hội.
+          {locale === "vi"
+            ? "Upload PDF bản tiếng Việt đã được Bộ Nội Vụ phê duyệt. Hiển thị mặc định trên /dieu-le."
+            : locale === "en"
+              ? "Upload bản dịch PDF tiếng Anh đã công chứng. Hiển thị tại /en/dieu-le. Nếu không có, fallback về bản VI."
+              : "Upload bản dịch PDF tiếng Trung đã công chứng. Hiển thị tại /zh/dieu-le. Nếu không có, fallback về bản VI."}
         </p>
       </div>
 

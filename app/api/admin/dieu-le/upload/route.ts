@@ -6,22 +6,44 @@ import { prisma } from "@/lib/prisma"
 import { uploadToDrive, deleteFromDrive } from "@/lib/google-drive"
 
 /**
- * POST /api/admin/dieu-le/upload
+ * POST /api/admin/dieu-le/upload?locale={vi|en|zh}
  * Upload file PDF Điều lệ Hội lên Google Drive và lưu metadata vào SiteConfig.
  *
- * Ghi nhận vào 4 SiteConfig keys:
- *  - dieu_le_drive_file_id      — Drive file ID (để build preview/download URL)
- *  - dieu_le_file_name          — Tên file gốc
- *  - dieu_le_file_size          — Kích thước (bytes)
- *  - dieu_le_uploaded_at        — ISO timestamp
+ * Per-locale keys:
+ *  - locale=vi (default): dieu_le_drive_file_id, dieu_le_file_name, dieu_le_file_size, dieu_le_uploaded_at
+ *  - locale=en: dieu_le_drive_file_id_en, dieu_le_file_name_en, ...
+ *  - locale=zh: dieu_le_drive_file_id_zh, ...
  *
- * Nếu đã có file cũ → xóa file cũ trên Drive trước khi upload file mới.
+ * Nếu đã có file cũ cùng locale → xóa file cũ trên Drive trước khi upload file mới.
  */
+
+type Locale = "vi" | "en" | "zh"
+const LOCALES: readonly Locale[] = ["vi", "en", "zh"] as const
+
+function keysFor(locale: Locale) {
+  const suffix = locale === "vi" ? "" : `_${locale}`
+  return {
+    driveFileId: `dieu_le_drive_file_id${suffix}`,
+    fileName: `dieu_le_file_name${suffix}`,
+    fileSize: `dieu_le_file_size${suffix}`,
+    uploadedAt: `dieu_le_uploaded_at${suffix}`,
+  }
+}
+
+function parseLocale(url: URL): Locale {
+  const raw = url.searchParams.get("locale")
+  if (raw && LOCALES.includes(raw as Locale)) return raw as Locale
+  return "vi"
+}
+
 export async function POST(request: Request) {
   const session = await auth()
   if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  const locale = parseLocale(new URL(request.url))
+  const keys = keysFor(locale)
 
   try {
     const formData = await request.formData()
@@ -30,94 +52,85 @@ export async function POST(request: Request) {
     if (!file) {
       return NextResponse.json({ error: "Vui lòng chọn file PDF" }, { status: 400 })
     }
-
-    // Validate: chỉ PDF
     if (file.type !== "application/pdf") {
-      return NextResponse.json(
-        { error: "Chỉ chấp nhận file PDF" },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: "Chỉ chấp nhận file PDF" }, { status: 400 })
     }
-
-    // Max 20MB (match với lib/google-drive MAX_FILE_SIZE)
     if (file.size > 20 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File tối đa 20MB" },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: "File tối đa 20MB" }, { status: 400 })
     }
 
-    // Xóa file cũ trên Drive nếu có
+    // Xóa file cũ cùng locale trên Drive nếu có
     const oldFileIdRow = await prisma.siteConfig.findUnique({
-      where: { key: "dieu_le_drive_file_id" },
+      where: { key: keys.driveFileId },
     })
     if (oldFileIdRow?.value) {
       try {
         await deleteFromDrive(oldFileIdRow.value)
       } catch (err) {
-        // Non-fatal — file có thể đã bị xóa manual trên Drive
-        console.warn("Failed to delete old dieu le file:", err)
+        console.warn(`Failed to delete old ${locale} dieu le file:`, err)
       }
     }
 
-    // Upload file mới
     const buffer = Buffer.from(await file.arrayBuffer())
     const year = new Date().getFullYear()
     const driveResult = await uploadToDrive(
       buffer,
       file.name,
       file.type,
-      "QUYET_DINH", // Lưu vào folder "Quyết định"
+      "QUYET_DINH",
       year,
     )
 
-    // Lưu metadata vào SiteConfig (upsert)
     const updates = [
-      { key: "dieu_le_drive_file_id", value: driveResult.driveFileId },
-      { key: "dieu_le_file_name", value: driveResult.fileName },
-      { key: "dieu_le_file_size", value: String(driveResult.fileSize) },
-      { key: "dieu_le_uploaded_at", value: new Date().toISOString() },
+      { key: keys.driveFileId, value: driveResult.driveFileId },
+      { key: keys.fileName, value: driveResult.fileName },
+      { key: keys.fileSize, value: String(driveResult.fileSize) },
+      { key: keys.uploadedAt, value: new Date().toISOString() },
     ]
     await Promise.all(
       updates.map((u) =>
         prisma.siteConfig.upsert({
           where: { key: u.key },
           update: { value: u.value },
-          create: { key: u.key, value: u.value, description: `Điều lệ Hội — ${u.key}` },
+          create: { key: u.key, value: u.value, description: `Điều lệ Hội (${locale}) — ${u.key}` },
         }),
       ),
     )
 
-    // Invalidate public /dieu-le page cache
     revalidatePath("/dieu-le")
+    revalidatePath(`/${locale}/dieu-le`)
     revalidateTag("homepage", "max")
 
     return NextResponse.json({
       success: true,
+      locale,
       driveFileId: driveResult.driveFileId,
       driveViewUrl: driveResult.driveViewUrl,
       fileName: driveResult.fileName,
       fileSize: driveResult.fileSize,
     })
   } catch (err) {
-    console.error("Dieu le upload error:", err)
+    console.error(`Dieu le (${locale}) upload error:`, err)
     const message = err instanceof Error ? err.message : "Upload thất bại"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
 /**
- * DELETE /api/admin/dieu-le/upload
- * Xóa file Điều lệ hiện tại (trên Drive + clear SiteConfig keys).
+ * DELETE /api/admin/dieu-le/upload?locale={vi|en|zh}
+ * Xóa file Điều lệ hiện tại ở locale đó (trên Drive + clear SiteConfig keys).
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const session = await auth()
   if (!session?.user || !canAdminWrite(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  const locale = parseLocale(new URL(request.url))
+  const keys = keysFor(locale)
+
   const fileIdRow = await prisma.siteConfig.findUnique({
-    where: { key: "dieu_le_drive_file_id" },
+    where: { key: keys.driveFileId },
   })
   if (!fileIdRow?.value) {
     return NextResponse.json({ error: "Không có file để xóa" }, { status: 404 })
@@ -129,22 +142,15 @@ export async function DELETE() {
     console.warn("Failed to delete from Drive (may already be deleted):", err)
   }
 
-  // Clear all 4 keys
   await prisma.siteConfig.deleteMany({
     where: {
-      key: {
-        in: [
-          "dieu_le_drive_file_id",
-          "dieu_le_file_name",
-          "dieu_le_file_size",
-          "dieu_le_uploaded_at",
-        ],
-      },
+      key: { in: [keys.driveFileId, keys.fileName, keys.fileSize, keys.uploadedAt] },
     },
   })
 
   revalidatePath("/dieu-le")
+  revalidatePath(`/${locale}/dieu-le`)
   revalidateTag("homepage", "max")
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, locale })
 }
