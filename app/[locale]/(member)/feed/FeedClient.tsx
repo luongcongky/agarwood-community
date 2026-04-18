@@ -5,7 +5,7 @@ import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -417,6 +417,7 @@ function InlinePostCreator({
   onPostCreated: (post: Post) => void
 }) {
   const t = useTranslations("feed")
+  const locale = useLocale()
   const [content, setContent] = useState("")
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -607,19 +608,19 @@ function InlinePostCreator({
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Zm7.5-12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
-            Ảnh
+            {t("images")}
           </button>
 
           {/* Full editor link */}
           <Link
-            href="/feed/tao-bai"
+            href={`/${locale}/feed/tao-bai`}
             className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors"
             title={t("fullEditor")}
           >
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
             </svg>
-            Soạn đầy đủ
+            {t("fullEditorShort")}
           </Link>
 
           {/* Char count hint */}
@@ -658,14 +659,14 @@ function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
   return (
     <div className="bg-linear-to-br from-brand-800 to-brand-700 text-white rounded-xl p-4 space-y-3" suppressHydrationWarning>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-brand-200">Hội viên</span>
+        <span className="text-sm font-semibold text-brand-200">{t("memberCard")}</span>
         <span className={cn("text-xs font-semibold rounded-full px-2 py-0.5", isActive ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300")}>
           {isActive ? t("statusActive") : t("statusExpired")}
         </span>
       </div>
       {expires && (
         <div>
-          <p className="text-xs text-brand-300">Hết hạn</p>
+          <p className="text-xs text-brand-300">{t("expiresLabel")}</p>
           <p className="text-sm font-medium">
             {expires.toLocaleDateString("vi-VN")}
             {isActive && <span className="ml-2 text-brand-300 text-xs">({daysLeft} ngày)</span>}
@@ -674,11 +675,11 @@ function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
       )}
       <div className="flex gap-4 pt-2 border-t border-brand-600">
         <div>
-          <p className="text-xs text-brand-300">Đóng góp</p>
+          <p className="text-xs text-brand-300">{t("contributionLabel")}</p>
           <p className="text-sm font-semibold">{info.contributionTotal.toLocaleString("vi-VN")} ₫</p>
         </div>
         <div>
-          <p className="text-xs text-brand-300">Ưu tiên</p>
+          <p className="text-xs text-brand-300">{t("priorityLabel")}</p>
           <p className="text-sm font-semibold">{info.displayPriority}</p>
         </div>
       </div>
@@ -937,7 +938,7 @@ export function FeedClient({
 
         {topContributors.length > 0 && (
           <div className="bg-white rounded-xl border border-brand-200 p-5">
-            <h3 className="font-semibold text-brand-900 text-sm mb-4">Hội viên tiêu biểu</h3>
+            <h3 className="font-semibold text-brand-900 text-sm mb-4">{t("topContributors")}</h3>
             <ul className="space-y-3">
               {topContributors.map((c, i) => {
                 const t = getTierBadge(c.contributionTotal, c.accountType, tierSilver, tierGold, tierIndSilver, tierIndGold)
