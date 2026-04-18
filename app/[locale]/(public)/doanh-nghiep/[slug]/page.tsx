@@ -85,16 +85,17 @@ export default async function CompanyProfilePage({ params }: Props) {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* White card wrapping all company content */}
       <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
-      {/* Cover image */}
-      <div className="relative w-full h-48 sm:h-64 md:h-72 overflow-hidden">
+      {/* Cover image — no overflow-hidden so the logo can half-overlap into
+          the content area below. The outer card still clips to its rounded-2xl. */}
+      <div className="relative w-full h-48 sm:h-64 md:h-72">
         {company.coverImageUrl ? (
           <Image src={company.coverImageUrl} alt={l(company, "name")} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 1024px" priority />
         ) : (
           <div className="w-full h-full bg-linear-to-br from-brand-800 via-brand-700 to-brand-900" />
         )}
 
-        {/* Logo overlay */}
-        <div className="absolute -bottom-10 left-6 sm:left-10">
+        {/* Logo overlay — half-sits below the cover's bottom edge */}
+        <div className="absolute -bottom-10 left-6 sm:left-10 z-10">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-4 border-white shadow-lg overflow-hidden bg-brand-700">
             {company.logoUrl ? (
               <Image src={company.logoUrl} alt={l(company, "name")} fill className="object-cover" sizes="96px" />
