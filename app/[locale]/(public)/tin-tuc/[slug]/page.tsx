@@ -118,10 +118,10 @@ export default async function NewsDetailPage({ params }: Props) {
             <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
           </nav>
 
-          {/* Cover image — có viền 5px tạo khung ôm ảnh */}
+          {/* Cover image — khung beige ôm ảnh, tách khỏi nền trắng của card */}
           {news.coverImageUrl && (
-            <div className="p-[5px]">
-              <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+            <div className="bg-brand-100 p-2">
+              <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden ring-1 ring-brand-300/60">
                 <Image
                   src={news.coverImageUrl}
                   alt={l(news, "title")}
