@@ -102,22 +102,22 @@ export default async function NewsDetailPage({ params }: Props) {
     <div className="bg-brand-50/60 min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
 
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
-          <Link href="/" className="hover:text-brand-700 transition-colors">
-            {tc("home")}
-          </Link>
-          <span>/</span>
-          <Link href="/tin-tuc" className="hover:text-brand-700 transition-colors">
-            {t("breadcrumbNews")}
-          </Link>
-          <span>/</span>
-          <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
-        </nav>
-
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Article card — nền trắng nổi trên background trang */}
         <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+          {/* Breadcrumb — nằm trong card, phía trên cover ảnh */}
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap px-6 sm:px-10 pt-6 pb-4">
+            <Link href="/" className="hover:text-brand-700 transition-colors">
+              {tc("home")}
+            </Link>
+            <span>/</span>
+            <Link href="/tin-tuc" className="hover:text-brand-700 transition-colors">
+              {t("breadcrumbNews")}
+            </Link>
+            <span>/</span>
+            <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
+          </nav>
+
           {/* Cover image — full-bleed bên trong card */}
           {news.coverImageUrl && (
             <div className="relative w-full aspect-video bg-muted">
@@ -127,7 +127,7 @@ export default async function NewsDetailPage({ params }: Props) {
                 fill
                 className="object-cover"
                 priority
-                sizes="(max-width: 896px) 100vw, 896px"
+                sizes="(max-width: 1280px) 100vw, 1280px"
               />
             </div>
           )}
