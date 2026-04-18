@@ -116,8 +116,8 @@ export function MemberCardBack({
             className="uppercase tracking-widest mt-0.5 whitespace-nowrap"
             style={{
               color: theme.textSecondary,
-              fontSize: "clamp(4px, 1cqw, 7px)",
-              letterSpacing: "0.12em",
+              fontSize: "clamp(3px, 0.85cqw, 6px)",
+              letterSpacing: "0.08em",
             }}
           >
             Vietnam Agarwood Association · VAWA

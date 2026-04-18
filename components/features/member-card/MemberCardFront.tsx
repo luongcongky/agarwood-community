@@ -115,11 +115,11 @@ export function MemberCardFront({
                 Hội Trầm Hương Việt Nam
               </p>
               <p
-                className="uppercase tracking-widest truncate"
+                className="uppercase tracking-widest whitespace-nowrap"
                 style={{
                   color: theme.textSecondary,
-                  fontSize: "clamp(4px, 1cqw, 7px)",
-                  letterSpacing: "0.1em",
+                  fontSize: "clamp(3px, 0.9cqw, 6px)",
+                  letterSpacing: "0.08em",
                 }}
               >
                 Vietnam Agarwood Association
