@@ -26,6 +26,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@base-ui/react": "^1.3.0",
     "@formatjs/intl-localematcher": "^0.8.3",
+    "@google/generative-ai": "^0.24.1",
     "@payos/node": "^2.0.5",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",

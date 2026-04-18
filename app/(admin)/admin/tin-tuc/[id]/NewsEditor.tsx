@@ -53,6 +53,8 @@ export default function NewsEditorPage({
   const [initialContent, setInitialContent] = useState<string>("")
   const [content_en, setContentEn] = useState("")
   const [content_zh, setContentZh] = useState("")
+  const [aiTranslating, setAiTranslating] = useState<"en" | "zh" | null>(null)
+  const [aiError, setAiError] = useState("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
@@ -153,6 +155,46 @@ export default function NewsEditorPage({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function handleAiTranslate(targetLocale: "en" | "zh") {
+    setAiError("")
+    // Get current content from rich text editor
+    const content = editorRef.current?.getHTML() ?? ""
+    if (!title.trim() && !excerpt.trim() && !content.trim()) {
+      setAiError("Vui lòng nhập tiêu đề / tóm tắt / nội dung trước khi dịch.")
+      return
+    }
+
+    setAiTranslating(targetLocale)
+    try {
+      const res = await fetch("/api/admin/ai/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, excerpt, content, targetLocale }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setAiError(data.error ?? "Lỗi khi dịch.")
+        return
+      }
+
+      // Fill translated fields
+      if (targetLocale === "en") {
+        if (data.title) setTitleEn(data.title)
+        if (data.excerpt) setExcerptEn(data.excerpt)
+        if (data.content) setContentEn(data.content)
+      } else {
+        if (data.title) setTitleZh(data.title)
+        if (data.excerpt) setExcerptZh(data.excerpt)
+        if (data.content) setContentZh(data.content)
+      }
+    } catch {
+      setAiError("Không thể kết nối tới AI. Vui lòng thử lại.")
+    } finally {
+      setAiTranslating(null)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -396,9 +438,36 @@ export default function NewsEditorPage({
                 )}
               </summary>
               <div className="px-6 pb-6 space-y-4">
-                <p className="text-xs text-brand-500">
-                  Dán nội dung HTML đã dịch. Nếu để trống, trang sẽ hiển thị nội dung tiếng Việt.
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-brand-500">
+                    Dùng AI để dịch tự động từ tiếng Việt, hoặc dán HTML đã dịch thủ công. Nếu để trống, hiển thị tiếng Việt.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAiTranslate("en")}
+                      disabled={aiTranslating !== null}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-linear-to-r from-blue-500 to-purple-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      {aiTranslating === "en" ? "⏳ Đang dịch..." : "🤖 AI dịch sang EN"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAiTranslate("zh")}
+                      disabled={aiTranslating !== null}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-linear-to-r from-red-500 to-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                    >
+                      {aiTranslating === "zh" ? "⏳ 翻译中..." : "🤖 AI dịch sang 中文"}
+                    </button>
+                  </div>
+                </div>
+
+                {aiError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                    ⚠ {aiError}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-brand-800 mb-1">
                     🇬🇧 Content (English)
@@ -408,7 +477,7 @@ export default function NewsEditorPage({
                     onChange={(e) => setContentEn(e.target.value)}
                     rows={8}
                     className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
-                    placeholder="Paste translated HTML content here..."
+                    placeholder="Paste translated HTML content here, or click 🤖 AI dịch sang EN above..."
                   />
                 </div>
                 <div>
@@ -420,7 +489,7 @@ export default function NewsEditorPage({
                     onChange={(e) => setContentZh(e.target.value)}
                     rows={8}
                     className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
-                    placeholder="在此粘贴翻译后的HTML内容..."
+                    placeholder="在此粘贴翻译后的HTML内容，或点击上方 🤖 AI dịch sang 中文..."
                   />
                 </div>
               </div>

@@ -116,7 +116,7 @@ function TypeCard({
       href={href}
       className="group relative overflow-hidden rounded-2xl border-2 border-brand-200 bg-white p-6 hover:border-brand-500 hover:shadow-xl hover:-translate-y-1 transition-all"
     >
-      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${color} text-white shadow-md mb-4`}>
+      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-linear-to-br ${color} text-white shadow-md mb-4`}>
         <Icon className="w-7 h-7" />
       </div>
       <h3 className="text-xl font-bold text-brand-900">{label}</h3>
