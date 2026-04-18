@@ -9,6 +9,7 @@ export function MemberCardBack({
   associationPhone,
   associationWebsite,
   className = "",
+  labels,
 }: {
   tier: TierKey
   memberCardId: string
@@ -18,8 +19,19 @@ export function MemberCardBack({
   associationPhone: string
   associationWebsite: string
   className?: string
+  /** Optional i18n labels. Falls back to Vietnamese defaults when omitted. */
+  labels?: {
+    verifyMember?: string
+    qrAlt?: string
+    established?: string
+  }
 }) {
   const theme = TIER_THEMES[tier]
+  const verifyMemberLabel = labels?.verifyMember ?? "Xác thực thành viên"
+  const qrAlt = labels?.qrAlt ?? "QR xác thực hội viên"
+  const establishedText =
+    labels?.established ??
+    "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ."
 
   return (
     <div
@@ -66,7 +78,7 @@ export function MemberCardBack({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrDataUrl}
-                alt="QR xác thực hội viên"
+                alt={qrAlt}
                 className="w-full h-full object-contain p-[4%]"
               />
             ) : (
@@ -85,7 +97,7 @@ export function MemberCardBack({
               fontSize: "clamp(5px, 1.1cqw, 7px)",
             }}
           >
-            Xác thực thành viên
+            {verifyMemberLabel}
           </p>
         </div>
 
@@ -123,9 +135,7 @@ export function MemberCardBack({
               fontSize: "clamp(6px, 1.5cqw, 9px)",
             }}
           >
-            Thành lập theo Quyết định số{" "}
-            <strong style={{ color: theme.textPrimary }}>23/QĐ-BNV</strong> ngày
-            11/01/2010 của Bộ Nội Vụ.
+            {establishedText}
           </p>
 
           <div className="mt-auto space-y-0.5">

@@ -818,12 +818,22 @@
     "printCard": "🖨️ Print"
   },
   "printCard": {
-    "title": "Print Card",
-    "instructions": "CR80 size. Press Print.",
+    "title": "Print Member Card",
+    "pageHeading": "Print Member Card — {name}",
+    "instructions": "The card is rendered at CR80 size (85.6 × 54mm). Press \"Print\" → choose your printer with landscape A4 paper or specialty ID card stock. The two sides print on two consecutive pages — select \"Two-sided\" in the dialog to align correctly.",
+    "printButton": "🖨️ Print card",
     "back": "← Back",
-    "guideTitle": "📐 CR80 Guide",
+    "guideTitle": "📐 CR80 print guide",
+    "guide1": "ID card paper 85.6×54mm (PVC 0.76mm recommended for durability)",
+    "guide2": "Dedicated card printers: Zebra ZC, Fargo DTC, Evolis Zenius — or print on A4 and trim",
+    "guide3": "Print at a card bureau: send this file as PDF (Ctrl+P → Save as PDF)",
     "front": "Front",
-    "rear": "Back"
+    "rear": "Back",
+    "cardIdLabel": "Card ID",
+    "validityLabel": "Validity",
+    "verifyMemberLabel": "Verify member",
+    "qrAlt": "Member verification QR code",
+    "establishedText": "Established under Decision No. 23/QĐ-BNV dated January 11, 2010 of the Ministry of Home Affairs."
   },
   "productFilters": {
     "typeLabel": "Type:",

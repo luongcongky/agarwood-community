@@ -24,7 +24,19 @@ export default async function VipMembersPage({
 }) {
   const params = await searchParams
   const q = params.q ?? ""
-  const t = await getTranslations("members")
+  const [t, tPrintCard] = await Promise.all([
+    getTranslations("members"),
+    getTranslations("printCard"),
+  ])
+  const cardFrontLabels = {
+    cardId: tPrintCard("cardIdLabel"),
+    validity: tPrintCard("validityLabel"),
+  }
+  const cardBackLabels = {
+    verifyMember: tPrintCard("verifyMemberLabel"),
+    qrAlt: tPrintCard("qrAlt"),
+    established: tPrintCard("establishedText"),
+  }
 
   const [members, businessThresholds, individualThresholds, configs] =
     await Promise.all([
@@ -190,6 +202,7 @@ export default async function VipMembersPage({
                             validTo: member.membershipExpires,
                             tier,
                           }}
+                          labels={cardFrontLabels}
                         />
                       }
                       back={
@@ -201,6 +214,7 @@ export default async function VipMembersPage({
                           associationEmail={cfg.association_email ?? ""}
                           associationPhone={cfg.association_phone ?? ""}
                           associationWebsite={cfg.association_website ?? SITE_URL}
+                          labels={cardBackLabels}
                         />
                       }
                     />

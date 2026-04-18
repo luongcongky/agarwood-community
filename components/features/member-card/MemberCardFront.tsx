@@ -35,11 +35,29 @@ function addYears(d: Date, years: number): Date {
 export function MemberCardFront({
   data,
   className = "",
+  labels,
 }: {
   data: MemberCardData
   className?: string
+  /** Optional i18n labels. When omitted, falls back to Vietnamese defaults so
+   *  callers that don't yet localize still render correctly. */
+  labels?: {
+    cardId?: string
+    validity?: string
+  }
 }) {
   const theme = TIER_THEMES[data.tier]
+  const cardIdLabel = labels?.cardId ?? "Mã thẻ"
+  const validityLabel = labels?.validity ?? "Hiệu lực"
+  // Compact tier badge suffix. Default replaces the "Hội viên" prefix so VI
+  // themes render as "Bạc" / "Vàng" / "Infinite"; for the infinite tier we
+  // collapse to a compact ∞ so the wide "★★★★ Infinite" pill doesn't push
+  // into the brand name text on narrow CR80 cards.
+  const tierBadgeSuffix =
+    data.tier === "infinite"
+      ? "∞"
+      : theme.label.replace("Hội viên", "").trim() || "Basic"
+  const tierBadgeStars = data.tier === "infinite" ? "" : "★".repeat(theme.stars)
 
   return (
     <div
@@ -85,9 +103,9 @@ export function MemberCardFront({
             >
               <Image src="/logo.png" alt="VAWA" fill className="object-contain p-[8%]" sizes="60px" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p
-                className="font-bold uppercase leading-tight whitespace-nowrap"
+                className="font-bold uppercase leading-tight truncate"
                 style={{
                   color: theme.textPrimary,
                   fontSize: "clamp(7px, 2cqw, 12px)",
@@ -96,7 +114,7 @@ export function MemberCardFront({
                 Hội Trầm Hương Việt Nam
               </p>
               <p
-                className="uppercase tracking-widest whitespace-nowrap"
+                className="uppercase tracking-widest truncate"
                 style={{
                   color: theme.textSecondary,
                   fontSize: "clamp(4px, 1.1cqw, 7px)",
@@ -118,7 +136,8 @@ export function MemberCardFront({
               fontSize: "clamp(7px, 1.6cqw, 10px)",
             }}
           >
-            {"★".repeat(theme.stars)} {theme.label.replace("Hội viên", "").trim() || "Basic"}
+            {tierBadgeStars ? `${tierBadgeStars} ` : ""}
+            {tierBadgeSuffix}
           </div>
         </div>
 
@@ -177,11 +196,13 @@ export function MemberCardFront({
             )}
             {data.companyName && (
               <p
-                className="mt-0.5 truncate"
+                className="mt-0.5 line-clamp-2"
                 style={{
                   color: theme.textSecondary,
                   fontSize: "clamp(7px, 1.7cqw, 10px)",
+                  lineHeight: 1.2,
                 }}
+                title={data.companyName}
               >
                 {data.companyName}
               </p>
@@ -203,7 +224,7 @@ export function MemberCardFront({
                 opacity: 0.8,
               }}
             >
-              Mã thẻ
+              {cardIdLabel}
             </p>
             <p
               className="font-mono font-bold"
@@ -224,7 +245,7 @@ export function MemberCardFront({
                   opacity: 0.8,
                 }}
               >
-                Hiệu lực
+                {validityLabel}
               </p>
               <p
                 className="font-semibold"

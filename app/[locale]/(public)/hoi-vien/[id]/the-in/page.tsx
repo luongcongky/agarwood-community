@@ -1,5 +1,6 @@
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
+import Link from "next/link"
 import QRCode from "qrcode"
 import { prisma } from "@/lib/prisma"
 import { calcTier, getTierThresholds } from "@/lib/tier"
@@ -7,6 +8,7 @@ import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { PrintButton } from "./PrintButton"
+import type { Locale } from "@/i18n/config"
 
 export async function generateMetadata() {
   const t = await getTranslations("printCard")
@@ -20,7 +22,10 @@ export default async function PrintMemberCardPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const tP = await getTranslations("printCard")
+  const [tP, locale] = await Promise.all([
+    getTranslations("printCard"),
+    getLocale() as Promise<Locale>,
+  ])
 
   const { id } = await params
 
@@ -96,53 +101,57 @@ export default async function PrintMemberCardPage({
     tier,
   } as const
 
+  const cardFrontLabels = {
+    cardId: tP("cardIdLabel"),
+    validity: tP("validityLabel"),
+  }
+  const cardBackLabels = {
+    verifyMember: tP("verifyMemberLabel"),
+    qrAlt: tP("qrAlt"),
+    established: tP("establishedText"),
+  }
+
   return (
     <div className="bg-brand-50 min-h-screen py-10">
       {/* Controls — ẩn khi in */}
       <div className="max-w-4xl mx-auto px-4 mb-8 print:hidden">
         <h1 className="text-2xl font-bold text-brand-900 mb-2">
-          In thẻ Hội viên — {member.name}
+          {tP("pageHeading", { name: member.name })}
         </h1>
-        <p className="text-sm text-brand-600 mb-4">
-          Thẻ được render đúng kích thước CR80 (85.6 × 54mm). Bấm "In" → chọn máy in,
-          giấy khổ A4 ngang hoặc giấy thẻ chuyên dụng. Hai mặt sẽ in trên 2 trang liên tiếp
-          — chọn "In 2 mặt" ở hộp thoại để ghép đúng.
-        </p>
+        <p className="text-sm text-brand-600 mb-4">{tP("instructions")}</p>
         <div className="flex gap-3">
           <PrintButton />
-          <a
-            href="/hoi-vien"
+          <Link
+            href={`/${locale}/hoi-vien`}
             className="rounded-lg border border-brand-200 px-5 py-2.5 text-sm font-medium text-brand-700 hover:bg-white transition-colors"
           >
-            ← Quay lại
-          </a>
+            {tP("back")}
+          </Link>
         </div>
 
         <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold mb-1">📐 Hướng dẫn in chuẩn CR80</p>
+          <p className="font-semibold mb-1">{tP("guideTitle")}</p>
           <ul className="list-disc list-inside space-y-0.5 text-xs">
-            <li>Giấy ID card 85.6×54mm (khuyến nghị PVC 0.76mm cho bền)</li>
-            <li>Máy in chuyên dụng: Zebra ZC, Fargo DTC, Evolis Zenius — hoặc in A4 rồi cắt</li>
-            <li>
-              In tại nhà máy thẻ: gửi file PDF này (<strong>Ctrl+P → Save as PDF</strong>)
-            </li>
+            <li>{tP("guide1")}</li>
+            <li>{tP("guide2")}</li>
+            <li>{tP("guide3")}</li>
           </ul>
         </div>
       </div>
 
       {/* Print area — 2 thẻ cách nhau, khi in mỗi thẻ 1 trang */}
       <div className="max-w-xl mx-auto px-4 space-y-8 print:space-y-0 print:max-w-none print:mx-0 print:px-0">
-        {/* Mặt trước */}
+        {/* Front */}
         <div className="print-card-page">
           <div className="mx-auto" style={{ width: "85.6mm" }}>
-            <MemberCardFront data={frontData} />
+            <MemberCardFront data={frontData} labels={cardFrontLabels} />
           </div>
           <p className="mt-2 text-center text-xs text-brand-500 print:hidden">
-            Mặt trước
+            {tP("front")}
           </p>
         </div>
 
-        {/* Mặt sau */}
+        {/* Back */}
         <div className="print-card-page page-break-before">
           <div className="mx-auto" style={{ width: "85.6mm" }}>
             <MemberCardBack
@@ -153,10 +162,11 @@ export default async function PrintMemberCardPage({
               associationEmail={cfg.association_email ?? ""}
               associationPhone={cfg.association_phone ?? ""}
               associationWebsite={cfg.association_website ?? SITE_URL}
+              labels={cardBackLabels}
             />
           </div>
           <p className="mt-2 text-center text-xs text-brand-500 print:hidden">
-            Mặt sau
+            {tP("rear")}
           </p>
         </div>
       </div>

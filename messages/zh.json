@@ -818,12 +818,22 @@
     "printCard": "🖨️ 打印"
   },
   "printCard": {
-    "title": "打印卡",
-    "instructions": "CR80尺寸，点打印。",
+    "title": "打印会员卡",
+    "pageHeading": "打印会员卡 — {name}",
+    "instructions": "卡片按 CR80 标准尺寸（85.6 × 54mm）渲染。点击\"打印\"→ 选择打印机，使用 A4 横向纸或专用卡片纸。两面将打印在两张连续的页面上 — 在对话框中选择\"双面打印\"以正确对齐。",
+    "printButton": "🖨️ 打印卡片",
     "back": "← 返回",
-    "guideTitle": "📐 打印指南",
+    "guideTitle": "📐 CR80 打印指南",
+    "guide1": "ID 卡纸 85.6×54mm（建议使用 PVC 0.76mm 以提高耐用性）",
+    "guide2": "专用卡片打印机：Zebra ZC、Fargo DTC、Evolis Zenius — 或在 A4 上打印后裁切",
+    "guide3": "在卡片印刷厂打印：将此文件另存为 PDF（Ctrl+P → Save as PDF）",
     "front": "正面",
-    "rear": "背面"
+    "rear": "背面",
+    "cardIdLabel": "卡号",
+    "validityLabel": "有效期",
+    "verifyMemberLabel": "会员验证",
+    "qrAlt": "会员验证二维码",
+    "establishedText": "根据内政部 2010 年 1 月 11 日第 23/QĐ-BNV 号决定成立。"
   },
   "productFilters": {
     "typeLabel": "类型：",

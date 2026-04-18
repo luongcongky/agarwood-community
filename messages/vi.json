@@ -819,11 +819,21 @@
   },
   "printCard": {
     "title": "In thẻ Hội viên",
-    "instructions": "Kích thước CR80. Bấm In → chọn máy in.",
+    "pageHeading": "In thẻ Hội viên — {name}",
+    "instructions": "Thẻ được render đúng kích thước CR80 (85.6 × 54mm). Bấm \"In\" → chọn máy in, giấy khổ A4 ngang hoặc giấy thẻ chuyên dụng. Hai mặt sẽ in trên 2 trang liên tiếp — chọn \"In 2 mặt\" ở hộp thoại để ghép đúng.",
+    "printButton": "🖨️ In thẻ",
     "back": "← Quay lại",
-    "guideTitle": "📐 Hướng dẫn in CR80",
+    "guideTitle": "📐 Hướng dẫn in chuẩn CR80",
+    "guide1": "Giấy ID card 85.6×54mm (khuyến nghị PVC 0.76mm cho bền)",
+    "guide2": "Máy in chuyên dụng: Zebra ZC, Fargo DTC, Evolis Zenius — hoặc in A4 rồi cắt",
+    "guide3": "In tại nhà máy thẻ: gửi file PDF này (Ctrl+P → Save as PDF)",
     "front": "Mặt trước",
-    "rear": "Mặt sau"
+    "rear": "Mặt sau",
+    "cardIdLabel": "Mã thẻ",
+    "validityLabel": "Hiệu lực",
+    "verifyMemberLabel": "Xác thực thành viên",
+    "qrAlt": "QR xác thực hội viên",
+    "establishedText": "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ."
   },
   "productFilters": {
     "typeLabel": "Loại:",
