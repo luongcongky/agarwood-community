@@ -34,7 +34,17 @@ const SETTINGS_GROUPS = [
       { key: "footer_copyright_notice", label: "Cảnh báo bản quyền", type: "textarea" },
       {
         key: "footer_quick_links",
-        label: "Liên kết nhanh — mỗi dòng: Nhãn|đường-dẫn",
+        label: "Liên kết nhanh (VI) — mỗi dòng: Nhãn|đường-dẫn",
+        type: "textarea",
+      },
+      {
+        key: "footer_quick_links_en",
+        label: "Liên kết nhanh (EN) — để trống sẽ fallback về ZH rồi VI",
+        type: "textarea",
+      },
+      {
+        key: "footer_quick_links_zh",
+        label: "Liên kết nhanh (中文) — để trống sẽ fallback về EN rồi VI",
         type: "textarea",
       },
     ],

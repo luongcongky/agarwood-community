@@ -4,6 +4,8 @@ import { Separator } from "@/components/ui/separator"
 import { prisma } from "@/lib/prisma"
 import { unstable_cache } from "next/cache"
 import { getTranslations, getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { BackToTop } from "./BackToTop"
 
 // Brand icons — inline SVG (lucide-react 1.7 đã remove các brand icon)
@@ -37,7 +39,7 @@ const getFooterData = unstable_cache(
           ],
         },
         orderBy: [{ sortOrder: "asc" }],
-        select: { id: true, name: true, title: true },
+        select: { id: true, name: true, name_en: true, name_zh: true, title: true },
         take: 10,
       }),
       prisma.siteConfig.findMany({
@@ -57,6 +59,8 @@ const getFooterData = unstable_cache(
               "footer_legal_basis",
               "footer_copyright_notice",
               "footer_quick_links",
+              "footer_quick_links_en",
+              "footer_quick_links_zh",
             ],
           },
         },
@@ -69,12 +73,27 @@ const getFooterData = unstable_cache(
   { revalidate: 600, tags: ["footer", "leaders"] },
 )
 
+// Pick locale-specific quick-links config with fallback chain:
+//   en → footer_quick_links_en → footer_quick_links_zh → footer_quick_links
+//   zh → footer_quick_links_zh → footer_quick_links_en → footer_quick_links
+//   vi → footer_quick_links
+function pickQuickLinksSource(cfg: Record<string, string>, locale: string): string | undefined {
+  if (locale === "vi") return cfg.footer_quick_links
+  const primary = locale === "en" ? cfg.footer_quick_links_en : cfg.footer_quick_links_zh
+  if (primary?.trim()) return primary
+  const secondary = locale === "en" ? cfg.footer_quick_links_zh : cfg.footer_quick_links_en
+  if (secondary?.trim()) return secondary
+  return cfg.footer_quick_links
+}
+
 export async function Footer() {
   const [{ leaders, cfg }, t, locale] = await Promise.all([
     getFooterData(),
     getTranslations("footer"),
-    getLocale(),
+    getLocale() as Promise<Locale>,
   ])
+  const l = (r: { name: string; name_en: string | null; name_zh: string | null }) =>
+    localize(r as unknown as Record<string, unknown>, "name", locale) as string
 
   // Tách Chủ tịch (unique) và Phó CT (nhiều)
   // Match chính xác "Chủ tịch" — không gồm "Chủ tịch danh dự" (thuộc vị trí danh dự)
@@ -93,8 +112,9 @@ export async function Footer() {
   const copyrightNotice =
     cfg.footer_copyright_notice ||
     "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này."
-  const quickLinks: { label: string; href: string }[] = (cfg.footer_quick_links
-    ? cfg.footer_quick_links.split("\n")
+  const quickLinksSource = pickQuickLinksSource(cfg, locale)
+  const quickLinks: { label: string; href: string }[] = (quickLinksSource
+    ? quickLinksSource.split("\n")
     : [
         "Trang chủ|/",
         "Doanh nghiệp|/doanh-nghiep",
@@ -193,25 +213,25 @@ export async function Footer() {
                 {chuTich && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("chairman")}</span>
-                    <span className="text-brand-100 font-medium">{chuTich.name}</span>
+                    <span className="text-brand-100 font-medium">{l(chuTich)}</span>
                   </li>
                 )}
-                {phoChuTich.map((l) => (
-                  <li key={l.id}>
+                {phoChuTich.map((leader) => (
+                  <li key={leader.id}>
                     <span className="block text-xs text-brand-400">{t("viceChairman")}</span>
-                    <span className="text-brand-100 font-medium">{l.name}</span>
+                    <span className="text-brand-100 font-medium">{l(leader)}</span>
                   </li>
                 ))}
                 {tongThuKy && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("secretaryGeneral")}</span>
-                    <span className="text-brand-100 font-medium">{tongThuKy.name}</span>
+                    <span className="text-brand-100 font-medium">{l(tongThuKy)}</span>
                   </li>
                 )}
                 {chanhVanPhong && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("chiefOfOffice")}</span>
-                    <span className="text-brand-100 font-medium">{chanhVanPhong.name}</span>
+                    <span className="text-brand-100 font-medium">{l(chanhVanPhong)}</span>
                   </li>
                 )}
                 {leaders.length === 0 && (
