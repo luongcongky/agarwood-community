@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
+import { ChevronDown } from "lucide-react"
 import { locales, type Locale } from "@/i18n/config"
 
 const localeLabels: Record<Locale, string> = {
-  vi: "VI",
-  en: "EN",
+  vi: "Tiếng Việt",
+  en: "English",
   zh: "中文",
 }
 
@@ -17,39 +19,79 @@ const localeFlags: Record<Locale, string> = {
 
 export function LocaleSwitcher({ current }: { current: Locale }) {
   const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   // Strip current locale prefix from pathname to get the "real" path
-  const pathnameWithoutLocale = pathname.replace(
-    new RegExp(`^/(${locales.join("|")})`),
-    "",
-  ) || "/"
+  const pathnameWithoutLocale =
+    pathname.replace(new RegExp(`^/(${locales.join("|")})`), "") || "/"
+
+  // Close on outside click + ESC
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    document.addEventListener("keydown", handleKey)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      document.removeEventListener("keydown", handleKey)
+    }
+  }, [open])
 
   return (
-    <div className="flex items-center gap-0.5">
-      {locales.map((locale) => {
-        const isActive = locale === current
-        return (
-          <a
-            key={locale}
-            href={`/${locale}${pathnameWithoutLocale}`}
-            onClick={() => {
-              document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`
-            }}
-            className={`
-              px-1.5 py-1 rounded text-xs font-medium transition-colors
-              ${isActive
-                ? "bg-brand-600 text-white"
-                : "text-brand-300 hover:text-brand-100 hover:bg-brand-700"
-              }
-            `}
-            aria-label={`Switch to ${localeLabels[locale]}`}
-            aria-current={isActive ? "true" : undefined}
-          >
-            <span className="mr-0.5">{localeFlags[locale]}</span>
-            {localeLabels[locale]}
-          </a>
-        )
-      })}
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Ngôn ngữ hiện tại: ${localeLabels[current]}`}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
+      >
+        <span className="text-lg leading-none">{localeFlags[current]}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 opacity-70 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          className="absolute right-0 top-full mt-1 min-w-[160px] rounded-lg bg-brand-800 border border-brand-700 shadow-lg py-1 z-50"
+        >
+          {locales.map((locale) => {
+            const isActive = locale === current
+            return (
+              <a
+                key={locale}
+                href={`/${locale}${pathnameWithoutLocale}`}
+                onClick={() => {
+                  document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`
+                  setOpen(false)
+                }}
+                role="option"
+                aria-selected={isActive}
+                className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  isActive
+                    ? "bg-brand-700 text-brand-100 font-semibold"
+                    : "text-brand-200 hover:bg-brand-700 hover:text-brand-100"
+                }`}
+              >
+                <span className="text-lg leading-none">{localeFlags[locale]}</span>
+                <span>{localeLabels[locale]}</span>
+                {isActive && (
+                  <span className="ml-auto text-xs text-brand-300">✓</span>
+                )}
+              </a>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
