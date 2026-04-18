@@ -163,16 +163,16 @@ export async function Navbar() {
                 membershipActive={membershipActive}
               />
             ) : (
-              <div className="hidden lg:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2 shrink-0">
                 <Link
                   href={`/${locale}/login`}
-                  className="px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
+                  className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
                 >
                   Đăng nhập
                 </Link>
                 <Link
                   href={`/${locale}/dang-ky`}
-                  className="px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
+                  className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
                 >
                   Đăng ký hội viên
                 </Link>

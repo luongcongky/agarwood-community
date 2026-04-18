@@ -28,7 +28,7 @@ function NavDesktopItem({ node, isActive }: { node: MenuNode; isActive: boolean 
       <span
         title="Sắp có"
         aria-disabled="true"
-        className="px-3 py-2 rounded-md text-sm font-medium text-brand-400 cursor-not-allowed inline-flex items-center gap-1.5"
+        className="whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium text-brand-400 cursor-not-allowed inline-flex items-center gap-1.5"
       >
         {node.label}
         <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-brand-700 text-brand-300">
@@ -39,7 +39,7 @@ function NavDesktopItem({ node, isActive }: { node: MenuNode; isActive: boolean 
   }
 
   const linkClass =
-    "px-3 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 " +
+    "whitespace-nowrap px-3 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1 " +
     (isActive
       ? "bg-brand-700 text-brand-100"
       : "text-brand-200 hover:bg-brand-700 hover:text-brand-300")
