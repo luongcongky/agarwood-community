@@ -170,6 +170,8 @@ model User {
 
   // Giới thiệu bản thân / tiểu sử — hiển thị trên trang hồ sơ cá nhân
   bio               String?   @db.Text
+  bio_en            String?   @db.Text
+  bio_zh            String?   @db.Text
 
   // Refund info — dùng khi hoàn phí chứng nhận bị từ chối
   bankAccountName   String?
@@ -365,6 +367,8 @@ model Company {
   // Người đại diện tổ chức — bắt buộc theo Điều lệ Hội, Điều 7 Khoản 2c
   representativeName     String?
   representativePosition String?
+  representativePosition_en String?
+  representativePosition_zh String?
 
   isVerified       Boolean   @default(false) // admin verify
   isPublished      Boolean   @default(true)

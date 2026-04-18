@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { VIETNAM_BANKS } from "@/lib/constants/banks"
 import { updateProfile, updateBankInfo } from "./_actions/update-profile"
 import { changePassword } from "./_actions/change-password"
+import { MultiLangInput, MultiLangTextarea } from "@/components/ui/multi-lang-input"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,14 +17,24 @@ type UserProfile = {
   email: string
   phone: string | null
   bio: string | null
+  bio_en: string | null
+  bio_zh: string | null
   bankAccountName: string | null
   bankAccountNumber: string | null
   bankName: string | null
   role: string
+  accountType: string
   contributionTotal: number
   membershipExpires: string | null
   displayPriority: number
-  company: { id: string; name: string; slug: string } | null
+  company: {
+    id: string
+    name: string
+    slug: string
+    representativePosition: string | null
+    representativePosition_en: string | null
+    representativePosition_zh: string | null
+  } | null
 }
 
 type MembershipRow = {
@@ -115,6 +126,14 @@ export function ProfileTabs({
   const [name, setName] = useState(user.name)
   const [phone, setPhone] = useState(user.phone ?? "")
   const [bio, setBio] = useState(user.bio ?? "")
+  const [bioEn, setBioEn] = useState(user.bio_en ?? "")
+  const [bioZh, setBioZh] = useState(user.bio_zh ?? "")
+  // Chức vụ tại doanh nghiệp — chỉ hiển thị khi user là đại diện business.
+  const showPositionField =
+    user.accountType === "BUSINESS" && user.company !== null
+  const [position, setPosition] = useState(user.company?.representativePosition ?? "")
+  const [positionEn, setPositionEn] = useState(user.company?.representativePosition_en ?? "")
+  const [positionZh, setPositionZh] = useState(user.company?.representativePosition_zh ?? "")
   const [personalLoading, setPersonalLoading] = useState(false)
   const [personalMsg, setPersonalMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
@@ -139,7 +158,16 @@ export function ProfileTabs({
     setPersonalLoading(true)
     setPersonalMsg(null)
     try {
-      const result = await updateProfile({ name, phone, bio })
+      const result = await updateProfile({
+        name,
+        phone,
+        bio,
+        bio_en: bioEn,
+        bio_zh: bioZh,
+        representativePosition: showPositionField ? position : undefined,
+        representativePosition_en: showPositionField ? positionEn : undefined,
+        representativePosition_zh: showPositionField ? positionZh : undefined,
+      })
       if (result.error) {
         setPersonalMsg({ type: "error", text: result.error })
       } else {
@@ -273,18 +301,44 @@ export function ProfileTabs({
               />
             </Field>
 
-            <Field
-              label="Giới thiệu bản thân / Tiểu sử"
-              hint={`Chia sẻ về chuyên môn, kinh nghiệm, lĩnh vực quan tâm... (${bio.length}/2000)`}
-            >
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value.slice(0, 2000))}
-                rows={5}
+            {/* Chức vụ tại doanh nghiệp — chỉ hiện cho đại diện doanh nghiệp */}
+            {showPositionField && (
+              <div className="space-y-1">
+                <MultiLangInput
+                  name="representativePosition"
+                  label="Chức vụ tại doanh nghiệp"
+                  values={{ vi: position, en: positionEn, zh: positionZh }}
+                  onChange={(key, val) => {
+                    if (key === "representativePosition") setPosition(val)
+                    else if (key === "representativePosition_en") setPositionEn(val)
+                    else if (key === "representativePosition_zh") setPositionZh(val)
+                  }}
+                  placeholder="Ví dụ: Giám đốc, Tổng Giám đốc, Chủ tịch HĐQT…"
+                />
+                <p className="text-xs text-brand-400">
+                  Chức vụ hiển thị trên trang doanh nghiệp và các vị trí có gắn tên đại diện.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <MultiLangTextarea
+                name="bio"
+                label="Giới thiệu bản thân / Tiểu sử"
+                values={{ vi: bio, en: bioEn, zh: bioZh }}
+                onChange={(key, val) => {
+                  const clipped = val.slice(0, 2000)
+                  if (key === "bio") setBio(clipped)
+                  else if (key === "bio_en") setBioEn(clipped)
+                  else if (key === "bio_zh") setBioZh(clipped)
+                }}
                 placeholder="Ví dụ: Tôi có 10 năm kinh nghiệm trong lĩnh vực trầm hương, chuyên về chế biến và phân phối..."
-                className={cn(inputClass, "resize-y min-h-[120px]")}
+                rows={5}
               />
-            </Field>
+              <p className="text-xs text-brand-400">
+                Chia sẻ về chuyên môn, kinh nghiệm, lĩnh vực quan tâm… (tối đa 2000 ký tự / ngôn ngữ)
+              </p>
+            </div>
 
             {/* Company link */}
             {user.company && (
