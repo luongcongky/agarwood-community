@@ -53,11 +53,21 @@ const getFooterData = unstable_cache(
               "association_phone",
               "association_phone_2",
               "contact_address",
+              "contact_address_en",
+              "contact_address_zh",
               "association_website",
               "footer_brand_desc",
+              "footer_brand_desc_en",
+              "footer_brand_desc_zh",
               "footer_working_hours",
+              "footer_working_hours_en",
+              "footer_working_hours_zh",
               "footer_legal_basis",
+              "footer_legal_basis_en",
+              "footer_legal_basis_zh",
               "footer_copyright_notice",
+              "footer_copyright_notice_en",
+              "footer_copyright_notice_zh",
               "footer_quick_links",
               "footer_quick_links_en",
               "footer_quick_links_zh",
@@ -73,27 +83,17 @@ const getFooterData = unstable_cache(
   { revalidate: 600, tags: ["footer", "leaders"] },
 )
 
-// Pick locale-specific quick-links config with fallback chain:
-//   en → footer_quick_links_en → footer_quick_links_zh → footer_quick_links
-//   zh → footer_quick_links_zh → footer_quick_links_en → footer_quick_links
-//   vi → footer_quick_links
-function pickQuickLinksSource(cfg: Record<string, string>, locale: string): string | undefined {
-  if (locale === "vi") return cfg.footer_quick_links
-  const primary = locale === "en" ? cfg.footer_quick_links_en : cfg.footer_quick_links_zh
-  if (primary?.trim()) return primary
-  const secondary = locale === "en" ? cfg.footer_quick_links_zh : cfg.footer_quick_links_en
-  if (secondary?.trim()) return secondary
-  return cfg.footer_quick_links
-}
-
 export async function Footer() {
   const [{ leaders, cfg }, t, locale] = await Promise.all([
     getFooterData(),
     getTranslations("footer"),
     getLocale() as Promise<Locale>,
   ])
-  const l = (r: { name: string; name_en: string | null; name_zh: string | null }) =>
+  const lName = (r: { name: string; name_en: string | null; name_zh: string | null }) =>
     localize(r as unknown as Record<string, unknown>, "name", locale) as string
+  // Helper: pick localized SiteConfig value by base key with the EN→ZH→VI chain.
+  const lCfg = (baseKey: string): string =>
+    (localize(cfg as unknown as Record<string, unknown>, baseKey, locale) as string | undefined) ?? ""
 
   // Tách Chủ tịch (unique) và Phó CT (nhiều)
   // Match chính xác "Chủ tịch" — không gồm "Chủ tịch danh dự" (thuộc vị trí danh dự)
@@ -103,16 +103,17 @@ export async function Footer() {
   const chanhVanPhong = leaders.find((l) => /Chánh Văn Phòng/i.test(l.title))
 
   const brandDesc =
-    cfg.footer_brand_desc ||
+    lCfg("footer_brand_desc") ||
     "Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm, chia sẻ tri thức và phát triển thị trường bền vững."
-  const workingHours = cfg.footer_working_hours || "Thứ 2 - Thứ 6: 8:00 - 17:00"
+  const workingHours = lCfg("footer_working_hours") || "Thứ 2 - Thứ 6: 8:00 - 17:00"
   const legalBasis =
-    cfg.footer_legal_basis ||
+    lCfg("footer_legal_basis") ||
     "Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ. Điều lệ Hội được phê duyệt qua Đại hội nhiệm kỳ."
   const copyrightNotice =
-    cfg.footer_copyright_notice ||
+    lCfg("footer_copyright_notice") ||
     "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này."
-  const quickLinksSource = pickQuickLinksSource(cfg, locale)
+  const contactAddress = lCfg("contact_address")
+  const quickLinksSource = lCfg("footer_quick_links")
   const quickLinks: { label: string; href: string }[] = (quickLinksSource
     ? quickLinksSource.split("\n")
     : [
@@ -213,25 +214,25 @@ export async function Footer() {
                 {chuTich && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("chairman")}</span>
-                    <span className="text-brand-100 font-medium">{l(chuTich)}</span>
+                    <span className="text-brand-100 font-medium">{lName(chuTich)}</span>
                   </li>
                 )}
                 {phoChuTich.map((leader) => (
                   <li key={leader.id}>
                     <span className="block text-xs text-brand-400">{t("viceChairman")}</span>
-                    <span className="text-brand-100 font-medium">{l(leader)}</span>
+                    <span className="text-brand-100 font-medium">{lName(leader)}</span>
                   </li>
                 ))}
                 {tongThuKy && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("secretaryGeneral")}</span>
-                    <span className="text-brand-100 font-medium">{l(tongThuKy)}</span>
+                    <span className="text-brand-100 font-medium">{lName(tongThuKy)}</span>
                   </li>
                 )}
                 {chanhVanPhong && (
                   <li>
                     <span className="block text-xs text-brand-400">{t("chiefOfOffice")}</span>
-                    <span className="text-brand-100 font-medium">{l(chanhVanPhong)}</span>
+                    <span className="text-brand-100 font-medium">{lName(chanhVanPhong)}</span>
                   </li>
                 )}
                 {leaders.length === 0 && (
@@ -264,10 +265,10 @@ export async function Footer() {
                     </span>
                   </li>
                 )}
-                {cfg.contact_address && (
+                {contactAddress && (
                   <li className="flex gap-2">
                     <span>📍</span>
-                    <span>{cfg.contact_address}</span>
+                    <span>{contactAddress}</span>
                   </li>
                 )}
                 {workingHours && (
