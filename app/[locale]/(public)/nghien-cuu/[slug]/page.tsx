@@ -114,17 +114,19 @@ export default async function ResearchDetailPage({ params }: Props) {
             <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
           </nav>
 
-          {/* Cover image — full-bleed inside card */}
+          {/* Cover image — có viền 5px tạo khung ôm ảnh */}
           {news.coverImageUrl && (
-            <div className="relative w-full aspect-video bg-muted">
-              <Image
-                src={news.coverImageUrl}
-                alt={l(news, "title")}
-                fill
-                className="object-cover"
-                priority
-                sizes="(max-width: 1280px) 100vw, 1280px"
-              />
+            <div className="p-[5px]">
+              <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                <Image
+                  src={news.coverImageUrl}
+                  alt={l(news, "title")}
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 1280px) 100vw, 1280px"
+                />
+              </div>
             </div>
           )}
 
