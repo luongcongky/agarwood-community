@@ -117,7 +117,9 @@
   "certProducts": {
     "metaTitle": "认证产品",
     "pageTitle": "认证产品",
-    "pageSubtitle": "经检验并获得越南沉香协会质量认证的沉香产品"
+    "pageSubtitle": "经检验并获得越南沉香协会质量认证的沉香产品",
+    "countLabel": "第 {first}–{last} 件 / 共 {total} 件产品",
+    "certifiedBadge": "✓ 认证"
   },
   "marketplace": {
     "metaTitle": "企业产品",

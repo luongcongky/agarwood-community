@@ -187,7 +187,11 @@ export default async function CertifiedProductsPage({
           <p className="text-sm text-brand-600">
             {total === 0
               ? "Không tìm thấy sản phẩm nào"
-              : `${((page - 1) * PAGE_SIZE + 1).toLocaleString("vi-VN")}–${Math.min(page * PAGE_SIZE, total).toLocaleString("vi-VN")} / ${total.toLocaleString("vi-VN")} sản phẩm`}
+              : t("countLabel", {
+                  first: ((page - 1) * PAGE_SIZE + 1).toLocaleString(locale),
+                  last: Math.min(page * PAGE_SIZE, total).toLocaleString(locale),
+                  total: total.toLocaleString(locale),
+                })}
             {(loai || vung || q) && (
               <Link href="/san-pham-chung-nhan" className="ml-3 text-brand-700 underline text-xs">
                 Xoá bộ lọc
@@ -232,7 +236,7 @@ export default async function CertifiedProductsPage({
                         {l(product, "name")}
                       </h2>
                       <span className="shrink-0 inline-flex items-center gap-1 bg-green-100 text-green-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-green-200">
-                        ✓ Chứng nhận
+                        {t("certifiedBadge")}
                       </span>
                     </div>
                     <p className="text-xs text-brand-500 mt-1">
@@ -272,7 +276,7 @@ export default async function CertifiedProductsPage({
                     )}
                     {/* Cert badge */}
                     <div className="absolute top-2.5 right-2.5 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
-                      ✓ Chứng nhận
+                      {t("certifiedBadge")}
                     </div>
                   </div>
 

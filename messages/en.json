@@ -117,7 +117,9 @@
   "certProducts": {
     "metaTitle": "Certified Products",
     "pageTitle": "Certified Products",
-    "pageSubtitle": "Agarwood products inspected and certified by the Vietnam Agarwood Association"
+    "pageSubtitle": "Agarwood products inspected and certified by the Vietnam Agarwood Association",
+    "countLabel": "{first}–{last} of {total} products",
+    "certifiedBadge": "✓ Certified"
   },
   "marketplace": {
     "metaTitle": "Business Products",

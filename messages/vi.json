@@ -117,7 +117,9 @@
   "certProducts": {
     "metaTitle": "Sản phẩm được Chứng nhận",
     "pageTitle": "Sản phẩm được Chứng nhận",
-    "pageSubtitle": "Sản phẩm trầm hương đã qua kiểm định và được Hội Trầm Hương Việt Nam cấp chứng nhận chất lượng"
+    "pageSubtitle": "Sản phẩm trầm hương đã qua kiểm định và được Hội Trầm Hương Việt Nam cấp chứng nhận chất lượng",
+    "countLabel": "{first}–{last} / {total} sản phẩm",
+    "certifiedBadge": "✓ Chứng nhận"
   },
   "marketplace": {
     "metaTitle": "Sản phẩm Doanh nghiệp",
