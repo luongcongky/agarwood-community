@@ -720,6 +720,24 @@
     "membersSection": "Members",
     "close": "Close"
   },
+  "officialChannels": {
+    "title": "Official Communication Channels & Anti-Impersonation Warning",
+    "intro": "Vietnam Agarwood Association (VAWA) — established under Decision No. 23/QĐ-BNV dated January 11, 2010 of the Ministry of Home Affairs — only communicates through the channels listed below. Any Facebook, Zalo, website, or account impersonating the Association does not belong to us.",
+    "labelFacebook": "Official Facebook",
+    "labelZalo": "Official Zalo",
+    "labelYoutube": "Official YouTube",
+    "labelWebsite": "Official Website",
+    "labelEmail": "Official Email",
+    "labelHotline": "Official Hotline",
+    "notResponsibleTitle": "The Association is NOT responsible for:",
+    "notResponsibleItem1": "Any Facebook page, fanpage, group, Zalo OA, Zalo group, website, TikTok, or YouTube account not on the official channels list above.",
+    "notResponsibleItem2": "Any transactions, payments, donations, membership fees… made through impersonating accounts or pages.",
+    "notResponsibleItem3": "Any content, products, or services published in the Association's name by third parties without written approval from the Executive Board.",
+    "reportTitle": "If you detect an impersonating page/account, please:",
+    "reportStep1": "Send the URL of the impersonating page to the Association's official email for the Communications Board to handle.",
+    "reportStep2": "Report the page directly to Facebook / Zalo / Google.",
+    "reportStep3": "Do not transfer money, provide personal information, or transact with unverified pages."
+  },
   "memberDetail": {
     "notFound": "Not found",
     "official": "Official",

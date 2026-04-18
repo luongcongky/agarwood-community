@@ -720,6 +720,24 @@
     "membersSection": "Uỷ viên & Thành viên",
     "close": "Đóng"
   },
+  "officialChannels": {
+    "title": "Kênh truyền thông chính thức & Cảnh báo giả mạo",
+    "intro": "Hội Trầm Hương Việt Nam (VAWA) — thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ — chỉ truyền thông qua những kênh dưới đây. Mọi trang Facebook, Zalo, website hoặc tài khoản khác mạo danh đều không thuộc Hội.",
+    "labelFacebook": "Facebook chính thức",
+    "labelZalo": "Zalo chính thức",
+    "labelYoutube": "YouTube chính thức",
+    "labelWebsite": "Website chính thức",
+    "labelEmail": "Email chính thức",
+    "labelHotline": "Hotline chính thức",
+    "notResponsibleTitle": "Hội KHÔNG chịu trách nhiệm về:",
+    "notResponsibleItem1": "Bất kỳ trang Facebook, Fanpage, group, Zalo OA, Zalo group, website, TikTok, YouTube nào không nằm trong danh sách kênh chính thức ở trên.",
+    "notResponsibleItem2": "Mọi giao dịch, thanh toán, quyên góp, phí hội viên… được thực hiện qua các tài khoản, trang giả mạo Hội.",
+    "notResponsibleItem3": "Nội dung, sản phẩm, dịch vụ do bên thứ ba phát ngôn nhân danh Hội mà chưa được Ban Chấp hành Hội phê duyệt bằng văn bản.",
+    "reportTitle": "Khi phát hiện trang/tài khoản giả mạo, vui lòng:",
+    "reportStep1": "Gửi đường dẫn (URL) của trang giả mạo về email chính thức của Hội để Ban Truyền thông xử lý.",
+    "reportStep2": "Báo cáo (Report) trang đó trực tiếp với Facebook/Zalo/Google.",
+    "reportStep3": "Không thực hiện chuyển khoản, cung cấp thông tin cá nhân hoặc giao dịch với các trang chưa được xác minh."
+  },
   "memberDetail": {
     "notFound": "Hội viên không tồn tại",
     "official": "Chính thức",

@@ -720,6 +720,24 @@
     "membersSection": "委员",
     "close": "关闭"
   },
+  "officialChannels": {
+    "title": "官方传播渠道与防假冒警示",
+    "intro": "越南沉香协会（VAWA）——根据内政部2010年1月11日第23/QĐ-BNV号决定成立——仅通过以下渠道进行传播。任何冒用本协会名义的Facebook、Zalo、网站或其他账户均不属于本协会。",
+    "labelFacebook": "官方 Facebook",
+    "labelZalo": "官方 Zalo",
+    "labelYoutube": "官方 YouTube",
+    "labelWebsite": "官方网站",
+    "labelEmail": "官方邮箱",
+    "labelHotline": "官方热线",
+    "notResponsibleTitle": "协会对以下情况概不负责：",
+    "notResponsibleItem1": "任何不在上述官方渠道列表中的 Facebook 主页、Fanpage、群组、Zalo OA、Zalo 群、网站、TikTok 或 YouTube 账户。",
+    "notResponsibleItem2": "通过假冒协会的账户或页面进行的任何交易、付款、捐赠、会费等。",
+    "notResponsibleItem3": "未经协会执委会书面批准，第三方以协会名义发布的任何内容、产品或服务。",
+    "reportTitle": "发现假冒页面/账户时，请：",
+    "reportStep1": "将假冒页面的链接（URL）发送至协会官方邮箱，由传播委员会处理。",
+    "reportStep2": "直接向 Facebook / Zalo / Google 举报该页面。",
+    "reportStep3": "不向未经验证的页面转账、提供个人信息或进行交易。"
+  },
   "memberDetail": {
     "notFound": "不存在",
     "official": "正式",

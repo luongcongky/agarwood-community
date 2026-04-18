@@ -1,7 +1,9 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
 
@@ -49,7 +51,10 @@ const orgJsonLd = {
 }
 
 export default async function GioiThieuPage() {
-  const t = await getTranslations("about")
+  const [t, locale] = await Promise.all([
+    getTranslations("about"),
+    getLocale() as Promise<Locale>,
+  ])
 
   // Fetch all leaders của nhiệm kỳ mới nhất — 3 category (BTV/BCH/BKT) cho tabs
   const rawLeaders = await prisma.leader.findMany({
@@ -57,11 +62,11 @@ export default async function GioiThieuPage() {
     orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
     select: {
       id: true,
-      name: true,
-      honorific: true,
-      title: true,
-      workTitle: true,
-      bio: true,
+      name: true, name_en: true, name_zh: true,
+      honorific: true, honorific_en: true, honorific_zh: true,
+      title: true, title_en: true, title_zh: true,
+      workTitle: true, workTitle_en: true, workTitle_zh: true,
+      bio: true, bio_en: true, bio_zh: true,
       photoUrl: true,
       term: true,
       category: true,
@@ -70,18 +75,20 @@ export default async function GioiThieuPage() {
   })
 
   const currentTerm = rawLeaders[0]?.term ?? null
+  const l = <T extends Record<string, unknown>>(record: T, field: string) =>
+    localize(record, field, locale) as string | null
   const currentLeaders: LeaderItem[] = rawLeaders
     .filter((l) => l.term === currentTerm)
-    .map((l) => ({
-      id: l.id,
-      name: l.name,
-      honorific: l.honorific,
-      title: l.title,
-      workTitle: l.workTitle,
-      bio: l.bio ?? l.user?.bio ?? null,
-      photoUrl: l.photoUrl ?? l.user?.avatarUrl ?? null,
-      term: l.term,
-      category: l.category as "BTV" | "BCH" | "BKT",
+    .map((leader) => ({
+      id: leader.id,
+      name: l(leader, "name") ?? leader.name,
+      honorific: l(leader, "honorific"),
+      title: l(leader, "title") ?? leader.title,
+      workTitle: l(leader, "workTitle"),
+      bio: l(leader, "bio") ?? leader.user?.bio ?? null,
+      photoUrl: leader.photoUrl ?? leader.user?.avatarUrl ?? null,
+      term: leader.term,
+      category: leader.category as "BTV" | "BCH" | "BKT",
     }))
 
   const benefits = [

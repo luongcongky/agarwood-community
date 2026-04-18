@@ -23,10 +23,10 @@ export type LeaderItem = {
 
 type TabKey = "BTV" | "BCH" | "BKT"
 
-const TAB_LABELS: Record<TabKey, string> = {
-  BTV: "Ban Thường vụ",
-  BCH: "Ban Chấp hành",
-  BKT: "Ban Kiểm tra",
+const TAB_I18N_KEYS: Record<TabKey, "btv" | "bch" | "bkt"> = {
+  BTV: "btv",
+  BCH: "bch",
+  BKT: "bkt",
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
 
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-wider font-semibold text-brand-500">
-              {TAB_LABELS[leader.category]} · {leader.term}
+              {t(TAB_I18N_KEYS[leader.category])} · {leader.term}
             </p>
             <h3 className="mt-1 text-2xl sm:text-3xl font-bold text-brand-900 leading-tight">
               {leader.honorific ? `${leader.honorific} ` : ""}
@@ -195,7 +195,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
             {leader.bio ? (
               <div className="mt-5 pt-5 border-t border-brand-200">
                 <p className="text-xs uppercase tracking-wider font-semibold text-brand-500 mb-2">
-                  {t("biography")} / Lý lịch trích ngang
+                  {t("biography")}
                 </p>
                 <div
                   className="prose prose-sm max-w-none text-brand-800 whitespace-pre-line leading-relaxed"
@@ -206,7 +206,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
             ) : (
               <div className="mt-5 pt-5 border-t border-brand-200">
                 <p className="text-sm italic text-brand-400">
-                  {t("biography")} đang được cập nhật.
+                  {t("bioUpdating")}
                 </p>
               </div>
             )}
@@ -246,7 +246,7 @@ export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
   if (availableTabs.length === 0) {
     return (
       <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-        Thông tin ban lãnh đạo sẽ được cập nhật sớm.
+        {t("noLeadershipInfo")}
       </div>
     )
   }
@@ -271,7 +271,7 @@ export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
                     : "text-brand-500 hover:text-brand-700",
                 )}
               >
-                {TAB_LABELS[tab]}{" "}
+                {t(TAB_I18N_KEYS[tab])}{" "}
                 <span
                   className={cn(
                     "ml-1 text-xs font-normal",
@@ -318,7 +318,7 @@ export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
             <div className="flex items-center gap-3 mb-6 mt-8">
               <div className="flex-1 h-px bg-brand-200" />
               <span className="text-xs uppercase tracking-wider font-semibold text-brand-500">
-                Uỷ viên &amp; Thành viên
+                {t("membersSection")}
               </span>
               <div className="flex-1 h-px bg-brand-200" />
             </div>
