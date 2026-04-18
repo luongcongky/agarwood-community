@@ -109,8 +109,10 @@
     "searchBtn": "搜索",
     "emptyTitle": "未找到会员",
     "emptyDefault": "暂无公开会员。",
-    "flipHint": "💡 点击卡片翻转查看详细信息",
-    "viewDetail": "查看详情 →"
+    "flipHint": "💡 点击卡片翻转查看背面 · 点击\"查看详情\"查看完整资料",
+    "viewDetail": "查看详情 →",
+    "printCard": "🖨️ 打印卡片",
+    "printCardTooltip": "打开打印卡片页面"
   },
   "certProducts": {
     "metaTitle": "认证产品",

@@ -109,8 +109,10 @@
     "searchBtn": "Search",
     "emptyTitle": "No members found",
     "emptyDefault": "No public members yet.",
-    "flipHint": "💡 Click on a card to flip and see details",
-    "viewDetail": "View details →"
+    "flipHint": "💡 Click a card to flip to the back · Click \"View details\" for the full profile",
+    "viewDetail": "View details →",
+    "printCard": "🖨️ Print card",
+    "printCardTooltip": "Open the print-ready card page"
   },
   "certProducts": {
     "metaTitle": "Certified Products",

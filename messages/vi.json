@@ -109,8 +109,10 @@
     "searchBtn": "Tìm kiếm",
     "emptyTitle": "Không tìm thấy hội viên",
     "emptyDefault": "Chưa có hội viên nào được công khai.",
-    "flipHint": "💡 Click vào thẻ để lật và xem thông tin chi tiết",
-    "viewDetail": "Xem chi tiết →"
+    "flipHint": "💡 Click vào thẻ để lật xem mặt sau · Click \"Xem chi tiết\" để xem hồ sơ đầy đủ",
+    "viewDetail": "Xem chi tiết →",
+    "printCard": "🖨️ In thẻ",
+    "printCardTooltip": "Mở trang in thẻ cứng"
   },
   "certProducts": {
     "metaTitle": "Sản phẩm được Chứng nhận",

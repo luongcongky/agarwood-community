@@ -169,7 +169,7 @@ export default async function VipMembersPage({
         ) : (
           <>
             <p className="text-center text-xs text-brand-500 mb-4 italic">
-              💡 Click vào thẻ để lật xem mặt sau · Click "Xem chi tiết" để xem hồ sơ đầy đủ
+              {t("flipHint")}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {cardsData.map(({ member, tierInfo, memberCardId, verifyUrl, qrDataUrl }) => {
@@ -226,9 +226,9 @@ export default async function VipMembersPage({
                         <Link
                           href={`/hoi-vien/${member.id}/the-in`}
                           className="text-brand-500 hover:text-brand-800 hover:underline"
-                          title="Mở trang in thẻ cứng"
+                          title={t("printCardTooltip")}
                         >
-                          🖨️ In thẻ
+                          {t("printCard")}
                         </Link>
                       </div>
                     </div>
