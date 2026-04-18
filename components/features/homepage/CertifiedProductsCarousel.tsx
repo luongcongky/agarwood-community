@@ -3,7 +3,9 @@ import Image from "next/image"
 import { getFeaturedProductsForHomepage } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 
 /**
  * Section 3 — Sản phẩm tiêu biểu (carousel).
@@ -16,9 +18,10 @@ import { getTranslations } from "next-intl/server"
  * Width: constrain trong max-w-7xl (không full bleed) — match các section khác.
  */
 export async function CertifiedProductsCarousel() {
-  const [products, t] = await Promise.all([
+  const [products, t, locale] = await Promise.all([
     getFeaturedProductsForHomepage(),
     getTranslations("homepage"),
+    getLocale() as Promise<Locale>,
   ])
 
   if (products.length === 0) {
@@ -75,7 +78,12 @@ export async function CertifiedProductsCarousel() {
           }}
         >
           <div className="flex gap-4 w-max animate-[homepage-marquee_60s_linear_infinite] group-hover:paused">
-            {items.map((product, idx) => (
+            {items.map((product, idx) => {
+              const productName = localize(product, "name", locale) as string
+              const companyName = product.company
+                ? (localize(product.company, "name", locale) as string)
+                : null
+              return (
               <Link
                 key={`${product.id}-${idx}`}
                 href={`/san-pham/${product.slug}`}
@@ -85,7 +93,7 @@ export async function CertifiedProductsCarousel() {
                   {product.imageUrls && product.imageUrls.length > 0 ? (
                     <Image
                       src={product.imageUrls[0]}
-                      alt={product.name}
+                      alt={productName}
                       fill
                       placeholder="blur"
                       blurDataURL={BRAND_BLUR_DATA_URL}
@@ -106,10 +114,10 @@ export async function CertifiedProductsCarousel() {
                 </div>
                 <div className="mt-2 px-1">
                   <h3 className="line-clamp-1 text-sm font-semibold text-brand-900 group-hover/card:text-brand-700">
-                    {product.name}
+                    {productName}
                   </h3>
                   <p className="line-clamp-1 text-xs text-brand-500 mt-0.5">
-                    {product.company?.name ?? product.owner.name}
+                    {companyName ?? product.owner.name}
                   </p>
                   {product.priceRange && (
                     <p className="text-xs text-brand-700 font-medium mt-0.5">
@@ -118,7 +126,8 @@ export async function CertifiedProductsCarousel() {
                   )}
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

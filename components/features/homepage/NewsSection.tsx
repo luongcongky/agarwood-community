@@ -3,7 +3,9 @@ import Image from "next/image"
 import { getAssociationNews, type HomepageNewsItem } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 
 function formatDate(d: Date | null | string): string {
   if (!d) return ""
@@ -16,9 +18,10 @@ function formatDate(d: Date | null | string): string {
 }
 
 export async function NewsSection() {
-  const [associationNews, t] = await Promise.all([
+  const [associationNews, t, locale] = await Promise.all([
     getAssociationNews(),
     getTranslations("homepage"),
+    getLocale() as Promise<Locale>,
   ])
   const heroNews = associationNews[0] ?? null
   const restNews = associationNews.slice(1)
@@ -35,7 +38,7 @@ export async function NewsSection() {
       </header>
 
       {heroNews ? (
-        <NewsHero news={heroNews} featuredLabel={t("newsFeatured")} />
+        <NewsHero news={heroNews} featuredLabel={t("newsFeatured")} locale={locale} />
       ) : (
         <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
           {t("newsEmpty")}
@@ -45,7 +48,7 @@ export async function NewsSection() {
       {restNews.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
           {restNews.map((news) => (
-            <NewsListItem key={news.id} news={news} />
+            <NewsListItem key={news.id} news={news} locale={locale} />
           ))}
         </div>
       )}
@@ -62,7 +65,17 @@ export async function NewsSection() {
   )
 }
 
-function NewsHero({ news, featuredLabel }: { news: HomepageNewsItem; featuredLabel: string }) {
+function NewsHero({
+  news,
+  featuredLabel,
+  locale,
+}: {
+  news: HomepageNewsItem
+  featuredLabel: string
+  locale: Locale
+}) {
+  const title = localize(news, "title", locale) as string
+  const excerpt = localize(news, "excerpt", locale) as string | null
   return (
     <Link
       href={`/tin-tuc/${news.slug}`}
@@ -72,7 +85,7 @@ function NewsHero({ news, featuredLabel }: { news: HomepageNewsItem; featuredLab
         {news.coverImageUrl ? (
           <Image
             src={news.coverImageUrl}
-            alt={news.title}
+            alt={title}
             fill
             priority
             placeholder="blur"
@@ -91,11 +104,11 @@ function NewsHero({ news, featuredLabel }: { news: HomepageNewsItem; featuredLab
       </div>
       <div className="p-5 sm:p-6">
         <h3 className="text-xl sm:text-2xl font-bold text-brand-900 group-hover:text-brand-700 line-clamp-2">
-          {news.title}
+          {title}
         </h3>
-        {news.excerpt && (
+        {excerpt && (
           <p className="mt-2 text-sm sm:text-base text-brand-600 line-clamp-2">
-            {news.excerpt}
+            {excerpt}
           </p>
         )}
         <time className="mt-3 block text-xs text-brand-500">
@@ -106,7 +119,8 @@ function NewsHero({ news, featuredLabel }: { news: HomepageNewsItem; featuredLab
   )
 }
 
-function NewsListItem({ news }: { news: HomepageNewsItem }) {
+function NewsListItem({ news, locale }: { news: HomepageNewsItem; locale: Locale }) {
+  const title = localize(news, "title", locale) as string
   return (
     <Link
       href={`/tin-tuc/${news.slug}`}
@@ -129,7 +143,7 @@ function NewsListItem({ news }: { news: HomepageNewsItem }) {
       )}
       <div className="min-w-0 flex-1">
         <h4 className="line-clamp-2 text-sm font-semibold text-brand-900 group-hover:text-brand-700">
-          {news.title}
+          {title}
         </h4>
         <time className="mt-1 block text-xs text-brand-500">
           {formatDate(news.publishedAt)}
