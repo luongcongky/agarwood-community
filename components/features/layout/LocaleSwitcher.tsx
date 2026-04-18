@@ -4,17 +4,12 @@ import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import { ChevronDown } from "lucide-react"
 import { locales, type Locale } from "@/i18n/config"
+import { Flag } from "./flag-icons"
 
 const localeLabels: Record<Locale, string> = {
   vi: "Tiếng Việt",
   en: "English",
   zh: "中文",
-}
-
-const localeFlags: Record<Locale, string> = {
-  vi: "🇻🇳",
-  en: "🇬🇧",
-  zh: "🇨🇳",
 }
 
 export function LocaleSwitcher({ current }: { current: Locale }) {
@@ -51,9 +46,9 @@ export function LocaleSwitcher({ current }: { current: Locale }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`Ngôn ngữ hiện tại: ${localeLabels[current]}`}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
       >
-        <span className="text-lg leading-none">{localeFlags[current]}</span>
+        <Flag locale={current} className="h-4 w-6 rounded-sm border border-brand-700 shadow-sm" />
         <ChevronDown
           className={`h-3.5 w-3.5 opacity-70 transition-transform ${open ? "rotate-180" : ""}`}
         />
@@ -76,13 +71,13 @@ export function LocaleSwitcher({ current }: { current: Locale }) {
                 }}
                 role="option"
                 aria-selected={isActive}
-                className={`flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                className={`flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? "bg-brand-700 text-brand-100 font-semibold"
                     : "text-brand-200 hover:bg-brand-700 hover:text-brand-100"
                 }`}
               >
-                <span className="text-lg leading-none">{localeFlags[locale]}</span>
+                <Flag locale={locale} className="h-4 w-6 shrink-0 rounded-sm border border-brand-700 shadow-sm" />
                 <span>{localeLabels[locale]}</span>
                 {isActive && (
                   <span className="ml-auto text-xs text-brand-300">✓</span>
