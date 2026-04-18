@@ -1,7 +1,8 @@
 import Link from "next/link"
 import Image from "next/image"
 import { prisma } from "@/lib/prisma"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
+import type { Locale } from "@/i18n/config"
 import { getTierThresholds } from "@/lib/tier"
 
 export const revalidate = 600
@@ -30,6 +31,7 @@ function formatVnd(n: number): string {
 export default async function LandingPage() {
   const t = await getTranslations("landing")
   const tc = await getTranslations("common")
+  const locale = (await getLocale()) as Locale
 
   const [
     vipCount,
@@ -386,12 +388,11 @@ export default async function LandingPage() {
 
           <div className="mt-8 mx-auto max-w-2xl rounded-xl border border-brand-200 bg-brand-50/50 px-5 py-4 text-center text-xs text-brand-500 leading-relaxed">
             <p>
-              * Hạng hội viên trên nền tảng số được xác định dựa trên tổng đóng góp tài chính
-              và tự động nâng c���p khi đạt ngư��ng tương ứng. Đây là quyền lợi bổ sung trên
-              nền tảng số, không thay thế quyền và nghĩa vụ hội viên theo{" "}
-              <Link href="/dieu-le" className="underline underline-offset-2 text-brand-700 hover:text-brand-900">
-                Điều lệ Hội Trầm Hương Việt Nam
-              </Link>.
+              {t("tierDisclaimer")}{" "}
+              <Link href={`/${locale}/dieu-le`} className="underline underline-offset-2 text-brand-700 hover:text-brand-900">
+                {t("charterLinkText")}
+              </Link>
+              .
             </p>
           </div>
         </div>

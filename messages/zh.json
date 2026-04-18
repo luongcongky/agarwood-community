@@ -318,7 +318,9 @@
     "finalCtaTitle": "准备将您的品牌提升到新高度？",
     "finalCtaDesc": "今天免费注册。无需信用卡。您可以随时升级为会员。",
     "finalCtaButton": "立即注册 →",
-    "finalCtaContact": "联系咨询"
+    "finalCtaContact": "联系咨询",
+    "tierDisclaimer": "* 数字平台上的会员等级根据财务贡献总额确定，在达到相应阈值时自动升级。这是数字平台上的附加权益，不替代根据以下文件规定的会员权利和义务：",
+    "charterLinkText": "越南沉香协会章程"
   },
   "register": {
     "metaTitle": "会员注册 | 越南沉香协会",

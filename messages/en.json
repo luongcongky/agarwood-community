@@ -318,7 +318,9 @@
     "finalCtaTitle": "Ready to take your brand to the next level?",
     "finalCtaDesc": "Register for free today. No credit card required. You can upgrade to Member anytime.",
     "finalCtaButton": "Register now →",
-    "finalCtaContact": "Contact us"
+    "finalCtaContact": "Contact us",
+    "tierDisclaimer": "* Member tiers on the digital platform are determined by total financial contributions and automatically upgrade when the corresponding threshold is reached. This is a supplementary benefit on the digital platform and does not replace member rights and obligations under the",
+    "charterLinkText": "Charter of the Vietnam Agarwood Association"
   },
   "register": {
     "metaTitle": "Member Registration | Vietnam Agarwood Association",

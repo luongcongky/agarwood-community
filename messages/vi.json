@@ -318,7 +318,9 @@
     "finalCtaTitle": "Sẵn sàng đưa thương hiệu của bạn lên tầm cao mới?",
     "finalCtaDesc": "Đăng ký miễn phí ngay hôm nay. Không cần thẻ tín dụng. Bạn có thể nâng cấp lên Hội viên bất cứ lúc nào.",
     "finalCtaButton": "Đăng ký ngay →",
-    "finalCtaContact": "Liên hệ tư vấn"
+    "finalCtaContact": "Liên hệ tư vấn",
+    "tierDisclaimer": "* Hạng hội viên trên nền tảng số được xác định dựa trên tổng đóng góp tài chính và tự động nâng cấp khi đạt ngưỡng tương ứng. Đây là quyền lợi bổ sung trên nền tảng số, không thay thế quyền và nghĩa vụ hội viên theo",
+    "charterLinkText": "Điều lệ Hội Trầm Hương Việt Nam"
   },
   "register": {
     "metaTitle": "Đăng ký Hội viên | Hội Trầm Hương Việt Nam",
