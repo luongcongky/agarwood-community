@@ -57,7 +57,7 @@ export function CompanyTabs({
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "intro", label: t("tabIntro") },
-    { id: "products", label: `{t("tabProducts")} (${products.length})` },
+    { id: "products", label: `${t("tabProducts")} (${products.length})` },
     { id: "info", label: t("tabInfo") },
   ]
 
