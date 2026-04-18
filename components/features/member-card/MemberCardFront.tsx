@@ -105,10 +105,10 @@ export function MemberCardFront({
             </div>
             <div className="min-w-0 flex-1">
               <p
-                className="font-bold uppercase"
+                className="font-bold uppercase whitespace-nowrap"
                 style={{
                   color: theme.textPrimary,
-                  fontSize: "clamp(6px, 1.7cqw, 11px)",
+                  fontSize: "clamp(5px, 1.6cqw, 10px)",
                   lineHeight: 1.1,
                 }}
               >
