@@ -105,10 +105,11 @@ export function MemberCardFront({
             </div>
             <div className="min-w-0 flex-1">
               <p
-                className="font-bold uppercase leading-tight truncate"
+                className="font-bold uppercase"
                 style={{
                   color: theme.textPrimary,
-                  fontSize: "clamp(7px, 2cqw, 12px)",
+                  fontSize: "clamp(6px, 1.7cqw, 11px)",
+                  lineHeight: 1.1,
                 }}
               >
                 Hội Trầm Hương Việt Nam
@@ -117,8 +118,8 @@ export function MemberCardFront({
                 className="uppercase tracking-widest truncate"
                 style={{
                   color: theme.textSecondary,
-                  fontSize: "clamp(4px, 1.1cqw, 7px)",
-                  letterSpacing: "0.12em",
+                  fontSize: "clamp(4px, 1cqw, 7px)",
+                  letterSpacing: "0.1em",
                 }}
               >
                 Vietnam Agarwood Association
@@ -188,7 +189,7 @@ export function MemberCardFront({
                 className="mt-1 truncate"
                 style={{
                   color: theme.textSecondary,
-                  fontSize: "clamp(7px, 1.8cqw, 11px)",
+                  fontSize: "clamp(6px, 1.5cqw, 9px)",
                 }}
               >
                 {data.title}
@@ -199,7 +200,7 @@ export function MemberCardFront({
                 className="mt-0.5 line-clamp-2"
                 style={{
                   color: theme.textSecondary,
-                  fontSize: "clamp(7px, 1.7cqw, 10px)",
+                  fontSize: "clamp(6px, 1.4cqw, 8px)",
                   lineHeight: 1.2,
                 }}
                 title={data.companyName}
