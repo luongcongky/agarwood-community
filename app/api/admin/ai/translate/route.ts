@@ -6,6 +6,7 @@ import { generateJSON, AllModelsFailedError } from "@/lib/gemini-models"
 const LOCALE_NAMES: Record<string, string> = {
   en: "English",
   zh: "Simplified Chinese (中文)",
+  ar: "Modern Standard Arabic (العربية)",
 }
 
 const TRANSLATION_PROMPT = `You are a professional translator for an agarwood industry association website (Hội Trầm Hương Việt Nam / Vietnam Agarwood Association).
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
   }
 
   if (!targetLocale || !LOCALE_NAMES[targetLocale]) {
-    return NextResponse.json({ error: "targetLocale phải là 'en' hoặc 'zh'" }, { status: 400 })
+    return NextResponse.json({ error: "targetLocale phải là 'en', 'zh' hoặc 'ar'" }, { status: 400 })
   }
 
   // Accept both new generic shape (`fields`) and legacy shape (`title/excerpt/content`).

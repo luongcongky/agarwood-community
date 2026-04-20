@@ -34,17 +34,21 @@ type FormData = {
   name: string
   name_en: string
   name_zh: string
+  name_ar: string
   honorific: string
   title: string
   title_en: string
   title_zh: string
+  title_ar: string
   category: LeaderCategory
   workTitle: string
   workTitle_en: string
   workTitle_zh: string
+  workTitle_ar: string
   bio: string
   bio_en: string
   bio_zh: string
+  bio_ar: string
   photoUrl: string
   term: string
   sortOrder: number
@@ -54,17 +58,21 @@ const EMPTY_FORM: FormData = {
   name: "",
   name_en: "",
   name_zh: "",
+  name_ar: "",
   honorific: "Ông",
   title: "",
   title_en: "",
   title_zh: "",
+  title_ar: "",
   category: "BCH",
   workTitle: "",
   workTitle_en: "",
   workTitle_zh: "",
+  workTitle_ar: "",
   bio: "",
   bio_en: "",
   bio_zh: "",
+  bio_ar: "",
   photoUrl: "",
   term: "",
   sortOrder: 0,
@@ -100,11 +108,12 @@ export function LeaderManager({
   const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [saving, setSaving] = useState(false)
 
-  function langValues(name: LangFieldName): { vi: string; en: string; zh: string } {
+  function langValues(name: LangFieldName): { vi: string; en: string; zh: string; ar: string } {
     return {
       vi: (form[langKey(name, "vi")] as string) ?? "",
       en: (form[langKey(name, "en")] as string) ?? "",
       zh: (form[langKey(name, "zh")] as string) ?? "",
+      ar: (form[langKey(name, "ar")] as string) ?? "",
     }
   }
 
@@ -155,17 +164,21 @@ export function LeaderManager({
       name: leader.name,
       name_en: (leader as Record<string, unknown>).name_en as string ?? "",
       name_zh: (leader as Record<string, unknown>).name_zh as string ?? "",
+      name_ar: (leader as Record<string, unknown>).name_ar as string ?? "",
       honorific: leader.honorific ?? "Ông",
       title: leader.title,
       title_en: (leader as Record<string, unknown>).title_en as string ?? "",
       title_zh: (leader as Record<string, unknown>).title_zh as string ?? "",
+      title_ar: (leader as Record<string, unknown>).title_ar as string ?? "",
       category: leader.category,
       workTitle: leader.workTitle ?? "",
       workTitle_en: (leader as Record<string, unknown>).workTitle_en as string ?? "",
       workTitle_zh: (leader as Record<string, unknown>).workTitle_zh as string ?? "",
+      workTitle_ar: (leader as Record<string, unknown>).workTitle_ar as string ?? "",
       bio: leader.bio ?? "",
       bio_en: (leader as Record<string, unknown>).bio_en as string ?? "",
       bio_zh: (leader as Record<string, unknown>).bio_zh as string ?? "",
+      bio_ar: (leader as Record<string, unknown>).bio_ar as string ?? "",
       photoUrl: leader.photoUrl ?? "",
       term: leader.term,
       sortOrder: leader.sortOrder,

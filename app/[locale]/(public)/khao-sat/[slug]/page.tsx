@@ -17,7 +17,7 @@ export default async function PublicTakeSurveyPage({ params }: { params: Promise
   const survey = await prisma.survey.findUnique({
     where: { slug },
     select: {
-      slug: true, title: true, title_en: true, title_zh: true, description: true, description_en: true, description_zh: true, status: true,
+      slug: true, title: true, title_en: true, title_zh: true, title_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, status: true,
       audience: true, questions: true, config: true,
     },
   })

@@ -82,9 +82,9 @@ export default async function NewsPage({
       take: PAGE_SIZE,
       select: {
         id: true,
-        title: true, title_en: true, title_zh: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
         slug: true,
-        excerpt: true, excerpt_en: true, excerpt_zh: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
         coverImageUrl: true,
         isPinned: true,
         publishedAt: true,
@@ -95,7 +95,7 @@ export default async function NewsPage({
       where: { isPublished: true, category: "GENERAL" },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
-      select: { id: true, title: true, title_en: true, title_zh: true, slug: true, publishedAt: true, isPinned: true },
+      select: { id: true, title: true, title_en: true, title_zh: true, title_ar: true, slug: true, publishedAt: true, isPinned: true },
     }),
   ])
 

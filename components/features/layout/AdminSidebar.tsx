@@ -27,8 +27,12 @@ import {
   Menu as MenuIcon,
   Images,
   ChevronDown,
+  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
+import { NotificationBell } from "@/components/features/admin/NotificationBell"
+import type { PendingWorkflowKey } from "@/app/api/admin/pending-counts/route"
 
 // ── Nav structure ──────────────────────────────────────────────────────────
 //
@@ -39,6 +43,9 @@ type NavItem = {
   label: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+  // When set, this menu item shows a red pending-count badge driven by
+  // the admin notification polling context.
+  pendingKey?: PendingWorkflowKey
 }
 
 type NavGroup = {
@@ -58,7 +65,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Hội viên & Tổ chức",
     items: [
       { label: "Hội viên", href: "/admin/hoi-vien", icon: Users },
-      { label: "Đơn kết nạp", href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck },
+      { label: "Đơn kết nạp", href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck, pendingKey: "membershipApplication" },
       { label: "Ban lãnh đạo", href: "/admin/ban-lanh-dao", icon: Crown },
     ],
   },
@@ -66,7 +73,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     key: "products",
     label: "Sản phẩm & Chứng nhận",
     items: [
-      { label: "Chứng nhận", href: "/admin/chung-nhan", icon: BadgeCheck },
+      { label: "Chứng nhận", href: "/admin/chung-nhan", icon: BadgeCheck, pendingKey: "certification" },
       { label: "Tiêu biểu", href: "/admin/tieu-bieu", icon: Star },
     ],
   },
@@ -77,17 +84,18 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { label: "Tin tức", href: "/admin/tin-tuc", icon: Newspaper },
       { label: "Tài liệu", href: "/admin/tai-lieu", icon: FileText },
       { label: "Văn bản pháp quy", href: "/admin/phap-ly", icon: Scale },
-      { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone },
-      { label: "Banner QC", href: "/admin/banner", icon: ImageIcon },
+      { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone, pendingKey: "mediaOrder" },
+      { label: "Banner QC", href: "/admin/banner", icon: ImageIcon, pendingKey: "banner" },
     ],
   },
   {
     key: "interaction",
     label: "Tương tác",
     items: [
-      { label: "Báo cáo", href: "/admin/bao-cao", icon: Flag },
+      { label: "Liên hệ", href: "/admin/lien-he", icon: Mail, pendingKey: "contact" },
+      { label: "Báo cáo", href: "/admin/bao-cao", icon: Flag, pendingKey: "report" },
       { label: "Khảo sát", href: "/admin/khao-sat", icon: ClipboardList },
-      { label: "Tư vấn", href: "/admin/tu-van", icon: Headset },
+      { label: "Tư vấn", href: "/admin/tu-van", icon: Headset, pendingKey: "consultation" },
     ],
   },
   {
@@ -95,7 +103,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Đối tác & Tài chính",
     items: [
       { label: "Đối tác", href: "/admin/doi-tac", icon: Handshake },
-      { label: "Xác nhận CK", href: "/admin/thanh-toan", icon: BadgeCheck },
+      { label: "Xác nhận CK", href: "/admin/thanh-toan", icon: BadgeCheck, pendingKey: "payment" },
     ],
   },
   {
@@ -141,6 +149,7 @@ interface AdminNavLinksProps {
 /** Dùng lại cả trong sidebar desktop và Sheet mobile */
 export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
   const pathname = usePathname()
+  const { data: pending } = usePendingCounts()
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
 
@@ -191,7 +200,15 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
                 aria-expanded={isOpen}
                 className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-[11px] uppercase tracking-wider font-semibold text-sidebar-foreground/50 hover:text-sidebar-foreground/80 transition-colors"
               >
-                <span>{group.label}</span>
+                <span className="flex items-center gap-2">
+                  {group.label}
+                  {/* When group is collapsed, a red dot signals that at
+                      least one item inside has pending work — so admin
+                      notices without needing to expand every accordion. */}
+                  {!isOpen && group.items.some((it) => it.pendingKey && (pending?.workflows[it.pendingKey].count ?? 0) > 0) && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                  )}
+                </span>
                 <ChevronDown
                   className={cn(
                     "h-3.5 w-3.5 transition-transform shrink-0",
@@ -203,8 +220,9 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
 
             {isOpen && (
               <div className="space-y-0.5">
-                {group.items.map(({ label, href, icon: Icon }) => {
+                {group.items.map(({ label, href, icon: Icon, pendingKey }) => {
                   const active = pathname === href || pathname.startsWith(href + "/")
+                  const badgeCount = pendingKey ? pending?.workflows[pendingKey].count ?? 0 : 0
                   return (
                     <Link
                       key={href}
@@ -218,7 +236,15 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
-                      {label}
+                      <span className="flex-1 truncate">{label}</span>
+                      {badgeCount > 0 && (
+                        <span
+                          className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold tabular-nums"
+                          title={`${badgeCount} mục chờ xử lý`}
+                        >
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
                     </Link>
                   )
                 })}
@@ -262,27 +288,32 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
 export function AdminSidebar() {
   return (
     <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col bg-sidebar h-full">
-      {/* Header — click logo để về trang chủ quản trị */}
-      <Link
-        href="/admin"
-        className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors"
-        title="Trang chủ quản trị"
-      >
-        <Image
-          src="/logo.png"
-          alt="Hội Trầm Hương Việt Nam"
-          width={40}
-          height={40}
-          className="h-10 w-10 shrink-0"
-          priority
-        />
-        <div>
-          <p className="text-sidebar-primary font-semibold text-sm leading-tight">
-            Hội Trầm Hương
-          </p>
-          <p className="text-sidebar-foreground/60 text-xs">Quản trị viên</p>
-        </div>
-      </Link>
+      {/* Header: logo (→ /admin) + notification bell. Bell sits in the
+          header so the pending-count badge is visible from every admin
+          page without needing a separate top toolbar. */}
+      <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+          title="Trang chủ quản trị"
+        >
+          <Image
+            src="/logo.png"
+            alt="Hội Trầm Hương Việt Nam"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0"
+            priority
+          />
+          <div className="min-w-0">
+            <p className="text-sidebar-primary font-semibold text-sm leading-tight truncate">
+              Hội Trầm Hương
+            </p>
+            <p className="text-sidebar-foreground/60 text-xs">Quản trị viên</p>
+          </div>
+        </Link>
+        <NotificationBell align="start" />
+      </div>
 
       <AdminNavLinks />
     </aside>

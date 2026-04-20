@@ -101,6 +101,24 @@ export default async function FeedPage() {
     getTierThresholds("INDIVIDUAL"),
   ])
 
+  // Vertical sidebar ads — ACTIVE banners at SIDEBAR position currently
+  // within their date window. Rendered as a sticky rail in the feed aside.
+  const nowDate = new Date()
+  const sidebarBanners = await prisma.banner.findMany({
+    where: {
+      status: "ACTIVE",
+      position: "SIDEBAR",
+      startDate: { lte: nowDate },
+      endDate: { gte: nowDate },
+    },
+    orderBy: [
+      { user: { contributionTotal: "desc" } },
+      { createdAt: "desc" },
+    ],
+    take: 5,
+    select: { id: true, title: true, imageUrl: true, targetUrl: true },
+  })
+
   return (
     <FeedClient
       initialPosts={posts}
@@ -124,6 +142,7 @@ export default async function FeedPage() {
           : null
       }
       topContributors={topContributors}
+      sidebarBanners={sidebarBanners}
     />
   )
 }

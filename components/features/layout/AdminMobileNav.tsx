@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { AdminNavLinks } from "./AdminSidebar"
+import { NotificationBell } from "@/components/features/admin/NotificationBell"
 
 /**
  * Top bar + Sheet drawer dành riêng cho admin trên mobile (< md / 768px).
@@ -49,6 +50,13 @@ export function AdminMobileNav() {
       <span className="text-sidebar-foreground font-semibold text-base">
         Quản trị
       </span>
+
+      {/* Notification bell on the right of the mobile top bar so the
+          pending-count badge stays in eye-line even with the sidebar
+          drawer closed. */}
+      <div className="ml-auto">
+        <NotificationBell />
+      </div>
     </header>
   )
 }

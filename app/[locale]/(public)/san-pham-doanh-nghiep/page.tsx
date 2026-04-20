@@ -98,10 +98,10 @@ export default async function MarketplacePage({
       take: PAGE_SIZE,
       select: {
         id: true,
-        name: true, name_en: true, name_zh: true,
+        name: true, name_en: true, name_zh: true, name_ar: true,
         slug: true,
         imageUrls: true,
-        category: true, category_en: true, category_zh: true,
+        category: true, category_en: true, category_zh: true, category_ar: true,
         priceRange: true,
         certStatus: true,
         isFeatured: true,
@@ -113,7 +113,7 @@ export default async function MarketplacePage({
         },
         company: {
           select: {
-            name: true, name_en: true, name_zh: true,
+            name: true, name_en: true, name_zh: true, name_ar: true,
             slug: true,
             logoUrl: true,
             isVerified: true,

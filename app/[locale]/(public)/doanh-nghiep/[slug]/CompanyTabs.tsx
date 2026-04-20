@@ -1,6 +1,6 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -52,6 +52,7 @@ export function CompanyTabs({
   canEdit,
 }: Props) {
   const t = useTranslations("companyTabs")
+  const locale = useLocale()
 
   const [activeTab, setActiveTab] = useState<TabId>("intro")
 
@@ -99,7 +100,7 @@ export function CompanyTabs({
             {canEdit && (
               <div className="mb-4">
                 <Link
-                  href="/san-pham/tao-moi"
+                  href={`/${locale}/feed/tao-bai?category=PRODUCT`}
                   className="inline-flex items-center gap-2 rounded-lg bg-brand-700 text-white px-4 py-2 text-sm font-medium hover:bg-brand-800 transition-colors"
                 >
                   {t("addProduct")}

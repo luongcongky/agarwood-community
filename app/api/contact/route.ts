@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import { prisma } from "@/lib/prisma"
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
 
@@ -32,11 +33,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Nội dung quá dài." }, { status: 400 })
   }
 
+  // Persist first — DB is the source of truth. Even if email delivery
+  // fails (Resend down, inbox full, spam-filtered), admin still sees
+  // the request in /admin/lien-he and the notification bell.
+  await prisma.contactMessage.create({
+    data: {
+      name,
+      email,
+      phone: phone || null,
+      message,
+    },
+  })
+
   const esc = (s: string) =>
     s.replace(/[&<>"']/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
     )
 
+  // Email is a side-channel notifier — any failure is logged but does
+  // not fail the request, because the DB row is already saved.
   try {
     await resend.emails.send({
       from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
@@ -51,15 +66,12 @@ export async function POST(req: Request) {
           ${phone ? `<p><strong>Điện thoại:</strong> ${esc(phone)}</p>` : ""}
           <p><strong>Nội dung:</strong></p>
           <div style="white-space:pre-wrap;padding:12px;background:#f5f5f5;border-radius:8px;">${esc(message)}</div>
+          <p style="color:#888;font-size:12px;margin-top:16px;">Tin nhắn đã được lưu trong /admin/lien-he.</p>
         </div>
       `,
     })
   } catch (err) {
-    console.error("Failed to send contact email:", err)
-    return NextResponse.json(
-      { error: "Không thể gửi liên hệ. Vui lòng thử lại sau." },
-      { status: 500 },
-    )
+    console.error("Failed to send contact email (DB row still saved):", err)
   }
 
   return NextResponse.json({ success: true })

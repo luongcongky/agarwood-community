@@ -144,6 +144,12 @@
   html {
     @apply font-sans;
   }
+  /* Arabic script — swap body font to Noto Sans Arabic since Be Vietnam
+     Pro doesn't cover Arabic glyphs. `lang="ar"` is set on <html> by
+     RootLayout when the request locale is AR. */
+  html[lang="ar"] {
+    font-family: var(--font-ar), var(--font-body), system-ui, sans-serif;
+  }
 }
 
 /* ── Prose overrides — hợp màu brand trầm hương ─────────────────────────── */
@@ -160,4 +166,41 @@
 }
 .prose :where(strong):not(:where([class~="not-prose"] *)) {
   color: inherit;
+}
+
+/* ── Refined typography pass (Option A) ─────────────────────────────────── */
+/* Applied site-wide via `.refined-typography` on <body> (see app/layout.tsx).
+   Goal: tighter, more editorial / premium-news feel without swapping fonts —
+   tighten heading tracking + line-height, drop heading weight from bold→
+   medium for a thinner stroke, relax body line-height for reading comfort,
+   and turn on common OpenType features. Class-level specificity beats
+   Tailwind's font-bold / font-semibold utilities on raw element selectors. */
+.refined-typography h1,
+.refined-typography h2,
+.refined-typography h3,
+.refined-typography h4 {
+  /* Lighter stroke — overrides Tailwind font-bold (700) applied inline in
+     section components. Thinner headlines while visual hierarchy stays
+     via size. */
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-feature-settings: "liga", "kern";
+  text-wrap: balance;
+}
+.refined-typography h1 { line-height: 1.1; font-weight: 600; }
+.refined-typography h2 { line-height: 1.15; }
+.refined-typography h3 { line-height: 1.2; }
+
+/* Body copy — a hair more breathing room for longer reading passages.
+   Small meta text (≤12px) keeps a compact rhythm. */
+.refined-typography p { line-height: 1.7; }
+.refined-typography p.text-xs,
+.refined-typography p.text-\[11px\],
+.refined-typography p.text-\[10px\] { line-height: 1.45; }
+
+/* Homepage — thin gold divider below first <h2> of each major
+   white-card section for a subtle editorial accent. */
+[data-page="home"] section h2 + p,
+[data-page="home"] section h2 + div {
+  margin-top: 0.5rem;
 }

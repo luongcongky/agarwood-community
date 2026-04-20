@@ -22,12 +22,12 @@ export default async function PublicSurveyLandingPage() {
     prisma.survey.findFirst({
       where: { status: "ACTIVE", audience: "BUSINESS" },
       orderBy: { createdAt: "desc" },
-      select: { slug: true, title: true, title_en: true, title_zh: true, description: true },
+      select: { slug: true, title: true, title_en: true, title_zh: true, title_ar: true, description: true },
     }),
     prisma.survey.findFirst({
       where: { status: "ACTIVE", audience: "INDIVIDUAL" },
       orderBy: { createdAt: "desc" },
-      select: { slug: true, title: true, title_en: true, title_zh: true, description: true },
+      select: { slug: true, title: true, title_en: true, title_zh: true, title_ar: true, description: true },
     }),
   ])
 

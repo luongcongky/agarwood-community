@@ -79,10 +79,30 @@ export function FlagEN({ className }: FlagProps) {
   )
 }
 
+export function FlagAR({ className }: FlagProps) {
+  // UAE flag — chosen as the pan-Arab representation for the switcher.
+  // Four horizontal bands: red hoist, green-white-black stripes.
+  return (
+    <svg
+      viewBox="0 0 30 20"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      role="img"
+      aria-label="Arabic"
+    >
+      <rect width="30" height="20" fill="#EF3340" />
+      <rect x="7.5" width="22.5" height="6.667" fill="#00732F" />
+      <rect x="7.5" y="6.667" width="22.5" height="6.666" fill="#FFFFFF" />
+      <rect x="7.5" y="13.333" width="22.5" height="6.667" fill="#000000" />
+    </svg>
+  )
+}
+
 const FLAGS: Record<Locale, (props: FlagProps) => React.ReactElement> = {
   vi: FlagVN,
   en: FlagEN,
   zh: FlagCN,
+  ar: FlagAR,
 }
 
 export function Flag({ locale, className }: { locale: Locale; className?: string }) {

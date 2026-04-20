@@ -135,8 +135,9 @@ enum BannerStatus {
 }
 
 enum BannerPosition {
-  TOP   // Đầu trang chủ — ngay sau thanh menu
-  MID   // Giữa trang chủ — sau section Sản phẩm chứng nhận
+  TOP        // Đầu trang chủ — ngay sau thanh menu
+  MID        // Giữa trang chủ — sau section Sản phẩm chứng nhận
+  SIDEBAR    // Rail dọc bên phải trang /feed (sticky khi scroll)
 }
 
 // Danh mục đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
@@ -172,6 +173,7 @@ model User {
   bio               String?   @db.Text
   bio_en            String?   @db.Text
   bio_zh            String?   @db.Text
+  bio_ar            String?   @db.Text
 
   // Refund info — dùng khi hoàn phí chứng nhận bị từ chối
   bankAccountName   String?
@@ -205,6 +207,7 @@ model User {
   surveyResponses   SurveyResponse[]
   consultationRequests ConsultationRequest[] @relation("ConsultationRequester")
   consultationsHandled ConsultationRequest[] @relation("ConsultationHandler")
+  contactMessagesHandled ContactMessage[]    @relation("ContactHandler")
   honoraryContributions        HonoraryContribution[] @relation("HonoraryRecipient")
   honoraryContributionsCreated HonoraryContribution[] @relation("HonoraryCreatedBy")
 
@@ -349,10 +352,12 @@ model Company {
   name             String
   name_en          String?
   name_zh          String?
+  name_ar          String?
   slug             String    @unique  // dùng cho URL: /companies/[slug]
   description      String?   @db.Text
   description_en   String?   @db.Text
   description_zh   String?   @db.Text
+  description_ar   String?   @db.Text
   logoUrl          String?
   coverImageUrl    String?
   website          String?
@@ -360,6 +365,7 @@ model Company {
   address          String?
   address_en       String?
   address_zh       String?
+  address_ar       String?
   foundedYear      Int?
   employeeCount    String?   // "1-10", "10-50", "50-200",...
   businessLicense  String?   // số ĐKKD
@@ -369,6 +375,7 @@ model Company {
   representativePosition String?
   representativePosition_en String?
   representativePosition_zh String?
+  representativePosition_ar String?
 
   isVerified       Boolean   @default(false) // admin verify
   isPublished      Boolean   @default(true)
@@ -396,14 +403,17 @@ model Product {
   name            String
   name_en         String?
   name_zh         String?
+  name_ar         String?
   slug            String      @unique
   description     String?     @db.Text
   description_en  String?     @db.Text
   description_zh  String?     @db.Text
+  description_ar  String?     @db.Text
   imageUrls       String[]    // mảng URL ảnh sản phẩm (Cloudinary)
   category        String?     // loại trầm: trầm tự nhiên, trầm nuôi cấy, tinh dầu,...
   category_en     String?
   category_zh     String?
+  category_ar     String?
   priceRange      String?     // "500k-1tr", "1tr-5tr",...
   isPublished     Boolean     @default(true)
 
@@ -666,13 +676,16 @@ model News {
   title        String
   title_en     String?
   title_zh     String?
+  title_ar     String?
   slug         String       @unique
   excerpt      String?
   excerpt_en   String?
   excerpt_zh   String?
+  excerpt_ar   String?
   content      String       @db.Text
   content_en   String?      @db.Text
   content_zh   String?      @db.Text
+  content_ar   String?      @db.Text
   coverImageUrl String?
   category     NewsCategory @default(GENERAL)
   isPublished  Boolean      @default(false)
@@ -762,6 +775,7 @@ model MenuItem {
   label         String
   label_en      String?
   label_zh      String?
+  label_ar      String?
   href          String
   parentId      String?
   parent        MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
@@ -885,15 +899,18 @@ model Document {
   title             String
   title_en          String?
   title_zh          String?
+  title_ar          String?
   description       String?           @db.Text
   description_en    String?           @db.Text
   description_zh    String?           @db.Text
+  description_ar    String?           @db.Text
   category          DocumentCategory
   documentNumber    String?           // số hiệu công văn (vd: CV-2026-001, 56/QĐ-VAWA)
   issuedDate        DateTime?         // ngày ban hành
   issuer            String?           // cơ quan / người ban hành (vd: "Chủ tịch VAWA", "Bộ Nội vụ")
   issuer_en         String?
   issuer_zh         String?
+  issuer_ar         String?
   sortOrder         Int               @default(0) // thứ tự hiển thị trên /phap-ly
   isPublic          Boolean           @default(false) // true = hiển thị trên /phap-ly (public)
 
@@ -910,6 +927,7 @@ model Document {
   summary           String?           @db.Text
   summary_en        String?           @db.Text
   summary_zh        String?           @db.Text
+  summary_ar        String?           @db.Text
 
   // Metadata
   uploadedBy        String            // adminId
@@ -938,19 +956,24 @@ model Leader {
   name         String
   name_en      String?
   name_zh      String?
+  name_ar      String?
   honorific    String?        // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
   honorific_en String?
   honorific_zh String?
+  honorific_ar String?
   title        String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
   title_en     String?
   title_zh     String?
+  title_ar     String?
   category     LeaderCategory @default(BCH) // nhóm chính hiển thị
   workTitle    String?        // chức vụ đơn vị công tác
   workTitle_en String?
   workTitle_zh String?
+  workTitle_ar String?
   bio          String?        @db.Text
   bio_en       String?        @db.Text
   bio_zh       String?        @db.Text
+  bio_ar       String?        @db.Text
   photoUrl  String?
   term      String         // "Nhiệm kỳ III (2023–2028)"
   sortOrder Int            @default(0)
@@ -1052,14 +1075,17 @@ model Survey {
   title          String
   title_en       String?
   title_zh       String?
+  title_ar       String?
   description    String?        @db.Text
   description_en String?        @db.Text
   description_zh String?        @db.Text
+  description_ar String?        @db.Text
   audience    SurveyAudience @default(BOTH_VIP)
   status      SurveyStatus   @default(DRAFT)
   questions   Json           // mảng câu hỏi (xem comment trên)
   questions_en Json?         // translated questions array (same structure, labels in English)
   questions_zh Json?         // translated questions array (same structure, labels in Chinese)
+  questions_ar Json?         // translated questions array (same structure, labels in Arabic)
   config      Json?          // { scoring: {...}, recommendation: {...} } — tùy loại survey
   startsAt    DateTime?
   endsAt      DateTime?
@@ -1137,4 +1163,36 @@ model ConsultationRequest {
   @@index([status, createdAt])
   @@index([userId])
   @@map("consultation_requests")
+}
+
+// ============================================================
+// CONTACT MESSAGES — form liên hệ công khai (/lien-he)
+// ============================================================
+// Guest / anon gửi qua form ở footer & trang /lien-he. Lưu DB trước
+// rồi gửi email notify → admin thấy lại trong /admin/lien-he và
+// notification bell kể cả khi email bị lọc / inbox chung bị bỏ sót.
+
+enum ContactStatus {
+  NEW        // vừa gửi, chờ admin đọc
+  HANDLED    // admin đã liên hệ lại / xử lý xong
+  ARCHIVED   // lưu trữ, không cần xử lý (spam, trùng...)
+}
+
+model ContactMessage {
+  id          String         @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  message     String         @db.Text
+  status      ContactStatus  @default(NEW)
+  handledAt   DateTime?
+  handledById String?
+  adminNote   String?        @db.Text
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  handledBy   User?          @relation("ContactHandler", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("contact_messages")
 }

@@ -49,6 +49,7 @@ export function CompanyEditForm({ company }: { company: Company }) {
   const [name, setName] = useState(company.name)
   const [name_en, setNameEn] = useState((c.name_en as string) ?? "")
   const [name_zh, setNameZh] = useState((c.name_zh as string) ?? "")
+  const [name_ar, setNameAr] = useState((c.name_ar as string) ?? "")
   const [slug, setSlug] = useState(company.slug)
   const descriptionRef = useRef<RichTextEditorHandle>(null)
   const [foundedYear, setFoundedYear] = useState(company.foundedYear?.toString() ?? "")
@@ -57,8 +58,10 @@ export function CompanyEditForm({ company }: { company: Company }) {
   const [address, setAddress] = useState(company.address ?? "")
   const [address_en, setAddressEn] = useState((c.address_en as string) ?? "")
   const [address_zh, setAddressZh] = useState((c.address_zh as string) ?? "")
+  const [address_ar, setAddressAr] = useState((c.address_ar as string) ?? "")
   const [description_en, setDescriptionEn] = useState((c.description_en as string) ?? "")
   const [description_zh, setDescriptionZh] = useState((c.description_zh as string) ?? "")
+  const [description_ar, setDescriptionAr] = useState((c.description_ar as string) ?? "")
   const [phone, setPhone] = useState(company.phone ?? "")
   const [website, setWebsite] = useState(company.website ?? "")
   const [logoUrl, setLogoUrl] = useState(company.logoUrl ?? "")
@@ -154,16 +157,19 @@ export function CompanyEditForm({ company }: { company: Company }) {
         name,
         name_en: name_en || null,
         name_zh: name_zh || null,
+        name_ar: name_ar || null,
         slug,
         description,
         description_en: description_en || null,
         description_zh: description_zh || null,
+        description_ar: description_ar || null,
         foundedYear: foundedYear ? Number(foundedYear) : null,
         employeeCount,
         businessLicense,
         address,
         address_en: address_en || null,
         address_zh: address_zh || null,
+        address_ar: address_ar || null,
         phone,
         website,
         logoUrl,
@@ -184,15 +190,6 @@ export function CompanyEditForm({ company }: { company: Company }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {msg && (
-        <div className={cn(
-          "rounded-lg border px-4 py-3 text-sm",
-          msg.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700",
-        )}>
-          {msg.text}
-        </div>
-      )}
-
       {/* ── Section 1: Thong tin co ban ─────────────────────────────── */}
       <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
         <h2 className="font-semibold text-brand-900">Thông tin cơ bản</h2>
@@ -200,11 +197,12 @@ export function CompanyEditForm({ company }: { company: Company }) {
         <MultiLangInput
           name="name"
           label="Tên công ty *"
-          values={{ vi: name, en: name_en, zh: name_zh }}
+          values={{ vi: name, en: name_en, zh: name_zh, ar: name_ar }}
           onChange={(key, value) => {
             if (key === "name") handleNameChange(value)
             else if (key === "name_en") setNameEn(value)
             else if (key === "name_zh") setNameZh(value)
+            else if (key === "name_ar") setNameAr(value)
           }}
           placeholder="Tên doanh nghiệp"
           required
@@ -285,11 +283,12 @@ export function CompanyEditForm({ company }: { company: Company }) {
         <MultiLangInput
           name="address"
           label="Địa chỉ"
-          values={{ vi: address, en: address_en, zh: address_zh }}
+          values={{ vi: address, en: address_en, zh: address_zh, ar: address_ar }}
           onChange={(key, value) => {
             if (key === "address") setAddress(value)
             else if (key === "address_en") setAddressEn(value)
             else if (key === "address_zh") setAddressZh(value)
+            else if (key === "address_ar") setAddressAr(value)
           }}
           placeholder="123 Đường ABC, Quận XYZ"
         />
@@ -407,6 +406,18 @@ export function CompanyEditForm({ company }: { company: Company }) {
           )}
         </div>
       </section>
+
+      {/* Status banner — shown right above the Save button so the user
+          sees the result immediately after clicking, without having to
+          scroll back up the long form. */}
+      {msg && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 text-sm",
+          msg.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700",
+        )}>
+          {msg.text}
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex gap-3">

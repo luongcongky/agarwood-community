@@ -7,6 +7,7 @@ const LOCALES = [
   { code: "vi", label: "🇻🇳 VI", full: "Tiếng Việt" },
   { code: "en", label: "🇬🇧 EN", full: "English" },
   { code: "zh", label: "🇨🇳 中文", full: "中文" },
+  { code: "ar", label: "🇦🇪 AR", full: "العربية" },
 ] as const
 
 type LocaleCode = (typeof LOCALES)[number]["code"]
@@ -15,9 +16,10 @@ interface MultiLangValues {
   vi: string
   en: string
   zh: string
+  ar: string
 }
 
-/** Suffix for the _en / _zh DB columns (vi has no suffix) */
+/** Suffix for the _en / _zh / _ar DB columns (vi has no suffix) */
 function fieldKey(baseName: string, locale: LocaleCode): string {
   return locale === "vi" ? baseName : `${baseName}_${locale}`
 }
@@ -29,9 +31,9 @@ interface MultiLangInputProps {
   name: string
   /** Display label shown above the tabs */
   label: string
-  /** Current values: { vi, en, zh } */
+  /** Current values: { vi, en, zh, ar } */
   values: MultiLangValues
-  /** Called with (fieldKey, value) — fieldKey is "title", "title_en", or "title_zh" */
+  /** Called with (fieldKey, value) — fieldKey is "title", "title_en", "title_zh", or "title_ar" */
   onChange: (fieldKey: string, value: string) => void
   placeholder?: string
   required?: boolean
@@ -66,6 +68,7 @@ export function MultiLangInput({
         placeholder={tab === "vi" ? placeholder : `${placeholder} (${LOCALES.find((l) => l.code === tab)?.full})`}
         required={required && tab === "vi"}
         disabled={disabled}
+        dir={tab === "ar" ? "rtl" : "ltr"}
         className="w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 placeholder:text-brand-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors disabled:opacity-50"
       />
     </div>
@@ -114,6 +117,7 @@ export function MultiLangTextarea({
         required={required && tab === "vi"}
         disabled={disabled}
         rows={rows}
+        dir={tab === "ar" ? "rtl" : "ltr"}
         className="w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 placeholder:text-brand-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors resize-none disabled:opacity-50"
       />
     </div>
@@ -168,5 +172,6 @@ export function extractLangValues(
     vi: (formState[baseName] as string) ?? "",
     en: (formState[`${baseName}_en`] as string) ?? "",
     zh: (formState[`${baseName}_zh`] as string) ?? "",
+    ar: (formState[`${baseName}_ar`] as string) ?? "",
   }
 }

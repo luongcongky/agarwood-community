@@ -56,6 +56,34 @@ Moi sang mo trang `/admin`, ban se thay:
 
 **Tang 4 — Hoat dong gan day** — log 10 su kien moi nhat trong he thong
 
+### He thong thong bao (Notification Bell + Sidebar badge)
+
+Tu thang 4/2026, moi trang admin co chuong thong bao theo doi 8 nghiep vu can thao tac:
+
+**Chuong thong bao (icon 🔔)**:
+- Nam o **header sidebar** (desktop) / **goc phai top bar** (mobile)
+- Badge **do** hien tong so muc cho xu ly tat ca workflow
+- Click → dropdown panel 420px liet ke tung workflow co pending + 3 muc cu nhat, moi muc co "time ago" + link di thang toi record
+- Cap nhat tu dong: poll moi **30 giay** + refetch khi ban chuyen tab ve
+
+**Badge tren tung menu sidebar**:
+- Menu item co nghiep vu pending se hien bong tron **do** ke ten + so luong
+- Group header dong se hien dot do nho neu ben trong co pending → ban khong bo sot khi accordion collapsed
+
+**Cac workflow theo doi** (thu tu uu tien blocking → informational):
+| # | Workflow | Menu / URL |
+|---|---|---|
+| 1 | Xac nhan chuyen khoan | `/admin/thanh-toan` |
+| 2 | Duyet don ket nap hoi vien | `/admin/hoi-vien/don-ket-nap` |
+| 3 | Duyet chung nhan san pham | `/admin/chung-nhan` |
+| 4 | Duyet banner quang cao | `/admin/banner` |
+| 5 | Xac nhan don truyen thong | `/admin/truyen-thong` |
+| 6 | Lien he tu website (moi) | `/admin/lien-he` |
+| 7 | Xu ly bao cao bai viet | `/admin/bao-cao` |
+| 8 | Lien he yeu cau tu van | `/admin/tu-van` |
+
+**Read-only (hang Infinite)**: van doc duoc badge + chuong, KHONG thao tac duoc — click vao xem nhung khong duyet / doi trang thai.
+
 ---
 
 ## 2. Quan ly hoi vien
@@ -579,19 +607,23 @@ He thong co 2 che do cho admin:
 Truy cap: `/admin/banner`. Quan ly cac banner do hoi vien dang ky.
 
 ### Vi tri (BannerPosition)
-Banner duoc gan vao 1 trong 2 vi tri:
-- **TOP** — slot tren cung trang chu, ngay sau thanh menu
-- **MID** — slot giua trang chu, sau khu San pham chung nhan
+Banner duoc gan vao 1 trong 3 vi tri:
+- **TOP** — slot tren cung trang chu, ngay sau thanh menu (ngang, aspect 5:1)
+- **MID** — slot giua trang chu, sau khu San pham chung nhan (ngang, aspect 5:1)
+- **SIDEBAR** — rail doc ben phai trang `/feed`, sticky khi user scroll (doc, aspect 2:3)
 
-User chon vi tri khi dang ky tai `/banner/dang-ky`. Admin thay cot "Dau trang / Giua trang"
-trong bang quan ly.
+User chon vi tri khi dang ky tai `/banner/dang-ky`. Admin thay cot "Dau trang / Giua trang /
+Rail doc (feed)" trong bang quan ly.
 
 ### Quy trinh duyet
 1. User → `/banner/dang-ky` chon vi tri + thoi gian + upload anh + tra phi
 2. Sau khi user CK → admin xac nhan o `/admin/thanh-toan`
 3. Banner chuyen sang `PENDING_APPROVAL` → admin vao `/admin/banner` review noi dung
-4. Approve → status `ACTIVE` → tu dong hien tren trang chu (cache 60s)
+4. Approve → status `ACTIVE` → tu dong hien tren trang chu / feed (cache 60s)
 5. Cron tu dong chuyen sang `EXPIRED` khi het han
+
+**Tip**: neu khong co SIDEBAR banner dang ACTIVE, trang `/feed` hien card placeholder
+"Dat banner quang cao" dan ve `/banner/dang-ky` → khuyen khich doanh nghiep mua slot.
 
 ---
 
@@ -766,6 +798,36 @@ co the fallback active. Cac key hop le: `home`, `about`, `research`, `social`, `
 
 ### Che do INFINITE
 - Admin INFINITE (chi-doc) van xem duoc danh sach nhung moi nut upload / edit / xoa se disabled (`useAdminReadOnly()`).
+
+---
+
+## 20. Tin nhan lien he tu website (`/admin/lien-he`)
+
+Truy cap: `/admin/lien-he`. Hien tat ca tin nhan khach gui qua form `/lien-he` cong khai.
+
+### Luong du lieu
+- Khach dien form name / email / phone / message → POST `/api/contact`
+- API **luu vao DB truoc** (`ContactMessage` table) → sau do gui email thong bao qua Resend (best-effort)
+- Du email bi spam-filter, tin nhan van hien tren admin UI → khong bo sot
+
+### Thao tac
+- Bang sap xep: NEW (cho xu ly) len dau, roi newest-first
+- Badge **do** "Moi" ben ten nguoi gui neu status = NEW
+- Cot Lien he: mailto/tel link → click goi/reply trong 1 cham
+- Noi dung: line-clamp-3, co nut "Xem them" khi dai
+- Cot **Trang thai**: select box doi:
+  - **NEW** — cho xu ly (tinh vao badge chuong thong bao)
+  - **HANDLED** — da lien he lai / xu ly xong
+  - **ARCHIVED** — luu tru (spam, trung, khong can xu ly)
+
+Khi doi sang HANDLED hoac ARCHIVED, he thong tu dong ghi lai `handledBy` (admin nao xu ly)
+va `handledAt` (thoi diem) → tim lich su sau nay de doi chieu.
+
+### Notification
+Tin nhan NEW tu dong xuat hien:
+- Badge do tren menu "Lien he" trong sidebar
+- Trong dropdown chuong (workflow `contact`) o header
+- Cap nhat moi 30s (poll) + refetch khi focus tab
 
 ---
 

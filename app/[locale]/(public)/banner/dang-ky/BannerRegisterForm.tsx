@@ -47,7 +47,7 @@ export function BannerRegisterForm() {
   // Step 1: schedule + position
   const [startDate, setStartDate] = useState(todayPlusDays(1))
   const [endDate, setEndDate] = useState(todayPlusDays(31))
-  const [position, setPosition] = useState<"TOP" | "MID">("TOP")
+  const [position, setPosition] = useState<"TOP" | "MID" | "SIDEBAR">("TOP")
 
   // Step 2: content
   const [imageUrl, setImageUrl] = useState("")
@@ -219,10 +219,11 @@ export function BannerRegisterForm() {
 
             <div>
               <label className="block text-sm font-medium text-brand-800 mb-2">{t("positionLabel")} hiển thị</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {([
                   { value: "TOP", label: t("positionTop"), desc: "Ngay sau thanh menu" },
                   { value: "MID", label: t("positionMid"), desc: "Sau khu sản phẩm chứng nhận" },
+                  { value: "SIDEBAR", label: "Rail dọc /feed", desc: "Sticky bên phải trang feed" },
                 ] as const).map((opt) => (
                   <button
                     key={opt.value}

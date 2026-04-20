@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await prisma.product.findUnique({
     where: { slug, isPublished: true },
-    select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, imageUrls: true, category: true },
+    select: { name: true, name_en: true, name_zh: true, name_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, imageUrls: true, category: true },
   })
   if (!product) return { title: "Not found" }
   return {
@@ -54,7 +54,7 @@ export default async function ProductDetailPage({ params }: Props) {
       },
       company: {
         select: {
-          name: true, name_en: true, name_zh: true, slug: true, logoUrl: true, isVerified: true,
+          name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true,
           ownerId: true, phone: true, website: true,
         },
       },
@@ -82,8 +82,8 @@ export default async function ProductDetailPage({ params }: Props) {
     take: 3,
     orderBy: { certStatus: "desc" },
     select: {
-      id: true, name: true, name_en: true, name_zh: true, slug: true, imageUrls: true,
-      category: true, category_en: true, category_zh: true, priceRange: true, certStatus: true,
+      id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
+      category: true, category_en: true, category_zh: true, category_ar: true, priceRange: true, certStatus: true,
       company: { select: { name: true } },
     },
   })

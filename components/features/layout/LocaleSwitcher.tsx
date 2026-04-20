@@ -10,6 +10,7 @@ const localeLabels: Record<Locale, string> = {
   vi: "Tiếng Việt",
   en: "English",
   zh: "中文",
+  ar: "العربية",
 }
 
 export function LocaleSwitcher({ current }: { current: Locale }) {

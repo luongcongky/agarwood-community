@@ -83,6 +83,13 @@ type MembershipInfo = {
   company: { name: string; slug: string } | null
 }
 
+type SidebarBanner = {
+  id: string
+  title: string
+  imageUrl: string
+  targetUrl: string
+}
+
 type FeedClientProps = {
   initialPosts: Post[]
   currentUserId: string | null
@@ -95,6 +102,7 @@ type FeedClientProps = {
   tierIndSilver?: number
   tierIndGold?: number
   topContributors: TopContributor[]
+  sidebarBanners: SidebarBanner[]
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -115,6 +123,132 @@ function timeAgo(dateStr: string, now: number, t: any): string {
 
 function getInitials(name: string) {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+}
+
+/**
+ * Pull image URLs out of sanitized HTML. Used for posts created via the
+ * inline composer, which embeds <img> tags directly in `content` rather
+ * than populating the `imageUrls` column. Falling back to this keeps the
+ * thumbnail grid + lightbox working for older posts too.
+ */
+function extractImageUrlsFromHtml(html: string): string[] {
+  const matches = html.match(/<img[^>]+src=["']([^"']+)["']/g) ?? []
+  return matches
+    .map((tag) => {
+      const m = tag.match(/src=["']([^"']+)["']/)
+      return m ? m[1] : null
+    })
+    .filter((u): u is string => !!u)
+}
+
+/** Remove <img> tags from HTML so images aren't rendered twice when we
+ *  display them separately as thumbnails. */
+function stripImgTagsFromHtml(html: string): string {
+  return html.replace(/<img[^>]*>/g, "")
+}
+
+// ── Lightbox ─────────────────────────────────────────────────────────────────
+
+/**
+ * Full-viewport image viewer with prev/next navigation. Used when the
+ * user clicks a post's thumbnail — keyboard arrows + buttons cycle
+ * through that post's image set. Closes on Esc, backdrop click, or the
+ * ✕ button.
+ */
+function Lightbox({
+  images,
+  startIndex,
+  onClose,
+}: {
+  images: string[]
+  startIndex: number
+  onClose: () => void
+}) {
+  const [index, setIndex] = useState(startIndex)
+  const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length])
+  const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+      else if (e.key === "ArrowLeft") prev()
+      else if (e.key === "ArrowRight") next()
+    }
+    document.addEventListener("keydown", onKey)
+    // Prevent body scroll while lightbox is open
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose, prev, next])
+
+  const multi = images.length > 1
+
+  return (
+    <div
+      className="fixed inset-0 z-100 bg-black/90 flex items-center justify-center"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClose() }}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors"
+        aria-label="Đóng"
+      >
+        ✕
+      </button>
+
+      {/* Counter */}
+      {multi && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1">
+          {index + 1} / {images.length}
+        </div>
+      )}
+
+      {/* Prev */}
+      {multi && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); prev() }}
+          className="absolute left-4 sm:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+          aria-label="Ảnh trước"
+        >
+          ‹
+        </button>
+      )}
+
+      {/* Image */}
+      <div
+        className="relative w-full h-full max-w-[92vw] max-h-[88vh] flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={images[index]}
+          alt=""
+          className="max-w-full max-h-full object-contain select-none"
+          draggable={false}
+        />
+      </div>
+
+      {/* Next */}
+      {multi && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); next() }}
+          className="absolute right-4 sm:right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+          aria-label="Ảnh sau"
+        >
+          ›
+        </button>
+      )}
+    </div>
+  )
 }
 
 function getTierBadge(
@@ -168,7 +302,21 @@ function PostCard({
   const t = useTranslations("feed")
   const [expanded, setExpanded] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const isLocked = post.status === "LOCKED"
+
+  // Unify image sources: use the DB column when populated, otherwise pull
+  // from embedded <img> tags in the sanitized HTML content. Posts from
+  // the inline composer fall into the latter bucket.
+  const displayImages = post.imageUrls.length > 0
+    ? (post.imageUrls as string[])
+    : extractImageUrlsFromHtml(post.content)
+  // When images are displayed as separate thumbnails, strip them from
+  // the prose block so they don't render twice.
+  const contentForProse = displayImages.length > 0
+    ? stripImgTagsFromHtml(post.content)
+    : post.content
   const userHasReacted = post.reactions.some((r) => r.type === "LIKE")
   const isAuthor = currentUserId === post.authorId
   const isAdmin = currentUserRole === "ADMIN"
@@ -178,8 +326,9 @@ function PostCard({
 
   const tier = getTierBadge(post.author.contributionTotal, post.author.accountType, tierSilver, tierGold, tierIndSilver, tierIndGold)
 
-  // Strip HTML for truncation
-  const plainText = post.content.replace(/<[^>]*>/g, "")
+  // Strip HTML for truncation. Use the image-stripped content so <img>
+  // tags don't inflate the character count for text-only truncation.
+  const plainText = contentForProse.replace(/<[^>]*>/g, "")
   const needsTruncation = plainText.length > 300
 
   // Menu options based on role
@@ -210,6 +359,23 @@ function PostCard({
       alert(t("genericError"))
     }
     setMenuOpen(false)
+  }
+
+  async function handleCopyLink() {
+    const url = `${window.location.origin}/bai-viet/${post.id}`
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // clipboard API unavailable (http, older browsers) — fallback
+      const ta = document.createElement("textarea")
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand("copy") } catch { /* ignore */ }
+      document.body.removeChild(ta)
+    }
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
   }
 
   return (
@@ -293,11 +459,11 @@ function PostCard({
       {post.category === "PRODUCT" && post.product && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/60 px-3 py-2 text-xs">
           <span className="inline-flex items-center gap-1 rounded-full bg-white border border-brand-200 px-2 py-0.5 font-semibold text-brand-700">
-            🛍️ Sản phẩm
+            🛍️ {t("productBadge")}
           </span>
           {post.product.certStatus === "APPROVED" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 font-semibold text-emerald-700">
-              ✓ Đã chứng nhận
+              ✓ {t("certifiedBadge")}
             </span>
           )}
           {post.product.category && (
@@ -310,7 +476,7 @@ function PostCard({
             href={`/san-pham/${post.product.slug}`}
             className="ml-auto font-semibold text-brand-700 hover:text-brand-900 underline underline-offset-2"
           >
-            Xem chi tiết →
+            {t("viewDetail")}
           </Link>
         </div>
       )}
@@ -322,6 +488,40 @@ function PostCard({
             {post.title}
           </Link>
         </h2>
+      )}
+
+      {/* Images first when post has them — quick-scan mode prioritizes
+          visuals. Rendered as extra-large icon thumbnails; clicking any
+          one opens a lightbox with prev/next navigation across the
+          post's full image set. */}
+      {!isGuestBlurred && displayImages.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {displayImages.slice(0, 4).map((url, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setLightboxIndex(i)}
+              className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-brand-200 hover:ring-2 hover:ring-brand-400 transition-all shrink-0"
+              aria-label={`Xem ảnh ${i + 1}`}
+            >
+              <Image src={url} alt="" fill className="object-cover" sizes="128px" />
+              {/* Show +N overlay on the 4th thumb when the post has >4 images */}
+              {i === 3 && displayImages.length > 4 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold text-lg">
+                  +{displayImages.length - 4}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          images={displayImages}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
 
       {/* Content — blurred for guests after GUEST_VISIBLE_COUNT */}
@@ -346,25 +546,13 @@ function PostCard({
               "text-sm text-brand-800 prose prose-sm max-w-none",
               !expanded && needsTruncation && "line-clamp-4",
             )}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(contentForProse) }}
           />
           {needsTruncation && !expanded && (
             <button onClick={() => setExpanded(true)} className="text-sm font-medium text-brand-600 hover:text-brand-800 mt-1">
               {t("readMore")}
             </button>
           )}
-        </div>
-      )}
-
-      {/* Images — up to 4 in grid */}
-      {!isGuestBlurred && post.imageUrls.length > 0 && (
-        <div className={cn(
-          "mb-3 gap-1 rounded-lg overflow-hidden",
-          post.imageUrls.length === 1 ? "" : "grid grid-cols-2",
-        )}>
-          {(post.imageUrls as string[]).slice(0, 4).map((url, i) => (
-            <Image key={i} src={url} alt="" width={600} height={400} className="w-full object-cover max-h-64 rounded-lg" sizes="(max-width: 768px) 100vw, 600px" />
-          ))}
         </div>
       )}
 
@@ -391,6 +579,19 @@ function PostCard({
             >
               💬 {post._count.comments > 0 ? `${post._count.comments} ` : ""}{t("comments")}
             </Link>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={cn(
+                "flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors",
+                linkCopied
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
+              )}
+              aria-label={t("copyLink")}
+            >
+              {linkCopied ? "✓ " : "🔗 "}{linkCopied ? t("linkCopied") : t("copyLink")}
+            </button>
           </div>
           <span className="text-sm text-brand-500">{post.viewCount} {t("views")}</span>
         </div>
@@ -481,10 +682,12 @@ function InlinePostCreator({
         uploadedUrls.push(data.secure_url)
       }
 
-      // Build HTML content — paragraphs + images
+      // Build HTML content — images first, then paragraphs. Quick-compose
+      // posts are scanned visually in the feed, so leading with the
+      // attached images mirrors how users expect the post to render.
       const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
       const imageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
-      const htmlContent = paragraphs + imageHtml
+      const htmlContent = imageHtml + paragraphs
 
       const res = await fetch("/api/posts", {
         method: "POST",
@@ -504,7 +707,7 @@ function InlinePostCreator({
         id: post.id,
         authorId: currentUserId,
         title: null,
-        content: paragraphs + imageHtml,
+        content: imageHtml + paragraphs,
         imageUrls: uploadedUrls,
         status: "PUBLISHED",
         isPremium: currentUserRole === "VIP",
@@ -697,6 +900,7 @@ export function FeedClient({
   currentUserAvatarUrl,
   membershipInfo,
   topContributors,
+  sidebarBanners,
   tierSilver,
   tierGold,
   tierIndSilver,
@@ -910,7 +1114,7 @@ export function FeedClient({
           </div>
         )}
         {!hasMore && posts.length > 0 && (
-          <p className="text-center text-sm text-brand-400 py-4">Đã hiển thị tất cả bài viết</p>
+          <p className="text-center text-sm text-brand-400 py-4">{t("endOfFeed")}</p>
         )}
       </div>
 
@@ -918,7 +1122,7 @@ export function FeedClient({
       <aside className="w-full lg:w-80 shrink-0 space-y-4 hidden lg:block">
         {!isMember ? (
           <div className="bg-white rounded-xl border border-brand-200 p-5 space-y-3">
-            <h3 className="font-semibold text-brand-900 text-sm">Tham gia Hội Trầm Hương</h3>
+            <h3 className="font-semibold text-brand-900 text-sm">{t("joinHeading")}</h3>
             <p className="text-xs text-brand-400">
               {isLoggedIn
                 ? t("pendingMsg")
@@ -926,7 +1130,7 @@ export function FeedClient({
             </p>
             {!isLoggedIn && (
               <Link href="/login" className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors">
-                Đăng nhập
+                {t("loginBtn")}
               </Link>
             )}
           </div>
@@ -963,6 +1167,54 @@ export function FeedClient({
             </ul>
           </div>
         )}
+
+        {/* Sticky vertical ad rail — placed at the bottom of the aside so
+            it naturally sits below MembershipCard + Top contributors. As
+            the user scrolls, `sticky top-20` pins the banner below the
+            64px sticky navbar (top-16 + a 4-unit gap) so it isn't clipped
+            by the header. */}
+        <div className="sticky top-20 space-y-3">
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-brand-400">
+            Quảng cáo
+          </p>
+          {sidebarBanners.length > 0 ? (
+            <div className="space-y-3">
+              {sidebarBanners.map((b) => (
+                <a
+                  key={b.id}
+                  href={b.targetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={b.title}
+                  className="block overflow-hidden rounded-xl border border-brand-200 bg-white hover:shadow-md transition-shadow"
+                >
+                  <div className="relative w-full" style={{ aspectRatio: "2 / 3" }}>
+                    <Image src={b.imageUrl} alt={b.title} fill className="object-cover" sizes="320px" />
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <Link
+              href="/banner/dang-ky"
+              className="block rounded-xl border-2 border-dashed border-brand-300 bg-white/80 p-5 text-center hover:bg-white hover:border-brand-500 transition-colors"
+              style={{ aspectRatio: "2 / 3" }}
+            >
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
+                  <span className="text-brand-700 text-xl font-bold">+</span>
+                </div>
+                <p className="text-sm font-semibold text-brand-800">Đặt banner quảng cáo</p>
+                <p className="text-xs text-brand-500 leading-relaxed">
+                  Hiển thị banner dọc tại vị trí này trên /feed. Đăng ký 1 tháng → hàng nghìn lượt xem.
+                </p>
+                <span className="text-xs font-semibold text-brand-700 underline underline-offset-2 mt-1">
+                  Đăng ký ngay →
+                </span>
+              </div>
+            </Link>
+          )}
+        </div>
       </aside>
     </div>
     </div>

@@ -28,14 +28,15 @@ export async function POST(request: Request) {
     title?: string
     startDate?: string
     endDate?: string
-    position?: "TOP" | "MID"
+    position?: "TOP" | "MID" | "SIDEBAR"
   }
 
   // Validate fields
   if (!imageUrl || !targetUrl || !title || !startDate || !endDate) {
     return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 })
   }
-  const bannerPosition: "TOP" | "MID" = position === "MID" ? "MID" : "TOP"
+  const bannerPosition: "TOP" | "MID" | "SIDEBAR" =
+    position === "MID" ? "MID" : position === "SIDEBAR" ? "SIDEBAR" : "TOP"
   if (!/^https:\/\//.test(targetUrl)) {
     return NextResponse.json({ error: "Đường dẫn đích phải bắt đầu bằng https://" }, { status: 400 })
   }

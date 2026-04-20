@@ -1,7 +1,7 @@
 # Tai lieu Ky thuat — Hoi Tram Huong Viet Nam
 
 > Danh cho developer moi join hoac doi maintain he thong.
-> Cap nhat: 04/2026 — Phase 1-6 + Dieu le integration + Van ban phap quy + TipTap v3 editor enhancements
+> Cap nhat: 04/2026 — Phase 1-6 + Dieu le + Van ban phap quy + TipTap v3 + i18n 4 locale (VI/EN/ZH/AR) + Admin notification system + Contact messages + Feed sidebar banner + Refined typography
 
 ---
 
@@ -42,9 +42,10 @@ agarwood-community/
 │   │       ├── tieu-bieu/      # [Phase 4] Pin top 20 SP + top 10 DN
 │   │       ├── truyen-thong/   # CRM don truyen thong
 │   │       ├── tin-tuc/        # Quan ly tin tuc (gom Privacy/Terms qua category=LEGAL)
-│   │       ├── banner/         # Duyet banner quang cao (TOP/MID)
+│   │       ├── banner/         # Duyet banner quang cao (TOP/MID/SIDEBAR)
 │   │       ├── doi-tac/        # CRUD doi tac (PartnersCarousel)
 │   │       ├── bao-cao/        # Bao cao vi pham
+│   │       ├── lien-he/        # Tin nhan lien he tu /lien-he public form
 │   │       └── cai-dat/        # Cai dat he thong
 │   ├── (member)/               # Layout Hoi vien (navbar)
 │   │   ├── layout.tsx
@@ -193,6 +194,13 @@ enum NewsCategory {
 enum BannerPosition {
   TOP          // dau trang chu, sau thanh menu
   MID          // giua trang, sau khu San pham chung nhan
+  SIDEBAR      // rail doc ben phai /feed (sticky khi scroll)
+}
+
+enum ContactStatus {
+  NEW          // vua gui, cho admin doc
+  HANDLED      // admin da lien he lai / xu ly xong
+  ARCHIVED    // luu tru (spam, trung...)
 }
 
 enum PartnerCategory {
@@ -228,6 +236,10 @@ enum DocumentCategory {
 - `20260415000000_add_infinite_role` — them gia tri `INFINITE` vao enum `Role`
 - `20260415100000_add_menu_items` — model `MenuItem` (navbar CMS) + self-relation parent/children
 - `20260415110000_add_menu_key` — them cot `menuKey` (unique, nullable) cho `MenuItem`
+- `20260418000000_add_profile_i18n_columns` — them `User.bio_en/_zh` + `Company.representativePosition_en/_zh`
+- `20260419000000_add_contact_messages` — model `ContactMessage` + enum `ContactStatus` (persist /lien-he submissions)
+- `20260419100000_add_sidebar_banner_position` — them gia tri `SIDEBAR` vao enum `BannerPosition`
+- `20260420000000_add_arabic_locale_columns` — them 24 cot `*_ar` cho 8 bang multilang (User, Company, Product, News, MenuItem, Document, Leader, Survey)
 
 > Cac migration nay duoc apply qua `prisma db push` (khong tao migration file rieng) — schema drift duoc dong bo truc tiep tu schema.prisma.
 
@@ -437,6 +449,70 @@ Admin chinh tai `/admin/cai-dat` nhom **"Footer website"** (SettingsForm co
 `type: "textarea"`). Nhom "Thong tin Hoi" bo sung `association_phone_2`,
 `association_website`, `zalo_url`. Seed defaults: `scripts/seed-footer-settings.ts`
 (idempotent, chi tao khi key chua ton tai).
+
+---
+
+## 6.5 Internationalization (i18n)
+
+### Supported locales
+`i18n/config.ts` — 4 locale: `vi` (default, source-of-truth), `en`, `zh`, `ar`.
+`rtlLocales = ["ar"]` → `<html dir="rtl">` dat tu `app/layout.tsx`.
+
+### URL routing
+- `[locale]` dynamic segment bao quat public pages: `/vi/...`, `/en/...`, `/zh/...`, `/ar/...`
+- Internal routes (`/admin/*`, `/feed/*`, `/api/*`) KHONG co locale prefix — `proxy.ts` dua locale qua header `x-locale` + cookie `NEXT_LOCALE`
+- `/proxy.ts` tu redirect bare public path `/tin-tuc/*` sang `/vi/tin-tuc/*` dua tren cookie
+
+### Dictionary loading
+- `messages/{vi,en,zh,ar}.json` — ICU message format
+- `i18n/get-dictionary.ts` lazy-import per locale (server-only)
+- Client: `useTranslations("namespace")` tu `next-intl`
+- Arabic: `messages/ar.json` seed tu en.json + ~77 key critical dich chuan (nav, common, footer, auth, homepage, feed, memberDetail). Cac key con lai fallback sang English
+
+### DB multi-lang fields
+Moi bang multilang co **4 cot** cho moi field: `field`, `field_en`, `field_zh`, `field_ar`. VI khong co suffix (default locale). Cac bang:
+- `users.bio` (1 field)
+- `companies.{name, description, address, representativePosition}` (4)
+- `products.{name, description, category}` (3)
+- `news.{title, excerpt, content}` (3)
+- `menu_items.label` (1)
+- `documents.{title, description, issuer, summary}` (4)
+- `leaders.{name, honorific, title, workTitle, bio}` (5)
+- `surveys.{title, description, questions JSON}` (3)
+
+Tong: **24 field × 3 foreign locales = 72 cot foreign** + 24 cot VI = 96 cot multilang across 8 bang.
+
+### Fallback chain (`i18n/localize.ts`)
+`localize(record, field, locale)`:
+- `vi`: `field`
+- `en`: `field_en → field_zh → field_ar → field` (VI cuoi cung)
+- `zh`: `field_zh → field_en → field_ar → field`
+- `ar`: `field_ar → field_en → field_zh → field`
+
+Cac sibling foreign locale duoc uu tien truoc khi fallback ve VI — user EN/ZH/AR khong bi "day nguoc" ve VI khi co ban dich sibling.
+
+### Font stack
+- **Body**: Be Vietnam Pro (subsets: vietnamese + latin, weights 300-700)
+- **Heading serif**: Playfair Display (load nhung chua apply — bien `--font-heading` khong duoc css dung)
+- **Chinese**: Noto Sans SC
+- **Arabic**: Noto Sans Arabic — swap body font qua rule `html[lang="ar"] { font-family: var(--font-ar), ... }` trong globals.css
+
+### Typography refinement (Option A)
+Class `.refined-typography` dat tren `<body>` ap dung site-wide cho moi trang:
+- Heading `font-weight: 500` (h1=600) — thay cho Tailwind `font-bold` default
+- `letter-spacing: -0.02em`, `text-wrap: balance`, `line-height` tighter cho h1-h3
+- Body `<p> line-height: 1.7` (deep meta text giu 1.45)
+
+### Multi-lang editor UI
+- `MultiLangInput` / `MultiLangTextarea` (components/ui/multi-lang-input.tsx) — 4 tabs (🇻🇳 VI / 🇬🇧 EN / 🇨🇳 中文 / 🇦🇪 AR), green dot indicator cho non-empty, **khong** co AI button
+- `LangTabsBar` (components/ui/lang-tabs-bar.tsx) — 4 tabs + nut "🤖 Dich toan bo tu VI sang X" (gradient theo target: EN=blue-purple, ZH=red-orange, AR=emerald-teal). Dung trong News/Survey/Leader editor
+- Cac input AR tu dong set `dir="rtl"` khi active
+
+### AI translate (`/api/admin/ai/translate`)
+- Target locale nhan: `en`, `zh`, `ar`
+- Dung Gemini cascade (lib/gemini-models.ts) — 3 tang fallback (latest aliases → ListModels discovery → ban state) voi 24h lazy cache
+- Prompt preserve HTML tags + image URLs, chi dich visible text
+- Max 20 fields / request, max 120_000 chars / request
 
 ---
 
@@ -844,6 +920,78 @@ Pattern: mousemove update `lastSizeRef` + inline style; mouseup commit qua `upda
 className="... max-w-none!"
 // Tailwind v4 important modifier: "class!" (khong phai "!class")
 ```
+
+---
+
+## 10.7 Admin notification system
+
+### Mot endpoint, hai UI
+- `GET /api/admin/pending-counts` (1 endpoint) — chay 8 `findMany` song song tren index `status`, tra ve `{ total, workflows: Record<PendingWorkflowKey, { count, recent[] }> }` voi top 3 item cu nhat moi workflow
+- Hai UI dung chung: badge tren sidebar item + bell dropdown tren navbar header
+
+### Workflows theo doi
+8 workflow blocking / informational:
+| Key | Bang | Signal |
+|---|---|---|
+| `membershipApplication` | `MembershipApplication` | `status = PENDING` |
+| `payment` | `Payment` | `status = PENDING` |
+| `certification` | `Certification` | `status IN (PENDING, UNDER_REVIEW)` |
+| `banner` | `Banner` | `status = PENDING_APPROVAL` |
+| `report` | `Report` | `status = PENDING` |
+| `mediaOrder` | `MediaOrder` | `status = NEW` |
+| `consultation` | `ConsultationRequest` | `status = PENDING` |
+| `contact` | `ContactMessage` | `status = NEW` |
+
+### Polling
+`components/features/admin/PendingCountsContext.tsx` — single provider wrap admin layout. Poll 30s/lan + refetch khi tab gain focus. 1 fetch duoc sidebar + bell cung dung (tranh N duplicate queries).
+
+### Components
+- `PendingCountsProvider` — React Context boc quanh `(admin)/layout.tsx`
+- `NotificationBell` — icon chuong + badge do tong count, click → dropdown panel 420px
+  - Prop `align: "start" | "end"` — dropdown anchor direction. Sidebar desktop dung `"start"` (panel extend sang phai), mobile nav dung `"end"` (default, extend sang trai)
+- Sidebar item co `pendingKey?: PendingWorkflowKey` → tu hien badge do
+- Group header collapsed hien dot do neu co item pending ben trong
+
+### Read-only admin
+`INFINITE` role (read-only admin) co the doc pending counts nhung khong mutate → endpoint dung `isAdmin()` (cho doc), PATCH endpoints dung `canAdminWrite()` (chi `ADMIN`).
+
+---
+
+## 10.8 Contact messages (persist thay vi email-only)
+
+Truoc day `/api/contact` chi gui email qua Resend → admin co the bo sot tin nhan khi spam filter.
+Hien tai:
+- **DB-first**: `prisma.contactMessage.create({...})` truoc, sau moi gui email (best-effort, that bai cung khong throw)
+- **Admin UI**: `/admin/lien-he` — list + detail, select status (NEW/HANDLED/ARCHIVED), mailto/tel links, 3-line clamp + "Xem them"
+- **Notification**: tu dong hien badge tren sidebar menu item "Lien he" + trong NotificationBell dropdown khi co tin nhan status=NEW
+- **Polling**: qua `/api/admin/pending-counts` workflow `contact`
+
+---
+
+## 10.9 Feed improvements (2026-04)
+
+### Vertical sidebar banner (`BannerPosition.SIDEBAR`)
+- Fetch o `app/[locale]/(member)/feed/page.tsx` → pass vao `FeedClient.sidebarBanners` (top 5 sort by owner contribution)
+- Render o aside voi `sticky top-20` (64px navbar + 16px gap) — stay pinned khi user scroll
+- Aspect ratio 2:3 portrait
+- Neu khong co banner active: card placeholder dashed-border dan toi `/banner/dang-ky`
+
+### Image-first preview + Lightbox
+- PostCard thumbnail grid: `flex-wrap gap-2` voi thumb `w-28 h-28 sm:w-32 sm:h-32` (XL icon)
+- `extractImageUrlsFromHtml()` pull img URLs tu content HTML khi `post.imageUrls` trong (posts tu quick composer chi luu img trong content)
+- `stripImgTagsFromHtml()` xoa `<img>` khoi prose block → khong render truot 2 lan
+- Click thumb → `Lightbox` component: overlay `z-100 bg-black/90`, arrows left/right, counter `1/4`, keyboard `←/→/Esc`
+
+### Post card actions
+- Copy link: `navigator.clipboard.writeText(${origin}/bai-viet/${id})` voi fallback `execCommand`
+- Quick composer: ap image trước `<p>text</p>` trong HTML content → hop voi image-first preview
+
+### Cache invalidation
+`POST /api/posts` goi `revalidatePath("/feed")` + `revalidatePath("/[locale]/feed", "page")` sau create → bai moi hien ngay thay vi cho 60s revalidate tick.
+
+### Sitemap & tin-tuc redirects
+- `app/sitemap.ts` filter `category IN (GENERAL, RESEARCH)`, emit URL theo category (`/tin-tuc/{slug}` vs `/nghien-cuu/{slug}`); LEGAL khong emit dynamic (them static `/privacy`, `/terms`)
+- `app/[locale]/(public)/tin-tuc/[slug]/page.tsx`: neu khong tim thay GENERAL nhung slug ton tai o category khac → redirect toi URL dung (LEGAL `chinh-sach-bao-mat` → `/privacy`, RESEARCH → `/nghien-cuu/{slug}`)
 
 ---
 

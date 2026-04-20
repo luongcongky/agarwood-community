@@ -135,7 +135,7 @@ export default async function AdminBannerPage({
                       <h3 className="font-semibold text-brand-900 line-clamp-2">{banner.title}</h3>
                       <div className="shrink-0 flex items-center gap-1.5">
                         <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-100 text-brand-700">
-                          {banner.position === "TOP" ? "Đầu trang" : "Giữa trang"}
+                          {banner.position === "TOP" ? "Đầu trang" : banner.position === "MID" ? "Giữa trang" : "Rail dọc (feed)"}
                         </span>
                         <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.color}`}>
                           {status.label}

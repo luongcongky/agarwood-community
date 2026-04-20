@@ -1,14 +1,16 @@
 import type { Metadata } from "next"
-import { Be_Vietnam_Pro, Noto_Sans_SC, Playfair_Display } from "next/font/google"
+import { Be_Vietnam_Pro, Noto_Sans_SC, Noto_Sans_Arabic, Playfair_Display } from "next/font/google"
 import Script from "next/script"
 import { headers } from "next/headers"
 import { ProgressBar } from "@/components/features/layout/ProgressBar"
-import { isValidLocale } from "@/i18n/config"
+import { isRtlLocale, isValidLocale } from "@/i18n/config"
 import "./globals.css"
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ["vietnamese", "latin"],
-  weight: ["400", "500", "600", "700"],
+  // 300 (Light) added for the thinner homepage treatment — headings
+  // render at 500 there instead of 700 for a lighter editorial feel.
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-body",
   display: "swap",
 })
@@ -24,6 +26,17 @@ const notoSansSC = Noto_Sans_SC({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-zh",
+  display: "swap",
+})
+
+// Arabic webfont — Be Vietnam Pro doesn't cover Arabic glyphs. Noto Sans
+// Arabic is the free, reliable default that Google Fonts recommends for
+// Arabic UI. Exposed as `--font-ar` and applied via `html[lang="ar"]`
+// rule in globals.css.
+const notoSansArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ar",
   display: "swap",
 })
 
@@ -70,14 +83,16 @@ export default async function RootLayout({
   const h = await headers()
   const headerLocale = h.get("x-locale")
   const lang = headerLocale && isValidLocale(headerLocale) ? headerLocale : "vi"
+  const dir = isRtlLocale(lang) ? "rtl" : "ltr"
 
   return (
     <html
       lang={lang}
-      className={`${beVietnamPro.variable} ${playfairDisplay.variable} ${notoSansSC.variable}`}
+      dir={dir}
+      className={`${beVietnamPro.variable} ${playfairDisplay.variable} ${notoSansSC.variable} ${notoSansArabic.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col antialiased" suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col antialiased refined-typography" suppressHydrationWarning>
         <ProgressBar />
         {children}
 

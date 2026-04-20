@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const company = await prisma.company.findUnique({
     where: { slug, isPublished: true },
-    select: { name: true, name_en: true, name_zh: true, description: true, description_en: true, description_zh: true, logoUrl: true, coverImageUrl: true, address: true, address_en: true, address_zh: true, foundedYear: true },
+    select: { name: true, name_en: true, name_zh: true, name_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, logoUrl: true, coverImageUrl: true, address: true, address_en: true, address_zh: true, address_ar: true, foundedYear: true },
   })
   if (!company) return { title: "Not found" }
   return {
@@ -60,7 +60,7 @@ export default async function CompanyProfilePage({ params }: Props) {
         where: { isPublished: true },
         orderBy: { certStatus: "desc" },
         select: {
-          id: true, name: true, name_en: true, name_zh: true, slug: true, imageUrls: true,
+          id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
           category: true, priceRange: true, certStatus: true, badgeUrl: true,
         },
       },

@@ -1,6 +1,7 @@
 import { AdminSidebar } from "@/components/features/layout/AdminSidebar"
 import { AdminMobileNav } from "@/components/features/layout/AdminMobileNav"
 import { AdminReadOnlyProvider } from "@/components/features/admin/AdminReadOnlyContext"
+import { PendingCountsProvider } from "@/components/features/admin/PendingCountsContext"
 import { auth } from "@/lib/auth"
 
 export default async function AdminLayout({
@@ -13,6 +14,7 @@ export default async function AdminLayout({
   return (
     // h-screen (thay cho min-h-screen) để main thực sự scroll bên trong,
     // không cho phép outer container grow theo content → sticky toolbar hoạt động
+    <PendingCountsProvider>
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar: ẩn mobile, hiện từ md+ */}
       <AdminSidebar />
@@ -36,5 +38,6 @@ export default async function AdminLayout({
         </main>
       </div>
     </div>
+    </PendingCountsProvider>
   )
 }

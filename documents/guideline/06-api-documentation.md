@@ -131,6 +131,10 @@ Khi `product` co mat:
 
 **Response:** `201 { post: Post }`
 
+**Cache invalidation (added 2026-04):** Sau khi tao post thanh cong, server goi
+`revalidatePath("/feed")` + `revalidatePath("/[locale]/feed", "page")` → feed page
+(revalidate=60) bi invalidate ngay, bai moi hien tuc thi thay vi cho ~60s.
+
 **Errors:**
 - `401` — Chua dang nhap
 - `400` — Noi dung qua ngan (< 50 ky tu) / slug khong hop le / ten SP qua ngan
@@ -598,9 +602,10 @@ trang public tu cap nhat sau 10 phut.
 
 ## 9. Banner quang cao (Phase 6)
 
-Banner quang cao chia 2 vi tri (`BannerPosition`):
-- `TOP` — sau menu
-- `MID` — giua trang chu (sau khu San pham chung nhan)
+Banner quang cao chia 3 vi tri (`BannerPosition`):
+- `TOP` — sau menu trang chu (ngang, aspect 5:1)
+- `MID` — giua trang chu (sau khu San pham chung nhan, ngang 5:1)
+- `SIDEBAR` — rail doc ben phai trang `/feed` (aspect 2:3, sticky khi scroll) — **added 2026-04**
 
 ### POST /api/banner
 User dang ky banner — tao Banner + Payment trong 1 transaction.
@@ -613,9 +618,11 @@ User dang ky banner — tao Banner + Payment trong 1 transaction.
   "title": "Tieu de banner (5-100 ky tu)",
   "startDate": "2026-04-15",
   "endDate": "2026-05-15",
-  "position": "TOP"
+  "position": "SIDEBAR"
 }
 ```
+
+**Note:** `position` chap nhan `"TOP" | "MID" | "SIDEBAR"`. Gia tri mac dinh / fallback = `"TOP"`.
 
 **Response:** `{ bankInfo, price, paymentId, bannerId }`
 
@@ -826,16 +833,128 @@ Form lien he cong khai tai `/lien-he`. **KHONG can auth.**
 - Gioi han do dai: name/email ≤ 200, message ≤ 5000
 - HTML escape toan bo input truoc khi render vao email
 
-**Process:**
-- Gui email qua Resend toi `CONTACT_INBOX_EMAIL` (mac dinh: `hoitramhuongvietnam2010@gmail.com`)
-- `reply-to` = email nguoi gui (admin bam Reply la tra loi dung nguoi lien he)
-- Subject: `[Lien he website] {name}`
+**Process (DB-first — updated 2026-04):**
+1. `prisma.contactMessage.create({...})` — luu DB voi `status = "NEW"` (source of truth)
+2. Gui email qua Resend toi `CONTACT_INBOX_EMAIL` (mac dinh: `hoitramhuongvietnam2010@gmail.com`) — best-effort, failure khong throw
+   - `reply-to` = email nguoi gui
+   - Subject: `[Lien he website] {name}`
+3. Email that bai → log + van tra ve `{ success: true }`. Admin van thay tin nhan o `/admin/lien-he` + notification bell.
 
 **Response:** `{ success: true }` | `{ error: "..." }`
 
 **Env vars:**
 - `RESEND_API_KEY` (bat buoc)
 - `CONTACT_INBOX_EMAIL` (tuy chon, mac dinh fallback)
+
+### PATCH /api/admin/contact-messages/[id]
+Cap nhat trang thai / ghi chu noi bo cho tin nhan lien he. Yeu cau: `ADMIN` (write).
+
+**Body:**
+```json
+{
+  "status": "HANDLED",
+  "adminNote": "Da goi lai hom qua, khach xac nhan..."
+}
+```
+
+**Validation:**
+- `status`: `"NEW" | "HANDLED" | "ARCHIVED"` (bat buoc)
+- `adminNote`: optional string
+
+**Side effects:**
+- `handledById = session.user.id` + `handledAt = now()` khi status != `NEW`
+- Next GET `/api/admin/pending-counts` tu dong tru count `contact` → sidebar badge + chuong cap nhat trong 30s.
+
+**Response:** `{ message: ContactMessage }`
+
+### GET /api/admin/pending-counts
+Tra ve so muc cho xu ly cua 8 workflow admin. Feed badge sidebar + notification bell.
+Yeu cau: `isAdmin()` — **ADMIN + INFINITE** doc duoc (INFINITE chi doc, khong mutate).
+
+**Response:**
+```json
+{
+  "total": 12,
+  "workflows": {
+    "membershipApplication": { "count": 2, "recent": [ { "id", "title", "subtitle?", "href", "createdAt" } ] },
+    "payment":               { "count": 3, "recent": [...] },
+    "certification":         { "count": 1, "recent": [...] },
+    "banner":                { "count": 0, "recent": [] },
+    "report":                { "count": 1, "recent": [...] },
+    "mediaOrder":            { "count": 2, "recent": [...] },
+    "consultation":          { "count": 1, "recent": [...] },
+    "contact":               { "count": 2, "recent": [...] }
+  }
+}
+```
+
+**Queries:** 8 `findMany` song song, filter theo `status` field cua moi bang (da index). Tra ve top 3 item cu nhat cho moi workflow (sorted `createdAt ASC`).
+
+**Cache:** `no-store` — moi request chay query moi. Client poll 30s/lan + refetch khi tab gain focus.
+
+**Headers:** `Cache-Control: no-store`
+
+### POST /api/admin/ai/translate
+Dich noi dung Viet sang EN / ZH / AR qua Gemini. Yeu cau: `ADMIN` (write).
+
+**Body (shape moi):**
+```json
+{
+  "targetLocale": "ar",
+  "fields": {
+    "title":   "Cong ty TNHH San pham XYZ",
+    "excerpt": "Nha cung cap tram huong hang dau...",
+    "content": "<p>Noi dung HTML...</p>"
+  }
+}
+```
+
+**Body (legacy shape — van hoat dong):**
+```json
+{
+  "targetLocale": "en",
+  "title": "...",
+  "excerpt": "...",
+  "content": "..."
+}
+```
+
+**Validation:**
+- `targetLocale`: `"en" | "zh" | "ar"`
+- `fields`: max 20 field / request
+- Total chars: max 120,000 / request
+- Bat buoc co it nhat 1 field non-empty
+
+**Process:**
+- Build prompt preserving HTML tags + image URLs + link URLs + CSS classes — chi dich visible text
+- Goi Gemini qua cascade (`lib/gemini-models.ts`): 3 tang fallback voi ban-state tracking + 24h lazy ListModels cache
+- Auto-extract JSON tu response (toleance code fences / markdown)
+
+**Response (shape moi):**
+```json
+{
+  "fields": {
+    "title":   "...translated...",
+    "excerpt": "...translated...",
+    "content": "...translated..."
+  },
+  "_modelUsed": "gemini-flash-latest",
+  "_attempts": 1
+}
+```
+
+Back-compat: neu client dung legacy shape (title/excerpt/content), response cung expose cung field o top level.
+
+**Errors:**
+- `403` — khong phai ADMIN
+- `503` — `GEMINI_API_KEY` chua cau hinh
+- `400` — validate fail (empty / qua dai / targetLocale sai)
+- `429` — tat ca model Gemini het quota / banned. Response `{ quotaExceeded: boolean, attempts: [...] }`
+- `502` — AI tra ve JSON khong parse duoc sau 3 lan retry
+
+**Env vars:** `GEMINI_API_KEY` (bat buoc).
+
+**Debug:** `GET /api/admin/ai/translate/status` tra ve trang thai cascade (model dang dung, ban state, cache age).
 
 ---
 

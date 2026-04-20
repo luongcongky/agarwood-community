@@ -36,7 +36,7 @@ export default function NewsEditorPage({
   const router = useRouter()
   const readOnly = useAdminReadOnly()
 
-  const EMPTY_LANG: Record<Locale, string> = { vi: "", en: "", zh: "" }
+  const EMPTY_LANG: Record<Locale, string> = { vi: "", en: "", zh: "", ar: "" }
   const [title, setTitle] = useState<Record<Locale, string>>(EMPTY_LANG)
   const [slug, setSlug] = useState("")
   const [excerpt, setExcerpt] = useState<Record<Locale, string>>(EMPTY_LANG)
@@ -85,16 +85,19 @@ export default function NewsEditorPage({
           vi: news.title,
           en: (n.title_en as string) ?? "",
           zh: (n.title_zh as string) ?? "",
+          ar: (n.title_ar as string) ?? "",
         })
         setExcerpt({
           vi: news.excerpt ?? "",
           en: (n.excerpt_en as string) ?? "",
           zh: (n.excerpt_zh as string) ?? "",
+          ar: (n.excerpt_ar as string) ?? "",
         })
         setContent({
           vi: news.content ?? "",
           en: (n.content_en as string) ?? "",
           zh: (n.content_zh as string) ?? "",
+          ar: (n.content_ar as string) ?? "",
         })
       } finally {
         setFetching(false)

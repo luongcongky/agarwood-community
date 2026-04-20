@@ -3,13 +3,14 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
-export const LANG_LOCALES = ["vi", "en", "zh"] as const
+export const LANG_LOCALES = ["vi", "en", "zh", "ar"] as const
 export type Locale = (typeof LANG_LOCALES)[number]
 
-const LABELS: Record<Locale, { tab: string; full: string }> = {
-  vi: { tab: "🇻🇳 VI (gốc)", full: "Tiếng Việt" },
-  en: { tab: "🇬🇧 EN", full: "English" },
-  zh: { tab: "🇨🇳 中文", full: "中文" },
+const LABELS: Record<Locale, { tab: string; full: string; short: string }> = {
+  vi: { tab: "🇻🇳 VI (gốc)", full: "Tiếng Việt",  short: "VI" },
+  en: { tab: "🇬🇧 EN",       full: "English",      short: "EN" },
+  zh: { tab: "🇨🇳 中文",     full: "中文",         short: "中文" },
+  ar: { tab: "🇦🇪 AR",       full: "العربية",      short: "AR" },
 }
 
 export interface LangTabsBarProps {
@@ -19,7 +20,7 @@ export interface LangTabsBarProps {
   hasContent: Record<Locale, boolean>
   /**
    * Called when admin clicks "AI dịch". Should call the translate API and
-   * populate EN/ZH state. Only invoked for non-VI locales.
+   * populate EN/ZH/AR state. Only invoked for non-VI locales.
    */
   onAiTranslate: (target: Locale) => Promise<void>
   /** Disable all interactions (read-only mode) */
@@ -27,6 +28,13 @@ export interface LangTabsBarProps {
   /** Optional helper text under the tab bar */
   helperText?: string
   className?: string
+}
+
+// Distinct gradient per target locale so the AI button feels unique.
+const AI_BUTTON_GRADIENT: Record<Exclude<Locale, "vi">, string> = {
+  en: "bg-linear-to-r from-blue-500 to-purple-500",
+  zh: "bg-linear-to-r from-red-500 to-orange-500",
+  ar: "bg-linear-to-r from-emerald-500 to-teal-600",
 }
 
 export function LangTabsBar({
@@ -87,24 +95,20 @@ export function LangTabsBar({
           })}
         </div>
 
-        {/* AI translate button — only for EN/ZH */}
+        {/* AI translate button — only for non-VI locales */}
         {activeLocale !== "vi" && (
           <button
             type="button"
             onClick={() => handleTranslate(activeLocale)}
             disabled={disabled || translating !== null}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed",
-              activeLocale === "en"
-                ? "bg-linear-to-r from-blue-500 to-purple-500 hover:opacity-90"
-                : "bg-linear-to-r from-red-500 to-orange-500 hover:opacity-90",
+              "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90",
+              AI_BUTTON_GRADIENT[activeLocale],
             )}
           >
             {translating === activeLocale
-              ? activeLocale === "en"
-                ? "⏳ Đang dịch..."
-                : "⏳ 翻译中..."
-              : `🤖 Dịch toàn bộ từ VI sang ${activeLocale === "en" ? "EN" : "中文"}`}
+              ? "⏳ Đang dịch..."
+              : `🤖 Dịch toàn bộ từ VI sang ${LABELS[activeLocale].short}`}
           </button>
         )}
       </div>
@@ -136,17 +140,18 @@ export interface LangValues<T> {
   vi: T
   en: T
   zh: T
+  ar: T
 }
 
 /**
  * Derive `hasContent` flags from a list of locale-keyed value objects.
- * Pass any number of { vi, en, zh } records; a locale is "has content"
+ * Pass any number of { vi, en, zh, ar } records; a locale is "has content"
  * if ANY of them has a non-empty string in that locale.
  */
 export function computeHasContent(
   ...records: Array<LangValues<string> | undefined>
 ): Record<Locale, boolean> {
-  const result: Record<Locale, boolean> = { vi: false, en: false, zh: false }
+  const result: Record<Locale, boolean> = { vi: false, en: false, zh: false, ar: false }
   for (const rec of records) {
     if (!rec) continue
     for (const loc of LANG_LOCALES) {

@@ -7,15 +7,19 @@ import { defaultLocale } from "./config"
  *
  * Fallback chain:
  *   locale="vi" → field
- *   locale="en" → field_en → field_zh → field
- *   locale="zh" → field_zh → field_en → field
+ *   locale="en" → field_en → field_zh → field_ar → field
+ *   locale="zh" → field_zh → field_en → field_ar → field
+ *   locale="ar" → field_ar → field_en → field_zh → field
  *
- * Vietnamese is the final source-of-truth; the "other foreign" language is
- * preferred over VI so a user who picks EN/ZH doesn't get pushed back to VI
- * when a sibling translation exists.
+ * Vietnamese is the final source-of-truth; foreign-language siblings are
+ * preferred over VI so a user who picks EN/ZH/AR doesn't get pushed back
+ * to VI when any sibling translation exists. Arabic sits last in the
+ * foreign-fallback order because it's the newest locale and is often
+ * still untranslated — EN is the most common fallback for AR readers.
  *
- * Note: the record must have all three columns selected in the Prisma query
- * for the middle fallback to resolve; otherwise the chain drops straight to VI.
+ * Note: the record must have all four *_{locale} columns selected in the
+ * Prisma query for the middle fallbacks to resolve; otherwise the chain
+ * drops straight to VI.
  */
 export function localize<T extends Record<string, unknown>>(
   record: T,
@@ -25,9 +29,15 @@ export function localize<T extends Record<string, unknown>>(
   if (locale === defaultLocale) return record[field]
   const primary = record[`${field}_${locale}`] as unknown
   if (primary != null && primary !== "") return primary
-  const otherForeign = locale === "en" ? "zh" : "en"
-  const secondary = record[`${field}_${otherForeign}`] as unknown
-  if (secondary != null && secondary !== "") return secondary
+  // Try each sibling foreign locale in priority order before dropping to VI.
+  const siblings: Locale[] =
+    locale === "en" ? ["zh", "ar"] :
+    locale === "zh" ? ["en", "ar"] :
+    /* ar */        ["en", "zh"]
+  for (const sib of siblings) {
+    const val = record[`${field}_${sib}`] as unknown
+    if (val != null && val !== "") return val
+  }
   return record[field]
 }
 

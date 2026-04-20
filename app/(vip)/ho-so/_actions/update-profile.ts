@@ -14,11 +14,13 @@ const profileSchema = z.object({
   bio: bioField,
   bio_en: bioField,
   bio_zh: bioField,
+  bio_ar: bioField,
   // Business representative fields — optional. Only written when the caller
   // actually has a company attached (checked server-side).
   representativePosition: positionField.optional(),
   representativePosition_en: positionField.optional(),
   representativePosition_zh: positionField.optional(),
+  representativePosition_ar: positionField.optional(),
 })
 
 type ProfileInput = {
@@ -27,9 +29,11 @@ type ProfileInput = {
   bio?: string
   bio_en?: string
   bio_zh?: string
+  bio_ar?: string
   representativePosition?: string
   representativePosition_en?: string
   representativePosition_zh?: string
+  representativePosition_ar?: string
 }
 
 export async function updateProfile(formData: ProfileInput) {
@@ -50,6 +54,7 @@ export async function updateProfile(formData: ProfileInput) {
       bio: data.bio?.trim() || null,
       bio_en: data.bio_en?.trim() || null,
       bio_zh: data.bio_zh?.trim() || null,
+      bio_ar: data.bio_ar?.trim() || null,
     },
   })
 
@@ -59,7 +64,8 @@ export async function updateProfile(formData: ProfileInput) {
   const sentPosition =
     data.representativePosition !== undefined ||
     data.representativePosition_en !== undefined ||
-    data.representativePosition_zh !== undefined
+    data.representativePosition_zh !== undefined ||
+    data.representativePosition_ar !== undefined
   if (sentPosition) {
     const company = await prisma.company.findUnique({
       where: { ownerId: session.user.id },
@@ -72,6 +78,7 @@ export async function updateProfile(formData: ProfileInput) {
           representativePosition: data.representativePosition?.trim() || null,
           representativePosition_en: data.representativePosition_en?.trim() || null,
           representativePosition_zh: data.representativePosition_zh?.trim() || null,
+          representativePosition_ar: data.representativePosition_ar?.trim() || null,
         },
       })
     }

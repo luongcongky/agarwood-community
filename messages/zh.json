@@ -622,7 +622,7 @@
     "minContent": "内容至少50个字符（当前：{count}）",
     "uploadFailed": "图片上传失败",
     "postFailed": "发帖失败",
-    "placeholder": "分享沉香知识、经验或市场信息...",
+    "placeholder": "你在想什么?",
     "addImages": "添加图片（最多4张）",
     "images": "图片",
     "fullEditor": "完整编辑器",
@@ -643,6 +643,8 @@
     "productBadge": "产品",
     "certifiedBadge": "已认证",
     "viewDetail": "查看详情 →",
+    "copyLink": "复制链接",
+    "linkCopied": "已复制",
     "joinHeading": "加入沉香协会",
     "pendingMsg": "账号审核中，审核通过后将收到邮件通知。",
     "guestMsg": "登录后可互动、发帖和享受会员权益。",
@@ -832,8 +834,8 @@
     "introEmpty": "未更新。",
     "joinedSince": "加入",
     "validUntil": "有效至",
-    "viewCompany": "查看企业 →",
-    "backToListBtn": "返回",
+    "viewCompany": "查看企业页面 →",
+    "backToListBtn": "返回列表",
     "printCard": "🖨️ 打印"
   },
   "printCard": {

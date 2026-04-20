@@ -46,11 +46,13 @@ export function SurveyEditor({ initial }: Props) {
     vi: initial?.title ?? "",
     en: (rec?.title_en as string) ?? "",
     zh: (rec?.title_zh as string) ?? "",
+    ar: (rec?.title_ar as string) ?? "",
   })
   const [description, setDescription] = useState<Record<Locale, string>>({
     vi: initial?.description ?? "",
     en: (rec?.description_en as string) ?? "",
     zh: (rec?.description_zh as string) ?? "",
+    ar: (rec?.description_ar as string) ?? "",
   })
   const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [audience, setAudience] = useState(initial?.audience ?? "BOTH_VIP")

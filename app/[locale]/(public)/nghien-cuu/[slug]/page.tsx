@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const news = await prisma.news.findFirst({
     where: { slug, category: "RESEARCH" },
     select: {
-      title: true, title_en: true, title_zh: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true,
+      title: true, title_en: true, title_zh: true, title_ar: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
     },
@@ -72,9 +72,9 @@ export default async function ResearchDetailPage({ params }: Props) {
     take: 3,
     select: {
       id: true,
-      title: true, title_en: true, title_zh: true,
+      title: true, title_en: true, title_zh: true, title_ar: true,
       slug: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
     },

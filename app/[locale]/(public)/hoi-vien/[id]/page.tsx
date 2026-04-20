@@ -1,9 +1,11 @@
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { calcTier, getTierThresholds } from "@/lib/tier"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import type { Metadata } from "next"
 
 // ── Metadata động theo user ──────────────────────────────────────────────────
@@ -16,12 +18,14 @@ export async function generateMetadata({
   const { id } = await params
   const member = await prisma.user.findFirst({
     where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
-    select: { name: true, bio: true },
+    select: { name: true, bio: true, bio_en: true, bio_zh: true, bio_ar: true },
   })
   if (!member) return { title: "Not found" }
+  const locale = (await getLocale()) as Locale
+  const bio = (localize(member, "bio", locale) as string | null) ?? member.bio
   return {
     title: `${member.name} — Hội viên Trầm Hương Việt Nam`,
-    description: member.bio?.slice(0, 160) ?? `Thông tin hội viên ${member.name} — Hội Trầm Hương Việt Nam.`,
+    description: bio?.slice(0, 160) ?? `Thông tin hội viên ${member.name} — Hội Trầm Hương Việt Nam.`,
   }
 }
 
@@ -40,6 +44,7 @@ export default async function MemberProfilePage({
   params: Promise<{ id: string }>
 }) {
   const tM = await getTranslations("memberDetail")
+  const locale = (await getLocale()) as Locale
   const MEMBER_CATEGORY_LABEL: Record<string, string> = {
     OFFICIAL: tM("official"), AFFILIATE: tM("affiliate"), HONORARY: tM("honorary"),
   }
@@ -53,6 +58,9 @@ export default async function MemberProfilePage({
         id: true,
         name: true,
         bio: true,
+        bio_en: true,
+        bio_zh: true,
+        bio_ar: true,
         avatarUrl: true,
         role: true,
         accountType: true,
@@ -67,6 +75,9 @@ export default async function MemberProfilePage({
             logoUrl: true,
             representativeName: true,
             representativePosition: true,
+            representativePosition_en: true,
+            representativePosition_zh: true,
+            representativePosition_ar: true,
             isPublished: true,
           },
         },
@@ -84,6 +95,10 @@ export default async function MemberProfilePage({
   const categoryLabel = MEMBER_CATEGORY_LABEL[member.memberCategory] ?? "—"
   const isBusiness = member.accountType === "BUSINESS"
   const companyPublic = member.company && member.company.isPublished
+  const bio = (localize(member, "bio", locale) as string | null) ?? ""
+  const position = member.company
+    ? ((localize(member.company, "representativePosition", locale) as string | null) ?? "")
+    : ""
 
   return (
     <div>
@@ -94,7 +109,7 @@ export default async function MemberProfilePage({
             href="/hoi-vien"
             className="inline-block text-sm text-brand-300 hover:text-brand-100 mb-4"
           >
-            &larr; Danh sách hội viên
+            {tM("backToList")}
           </Link>
           <div className="flex items-center gap-5 flex-wrap">
             <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-brand-600 bg-brand-900 shrink-0">
@@ -111,12 +126,12 @@ export default async function MemberProfilePage({
               <p className="text-sm text-brand-300 mt-1">
                 {isBusiness ? tM("businessMember") : tM("individualMember")}
                 <span className="mx-2">·</span>
-                Hạng {categoryLabel}
+                {tM("tier")} {categoryLabel}
                 {tierInfo.stars > 0 && <span className="ml-2 text-amber-300">{"★".repeat(tierInfo.stars)} {tierInfo.label}</span>}
               </p>
               {isBusiness && member.company && (
                 <p className="text-sm text-brand-400 mt-0.5">
-                  {member.company.representativePosition ? `${member.company.representativePosition} · ` : ""}
+                  {position ? `${position} · ` : ""}
                   {companyPublic ? (
                     <Link href={`/doanh-nghiep/${member.company.slug}`} className="underline hover:text-brand-200">
                       {member.company.name}
@@ -137,14 +152,14 @@ export default async function MemberProfilePage({
         {/* Bio */}
         <section className="bg-white rounded-xl border border-brand-200 p-6">
           <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide mb-3">
-            Giới thiệu
+            {tM("intro")}
           </h2>
-          {member.bio?.trim() ? (
+          {bio.trim() ? (
             <p className="text-sm leading-relaxed text-brand-800 whitespace-pre-wrap">
-              {member.bio}
+              {bio}
             </p>
           ) : (
-            <p className="text-sm text-brand-400 italic">Hội viên chưa cập nhật phần giới thiệu.</p>
+            <p className="text-sm text-brand-400 italic">{tM("introEmpty")}</p>
           )}
         </section>
 
@@ -171,14 +186,14 @@ export default async function MemberProfilePage({
               href={`/doanh-nghiep/${member.company!.slug}`}
               className="inline-flex items-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 transition-colors"
             >
-              Xem trang doanh nghiệp →
+              {tM("viewCompany")}
             </Link>
           )}
           <Link
             href="/hoi-vien"
-            className="inline-flex items-center rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+            className="inline-flex items-center rounded-lg bg-white border border-brand-200 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
           >
-            Quay lại danh sách
+            {tM("backToListBtn")}
           </Link>
         </section>
       </div>

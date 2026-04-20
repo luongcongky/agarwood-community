@@ -105,14 +105,14 @@ export default async function CertifiedProductsPage({
         take: PAGE_SIZE,
         select: {
           id: true,
-          name: true, name_en: true, name_zh: true,
+          name: true, name_en: true, name_zh: true, name_ar: true,
           slug: true,
           imageUrls: true,
-          category: true, category_en: true, category_zh: true,
+          category: true, category_en: true, category_zh: true, category_ar: true,
           priceRange: true,
           certApprovedAt: true,
           company: {
-            select: { name: true, name_en: true, name_zh: true, slug: true, logoUrl: true, isVerified: true, address: true },
+            select: { name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true, address: true },
           },
         },
       }),

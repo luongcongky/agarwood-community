@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const news = await prisma.news.findFirst({
     where: { slug, category: "GENERAL" },
     select: {
-      title: true, title_en: true, title_zh: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true,
+      title: true, title_en: true, title_zh: true, title_ar: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
     },
@@ -67,6 +67,26 @@ export default async function NewsDetailPage({ params }: Props) {
     }
   }
 
+  // Still no hit: the slug may belong to a News row of a different
+  // category — send the user to the correct public URL instead of 404.
+  // Handles old bookmarks / cached sitemap entries like
+  // /tin-tuc/chinh-sach-bao-mat (LEGAL → /privacy) or a research slug.
+  if (!news) {
+    const other = await prisma.news.findFirst({
+      where: { slug, isPublished: true },
+      select: { category: true, slug: true },
+    })
+    if (other) {
+      if (other.category === "LEGAL") {
+        if (other.slug === "chinh-sach-bao-mat") redirect("/privacy")
+        if (other.slug === "dieu-khoan-su-dung") redirect("/terms")
+      }
+      if (other.category === "RESEARCH") {
+        redirect(`/nghien-cuu/${other.slug}`)
+      }
+    }
+  }
+
   if (!news) notFound()
 
   // Fetch related articles (excluding current slug)
@@ -76,9 +96,9 @@ export default async function NewsDetailPage({ params }: Props) {
     take: 3,
     select: {
       id: true,
-      title: true, title_en: true, title_zh: true,
+      title: true, title_en: true, title_zh: true, title_ar: true,
       slug: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true,
+      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
     },

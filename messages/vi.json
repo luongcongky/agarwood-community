@@ -622,7 +622,7 @@
     "minContent": "Nội dung tối thiểu 50 ký tự (hiện tại: {count})",
     "uploadFailed": "Upload ảnh thất bại",
     "postFailed": "Đăng bài thất bại",
-    "placeholder": "Chia sẻ kiến thức, kinh nghiệm hoặc thông tin thị trường trầm hương...",
+    "placeholder": "Bạn đang nghĩ gì?",
     "addImages": "Thêm ảnh (tối đa 4)",
     "images": "Ảnh",
     "fullEditor": "Trình soạn thảo đầy đủ",
@@ -643,6 +643,8 @@
     "productBadge": "Sản phẩm",
     "certifiedBadge": "Đã chứng nhận",
     "viewDetail": "Xem chi tiết →",
+    "copyLink": "Sao chép link",
+    "linkCopied": "Đã sao chép",
     "joinHeading": "Tham gia Hội Trầm Hương",
     "pendingMsg": "Tài khoản đang chờ duyệt. Bạn sẽ nhận email khi được phê duyệt.",
     "guestMsg": "Đăng nhập để tương tác, đăng bài và nhận quyền lợi hội viên.",
@@ -832,8 +834,8 @@
     "introEmpty": "Chưa cập nhật giới thiệu.",
     "joinedSince": "Tham gia từ",
     "validUntil": "Hiệu lực đến",
-    "viewCompany": "Xem doanh nghiệp →",
-    "backToListBtn": "Quay lại",
+    "viewCompany": "Xem trang doanh nghiệp →",
+    "backToListBtn": "Quay lại danh sách",
     "printCard": "🖨️ In thẻ"
   },
   "printCard": {

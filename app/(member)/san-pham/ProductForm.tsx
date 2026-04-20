@@ -45,13 +45,16 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
   const [name, setName] = useState(product?.name ?? "")
   const [name_en, setNameEn] = useState((p?.name_en as string) ?? "")
   const [name_zh, setNameZh] = useState((p?.name_zh as string) ?? "")
+  const [name_ar, setNameAr] = useState((p?.name_ar as string) ?? "")
   const [slug, setSlug] = useState(product?.slug ?? "")
   const descriptionRef = useRef<RichTextEditorHandle>(null)
   const [description_en, setDescriptionEn] = useState((p?.description_en as string) ?? "")
   const [description_zh, setDescriptionZh] = useState((p?.description_zh as string) ?? "")
+  const [description_ar, setDescriptionAr] = useState((p?.description_ar as string) ?? "")
   const [category, setCategory] = useState(product?.category ?? "")
   const [category_en, setCategoryEn] = useState((p?.category_en as string) ?? "")
   const [category_zh, setCategoryZh] = useState((p?.category_zh as string) ?? "")
+  const [category_ar, setCategoryAr] = useState((p?.category_ar as string) ?? "")
   const [priceRange, setPriceRange] = useState(product?.priceRange ?? "")
   const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? [])
   const [isPublished, setIsPublished] = useState(product?.isPublished ?? true)
@@ -98,10 +101,10 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
     await descriptionRef.current?.processImages()
     const description = descriptionRef.current?.getHTML() ?? ""
     const data = {
-      name, name_en: name_en || null, name_zh: name_zh || null,
+      name, name_en: name_en || null, name_zh: name_zh || null, name_ar: name_ar || null,
       slug, description,
-      description_en: description_en || null, description_zh: description_zh || null,
-      category, category_en: category_en || null, category_zh: category_zh || null,
+      description_en: description_en || null, description_zh: description_zh || null, description_ar: description_ar || null,
+      category, category_en: category_en || null, category_zh: category_zh || null, category_ar: category_ar || null,
       priceRange, imageUrls, isPublished,
     }
 
@@ -141,11 +144,12 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
         <MultiLangInput
           name="name"
           label="Tên sản phẩm *"
-          values={{ vi: name, en: name_en, zh: name_zh }}
+          values={{ vi: name, en: name_en, zh: name_zh, ar: name_ar }}
           onChange={(key, value) => {
             if (key === "name") handleNameChange(value)
             else if (key === "name_en") setNameEn(value)
             else if (key === "name_zh") setNameZh(value)
+            else if (key === "name_ar") setNameAr(value)
           }}
           placeholder="Tên sản phẩm"
           required

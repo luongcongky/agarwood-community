@@ -19,6 +19,7 @@ type UserProfile = {
   bio: string | null
   bio_en: string | null
   bio_zh: string | null
+  bio_ar: string | null
   bankAccountName: string | null
   bankAccountNumber: string | null
   bankName: string | null
@@ -34,6 +35,7 @@ type UserProfile = {
     representativePosition: string | null
     representativePosition_en: string | null
     representativePosition_zh: string | null
+    representativePosition_ar: string | null
   } | null
 }
 
@@ -128,12 +130,14 @@ export function ProfileTabs({
   const [bio, setBio] = useState(user.bio ?? "")
   const [bioEn, setBioEn] = useState(user.bio_en ?? "")
   const [bioZh, setBioZh] = useState(user.bio_zh ?? "")
+  const [bioAr, setBioAr] = useState(user.bio_ar ?? "")
   // Chức vụ tại doanh nghiệp — chỉ hiển thị khi user là đại diện business.
   const showPositionField =
     user.accountType === "BUSINESS" && user.company !== null
   const [position, setPosition] = useState(user.company?.representativePosition ?? "")
   const [positionEn, setPositionEn] = useState(user.company?.representativePosition_en ?? "")
   const [positionZh, setPositionZh] = useState(user.company?.representativePosition_zh ?? "")
+  const [positionAr, setPositionAr] = useState(user.company?.representativePosition_ar ?? "")
   const [personalLoading, setPersonalLoading] = useState(false)
   const [personalMsg, setPersonalMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
@@ -164,9 +168,11 @@ export function ProfileTabs({
         bio,
         bio_en: bioEn,
         bio_zh: bioZh,
+        bio_ar: bioAr,
         representativePosition: showPositionField ? position : undefined,
         representativePosition_en: showPositionField ? positionEn : undefined,
         representativePosition_zh: showPositionField ? positionZh : undefined,
+        representativePosition_ar: showPositionField ? positionAr : undefined,
       })
       if (result.error) {
         setPersonalMsg({ type: "error", text: result.error })
@@ -307,11 +313,12 @@ export function ProfileTabs({
                 <MultiLangInput
                   name="representativePosition"
                   label="Chức vụ tại doanh nghiệp"
-                  values={{ vi: position, en: positionEn, zh: positionZh }}
+                  values={{ vi: position, en: positionEn, zh: positionZh, ar: positionAr }}
                   onChange={(key, val) => {
                     if (key === "representativePosition") setPosition(val)
                     else if (key === "representativePosition_en") setPositionEn(val)
                     else if (key === "representativePosition_zh") setPositionZh(val)
+                    else if (key === "representativePosition_ar") setPositionAr(val)
                   }}
                   placeholder="Ví dụ: Giám đốc, Tổng Giám đốc, Chủ tịch HĐQT…"
                 />
@@ -325,12 +332,13 @@ export function ProfileTabs({
               <MultiLangTextarea
                 name="bio"
                 label="Giới thiệu bản thân / Tiểu sử"
-                values={{ vi: bio, en: bioEn, zh: bioZh }}
+                values={{ vi: bio, en: bioEn, zh: bioZh, ar: bioAr }}
                 onChange={(key, val) => {
                   const clipped = val.slice(0, 2000)
                   if (key === "bio") setBio(clipped)
                   else if (key === "bio_en") setBioEn(clipped)
                   else if (key === "bio_zh") setBioZh(clipped)
+                  else if (key === "bio_ar") setBioAr(clipped)
                 }}
                 placeholder="Ví dụ: Tôi có 10 năm kinh nghiệm trong lĩnh vực trầm hương, chuyên về chế biến và phân phối..."
                 rows={5}

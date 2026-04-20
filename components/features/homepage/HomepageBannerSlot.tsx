@@ -42,6 +42,7 @@ const getActiveBanners = (position: BannerPosition) =>
 const POSITION_COPY: Record<BannerPosition, string> = {
   TOP: "Vị trí Banner — Đầu trang chủ",
   MID: "Vị trí Banner — Giữa trang chủ",
+  SIDEBAR: "Vị trí Banner — Rail dọc /feed",
 }
 
 export async function HomepageBannerSlot({

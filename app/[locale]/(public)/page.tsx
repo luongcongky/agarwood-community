@@ -51,7 +51,10 @@ export default async function HomePage() {
   }
 
   return (
-    <>
+    // data-page="home" scopes the Option-A typography refinement pass
+    // (see .home in globals.css). Only the homepage is touched — every
+    // other public page keeps the original typography.
+    <div data-page="home">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
@@ -113,6 +116,6 @@ export default async function HomePage() {
       <Suspense fallback={<PartnersCarouselSkeleton />}>
         <PartnersCarousel />
       </Suspense>
-    </>
+    </div>
   )
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getQuotaUsage } from "@/lib/quota"
@@ -198,6 +199,10 @@ export async function POST(request: Request) {
         authorPriority: user?.displayPriority ?? 0,
       },
     })
+    // Invalidate the /feed ISR cache so the new post shows up on the
+    // next visit instead of waiting up to 60s for the revalidate tick.
+    revalidatePath("/feed")
+    revalidatePath("/[locale]/feed", "page")
     return NextResponse.json({ post }, { status: 201 })
   }
 
@@ -238,5 +243,7 @@ export async function POST(request: Request) {
     return { post }
   })
 
+  revalidatePath("/feed")
+  revalidatePath("/[locale]/feed", "page")
   return NextResponse.json({ post }, { status: 201 })
 }
