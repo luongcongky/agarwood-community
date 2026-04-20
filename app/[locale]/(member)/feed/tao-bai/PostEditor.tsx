@@ -27,19 +27,22 @@ function extractCloudinaryUrls(html: string): string[] {
   return matches ? [...new Set(matches)] : []
 }
 
-/** Delete orphaned Cloudinary images (present in before but not in after) */
+/** Delete orphaned Cloudinary images (present in before but not in after).
+ *  Fires all deletes in parallel; individual failures are swallowed. */
 async function deleteOrphanedImages(beforeUrls: string[], afterHtml: string) {
   const afterUrls = extractCloudinaryUrls(afterHtml)
   const orphaned = beforeUrls.filter((url) => !afterUrls.includes(url))
-  for (const url of orphaned) {
-    try {
-      await fetch("/api/upload/delete", {
+  await Promise.all(
+    orphaned.map((url) =>
+      fetch("/api/upload/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
-      })
-    } catch { /* ignore individual failures */ }
-  }
+      }).catch(() => {
+        /* ignore individual failures */
+      }),
+    ),
+  )
 }
 
 // ─── Page Component ──────────────────────────────────────────────────────────
@@ -264,15 +267,18 @@ function TaoBaiContent() {
   }, [title])
 
   async function handleCancel() {
-    for (const url of uploadedImages) {
-      try {
-        await fetch("/api/upload/delete", {
+    // Fire-and-forget parallel cleanup — don't block redirect
+    void Promise.all(
+      uploadedImages.map((url) =>
+        fetch("/api/upload/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url }),
-        })
-      } catch { /* ignore */ }
-    }
+        }).catch(() => {
+          /* ignore */
+        }),
+      ),
+    )
     localStorage.removeItem("feed_draft")
     router.push("/feed")
   }
@@ -324,7 +330,19 @@ function TaoBaiContent() {
         }),
       })
       if (res.ok) {
-        await deleteOrphanedImages([...originalImages, ...uploadedImages], html)
+        // Hand the freshly-created post to /feed via sessionStorage so it
+        // appears at the top of the list immediately, instead of waiting
+        // for the next ISR revalidate tick. FeedClient picks it up on mount.
+        try {
+          const { post } = await res.json()
+          if (post && !editId) {
+            sessionStorage.setItem("freshPost", JSON.stringify(post))
+          }
+        } catch {
+          /* fall through — feed will still show post after ISR refresh */
+        }
+        // Fire-and-forget orphan cleanup — don't block redirect on it
+        void deleteOrphanedImages([...originalImages, ...uploadedImages], html)
         localStorage.removeItem("feed_draft")
         router.push("/feed")
       } else {

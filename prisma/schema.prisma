@@ -701,6 +701,7 @@ model News {
   updatedAt    DateTime     @updatedAt
 
   @@index([category, isPublished, publishedAt])
+  @@index([isPublished, isPinned, publishedAt])  // homepage news carousel: WHERE isPublished ORDER BY isPinned, publishedAt
   @@index([slug])
   @@map("news")
 }
@@ -852,6 +853,7 @@ model Banner {
   @@index([endDate])
   @@index([status, endDate])  // homepage query: ACTIVE + đang trong khoảng startDate-endDate
   @@index([status, position, endDate])  // homepage query tách theo position
+  @@index([status, position, startDate, endDate])  // covers full date-window filter on TOP/MID/SIDEBAR queries
   @@map("banners")
 }
 

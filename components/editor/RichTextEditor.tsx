@@ -181,7 +181,6 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       const pending = pendingFilesRef.current
       if (pending.size === 0) return []
 
-      const uploadedUrls: string[] = []
       const json = editor.getJSON()
 
       // Collect all blob URLs still in the document
@@ -197,44 +196,53 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       }
       walk(json as Record<string, unknown>)
 
-      // Upload each blob that's still in the doc
+      // Phase 1: drop blobs that the user removed from the editor
+      const toUpload: { blobUrl: string; file: File }[] = []
       for (const [blobUrl, file] of pending.entries()) {
         if (!blobsInDoc.has(blobUrl)) {
-          // Image was removed from editor — skip upload, revoke blob
           URL.revokeObjectURL(blobUrl)
           pending.delete(blobUrl)
-          continue
+        } else {
+          toUpload.push({ blobUrl, file })
         }
+      }
 
-        try {
-          const formData = new FormData()
-          formData.append("file", file)
-          formData.append("folder", uploadFolder)
-          const res = await fetch("/api/upload", { method: "POST", body: formData })
-          if (!res.ok) throw new Error("Upload failed")
-          const data = await res.json()
-          const cloudinaryUrl = data.secure_url ?? data.url
+      // Phase 2: upload all in parallel — N images = max(N) instead of sum(N)
+      const results = await Promise.all(
+        toUpload.map(async ({ blobUrl, file }) => {
+          try {
+            const formData = new FormData()
+            formData.append("file", file)
+            formData.append("folder", uploadFolder)
+            const res = await fetch("/api/upload", { method: "POST", body: formData })
+            if (!res.ok) throw new Error("Upload failed")
+            const data = await res.json()
+            return { blobUrl, file, cloudinaryUrl: (data.secure_url ?? data.url) as string }
+          } catch {
+            console.error(`Failed to upload image: ${file.name}`)
+            return null
+          }
+        }),
+      )
 
-          // Replace blob URL with Cloudinary URL in editor
-          // Walk ProseMirror doc and update matching image nodes
-          editor.state.doc.descendants((node, pos) => {
-            if (node.type.name === "image" && node.attrs.src === blobUrl) {
-              editor
-                .chain()
-                .focus()
-                .setNodeSelection(pos)
-                .updateAttributes("image", { src: cloudinaryUrl })
-                .run()
-            }
-          })
-
-          uploadedUrls.push(cloudinaryUrl)
-          URL.revokeObjectURL(blobUrl)
-          pending.delete(blobUrl)
-        } catch {
-          // Keep blob in pending if upload fails — caller can retry
-          console.error(`Failed to upload image: ${file.name}`)
-        }
+      // Phase 3: rewrite editor doc + clean up blobs (fast, no await)
+      const uploadedUrls: string[] = []
+      for (const result of results) {
+        if (!result) continue
+        const { blobUrl, cloudinaryUrl } = result
+        editor.state.doc.descendants((node, pos) => {
+          if (node.type.name === "image" && node.attrs.src === blobUrl) {
+            editor
+              .chain()
+              .focus()
+              .setNodeSelection(pos)
+              .updateAttributes("image", { src: cloudinaryUrl })
+              .run()
+          }
+        })
+        uploadedUrls.push(cloudinaryUrl)
+        URL.revokeObjectURL(blobUrl)
+        pending.delete(blobUrl)
       }
 
       return uploadedUrls

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
@@ -83,13 +83,6 @@ type MembershipInfo = {
   company: { name: string; slug: string } | null
 }
 
-type SidebarBanner = {
-  id: string
-  title: string
-  imageUrl: string
-  targetUrl: string
-}
-
 type FeedClientProps = {
   initialPosts: Post[]
   currentUserId: string | null
@@ -102,7 +95,7 @@ type FeedClientProps = {
   tierIndSilver?: number
   tierIndGold?: number
   topContributors: TopContributor[]
-  sidebarBanners: SidebarBanner[]
+  sidebarBannersSlot: ReactNode
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -670,17 +663,18 @@ function InlinePostCreator({
     setError(null)
 
     try {
-      // Upload images first
-      const uploadedUrls: string[] = []
-      for (const img of images) {
-        const formData = new FormData()
-        formData.append("file", img.file)
-        formData.append("folder", "bai-viet")
-        const res = await fetch("/api/upload", { method: "POST", body: formData })
-        if (!res.ok) throw new Error(t("uploadFailed"))
-        const data = await res.json()
-        uploadedUrls.push(data.secure_url)
-      }
+      // Upload all images in parallel — N images takes max(N), not sum(N)
+      const uploadedUrls = await Promise.all(
+        images.map(async (img) => {
+          const formData = new FormData()
+          formData.append("file", img.file)
+          formData.append("folder", "bai-viet")
+          const res = await fetch("/api/upload", { method: "POST", body: formData })
+          if (!res.ok) throw new Error(t("uploadFailed"))
+          const data = await res.json()
+          return data.secure_url as string
+        }),
+      )
 
       // Build HTML content — images first, then paragraphs. Quick-compose
       // posts are scanned visually in the feed, so leading with the
@@ -900,7 +894,7 @@ export function FeedClient({
   currentUserAvatarUrl,
   membershipInfo,
   topContributors,
-  sidebarBanners,
+  sidebarBannersSlot,
   tierSilver,
   tierGold,
   tierIndSilver,
@@ -918,12 +912,42 @@ export function FeedClient({
   const [isMounted, setIsMounted] = useState(false)
   const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
-  const [hasMore, setHasMore] = useState(initialPosts.length >= 20)
+  const [hasMore, setHasMore] = useState(initialPosts.length >= 10)
   const [filter, setFilter] = useState<FilterKey>("all")
 
   useEffect(() => {
     setNow(Date.now())
     setIsMounted(true)
+
+    // Optimistic hand-off from /feed/tao-bai full editor: PostEditor stashes
+    // the freshly-created post in sessionStorage before redirecting here.
+    // Prepend it so the user sees their post instantly instead of waiting
+    // for the next ISR revalidate. Skip if the ISR refresh already included it.
+    try {
+      const raw = sessionStorage.getItem("freshPost")
+      if (raw) {
+        sessionStorage.removeItem("freshPost")
+        const fresh = JSON.parse(raw) as Partial<Post> & { id: string }
+        const hydrated: Post = {
+          imageUrls: [],
+          status: "PUBLISHED",
+          isPremium: false,
+          isPromoted: false,
+          authorPriority: 0,
+          viewCount: 0,
+          reportCount: 0,
+          lockedAt: null,
+          lockedBy: null,
+          lockReason: null,
+          reactions: [],
+          _count: { reactions: 0, comments: 0 },
+          ...fresh,
+        } as Post
+        setPosts((prev) => (prev.some((p) => p.id === hydrated.id) ? prev : [hydrated, ...prev]))
+      }
+    } catch {
+      /* ignore corrupt sessionStorage entry */
+    }
   }, [])
   const [loading, setLoading] = useState(false)
   const observerRef = useRef<HTMLDivElement>(null)
@@ -943,7 +967,7 @@ export function FeedClient({
       .then((data) => {
         if (cancelled) return
         setPosts(data.posts ?? [])
-        setHasMore((data.posts?.length ?? 0) >= 20)
+        setHasMore((data.posts?.length ?? 0) >= 10)
         cursorRef.current = data.posts?.at(-1)?.id ?? null
       })
       .catch(() => {})
@@ -959,7 +983,7 @@ export function FeedClient({
     try {
       const res = await fetch(buildFeedUrl(filter, cursorRef.current))
       const data = await res.json()
-      if (data.posts.length < 20) setHasMore(false)
+      if (data.posts.length < 10) setHasMore(false)
       setPosts((prev) => [...prev, ...data.posts])
       cursorRef.current = data.posts.at(-1)?.id ?? null
     } catch {
@@ -1168,53 +1192,9 @@ export function FeedClient({
           </div>
         )}
 
-        {/* Sticky vertical ad rail — placed at the bottom of the aside so
-            it naturally sits below MembershipCard + Top contributors. As
-            the user scrolls, `sticky top-20` pins the banner below the
-            64px sticky navbar (top-16 + a 4-unit gap) so it isn't clipped
-            by the header. */}
-        <div className="sticky top-20 space-y-3">
-          <p className="text-[10px] uppercase tracking-wider font-semibold text-brand-400">
-            Quảng cáo
-          </p>
-          {sidebarBanners.length > 0 ? (
-            <div className="space-y-3">
-              {sidebarBanners.map((b) => (
-                <a
-                  key={b.id}
-                  href={b.targetUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={b.title}
-                  className="block overflow-hidden rounded-xl border border-brand-200 bg-white hover:shadow-md transition-shadow"
-                >
-                  <div className="relative w-full" style={{ aspectRatio: "2 / 3" }}>
-                    <Image src={b.imageUrl} alt={b.title} fill className="object-cover" sizes="320px" />
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <Link
-              href="/banner/dang-ky"
-              className="block rounded-xl border-2 border-dashed border-brand-300 bg-white/80 p-5 text-center hover:bg-white hover:border-brand-500 transition-colors"
-              style={{ aspectRatio: "2 / 3" }}
-            >
-              <div className="flex flex-col items-center justify-center h-full gap-2">
-                <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
-                  <span className="text-brand-700 text-xl font-bold">+</span>
-                </div>
-                <p className="text-sm font-semibold text-brand-800">Đặt banner quảng cáo</p>
-                <p className="text-xs text-brand-500 leading-relaxed">
-                  Hiển thị banner dọc tại vị trí này trên /feed. Đăng ký 1 tháng → hàng nghìn lượt xem.
-                </p>
-                <span className="text-xs font-semibold text-brand-700 underline underline-offset-2 mt-1">
-                  Đăng ký ngay →
-                </span>
-              </div>
-            </Link>
-          )}
-        </div>
+        {/* Sticky vertical ad rail — fetched separately as a streamed server
+            component so the feed renders without waiting on the banner query. */}
+        {sidebarBannersSlot}
       </aside>
     </div>
     </div>

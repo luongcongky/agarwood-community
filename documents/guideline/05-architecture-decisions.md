@@ -954,3 +954,169 @@ const idx = fnv1a(key) % active.length
 - Neu can hien thi anh khac nhau theo loai trang (vd homepage vs `/tin-tuc`) → them field `scope` va logic pick theo scope.
 - Neu so anh active > 100 va muon weight theo `sortOrder` (vd anh A hien gap 2 anh B) → thay FNV-1a index bang cumulative-weight selection.
 - Neu Next cho ra `cache()` stable API thay the `unstable_cache` → migrate.
+
+---
+
+## ADR-027: Suspense streaming cho trang chu
+
+### Boi canh
+Trang chu fetch ~7-10 section (Tin Hoi, Ban tin hoi vien, Banner TOP/MID, San pham chung nhan,
+Tin doanh nghiep, Tin san pham, Doi tac). Truoc day code render tat ca tuan tu, TTFB cold ~350ms,
+user thay "trang trang" trong khi cho.
+
+### Quyet dinh
+Wrap MOI section trong `<Suspense fallback={<Skeleton />}>` voi skeleton tu
+`components/features/homepage/skeletons.tsx`. Section nhanh xong truoc se render truoc;
+HTML dau flush gan nhu ngay.
+
+### Ly do
+- **Loai bo "trang trang"**: user thay khung skeleton ngay, biet trang dang load
+- **TTFB on dinh**: section nho/cache nong khong bi block boi section cham
+- **LCP cai thien**: above-fold skeleton -> content thuc khong layout shift (cung dimensions)
+- **Khong tang chi phi**: skeleton la pure JSX, ~bytes
+
+### Loi thuong gap
+- Skeleton phai khop kich thuoc voi component thuc, neu lech -> CLS
+- Suspense boundary chi work voi async server component (fetch in component, khong props)
+
+### Ket hop voi cron warm-up (ADR-029)
+Suspense streaming giai quyet WAIT TIME bang skeleton; cron warm-up giai quyet COLD TTFB
+bang cach repopulate cache truoc khi user den. 2 giai phap bo sung nhau.
+
+---
+
+## ADR-028: POST /api/posts — fetch user 1 lan + Promise.all queries
+
+### Boi canh
+Truoc day handler POST /api/posts goi:
+1. `auth()`
+2. `getQuotaUsage(userId)` — internal: `user.findUnique` + `post.count`
+3. (Neu PRODUCT) `getProductQuotaUsage(userId)` — internal: `user.findUnique` (TRUNG LAP) + `product.count`
+4. (Neu PRODUCT) `prisma.product.findUnique` slug check
+5. `prisma.user.findUnique` cho `displayPriority` (TRUNG LAP lan 2)
+6. (Neu PRODUCT) `prisma.company.findUnique`
+7. `prisma.post.create` (hoac transaction Post + Product)
+
+= 5-10 query tuan tu, voi 2-3 lan fetch user trung lap. Khach hang phan nan "dang bai
+qua lau" (one of the painpoints).
+
+### Quyet dinh
+Refactor:
+- Validate body fields TRUOC khi cham DB
+- 1 batch parallel: `Promise.all([user.findUnique, post.count, productCount?, slugConflict?, company?])`
+- Sau khi co `user`, goi `getMonthlyQuota`/`getMonthlyProductQuota` (truyen user object) thay vi
+  `getQuotaUsage` (auto-fetch user lan nua)
+- Response giu kem `author` (va `product` neu PRODUCT) -> phuc vu optimistic UI o client (ADR-030)
+
+### Ket qua
+- GENERAL: 5 query -> 3 round-trip (-40%)
+- PRODUCT: 10 query -> 4 round-trip (-60%)
+- Server time: ~150-300ms -> ~50-150ms
+
+### Trade-offs
+- `getQuotaUsage`/`getProductQuotaUsage` van duoc dung o cho khac (vd /api/posts/quota)
+  voi semantic "fetch all from userId" — KHONG bi anh huong
+- Code phuc tap hon mot chut trong handler (Promise.all + spread/conditional)
+
+---
+
+## ADR-029: Cron warm-up trang chu (Vercel Cron)
+
+### Boi canh
+Trang chu dung `unstable_cache` voi `revalidate: 300-600`. Sau khi cache het, user dau tien
+sau cache-miss phai cho ~350ms (cold) cho cac DB query repopulate. User dem (it traffic) hoac
+post-deploy regions cold thuong xuyen hon.
+
+### Quyet dinh
+Tao `/api/cron/warm-homepage` route:
+- Auth: `Bearer ${CRON_SECRET}` (Vercel Cron tu gui)
+- Goi `revalidateTag("homepage", "max")` invalidate cache
+- `Promise.all` 5 fetcher chinh trong `lib/homepage.ts` (NewsSection, MemberRail, FeaturedProducts,
+  LatestPosts × 2) -> auto repopulate
+
+Schedule trong `vercel.json`:
+- **Hobby (free)**: `0 23 * * *` (06:00 VN, daily) — Vercel Hobby cap cron daily-only
+- **Pro**: doi sang `*/5 * * * *` (mooi 5 phut)
+- **External tren Hobby**: cron-job.org / GitHub Actions / Upstash QStash goi endpoint voi
+  CRON_SECRET de dat tan suat 5 phut khong upgrade plan
+
+### Ly do daily 06:00 VN
+- Truoc peak traffic buoi sang (VN audience)
+- Stagger 5 tieng sau `banner-expire` (01:00 VN) — banner-expire co the `revalidateTag("homepage")`
+  neu co banner expire, warm-homepage chay sau se repopulate
+
+### Trade-offs
+- Hobby plan: cold van xuat hien ban dem va trong ngay khi cache het 5 phut. Acceptable vi
+  user buoi dem it, ban ngay traffic lien tuc warm cache tu nhien (1 user warm cho ~5 phut tiep theo)
+- Pro plan: gan nhu khong bao gio cold. Tradeoff: $20/thang
+- Yeu cau env var `CRON_SECRET` tren Vercel dashboard
+
+---
+
+## ADR-030: Optimistic UI cho /feed/tao-bai (sessionStorage hand-off)
+
+### Boi canh
+Sau khi POST /api/posts thanh cong, user `router.push("/feed")`. Page dung ISR
+(`revalidate=60`), bai moi co the chua xuat hien ngay -> cam giac "dang nhung khong thay".
+Inline composer trong /feed da co optimistic update (state local), nhung full editor
+o trang rieng /feed/tao-bai khong the truyen state qua route boundary.
+
+### Quyet dinh
+Hand-off qua `sessionStorage`:
+1. PostEditor.handleSubmit on success: lay `post` tu response (gio co `author` nho ADR-028),
+   luu vao `sessionStorage.setItem("freshPost", JSON.stringify(post))`
+2. FeedClient on mount: doc `sessionStorage.getItem("freshPost")`, hydrate fields thieu
+   (`reactions: []`, `_count`), prepend vao posts neu chua co (skip duplicate ID), xoa key
+3. Effect run-once -> bai moi hien tuc thi, ISR vai chuc giay sau co the dieu chinh nhe
+
+### Trade-offs
+- sessionStorage chia se trong 1 tab — neu user mo /feed o tab khac sau khi POST, khong nhan
+  hand-off. Acceptable vi user thuong dang bai roi xem cung tab.
+- Field thieu (reactions, _count) hien la `[]`/`0` — UI hien dung nhung user khong thay reaction
+  cua minh ngay (tinh the rare).
+
+### Tai sao khong dung Server Action revalidate?
+- `revalidatePath("/[locale]/feed", "page")` da goi tu API, nhung ISR cap region/edge,
+  user dau tien thay state cu trong vai chuc giay. Optimistic ngay tot hon UX.
+- React 19 `useOptimistic` chi work trong cung component tree, khong cross-route.
+
+---
+
+## ADR-031: Migration baseline cho db_push drift
+
+### Boi canh
+Trong qua trinh phat trien, 5 table (`leaders`, `partners`, `surveys`, `survey_responses`,
+`consultation_requests`) + 5 enum + cot `banners.position` + index `banners(status,position,endDate)`
++ cot `products.postId` duoc tao qua `prisma db push` (KHONG qua migration). Migration history
+khong co `CREATE TABLE` cho cac doi tuong nay. Khi `prisma migrate dev` rebuild shadow DB,
+migration sau (vd `20260417000000_add_i18n_columns` ALTER `leaders`) fail vi shadow chua co table.
+
+### Quyet dinh
+Tao 2 baseline migration **idempotent** (timestamp truoc cac migration alter):
+- `20260416200000_baseline_db_push_drift`: 5 table + 5 enum + `banners.position` (BannerPosition pre-SIDEBAR)
+- `20260416300000_baseline_db_push_drift_part2`: NewsCategory `LEGAL` value, `products.postId` + FK CASCADE,
+  `banners(status, position, endDate)` index
+
+Pattern idempotent:
+- `CREATE TYPE ... AS ENUM (...)` wrap trong `DO $$ ... EXCEPTION WHEN duplicate_object THEN null; END $$`
+- `CREATE TABLE IF NOT EXISTS`
+- `CREATE INDEX IF NOT EXISTS`
+- `ALTER TABLE ADD CONSTRAINT` wrap trong `DO $$ ... EXCEPTION WHEN duplicate_object`
+
+### Cach apply
+- DB co san (local dev hien tai, prod Supabase): `prisma migrate resolve --applied <name>` —
+  ghi vao `_prisma_migrations` ma KHONG chay SQL
+- DB rong (shadow rebuild khi `migrate dev`): SQL chay binh thuong, IF NOT EXISTS skip o cac
+  doi tuong nao da co (khong xay ra trong shadow), CREATE binh thuong cho cac doi tuong khac
+
+### Ly do KHONG sua migration cu
+- Prisma checksum migration `.sql` file. Sua sau khi apply -> drift detection -> phai reset
+- Baseline rieng la cleanest: undo-able, doc duoc, traceable
+
+### Khi nao deploy len Supabase
+1. `MIGRATE_TARGET=supabase npx prisma migrate resolve --applied 20260416200000_baseline_db_push_drift`
+2. `MIGRATE_TARGET=supabase npx prisma migrate resolve --applied 20260416300000_baseline_db_push_drift_part2`
+3. `MIGRATE_TARGET=supabase npx prisma migrate deploy`
+
+(Hai lenh resolve dau khong chay SQL — cac doi tuong da co tren Supabase. Lenh deploy cuoi
+apply migration mới — vd `20260420010000_add_news_banner_perf_indexes`.)

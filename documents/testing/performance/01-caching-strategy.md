@@ -5,14 +5,14 @@
 ### Revalidate values (da kiem tra + fix)
 | Trang | revalidate | Ly do |
 |-------|-----------|-------|
-| / (trang chu) | 3600 (1h) | Static content, it thay doi |
+| / (trang chu) | 300 (5m) | Page-level revalidate; moi section dung `unstable_cache` (300-600s) tagged `homepage` -> cron warm |
 | /tin-tuc | 3600 | Listing tin tuc, cache 1h |
 | /tin-tuc/[slug] | 1800 (30m) | Chi tiet tin, **da fix** (truoc: khong co) |
 | /san-pham-chung-nhan | 3600 | Listing SP, cache 1h |
 | /san-pham/[slug] | 3600 | Chi tiet SP, **da fix** (truoc: khong co) |
 | /doanh-nghiep/[slug] | 3600 | Profile DN, **da fix** (truoc: khong co) |
 | /hoi-vien | 3600 | Danh sach hoi vien |
-| /feed | 0 (realtime) | Feed can moi nhat |
+| /feed | 60 | Feed page cache 1m, sidebar banner stream rieng qua Suspense |
 | /tong-quan | 0 | Dashboard VIP can realtime |
 | /ho-so | 0 | Profile ca nhan |
 | /gia-han | 0 | Trang thai membership |
@@ -20,15 +20,29 @@
 | /admin | 60 | Alert panel refresh 60s |
 | /admin/* | 0 | Tat ca trang admin can realtime |
 
+### Cron warm-homepage (Hobby/Pro)
+- File: `app/api/cron/warm-homepage/route.ts`, schedule trong `vercel.json`
+- Hobby (free): `0 23 * * *` UTC = 06:00 VN, daily — warm truoc peak sang
+- Pro (upgrade): doi sang `*/5 * * * *` de warm mooi 5 phut
+- Logic: `revalidateTag("homepage", "max")` -> Promise.all goi 5 fetcher chinh trong `lib/homepage.ts`
+- Auth: `Bearer ${CRON_SECRET}` (Vercel Cron tu gui)
+
 ## Kich ban kiem tra
 
-### TC-PERF-CACHE-01: Trang chu cache 1 gio
+### TC-PERF-CACHE-01: Trang chu cache 5 phut + section unstable_cache
 1. Truy cap / -> ghi nhan response header
-2. **Kiem tra**: Header `Cache-Control` hoac `x-nextjs-cache` cho thay ISR
+2. **Kiem tra**: Header `Cache-Control` hoac `x-nextjs-cache` cho thay ISR (page-level revalidate=300)
 3. Doi 5 giay -> truy cap lai
 4. **Kiem tra**: Response tra ve tu cache (nhanh hon)
 5. Thay doi data trong DB -> truy cap lai ngay
-6. **Kiem tra**: Van hien data cu (cache chua het han)
+6. **Kiem tra**: Van hien data cu (cache chua het han 5 phut hoac section TTL 300-600s)
+7. **Kiem tra**: Tung section (Tin Hoi, Ban tin hoi vien, San pham chung nhan, ...) load qua Suspense + skeleton, HTML dau flush nhanh
+
+### TC-PERF-CACHE-CRON: Cron warm-homepage
+1. (Sau khi deploy) Vercel dashboard -> Crons -> kiem tra `warm-homepage` chay daily 06:00 VN
+2. Goi tay endpoint: `curl -H "Authorization: Bearer $CRON_SECRET" https://[domain]/api/cron/warm-homepage`
+3. **Kiem tra**: Response `{ warmed: true, sections: 5, elapsedMs: 100-300 }`
+4. **Kiem tra**: Lan tiep theo vao trang chu sau cron tick -> TTFB warm (~20ms thay vi cold ~350ms)
 
 ### TC-PERF-CACHE-02: Feed khong cache (revalidate=0)
 1. Truy cap /feed
@@ -70,3 +84,5 @@
 - [ ] TC-PERF-CACHE-03: PASS / FAIL
 - [ ] TC-PERF-CACHE-04: PASS / FAIL
 - [ ] TC-PERF-CACHE-05: PASS / FAIL
+- [ ] TC-PERF-CACHE-06: PASS / FAIL
+- [ ] TC-PERF-CACHE-CRON: PASS / FAIL

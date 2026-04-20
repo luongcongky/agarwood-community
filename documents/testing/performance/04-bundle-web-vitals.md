@@ -8,10 +8,17 @@
 | Recharts (DashboardCharts) | PASS | **Da fix**: dynamic import voi ssr:false qua DashboardChartsLoader |
 | TipTap (tao-bai) | NOT FIXED | Client component, chi load khi vao /feed/tao-bai (acceptable) |
 
-### Bundle analysis
-- Recharts: ~200KB — chi load tren /admin (dynamic import)
-- TipTap: ~150KB — chi load tren /feed/tao-bai (client route)
-- DOMPurify: ~15KB — load o server + client (can thiet cho XSS protection)
+### Bundle analysis (do qua `npm run build`, da xac nhan)
+- Tiptap/prosemirror: ~449KB — dynamic import voi ssr:false, chi load tren /feed/tao-bai + /admin/tin-tuc/[id]
+- Recharts: ~386KB — chi load tren /admin (dynamic import qua DashboardChartsLoader)
+- react-dom: ~221KB — framework
+- lucide-react icons: ~246KB tong — Next 16 da auto-optimize qua `optimizePackageImports`, day la subset thuc te dung
+- Radix UI primitives: ~116KB
+- core-js polyfills: ~110KB
+- isomorphic-dompurify: ~15KB client-side (jsdom KHONG bi bundle vao client nho `serverExternalPackages`)
+- **Total client JS chunks: ~3.5MB raw (~1MB gzip)**
+
+**Loi nhan dien sai trong qua trinh audit (da revert)**: Co thoi diem da swap `isomorphic-dompurify` -> `dompurify` o 5 client component voi gia thiet "save 200KB jsdom". Build lai phat hien jsdom KHONG co trong client (chi co string `isJSDOM` flag tu react-aria), va `dompurify` thuan browser khong co `.sanitize` khi SSR -> trang `/feed`, `/bai-viet/[id]` etc tra 500. Da revert ve `isomorphic-dompurify`. Bundle size khong doi.
 
 ## Kich ban kiem tra
 
@@ -61,20 +68,25 @@
 5. Truy cap /feed -> **Kiem tra**: First post hien < 2s
 
 ### TC-PERF-BUNDLE-STREAM: Homepage progressive streaming (Suspense)
-1. `app/(public)/page.tsx` KHONG con `Promise.all` o top-level — moi section co
-   data fetch rieng, wrap `<Suspense>` + skeleton (`components/features/homepage/skeletons.tsx`)
-2. **Exception (co chu y)**: `NewsSection` (Tin Hoi) + `MemberNewsRail`
-   (Ban tin hoi vien) KHONG wrap Suspense — block initial HTML flush de
-   content chinh luon co mat khi first paint
-3. Cac section khac (banners, CertifiedProductsCarousel, LatestPostsSection, partners)
-   stream sau -> cai thien TTFB va LCP cua main content
-4. **Kiem tra** (Lighthouse / WebPageTest):
-   - TTFB van nho (Tin Hoi block nhung nhanh — cung cache)
-   - LCP element = Tin Hoi heading/thumbnail (above fold, khong cho stream)
-   - Cac skeleton hien nhanh o banner/carousel slot, sau do replace khong layout shift
-5. List pages co `loading.tsx` skeleton rieng: `/tin-tuc`, `/san-pham-doanh-nghiep`
-6. Trade-off: TTFB cao hon 1 chut so voi full-streaming, nhung LCP on dinh —
-   tranh case man hinh trong hoac nhay skeleton tren main content
+1. `app/[locale]/(public)/page.tsx` — **moi section deu wrap `<Suspense>`** voi skeleton
+   tu `components/features/homepage/skeletons.tsx`:
+   - Banner TOP (BannerSlotSkeleton)
+   - NewsSection (NewsSectionSkeleton) — **da fix tu turn nay** (truoc do block initial flush)
+   - MemberNewsRail (MemberRailSkeleton) — **da fix tu turn nay**
+   - CertifiedProductsCarousel (CarouselSkeleton)
+   - Banner MID, LatestPostsSection × 2 (NEWS + PRODUCT), PartnersCarousel
+2. **Hieu qua**: HTML dau flush gan nhu ngay (~17-30ms warm, ~350ms cold), cac
+   section render khi data san sang -> user thay khung skeleton truoc, tranh
+   "trang trang" cho het DB queries
+3. **Kiem tra** (Lighthouse / WebPageTest):
+   - TTFB nho (~20-50ms warm)
+   - First Contentful Paint nhanh (skeleton hien som)
+   - LCP do banner top hoac NewsSection — tuy thuoc data + cache state
+   - Skeleton replace khong layout shift (CLS)
+4. **Trade-off**: cold lan dau ~350ms vi data fetcher chua warm. Da co cron
+   `warm-homepage` (`vercel.json`) chay daily 06:00 VN warm cache truoc peak.
+5. List pages co `loading.tsx` skeleton rieng: `/tin-tuc`, `/san-pham-doanh-nghiep`,
+   `/feed` (member route, sidebar banner cung Suspense)
 
 ### TC-PERF-BUNDLE-08: Font preload
 1. Xem HTML source cua bat ky trang nao

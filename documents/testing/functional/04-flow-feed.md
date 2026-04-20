@@ -96,12 +96,13 @@
 6. Guest/Hoi vien xem bai do -> chi thay thong bao vi pham
 
 ### TC-FEED-09: Infinite scroll khong duplicate
-1. Load feed -> scroll xuong cuoi
-2. **Kiem tra**: 20 bai tiep theo load them
-3. **Kiem tra**: Khong co bai bi lap lai
-4. **Kiem tra**: Khong co bai bi skip
-5. Tiep tuc scroll den het
-6. **Kiem tra**: Hien "Da hien thi tat ca bai viet"
+1. Load feed -> ghi nhan: initial fetch chi 10 bai (giam tu 20 -> 10 de TTFB nhanh)
+2. Scroll xuong cuoi
+3. **Kiem tra**: 10 bai tiep theo load them
+4. **Kiem tra**: Khong co bai bi lap lai
+5. **Kiem tra**: Khong co bai bi skip
+6. Tiep tuc scroll den het
+7. **Kiem tra**: Hien "Da hien thi tat ca bai viet"
 
 ### TC-FEED-10: Xoa bai viet
 1. Login Hoi vien -> xem bai cua minh -> menu "..." -> "Xoa bai"
@@ -117,6 +118,27 @@
 4. **Kiem tra**: Hoi "Khoi phuc ban nhap?"
 5. Click khoi phuc -> **Kiem tra**: Noi dung cu hien lai
 
+### TC-FEED-14: Parallel image upload (toc do)
+1. Login Hoi vien -> /feed/tao-bai
+2. Paste hoac drop **5 anh** vao editor TipTap
+3. Click "Dang bai" -> mo DevTools -> tab Network
+4. **Kiem tra**: 5 request POST /api/upload xuat hien gan nhu cung luc (parallel) — KHONG sequential 1-by-1
+5. **Kiem tra**: Tong thoi gian upload ~ thoi gian anh nang nhat (max), KHONG sum tat ca (~2-3s thay vi ~10-15s)
+6. (Inline composer trong /feed cung tuong tu — paste 5 anh vao quick post box, kiem tra parallel)
+
+### TC-FEED-15: Optimistic UI sau khi dang bai (full editor)
+1. Login Hoi vien -> /feed/tao-bai -> dang bai (KHONG paste anh hoac it anh de quan sat ro)
+2. Click "Dang bai"
+3. **Kiem tra**: Sau khi POST tra ve, redirect ve /feed gan nhu ngay (khong cho orphan delete chay xong)
+4. **Kiem tra**: Bai vua dang HIEN NGAY o dau /feed (sessionStorage hand-off — khong phai cho ISR refresh 60s)
+5. Scroll xuong roi quay len -> **Kiem tra**: Bai van o dau, khong duplicate
+6. Reload trang -> **Kiem tra**: Bai van o dau (ISR da refresh trong khi user xem)
+
+### TC-FEED-16: POST /api/posts response co kem `author`
+1. DevTools Network -> POST /api/posts
+2. **Kiem tra**: Response body `{ post: { ..., author: { id, name, avatarUrl, role, accountType, contributionTotal, company } } }`
+3. (Neu category=PRODUCT) **Kiem tra**: Response cung kem `product: { id, name, slug, priceRange, category, badgeUrl, certStatus }`
+
 ## Ket qua
 - [ ] TC-FEED-01: PASS / FAIL
 - [ ] TC-FEED-02: PASS / FAIL
@@ -131,3 +153,6 @@
 - [ ] TC-FEED-11: PASS / FAIL
 - [ ] TC-FEED-12: PASS / FAIL
 - [ ] TC-FEED-13: PASS / FAIL
+- [ ] TC-FEED-14: PASS / FAIL
+- [ ] TC-FEED-15: PASS / FAIL
+- [ ] TC-FEED-16: PASS / FAIL

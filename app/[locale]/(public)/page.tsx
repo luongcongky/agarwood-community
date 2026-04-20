@@ -11,6 +11,8 @@ import {
   LatestPostsSkeleton,
   BannerSlotSkeleton,
   PartnersCarouselSkeleton,
+  NewsSectionSkeleton,
+  MemberRailSkeleton,
 } from "@/components/features/homepage/skeletons"
 
 export async function generateMetadata() {
@@ -65,18 +67,19 @@ export default async function HomePage() {
         <HomepageBannerSlot position="TOP" />
       </Suspense>
 
-      {/*
-        Section 1 + 2: Tin Hội + Bản tin hội viên — KHÔNG bọc Suspense.
-        Next.js sẽ chờ 2 component này resolve xong mới flush HTML đầu tiên,
-        đảm bảo "khối nội dung chính" luôn hiện ngay khi trang hiện ra.
-        Các section khác (banners, carousels, latest posts, partners) vẫn stream sau.
-      */}
+      {/* Section 1 + 2: Tin Hội + Bản tin hội viên — stream song song. */}
       <section className="bg-brand-50/85 backdrop-blur-[2px] py-8 lg:py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-6 lg:grid-cols-3">
-            <NewsSection />
+            <div className="min-w-0 lg:col-span-2">
+              <Suspense fallback={<NewsSectionSkeleton />}>
+                <NewsSection />
+              </Suspense>
+            </div>
             <div className="min-w-0 lg:col-span-1">
-              <MemberNewsRail />
+              <Suspense fallback={<MemberRailSkeleton />}>
+                <MemberNewsRail />
+              </Suspense>
             </div>
           </div>
         </div>

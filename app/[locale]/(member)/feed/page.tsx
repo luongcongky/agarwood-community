@@ -1,7 +1,9 @@
+import { Suspense } from "react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTierThresholds } from "@/lib/tier"
 import { FeedClient } from "./FeedClient"
+import { SidebarBanners, SidebarBannersSkeleton } from "./SidebarBanners"
 
 export const revalidate = 60 // 1 min — feed updates are not real-time critical
 
@@ -9,7 +11,8 @@ export default async function FeedPage() {
   const session = await auth()
   const userId = session?.user?.id
 
-  // Initial 20 posts — promoted first, then by authorPriority + createdAt
+  // Initial 10 posts — promoted first, then by authorPriority + createdAt.
+  // Smaller initial page = faster TTFB; cursor pagination loads 10 more on scroll.
   const initialPosts = await prisma.post.findMany({
     where: { status: { in: ["PUBLISHED", "LOCKED"] } },
     orderBy: [
@@ -17,7 +20,7 @@ export default async function FeedPage() {
       { authorPriority: "desc" },
       { createdAt: "desc" },
     ],
-    take: 20,
+    take: 10,
     select: {
       id: true,
       authorId: true,
@@ -101,24 +104,6 @@ export default async function FeedPage() {
     getTierThresholds("INDIVIDUAL"),
   ])
 
-  // Vertical sidebar ads — ACTIVE banners at SIDEBAR position currently
-  // within their date window. Rendered as a sticky rail in the feed aside.
-  const nowDate = new Date()
-  const sidebarBanners = await prisma.banner.findMany({
-    where: {
-      status: "ACTIVE",
-      position: "SIDEBAR",
-      startDate: { lte: nowDate },
-      endDate: { gte: nowDate },
-    },
-    orderBy: [
-      { user: { contributionTotal: "desc" } },
-      { createdAt: "desc" },
-    ],
-    take: 5,
-    select: { id: true, title: true, imageUrl: true, targetUrl: true },
-  })
-
   return (
     <FeedClient
       initialPosts={posts}
@@ -142,7 +127,11 @@ export default async function FeedPage() {
           : null
       }
       topContributors={topContributors}
-      sidebarBanners={sidebarBanners}
+      sidebarBannersSlot={
+        <Suspense fallback={<SidebarBannersSkeleton />}>
+          <SidebarBanners />
+        </Suspense>
+      }
     />
   )
 }

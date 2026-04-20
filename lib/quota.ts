@@ -122,10 +122,10 @@ export async function getQuotaUsage(userId: string): Promise<QuotaUsage> {
   }
 }
 
-function startOfMonth(d: Date = new Date()): Date {
+export function startOfMonth(d: Date = new Date()): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0)
 }
 
-function startOfNextMonth(d: Date = new Date()): Date {
+export function startOfNextMonth(d: Date = new Date()): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0)
 }

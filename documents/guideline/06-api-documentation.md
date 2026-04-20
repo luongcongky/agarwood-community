@@ -129,11 +129,17 @@ Khi `product` co mat:
 - Server tu fetch `companyId` cua user neu co
 - `imageUrls` + `description` cua Product duoc trich tu HTML content cua post
 
-**Response:** `201 { post: Post }`
+**Response:** `201 { post: Post }` — `Post` luon kem field `author` (id, name, avatarUrl, role,
+accountType, contributionTotal, company), va kem `product` neu `category=PRODUCT`. Client co the
+dung response truc tiep cho optimistic UI (vd FeedClient prepend post moi qua sessionStorage
+hand-off khi redirect tu /feed/tao-bai → /feed).
 
-**Cache invalidation (added 2026-04):** Sau khi tao post thanh cong, server goi
-`revalidatePath("/feed")` + `revalidatePath("/[locale]/feed", "page")` → feed page
-(revalidate=60) bi invalidate ngay, bai moi hien tuc thi thay vi cho ~60s.
+**Cache invalidation:** Sau khi tao post thanh cong, server goi `revalidatePath("/[locale]/feed", "page")`
+→ feed page (revalidate=60) bi invalidate ngay, bai moi hien tuc thi thay vi cho ~60s.
+
+**Performance (refactor 2026-04 — ADR-028):** Truoc day handler chay 5-10 query tuan tu
+voi 2-3 lan fetch `user` trung lap. Hien tai: 1 user fetch + `Promise.all([postCount, productCount,
+slugConflict, company])` → giam ~50% round-trip (PRODUCT case ~10 → ~4). Xem ADR-028.
 
 **Errors:**
 - `401` — Chua dang nhap

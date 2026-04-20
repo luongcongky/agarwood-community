@@ -209,11 +209,11 @@ export const config = {
   matcher: [
     /*
      * Chạy trên tất cả request trừ:
-     * - /api/auth/* (NextAuth handlers)
+     * - /api/* (route handlers tự call `auth()` khi cần — proxy không add gì hữu ích)
      * - /_next/static, /_next/image (Next.js assets)
      * - /favicon.ico, /robots.txt, /sitemap.xml (static files)
      * - Static assets in /public (images, fonts, etc.)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:webp|jpg|jpeg|png|gif|svg|ico|css|js|woff2?|ttf|eot)).*)",
+    "/((?!api|_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:webp|jpg|jpeg|png|gif|svg|ico|css|js|woff2?|ttf|eot)).*)",
   ],
 }
