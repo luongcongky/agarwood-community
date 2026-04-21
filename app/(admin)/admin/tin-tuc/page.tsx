@@ -45,6 +45,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         isPinned: true,
         publishedAt: true,
         createdAt: true,
+        seoScore: true,
       },
     }),
     prisma.news.count({ where }),
@@ -144,6 +145,9 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
                 Ghim
               </th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
+                SEO
+              </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[100px] whitespace-nowrap">
                 Ngày đăng
               </th>
@@ -156,7 +160,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             {newsList.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center"
                 >
                   <div className="text-brand-300 text-4xl mb-2">🔍</div>
@@ -208,6 +212,25 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                       📌
                     </span>
                   ) : "-"}
+                </td>
+                <td className="px-4 py-3">
+                  {news.seoScore == null ? (
+                    <span className="text-[11px] text-brand-300 italic">Chưa chấm</span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold border whitespace-nowrap",
+                        news.seoScore >= 80
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : news.seoScore >= 50
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-red-50 text-red-700 border-red-200",
+                      )}
+                      title={`Điểm SEO ${news.seoScore}/100`}
+                    >
+                      {news.seoScore}/100
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-brand-500 whitespace-nowrap">
                   {news.publishedAt

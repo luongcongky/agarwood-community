@@ -697,12 +697,35 @@ model News {
   sourceUrl      String?    // URL gốc trên trang cũ (step 2 crawl sẽ dùng)
   originalAuthor String?    // Tên tác giả gốc (vd "Admin", "BBT") — hiển thị khi có, không thay authorId
 
+  // SEO — per-locale overrides for <title>, meta description, image alt.
+  // Fallback chain: localize() picks seoTitle_{locale} → siblings → seoTitle → title.
+  seoTitle           String?
+  seoTitle_en        String?
+  seoTitle_zh        String?
+  seoTitle_ar        String?
+  seoDescription     String?
+  seoDescription_en  String?
+  seoDescription_zh  String?
+  seoDescription_ar  String?
+  coverImageAlt      String?
+  coverImageAlt_en   String?
+  coverImageAlt_zh   String?
+  coverImageAlt_ar   String?
+
+  // SEO — single (VI source-of-truth). focusKeyword feeds the 19-point
+  // scoring rubric. seoScore + seoScoreDetail are recomputed on save.
+  focusKeyword       String?
+  secondaryKeywords  String[]   @default([])
+  seoScore           Int?
+  seoScoreDetail     Json?
+
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   @@index([category, isPublished, publishedAt])
   @@index([isPublished, isPinned, publishedAt])  // homepage news carousel: WHERE isPublished ORDER BY isPinned, publishedAt
   @@index([slug])
+  @@index([seoScore])
   @@map("news")
 }
 

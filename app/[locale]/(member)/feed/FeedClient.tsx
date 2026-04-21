@@ -5,6 +5,9 @@ import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { isMember as isMemberRole } from "@/lib/roles"
+import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { useLocale, useTranslations } from "next-intl"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -51,6 +54,13 @@ type Post = {
   product?: ProductSidecar | null
   reactions: { type: string }[]
   _count: { reactions: number; comments: number }
+  // ── Optimistic posting state (client-only, not persisted) ──
+  /** True while upload + POST are in flight. Card is dimmed + reactions
+   *  disabled until the real post ID comes back from the server. */
+  isPending?: boolean
+  /** Non-null when the optimistic upload/POST failed. Card shows a red
+   *  banner with the message + a dismiss button. */
+  pendingError?: string | null
 }
 
 type FilterKey = "all" | "NEWS" | "PRODUCT" | "CERTIFIED"
@@ -177,6 +187,25 @@ function Lightbox({
     }
   }, [onClose, prev, next])
 
+  // Preload adjacent images so pressing ← / → feels instant. Browser
+  // starts downloading next/prev as soon as the current one is shown;
+  // switching index hits the cache.
+  useEffect(() => {
+    if (images.length < 2) return
+    const nextIdx = (index + 1) % images.length
+    const prevIdx = (index - 1 + images.length) % images.length
+    const uniqueIdx = [...new Set([nextIdx, prevIdx])].filter((i) => i !== index)
+    const links = uniqueIdx.map((i) => {
+      const link = document.createElement("link")
+      link.rel = "preload"
+      link.as = "image"
+      link.href = cloudinaryResize(images[i], 1920)
+      document.head.appendChild(link)
+      return link
+    })
+    return () => { links.forEach((l) => l.remove()) }
+  }, [index, images])
+
   const multi = images.length > 1
 
   return (
@@ -222,7 +251,7 @@ function Lightbox({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={images[index]}
+          src={cloudinaryResize(images[index], 1920)}
           alt=""
           className="max-w-full max-h-full object-contain select-none"
           draggable={false}
@@ -273,6 +302,7 @@ function PostCard({
   onReact,
   onLock,
   onDelete,
+  onDismiss,
   tierSilver,
   tierGold,
   tierIndSilver,
@@ -285,6 +315,9 @@ function PostCard({
   onReact: (id: string) => void
   onLock: (id: string) => void
   onDelete: (id: string) => void
+  /** Used for optimistic-post error dismissal only (removes the failed card
+   *  from the feed). No-op for normal posts. */
+  onDismiss: (id: string) => void
   tierSilver?: number
   tierGold?: number
   tierIndSilver?: number
@@ -372,7 +405,36 @@ function PostCard({
   }
 
   return (
-    <article className={cn("bg-white rounded-xl border border-brand-200 p-5 transition-opacity", isLocked && "opacity-60")}>
+    <article className={cn(
+      "bg-white rounded-xl border border-brand-200 p-5 transition-opacity",
+      isLocked && "opacity-60",
+      post.isPending && "opacity-70",
+      post.pendingError && "border-red-300 bg-red-50/30",
+    )}>
+      {/* Optimistic-post state banners */}
+      {post.isPending && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-brand-600 bg-brand-50 rounded-md px-3 py-1.5">
+          <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          <span>{t("pendingLabel")}</span>
+        </div>
+      )}
+      {post.pendingError && (
+        <div className="mb-3 flex items-start justify-between gap-2 text-xs text-red-700 bg-red-100 rounded-md px-3 py-2 border border-red-200">
+          <span className="flex-1">
+            <strong className="font-semibold">{t("pendingErrorPrefix")}</strong> {post.pendingError}
+          </span>
+          <button
+            type="button"
+            onClick={() => onDismiss(post.id)}
+            className="text-red-600 font-semibold hover:text-red-800 whitespace-nowrap"
+          >
+            {t("pendingDismiss")}
+          </button>
+        </div>
+      )}
       {/* Locked banner */}
       {isLocked && (
         <div className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
@@ -497,7 +559,15 @@ function PostCard({
               className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-brand-200 hover:ring-2 hover:ring-brand-400 transition-all shrink-0"
               aria-label={`Xem ảnh ${i + 1}`}
             >
-              <Image src={url} alt="" fill className="object-cover" sizes="128px" />
+              <Image
+                src={cloudinaryResize(url, 256)}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="128px"
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
+              />
               {/* Show +N overlay on the 4th thumb when the post has >4 images */}
               {i === 3 && displayImages.length > 4 && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold text-lg">
@@ -539,7 +609,7 @@ function PostCard({
               "text-sm text-brand-800 prose prose-sm max-w-none",
               !expanded && needsTruncation && "line-clamp-4",
             )}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(contentForProse) }}
+            dangerouslySetInnerHTML={{ __html: rewriteCloudinaryInHtml(DOMPurify.sanitize(contentForProse), 800) }}
           />
           {needsTruncation && !expanded && (
             <button onClick={() => setExpanded(true)} className="text-sm font-medium text-brand-600 hover:text-brand-800 mt-1">
@@ -556,8 +626,9 @@ function PostCard({
             {currentUserRole && currentUserRole !== "GUEST" ? (
               <button
                 onClick={() => onReact(post.id)}
+                disabled={post.isPending}
                 className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors",
+                  "flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
                   userHasReacted ? "bg-brand-100 text-brand-700" : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
                 )}
               >
@@ -566,12 +637,18 @@ function PostCard({
             ) : (
               <span className="text-sm text-brand-400">{t("useful", { count: post._count.reactions })}</span>
             )}
-            <Link
-              href={`/bai-viet/${post.id}`}
-              className="flex items-center gap-1.5 text-sm font-medium text-brand-400 hover:text-brand-700 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors"
-            >
-              💬 {post._count.comments > 0 ? `${post._count.comments} ` : ""}{t("comments")}
-            </Link>
+            {post.isPending ? (
+              <span className="flex items-center gap-1.5 text-sm font-medium text-brand-400 rounded-lg px-3 py-1.5 opacity-40">
+                💬 {t("comments")}
+              </span>
+            ) : (
+              <Link
+                href={`/bai-viet/${post.id}`}
+                className="flex items-center gap-1.5 text-sm font-medium text-brand-400 hover:text-brand-700 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors"
+              >
+                💬 {post._count.comments > 0 ? `${post._count.comments} ` : ""}{t("comments")}
+              </Link>
+            )}
             <button
               type="button"
               onClick={handleCopyLink}
@@ -602,6 +679,7 @@ function InlinePostCreator({
   currentUserRole,
   membershipInfo,
   onPostCreated,
+  onPostUpdated,
 }: {
   currentUserName: string | null
   currentUserAvatarUrl: string | null
@@ -609,12 +687,12 @@ function InlinePostCreator({
   currentUserRole: string
   membershipInfo: MembershipInfo | null
   onPostCreated: (post: Post) => void
+  onPostUpdated: (tempId: string, patch: Partial<Post>) => void
 }) {
   const t = useTranslations("feed")
   const locale = useLocale()
   const [content, setContent] = useState("")
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -627,12 +705,6 @@ function InlinePostCreator({
       ta.style.height = ta.scrollHeight + "px"
     }
   }, [content])
-
-  function handleReset() {
-    setContent("")
-    setImages([])
-    setError(null)
-  }
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -659,83 +731,112 @@ function InlinePostCreator({
       return
     }
 
-    setSubmitting(true)
+    // Snapshot files + blob URLs before resetting the form. The background
+    // upload runs against these snapshots, so the user can start composing
+    // the next post immediately.
+    const imagesSnapshot = images
+    const blobUrls = imagesSnapshot.map((img) => img.preview)
+    const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
+    const blobImageHtml = blobUrls.map((url) => `<img src="${url}" />`).join("")
+    const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    // Build optimistic Post. Blob URLs render instantly — the image files
+    // are already in browser memory, so there's zero wait for the user.
+    const optimisticPost: Post = {
+      id: tempId,
+      authorId: currentUserId,
+      title: null,
+      content: blobImageHtml + paragraphs,
+      imageUrls: blobUrls,
+      status: "PUBLISHED",
+      isPremium: currentUserRole === "VIP" || currentUserRole === "INFINITE",
+      isPromoted: false,
+      authorPriority: membershipInfo?.displayPriority ?? 0,
+      viewCount: 0,
+      reportCount: 0,
+      lockedAt: null,
+      lockedBy: null,
+      lockReason: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      author: {
+        id: currentUserId,
+        name: currentUserName ?? "",
+        avatarUrl: currentUserAvatarUrl,
+        role: currentUserRole,
+        accountType: membershipInfo?.accountType ?? "BUSINESS",
+        contributionTotal: membershipInfo?.contributionTotal ?? 0,
+        company: membershipInfo?.company ?? null,
+      },
+      reactions: [],
+      _count: { reactions: 0, comments: 0 },
+      isPending: true,
+      pendingError: null,
+    }
+    onPostCreated(optimisticPost)
+
+    // Reset form immediately — user can compose next post while upload runs.
+    // NOTE: blob URLs are NOT revoked here; the optimistic post is still
+    // rendering them. They're revoked in the background handler below
+    // after the real Cloudinary URLs are swapped in.
+    setContent("")
+    setImages([])
     setError(null)
 
-    try {
-      // Upload all images in parallel — N images takes max(N), not sum(N)
-      const uploadedUrls = await Promise.all(
-        images.map(async (img) => {
-          const formData = new FormData()
-          formData.append("file", img.file)
-          formData.append("folder", "bai-viet")
-          const res = await fetch("/api/upload", { method: "POST", body: formData })
-          if (!res.ok) throw new Error(t("uploadFailed"))
-          const data = await res.json()
-          return data.secure_url as string
-        }),
-      )
+    // ── Background: upload images → POST → swap URLs in the post ───────
+    ;(async () => {
+      try {
+        const uploadedUrls = await Promise.all(
+          imagesSnapshot.map(async (img) => {
+            const formData = new FormData()
+            formData.append("file", img.file)
+            formData.append("folder", "bai-viet")
+            const res = await fetch("/api/upload", { method: "POST", body: formData })
+            if (!res.ok) throw new Error(t("uploadFailed"))
+            const data = await res.json()
+            return data.secure_url as string
+          }),
+        )
 
-      // Build HTML content — images first, then paragraphs. Quick-compose
-      // posts are scanned visually in the feed, so leading with the
-      // attached images mirrors how users expect the post to render.
-      const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
-      const imageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
-      const htmlContent = imageHtml + paragraphs
+        const realImageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
+        const realContent = realImageHtml + paragraphs
 
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: htmlContent, category: "GENERAL" }),
-      })
+        const res = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: realContent, category: "GENERAL" }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || t("postFailed"))
+        }
+        const { post } = await res.json()
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || t("postFailed"))
+        // Swap in server data. React remounts the PostCard because the
+        // ID changes, but since it was in `pending` state (no user
+        // interactions), the remount is invisible to the user.
+        onPostUpdated(tempId, {
+          id: post.id,
+          content: realContent,
+          imageUrls: uploadedUrls,
+          createdAt: post.createdAt ?? optimisticPost.createdAt,
+          updatedAt: post.updatedAt ?? optimisticPost.updatedAt,
+          isPending: false,
+          pendingError: null,
+        })
+
+        // Now safe to free the blob URLs — images are served from Cloudinary.
+        blobUrls.forEach((url) => URL.revokeObjectURL(url))
+      } catch (err) {
+        // Keep blob URLs alive so the failed post still shows its images
+        // while the user decides to retry / dismiss. They'll be released
+        // when the user dismisses (handlePostDismiss).
+        onPostUpdated(tempId, {
+          isPending: false,
+          pendingError: err instanceof Error ? err.message : "Có lỗi xảy ra",
+        })
       }
-
-      const { post } = await res.json()
-
-      // Build optimistic Post for immediate feed display
-      const optimisticPost: Post = {
-        id: post.id,
-        authorId: currentUserId,
-        title: null,
-        content: imageHtml + paragraphs,
-        imageUrls: uploadedUrls,
-        status: "PUBLISHED",
-        isPremium: currentUserRole === "VIP",
-        isPromoted: false,
-        authorPriority: membershipInfo?.displayPriority ?? 0,
-        viewCount: 0,
-        reportCount: 0,
-        lockedAt: null,
-        lockedBy: null,
-        lockReason: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        author: {
-          id: currentUserId,
-          name: currentUserName ?? "",
-          avatarUrl: currentUserAvatarUrl,
-          role: currentUserRole,
-          accountType: membershipInfo?.accountType ?? "BUSINESS",
-          contributionTotal: membershipInfo?.contributionTotal ?? 0,
-          company: membershipInfo?.company ?? null,
-        },
-        reactions: [],
-        _count: { reactions: 0, comments: 0 },
-      }
-      onPostCreated(optimisticPost)
-
-      // Reset form
-      images.forEach((img) => URL.revokeObjectURL(img.preview))
-      handleReset()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Có lỗi xảy ra")
-    } finally {
-      setSubmitting(false)
-    }
+    })()
   }
 
   const charCount = content.trim().length
@@ -759,7 +860,6 @@ function InlinePostCreator({
         onChange={(e) => { setContent(e.target.value); setError(null) }}
         placeholder={t("placeholder")}
           className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
-          disabled={submitting}
           rows={2}
         />
       </div>
@@ -798,7 +898,7 @@ function InlinePostCreator({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={images.length >= 4 || submitting}
+            disabled={images.length >= 4}
             className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
             title={t("addImages")}
           >
@@ -830,7 +930,7 @@ function InlinePostCreator({
 
         <button
           onClick={handleSubmit}
-          disabled={submitting || charCount < 50}
+          disabled={charCount < 50}
           className={cn(
             "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
             charCount >= 50
@@ -838,7 +938,7 @@ function InlinePostCreator({
               : "bg-brand-100 text-brand-400 cursor-not-allowed",
           )}
         >
-          {submitting ? t("posting") : t("post")}
+          {t("post")}
         </button>
       </div>
     </div>
@@ -1060,8 +1160,24 @@ export function FeedClient({
     setNow(Date.now())
   }
 
+  /** Merge server data into an optimistic post (tempId → realId swap on
+   *  success, or set pendingError on failure). Noop if the post was
+   *  dismissed by the user before the background work finished. */
+  function handlePostUpdated(tempId: string, patch: Partial<Post>) {
+    setPosts((prev) => prev.map((p) => (p.id === tempId ? { ...p, ...patch } : p)))
+  }
+
+  /** Remove a failed optimistic post from the feed (after user clicks
+   *  "Bỏ qua" on the error banner). */
+  function handlePostDismiss(tempId: string) {
+    setPosts((prev) => prev.filter((p) => p.id !== tempId))
+  }
+
   const isLoggedIn = !!currentUserId
-  const isMember = currentUserRole === "VIP" || currentUserRole === "ADMIN"
+  // Includes INFINITE — bug fix: before this was hard-coded to VIP|ADMIN,
+  // which blocked the post form for users with the INFINITE role even
+  // though they have full member privileges.
+  const isMember = isMemberRole(currentUserRole)
   const canPost = isMember
 
   return (
@@ -1078,6 +1194,7 @@ export function FeedClient({
             currentUserRole={currentUserRole}
             membershipInfo={membershipInfo}
             onPostCreated={handlePostCreated}
+            onPostUpdated={handlePostUpdated}
           />
         )}
 
@@ -1122,6 +1239,7 @@ export function FeedClient({
             onReact={handleReact}
             onLock={handleLock}
             onDelete={handleDelete}
+            onDismiss={handlePostDismiss}
             tierSilver={tierSilver}
             tierGold={tierGold}
             tierIndSilver={tierIndSilver}

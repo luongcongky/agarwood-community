@@ -128,8 +128,8 @@ export default async function FeedPage() {
       }
       topContributors={topContributors}
       sidebarBannersSlot={
-        <Suspense fallback={<SidebarBannersSkeleton />}>
-          <SidebarBanners />
+        <Suspense key="sidebar-banners" fallback={<SidebarBannersSkeleton key="sidebar-banners-fallback" />}>
+          <SidebarBanners key="sidebar-banners-content" />
         </Suspense>
       }
     />

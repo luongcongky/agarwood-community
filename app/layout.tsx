@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro, Noto_Sans_SC, Noto_Sans_Arabic, Playfair_Display } from
 import Script from "next/script"
 import { headers } from "next/headers"
 import { ProgressBar } from "@/components/features/layout/ProgressBar"
+import { WebVitalsReporter } from "@/components/features/layout/WebVitalsReporter"
 import { isRtlLocale, isValidLocale } from "@/i18n/config"
 import "./globals.css"
 
@@ -92,8 +93,16 @@ export default async function RootLayout({
       className={`${beVietnamPro.variable} ${playfairDisplay.variable} ${notoSansSC.variable} ${notoSansArabic.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Pre-establish TCP+TLS to Cloudinary (cover + thumbnail host) so
+            the first image byte arrives faster — 100–200ms LCP improvement
+            on slow mobile when the LCP element is a Cloudinary image. */}
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body className="min-h-screen flex flex-col antialiased refined-typography" suppressHydrationWarning>
         <ProgressBar />
+        <WebVitalsReporter />
         {children}
 
         {/* Google Analytics 4 */}

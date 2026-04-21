@@ -129,7 +129,7 @@ export default async function CompanyProfilePage({ params }: Props) {
               ✓ Đã xác minh
             </span>
           )}
-          {company.owner.role === "VIP" && (
+          {(company.owner.role === "VIP" || company.owner.role === "INFINITE") && (
             <span className="inline-flex items-center gap-1 bg-brand-100 text-brand-700 text-xs font-medium px-2 py-1 rounded-full">
               Thành viên Hội
             </span>

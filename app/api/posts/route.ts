@@ -247,7 +247,10 @@ export async function POST(request: Request) {
         content: sanitizedContent,
         imageUrls: [],
         category: cat,
-        isPremium: session.user.role === "VIP",
+        // INFINITE = "full quyền VIP Vàng" per schema — their posts get
+        // the premium badge alongside regular VIP. Admins don't typically
+        // post via this flow, so they're left out.
+        isPremium: session.user.role === "VIP" || session.user.role === "INFINITE",
         authorPriority: user.displayPriority,
       },
       include: { author: { select: POST_AUTHOR_SELECT } },
@@ -270,7 +273,10 @@ export async function POST(request: Request) {
         content: sanitizedContent,
         imageUrls: productImages,
         category: "PRODUCT",
-        isPremium: session.user.role === "VIP",
+        // INFINITE = "full quyền VIP Vàng" per schema — their posts get
+        // the premium badge alongside regular VIP. Admins don't typically
+        // post via this flow, so they're left out.
+        isPremium: session.user.role === "VIP" || session.user.role === "INFINITE",
         authorPriority: user.displayPriority,
       },
       include: { author: { select: POST_AUTHOR_SELECT } },

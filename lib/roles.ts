@@ -22,3 +22,13 @@ export function hasGoldPrivileges(role: Role | string | null | undefined): boole
 export function canAdminWrite(role: Role | string | null | undefined): boolean {
   return role === "ADMIN"
 }
+
+/**
+ * Role được coi là "thành viên" — có quyền đăng bài feed, xem nội dung VIP.
+ * VIP (membership đang active) + ADMIN + INFINITE. GUEST bị loại.
+ * Backend `/api/posts` không enforce role, nhưng UI cần check để ẩn nút đăng
+ * với guest/unverified user.
+ */
+export function isMember(role: Role | string | null | undefined): boolean {
+  return role === "VIP" || role === "ADMIN" || role === "INFINITE"
+}

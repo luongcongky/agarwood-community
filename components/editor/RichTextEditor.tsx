@@ -103,13 +103,24 @@ export interface RichTextEditorProps {
   className?: string
   /** Cloudinary folder for image uploads (default: "bai-viet") */
   uploadFolder?: string
+  /** Fires on every keystroke / structural change. The callback is stored
+   *  in a ref so we don't re-instantiate the editor when the parent
+   *  re-renders. Throttle/debounce in the parent if needed. */
+  onUpdate?: (html: string) => void
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
   function RichTextEditor(
-    { initialContent = "", minHeight = 300, className = "", uploadFolder = "bai-viet" },
+    { initialContent = "", minHeight = 300, className = "", uploadFolder = "bai-viet", onUpdate },
     ref,
   ) {
+    // Hold the latest onUpdate in a ref so TipTap's onUpdate closure always
+    // sees the freshest callback without re-creating the editor instance.
+    const onUpdateRef = useRef(onUpdate)
+    useEffect(() => {
+      onUpdateRef.current = onUpdate
+    }, [onUpdate])
+
     const editor = useEditor({
       extensions: [
         StarterKit.configure({
@@ -149,6 +160,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       content: "",
       immediatelyRender: false,
       shouldRerenderOnTransaction: false,
+      onUpdate: ({ editor }) => {
+        onUpdateRef.current?.(editor.getHTML())
+      },
     })
 
     const contentLoadedRef = useRef(false)

@@ -13,6 +13,7 @@ import { slugify } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 import { CoverImageCropper } from "@/components/ui/CoverImageCropper"
 import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
+import { SeoEditorPanel } from "./SeoEditorPanel"
 
 interface NewsData {
   title: string
@@ -56,8 +57,40 @@ export default function NewsEditorPage({
   const [saved, setSaved] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
+  // SEO state
+  const [focusKeyword, setFocusKeyword] = useState("")
+  const [secondaryKeywords, setSecondaryKeywords] = useState<string[]>([])
+  const [seoTitle, setSeoTitle] = useState<Record<Locale, string>>(EMPTY_LANG)
+  const [seoDescription, setSeoDescription] = useState<Record<Locale, string>>(EMPTY_LANG)
+  const [coverImageAlt, setCoverImageAlt] = useState<Record<Locale, string>>(EMPTY_LANG)
+  const setSeoTitleField = (l: Locale, v: string) => setSeoTitle((p) => ({ ...p, [l]: v }))
+  const setSeoDescriptionField = (l: Locale, v: string) => setSeoDescription((p) => ({ ...p, [l]: v }))
+  const setCoverImageAltField = (l: Locale, v: string) => setCoverImageAlt((p) => ({ ...p, [l]: v }))
+
   const editorRef = useRef<RichTextEditorHandle>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+
+  // Refs used by the throttled editor->content sync. activeLocaleRef lets
+  // the stable handler always read the latest locale; editorDebounceRef
+  // collapses bursts of keystrokes into one state update.
+  const activeLocaleRef = useRef<Locale>(activeLocale)
+  useEffect(() => { activeLocaleRef.current = activeLocale }, [activeLocale])
+  const editorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Stable forever — relies on refs to read the latest locale on fire.
+  // The locale captured at schedule-time is preserved so a mid-debounce
+  // tab switch can't write the previous tab's HTML into the new tab.
+  const handleEditorUpdate = useRef((html: string) => {
+    if (editorDebounceRef.current) clearTimeout(editorDebounceRef.current)
+    const localeAtSchedule = activeLocaleRef.current
+    editorDebounceRef.current = setTimeout(() => {
+      setContent((prev) => ({ ...prev, [localeAtSchedule]: html }))
+    }, 300)
+  }).current
+  useEffect(() => {
+    return () => {
+      if (editorDebounceRef.current) clearTimeout(editorDebounceRef.current)
+    }
+  }, [])
 
   // Load existing news
   useEffect(() => {
@@ -98,6 +131,26 @@ export default function NewsEditorPage({
           en: (n.content_en as string) ?? "",
           zh: (n.content_zh as string) ?? "",
           ar: (n.content_ar as string) ?? "",
+        })
+        setFocusKeyword((n.focusKeyword as string) ?? "")
+        setSecondaryKeywords((n.secondaryKeywords as string[]) ?? [])
+        setSeoTitle({
+          vi: (n.seoTitle as string) ?? "",
+          en: (n.seoTitle_en as string) ?? "",
+          zh: (n.seoTitle_zh as string) ?? "",
+          ar: (n.seoTitle_ar as string) ?? "",
+        })
+        setSeoDescription({
+          vi: (n.seoDescription as string) ?? "",
+          en: (n.seoDescription_en as string) ?? "",
+          zh: (n.seoDescription_zh as string) ?? "",
+          ar: (n.seoDescription_ar as string) ?? "",
+        })
+        setCoverImageAlt({
+          vi: (n.coverImageAlt as string) ?? "",
+          en: (n.coverImageAlt_en as string) ?? "",
+          zh: (n.coverImageAlt_zh as string) ?? "",
+          ar: (n.coverImageAlt_ar as string) ?? "",
         })
       } finally {
         setFetching(false)
@@ -250,18 +303,36 @@ export default function NewsEditorPage({
         title: title.vi,
         title_en: title.en || null,
         title_zh: title.zh || null,
+        title_ar: title.ar || null,
         slug,
         excerpt: excerpt.vi,
         excerpt_en: excerpt.en || null,
         excerpt_zh: excerpt.zh || null,
+        excerpt_ar: excerpt.ar || null,
         coverImageUrl: finalCoverUrl,
         content: finalContent.vi,
         content_en: finalContent.en || null,
         content_zh: finalContent.zh || null,
+        content_ar: finalContent.ar || null,
         category,
         isPublished,
         isPinned,
         publishedAt: publishedAt || null,
+        // SEO
+        focusKeyword: focusKeyword || null,
+        secondaryKeywords,
+        seoTitle: seoTitle.vi || null,
+        seoTitle_en: seoTitle.en || null,
+        seoTitle_zh: seoTitle.zh || null,
+        seoTitle_ar: seoTitle.ar || null,
+        seoDescription: seoDescription.vi || null,
+        seoDescription_en: seoDescription.en || null,
+        seoDescription_zh: seoDescription.zh || null,
+        seoDescription_ar: seoDescription.ar || null,
+        coverImageAlt: coverImageAlt.vi || null,
+        coverImageAlt_en: coverImageAlt.en || null,
+        coverImageAlt_zh: coverImageAlt.zh || null,
+        coverImageAlt_ar: coverImageAlt.ar || null,
       }
 
       const res = await fetch(
@@ -462,8 +533,16 @@ export default function NewsEditorPage({
               )}
             </div>
 
-            {/* Rich text editor — content for the currently-active locale */}
-            <RichTextEditor ref={editorRef} initialContent={initialContent} uploadFolder="tin-tuc" />
+            {/* Rich text editor — content for the currently-active locale.
+                onUpdate is throttled inside the parent so the SEO panel sees
+                body-level criteria (H2, density, intro keyword, ...) update
+                in real time as the writer types. */}
+            <RichTextEditor
+              ref={editorRef}
+              initialContent={initialContent}
+              uploadFolder="tin-tuc"
+              onUpdate={handleEditorUpdate}
+            />
           </div>
 
           {/* Sidebar */}
@@ -538,6 +617,27 @@ export default function NewsEditorPage({
                 />
               </div>
             </div>
+
+            <SeoEditorPanel
+              excludeId={isNew ? undefined : id}
+              activeLocale={activeLocale}
+              title={title}
+              excerpt={excerpt}
+              content={content}
+              slug={slug}
+              coverImageUrl={coverImageUrl}
+              focusKeyword={focusKeyword}
+              setFocusKeyword={setFocusKeyword}
+              secondaryKeywords={secondaryKeywords}
+              setSecondaryKeywords={setSecondaryKeywords}
+              seoTitle={seoTitle}
+              setSeoTitleField={setSeoTitleField}
+              seoDescription={seoDescription}
+              setSeoDescriptionField={setSeoDescriptionField}
+              coverImageAlt={coverImageAlt}
+              setCoverImageAltField={setCoverImageAltField}
+              disabled={readOnly}
+            />
 
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">

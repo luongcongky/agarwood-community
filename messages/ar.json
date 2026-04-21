@@ -629,6 +629,9 @@
     "fullEditorShort": "Full editor",
     "posting": "جارٍ النشر...",
     "post": "نشر",
+    "pendingLabel": "جارٍ النشر...",
+    "pendingDismiss": "تجاهل",
+    "pendingErrorPrefix": "فشل النشر:",
     "memberCard": "Member",
     "statusActive": "Active",
     "statusExpired": "Expired",
@@ -675,10 +678,13 @@
     "ctaText": "Join the Vietnam Agarwood Association to get the latest news",
     "ctaButton": "Register now",
     "notFound": "Article not found",
-    "breadcrumbNews": "News",
-    "publishedAt": "Published:",
-    "shareArticle": "Share this article:",
-    "relatedNews": "Related news"
+    "breadcrumbNews": "الأخبار",
+    "publishedAt": "نُشر في:",
+    "updatedAt": "آخر تحديث:",
+    "shareArticle": "شارك المقال:",
+    "relatedNews": "أخبار ذات صلة",
+    "tocTitle": "جدول المحتويات",
+    "aboutAuthor": "عن الكاتب"
   },
   "legal": {
     "label": "Legal Documents",

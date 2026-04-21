@@ -3,46 +3,65 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
-import { getLocale } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
+import { addAnchorIdsToH2, extractTocFromHtml } from "@/lib/seo/toc"
+import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { CopyLinkButton } from "../../tin-tuc/[slug]/CopyLinkButton"
 
 export const revalidate = 1800
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = { params: Promise<{ locale: Locale; slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params
+  const { locale, slug } = await params
   const news = await prisma.news.findFirst({
     where: { slug, category: "RESEARCH" },
     select: {
       title: true, title_en: true, title_zh: true, title_ar: true,
       excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+      seoTitle: true, seoTitle_en: true, seoTitle_zh: true, seoTitle_ar: true,
+      seoDescription: true, seoDescription_en: true, seoDescription_zh: true, seoDescription_ar: true,
       coverImageUrl: true,
       publishedAt: true,
     },
   })
   if (!news) return { title: "Bài nghiên cứu không tồn tại" }
+  const title =
+    (localize(news, "seoTitle", locale) as string | null) ||
+    (localize(news, "title", locale) as string)
+  const excerpt =
+    ((localize(news, "seoDescription", locale) as string | null) ||
+      (localize(news, "excerpt", locale) as string | null)) ?? undefined
+  const path = `/nghien-cuu/${slug}`
   return {
-    title: `${news.title} | Nghiên cứu khoa học | Hội Trầm Hương Việt Nam`,
-    description: news.excerpt ?? undefined,
+    title: `${title} | Nghiên cứu khoa học | ${SITE_NAME}`,
+    description: excerpt,
+    alternates: hreflangAlternates(path),
     openGraph: {
-      title: news.title,
-      description: news.excerpt ?? undefined,
+      title,
+      description: excerpt,
+      url: localizedUrl(path, locale),
       images: news.coverImageUrl ? [{ url: news.coverImageUrl }] : [],
       type: "article",
       publishedTime: news.publishedAt?.toISOString(),
-      siteName: "Hội Trầm Hương Việt Nam",
+      siteName: SITE_NAME,
+      locale: locale === "vi" ? "vi_VN" : locale === "en" ? "en_US" : locale === "zh" ? "zh_CN" : "ar_AR",
     },
   }
 }
 
 export default async function ResearchDetailPage({ params }: Props) {
-  const locale = await getLocale() as Locale
+  const [locale, t, tc] = await Promise.all([
+    getLocale() as Promise<Locale>,
+    getTranslations("news"),
+    getTranslations("common"),
+  ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
 
@@ -65,9 +84,21 @@ export default async function ResearchDetailPage({ params }: Props) {
 
   if (!news) notFound()
 
-  // Related research articles
-  const related = await prisma.news.findMany({
-    where: { isPublished: true, category: "RESEARCH", slug: { not: slug } },
+  // Related research articles — prefer same focus keyword, fallback to recency.
+  const relatedPool = await prisma.news.findMany({
+    where: {
+      isPublished: true,
+      category: "RESEARCH",
+      slug: { not: slug },
+      ...(news.focusKeyword
+        ? {
+            OR: [
+              { focusKeyword: news.focusKeyword },
+              { secondaryKeywords: { has: news.focusKeyword } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { publishedAt: "desc" },
     take: 3,
     select: {
@@ -79,24 +110,96 @@ export default async function ResearchDetailPage({ params }: Props) {
       publishedAt: true,
     },
   })
+  let related = relatedPool
+  if (related.length < 3) {
+    const fill = await prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: "RESEARCH",
+        slug: { not: slug },
+        id: { notIn: related.map((r) => r.id) },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 3 - related.length,
+      select: {
+        id: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        slug: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+        coverImageUrl: true,
+        publishedAt: true,
+      },
+    })
+    related = [...related, ...fill]
+  }
 
-  const articleUrl = `https://hoitramhuong.vn/nghien-cuu/${slug}`
+  // Fetch author for E-E-A-T signals.
+  const author = await prisma.user.findUnique({
+    where: { id: news.authorId },
+    select: {
+      id: true, name: true, avatarUrl: true, role: true,
+      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+    },
+  })
+  const authorDisplayName = news.originalAuthor || author?.name || SITE_NAME
+  const authorBio = author ? (l(author, "bio") as string | null) : null
+  const authorUrl = author ? localizedUrl(`/thanh-vien/${author.id}`, locale) : BASE_URL
+
+  // Inject H2 anchor IDs + extract TOC. Also rewrite Cloudinary URLs in
+  // the body to include width limit so the browser doesn't pull the
+  // original full-size image into a content column.
+  const sanitizedContent = DOMPurify.sanitize(l(news, "content") ?? "")
+  const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
+  const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
+  const toc = extractTocFromHtml(sanitizedContent)
+
+  const articleUrl = localizedUrl(`/nghien-cuu/${slug}`, locale)
+  const seoTitle = (l(news, "seoTitle") as string | null) || l(news, "title")
+  const seoDesc = (l(news, "seoDescription") as string | null) || l(news, "excerpt")
+  const coverAlt = (l(news, "coverImageAlt") as string | null) || l(news, "title")
+  const localizedContent = (l(news, "content") as string | undefined) ?? ""
+  const keywords = [news.focusKeyword, ...(news.secondaryKeywords ?? [])]
+    .filter((k): k is string => Boolean(k && k.trim()))
 
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "ScholarlyArticle",
-    headline: news.title,
-    description: news.excerpt ?? news.content.replace(/<[^>]*>/g, "").slice(0, 160),
+    mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+    headline: seoTitle,
+    description: seoDesc || localizedContent.replace(/<[^>]*>/g, "").slice(0, 160),
     image: news.coverImageUrl ?? undefined,
+    keywords: keywords.length > 0 ? keywords : undefined,
+    inLanguage: locale === "vi" ? "vi-VN" : locale === "zh" ? "zh-CN" : locale,
     datePublished: news.publishedAt?.toISOString(),
     dateModified: news.updatedAt?.toISOString(),
-    author: { "@type": "Organization", name: "Hội Trầm Hương Việt Nam" },
-    publisher: { "@type": "Organization", name: "Hội Trầm Hương Việt Nam" },
+    author: {
+      "@type": "Person",
+      name: authorDisplayName,
+      url: authorUrl,
+      ...(author?.avatarUrl ? { image: author.avatarUrl } : {}),
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: BASE_URL,
+      logo: { "@type": "ImageObject", url: `${BASE_URL}/logo.png` },
+    },
+  }
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: tc("home"), item: localizedUrl("/", locale) },
+      { "@type": "ListItem", position: 2, name: "Nghiên cứu khoa học", item: localizedUrl("/nghien-cuu", locale) },
+      { "@type": "ListItem", position: 3, name: seoTitle, item: articleUrl },
+    ],
   }
 
   return (
     <div className="bg-brand-50/60 min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Article card */}
@@ -119,8 +222,8 @@ export default async function ResearchDetailPage({ params }: Props) {
             <div className="bg-brand-100 p-2">
               <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden ring-1 ring-brand-300/60">
                 <Image
-                  src={news.coverImageUrl}
-                  alt={l(news, "title")}
+                  src={cloudinaryResize(news.coverImageUrl, 1280)}
+                  alt={coverAlt}
                   fill
                   className="object-cover"
                   priority
@@ -141,26 +244,95 @@ export default async function ResearchDetailPage({ params }: Props) {
               <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
                 {l(news, "title")}
               </h1>
-              {news.publishedAt && (
-                <p className="text-muted-foreground text-sm">
-                  Ngày công bố:{" "}
-                  {new Date(news.publishedAt).toLocaleDateString("vi-VN", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}
-                </p>
-              )}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-sm">
+                {news.publishedAt && (
+                  <span>
+                    {t("publishedAt")}{" "}
+                    {new Date(news.publishedAt).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </span>
+                )}
+                {news.updatedAt && news.publishedAt &&
+                  news.updatedAt.getTime() - news.publishedAt.getTime() > 24 * 60 * 60 * 1000 && (
+                    <span>
+                      · {t("updatedAt")}{" "}
+                      {new Date(news.updatedAt).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                <span className="text-brand-600 font-medium">· {authorDisplayName}</span>
+              </div>
             </header>
+
+            {/* Table of Contents — auto-generated from H2 tags. */}
+            {toc.length >= 2 && (
+              <nav className="mb-8 rounded-lg border border-brand-200 bg-brand-50/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-600 mb-2">
+                  {t("tocTitle")}
+                </p>
+                <ol className="space-y-1 text-sm">
+                  {toc.map((entry, i) => (
+                    <li key={entry.id} className="flex items-baseline gap-2">
+                      <span className="text-brand-400 shrink-0 tabular-nums">{i + 1}.</span>
+                      <a
+                        href={`#${entry.id}`}
+                        className="text-brand-700 hover:text-brand-900 hover:underline line-clamp-1"
+                      >
+                        {entry.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
 
             {/* Article Body */}
             <article className="mb-10">
               <div
                 className="prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content) }}
+                dangerouslySetInnerHTML={{ __html: contentWithAnchors }}
               />
             </article>
+
+            {/* Author bio — E-E-A-T signal. */}
+            {author && (authorBio || author.avatarUrl) && (
+              <aside className="mb-8 rounded-xl border border-brand-200 bg-brand-50/40 p-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-600 mb-3">
+                  {t("aboutAuthor")}
+                </p>
+                <div className="flex items-start gap-4">
+                  <div className="relative w-14 h-14 shrink-0 rounded-full bg-brand-200 overflow-hidden">
+                    {author.avatarUrl ? (
+                      <Image
+                        src={author.avatarUrl}
+                        alt={author.name}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-brand-700 font-bold">
+                        {author.name.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-brand-900">{author.name}</p>
+                    {authorBio && (
+                      <p className="mt-1 text-sm text-brand-700 leading-relaxed whitespace-pre-line">
+                        {authorBio}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            )}
 
             {/* Share Buttons */}
             <div className="border-t border-border pt-6">
@@ -204,7 +376,7 @@ export default async function ResearchDetailPage({ params }: Props) {
                   {item.coverImageUrl ? (
                     <div className="relative w-full h-36">
                       <Image
-                        src={item.coverImageUrl}
+                        src={cloudinaryResize(item.coverImageUrl, 480)}
                         alt={l(item, "title")}
                         fill
                         className="object-cover"

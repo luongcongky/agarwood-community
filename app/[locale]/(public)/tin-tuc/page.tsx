@@ -1,16 +1,21 @@
 import Link from "next/link"
+import Image from "next/image"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import { cloudinaryResize } from "@/lib/cloudinary"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
+import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
+
 export async function generateMetadata() {
   const t = await getTranslations("news")
   return {
     title: t("metaTitle"),
     description: t("metaDesc"),
-    alternates: { canonical: "/tin-tuc" },
+    alternates: hreflangAlternates("/tin-tuc"),
   }
 }
 
@@ -107,8 +112,29 @@ export default async function NewsPage({
   const subHeroItems = isFirstPage ? newsList.slice(1, 5) : []
   const listItems = isFirstPage ? newsList.slice(5) : newsList
 
+  const listingJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: t("metaTitle"),
+    description: t("metaDesc"),
+    url: localizedUrl("/tin-tuc", locale),
+    inLanguage: locale === "vi" ? "vi-VN" : locale === "zh" ? "zh-CN" : locale,
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: BASE_URL },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: newsList.length,
+      itemListElement: newsList.map((item, idx) => ({
+        "@type": "ListItem",
+        position: (page - 1) * PAGE_SIZE + idx + 1,
+        url: localizedUrl(`/tin-tuc/${item.slug}`, locale),
+        name: localize(item, "title", locale) as string,
+      })),
+    },
+  }
+
   return (
     <div className="min-h-screen bg-brand-50/60">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listingJsonLd) }} />
 
       {/* ── Page Banner ─────────────────────────────────────────────────────── */}
       <div className="bg-brand-800 py-14 px-4 text-center">
@@ -166,13 +192,19 @@ export default async function NewsPage({
                 href={`/tin-tuc/${heroItem.slug}`}
                 className="group lg:col-span-2 flex flex-col"
               >
-                {/* Ảnh bìa */}
+                {/* Ảnh bìa — hero is the LCP element on /tin-tuc page 1,
+                    so it gets `priority` to skip lazy-loading. */}
                 <div className="relative h-52 sm:h-64 lg:h-[300px] bg-brand-800 overflow-hidden">
                   {heroItem.coverImageUrl ? (
-                    <img
-                      src={heroItem.coverImageUrl}
+                    <Image
+                      src={cloudinaryResize(heroItem.coverImageUrl, 1280)}
                       alt={l(heroItem, "title")}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 66vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
                     />
                   ) : (
                     <AgarwoodPlaceholder className="w-full h-full" size="xl" shape="square" tone="dark" />
@@ -208,12 +240,14 @@ export default async function NewsPage({
                       href={`/tin-tuc/${item.slug}`}
                       className="group flex gap-3 p-4 hover:bg-brand-50 transition-colors flex-1"
                     >
-                      <div className="w-20 h-16 shrink-0 rounded overflow-hidden bg-brand-100">
+                      <div className="relative w-20 h-16 shrink-0 rounded overflow-hidden bg-brand-100">
                         {item.coverImageUrl ? (
-                          <img
-                            src={item.coverImageUrl}
+                          <Image
+                            src={cloudinaryResize(item.coverImageUrl, 160)}
                             alt={l(item, "title")}
-                            className="w-full h-full object-cover"
+                            fill
+                            sizes="80px"
+                            className="object-cover"
                           />
                         ) : (
                           <AgarwoodPlaceholder className="w-full h-full" size="sm" shape="square" />
@@ -269,12 +303,14 @@ export default async function NewsPage({
                     className="group flex gap-4 py-5 hover:bg-brand-50 -mx-2 px-2 rounded-lg transition-colors"
                   >
                     {/* Thumbnail */}
-                    <div className="w-28 h-20 sm:w-36 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-brand-100">
+                    <div className="relative w-28 h-20 sm:w-36 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-brand-100">
                       {item.coverImageUrl ? (
-                        <img
-                          src={item.coverImageUrl}
+                        <Image
+                          src={cloudinaryResize(item.coverImageUrl, 288)}
                           alt={l(item, "title")}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          sizes="(max-width: 640px) 112px, 144px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" />

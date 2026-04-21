@@ -184,7 +184,7 @@ export default async function ProductDetailPage({ params }: Props) {
                       )}
                     </div>
                     <span className="text-sm text-brand-600">{product.owner.name}</span>
-                    {product.owner.role === "VIP" && (
+                    {(product.owner.role === "VIP" || product.owner.role === "INFINITE") && (
                       <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">{tP("member")}</span>
                     )}
                   </>

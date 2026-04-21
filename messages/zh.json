@@ -629,6 +629,9 @@
     "fullEditorShort": "完整编辑",
     "posting": "发布中...",
     "post": "发布",
+    "pendingLabel": "发布中...",
+    "pendingDismiss": "取消",
+    "pendingErrorPrefix": "发布失败：",
     "memberCard": "会员",
     "statusActive": "活跃",
     "statusExpired": "已过期",
@@ -677,8 +680,11 @@
     "notFound": "文章不存在",
     "breadcrumbNews": "新闻",
     "publishedAt": "发布日期：",
+    "updatedAt": "更新日期：",
     "shareArticle": "分享文章：",
-    "relatedNews": "相关新闻"
+    "relatedNews": "相关新闻",
+    "tocTitle": "目录",
+    "aboutAuthor": "关于作者"
   },
   "legal": {
     "label": "法律文件",

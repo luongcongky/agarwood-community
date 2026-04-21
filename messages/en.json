@@ -629,6 +629,9 @@
     "fullEditorShort": "Full editor",
     "posting": "Posting...",
     "post": "Post",
+    "pendingLabel": "Posting...",
+    "pendingDismiss": "Dismiss",
+    "pendingErrorPrefix": "Failed to post:",
     "memberCard": "Member",
     "statusActive": "Active",
     "statusExpired": "Expired",
@@ -677,8 +680,11 @@
     "notFound": "Article not found",
     "breadcrumbNews": "News",
     "publishedAt": "Published:",
+    "updatedAt": "Updated:",
     "shareArticle": "Share this article:",
-    "relatedNews": "Related news"
+    "relatedNews": "Related news",
+    "tocTitle": "Table of Contents",
+    "aboutAuthor": "About the author"
   },
   "legal": {
     "label": "Legal Documents",
