@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma"
 import { getLocale, getTranslations } from "next-intl/server"
 import type { Locale } from "@/i18n/config"
 
+// Nội dung Điều lệ là pháp lý hầu như không đổi — ISR 1 ngày. Khi admin
+// sửa, revalidate tag "dieu-le" sẽ clear cache sớm hơn.
+export const revalidate = 86400
+
 export async function generateMetadata() {
   const t = await getTranslations("dieuLe")
   return {

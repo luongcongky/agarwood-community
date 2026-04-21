@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import type { Metadata } from "next"
 
+// Cert status có thể đổi (approve/expire) → ISR ngắn để batch cluster hits
+// khi khách scan QR trong 1 event, nhưng vẫn giữ freshness trong 5 phút.
+export const revalidate = 300
+
 type Props = { params: Promise<{ certCode: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
