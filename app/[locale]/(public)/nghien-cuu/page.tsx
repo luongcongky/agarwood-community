@@ -1,9 +1,12 @@
 import Link from "next/link"
+import Image from "next/image"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import { cloudinaryResize } from "@/lib/cloudinary"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 export async function generateMetadata() {
   const t = await getTranslations("research")
@@ -172,14 +175,18 @@ export default async function ResearchPage({
                 href={`/nghien-cuu/${item.slug}`}
                 className="group bg-white rounded-xl border border-brand-200 overflow-hidden hover:shadow-lg hover:border-brand-400 transition-all flex flex-col"
               >
-                {/* Cover */}
+                {/* Cover — Next.js Image qua cloudinaryResize: tự webp +
+                    responsive + lazy-load, giảm bandwidth ~5-10× so với <img>. */}
                 <div className="relative h-44 bg-brand-100 overflow-hidden">
                   {item.coverImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.coverImageUrl}
+                    <Image
+                      src={cloudinaryResize(item.coverImageUrl, 480)}
                       alt={l(item, "title")}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      placeholder="blur"
+                      blurDataURL={BLUR_DATA_URL}
                     />
                   ) : (
                     <AgarwoodPlaceholder className="w-full h-full" size="lg" shape="square" />
