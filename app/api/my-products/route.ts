@@ -16,6 +16,7 @@ export async function GET() {
       name: true,
       slug: true,
       certStatus: true,
+      certExpiredAt: true,
       imageUrls: true,
       companyId: true,
     },

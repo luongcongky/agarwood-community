@@ -19,6 +19,16 @@ function formatDate(d: Date) {
   return new Date(d).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
+const RENEWAL_WARNING_DAYS = 60
+
+function expiryState(expiredAt: Date | null): "none" | "expiring" | "expired" {
+  if (!expiredAt) return "none"
+  const diffDays = (new Date(expiredAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+  if (diffDays <= 0) return "expired"
+  if (diffDays <= RENEWAL_WARNING_DAYS) return "expiring"
+  return "none"
+}
+
 export default async function CertHistoryPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
@@ -29,13 +39,15 @@ export default async function CertHistoryPage() {
     select: {
       id: true,
       status: true,
-      isOnlineReview: true,
+      reviewMode: true,
+      feePaid: true,
       reviewNote: true,
       approvedAt: true,
       rejectedAt: true,
       refundedAt: true,
       createdAt: true,
-      product: { select: { name: true, slug: true, certStatus: true, badgeUrl: true } },
+      certCode: true,
+      product: { select: { id: true, name: true, slug: true, certStatus: true, badgeUrl: true, certExpiredAt: true } },
     },
   })
 
@@ -71,7 +83,7 @@ export default async function CertHistoryPage() {
                       {cert.product.name}
                     </Link>
                     <p className="text-xs text-brand-400 mt-0.5">
-                      Nộp ngày {formatDate(cert.createdAt)} · {cert.isOnlineReview ? "Online" : "Offline"}
+                      Nộp ngày {formatDate(cert.createdAt)} · {cert.reviewMode === "ONLINE" ? "Online" : "Offline"} · {cert.feePaid.toLocaleString("vi-VN")}đ
                     </p>
                   </div>
                   <span className={cn("inline-flex text-xs font-medium px-2.5 py-1 rounded-full", st.cls)}>
@@ -82,17 +94,66 @@ export default async function CertHistoryPage() {
                 {/* Status description */}
                 <p className="text-xs text-brand-500">{st.description}</p>
 
-                {/* Approved: show badge link */}
-                {cert.status === "APPROVED" && cert.approvedAt && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 space-y-1">
-                    <p className="text-sm text-green-800 font-medium">
-                      Chứng nhận cấp ngày {formatDate(cert.approvedAt)}
-                    </p>
-                    <Link href={`/verify/${cert.product.slug}`} className="text-xs text-green-700 hover:text-green-900 underline">
-                      Xem trang xác minh chứng nhận
-                    </Link>
-                  </div>
-                )}
+                {/* Approved: show badge link + expiry + renewal */}
+                {cert.status === "APPROVED" && cert.approvedAt && (() => {
+                  const expState = expiryState(cert.product.certExpiredAt)
+                  const canRenew = expState !== "none"
+                  return (
+                    <div className={cn(
+                      "border rounded-lg px-4 py-3 space-y-2",
+                      expState === "expired"
+                        ? "bg-red-50 border-red-200"
+                        : expState === "expiring"
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-green-50 border-green-200",
+                    )}>
+                      <p className="text-sm font-medium text-green-800">
+                        Chứng nhận cấp ngày {formatDate(cert.approvedAt)}
+                        {cert.certCode && (
+                          <span className="ml-2 font-mono text-xs text-green-700">· {cert.certCode}</span>
+                        )}
+                      </p>
+                      {cert.product.certExpiredAt && (
+                        <p className={cn(
+                          "text-xs",
+                          expState === "expired"
+                            ? "text-red-700 font-semibold"
+                            : expState === "expiring"
+                              ? "text-amber-800 font-semibold"
+                              : "text-green-700",
+                        )}>
+                          {expState === "expired"
+                            ? `⏰ Đã hết hạn ngày ${formatDate(cert.product.certExpiredAt)} — vui lòng gia hạn`
+                            : expState === "expiring"
+                              ? `⚠️ Sắp hết hạn ngày ${formatDate(cert.product.certExpiredAt)} — nên nộp gia hạn sớm`
+                              : `Hiệu lực đến ${formatDate(cert.product.certExpiredAt)}`}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-3 text-xs pt-1">
+                        <Link
+                          href={`/verify/${cert.certCode ?? cert.product.slug}`}
+                          className="inline-flex items-center gap-1 rounded-md bg-green-700 px-3 py-1.5 font-semibold text-white hover:bg-green-800 transition-colors"
+                        >
+                          🖨️ In chứng nhận
+                        </Link>
+                        <Link
+                          href={`/verify/${cert.certCode ?? cert.product.slug}`}
+                          className="text-green-700 hover:text-green-900 underline self-center"
+                        >
+                          Xem trang xác minh
+                        </Link>
+                        {canRenew && (
+                          <Link
+                            href={`/chung-nhan/nop-don?renew=${cert.product.id}`}
+                            className="ml-auto inline-flex items-center gap-1 rounded-md bg-amber-700 px-3 py-1.5 font-semibold text-white hover:bg-amber-800 transition-colors"
+                          >
+                            🔄 Gia hạn chứng nhận
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Rejected: show review note */}
                 {cert.status === "REJECTED" && (
@@ -103,7 +164,7 @@ export default async function CertHistoryPage() {
                     {cert.rejectedAt && (
                       <p className="text-xs text-red-500">Từ chối ngày {formatDate(cert.rejectedAt)}</p>
                     )}
-                    <p className="text-xs text-red-500">Admin đang xử lý hoàn tiền 5.000.000đ</p>
+                    <p className="text-xs text-red-500">Admin đang xử lý hoàn tiền {cert.feePaid.toLocaleString("vi-VN")}đ</p>
                   </div>
                 )}
 

@@ -6,6 +6,7 @@ import type { CertStatus } from "@prisma/client"
 export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
 const PAGE_SIZE = 20
+const STUCK_DAYS = 14
 
 const CERT_STATUS_LABELS: Record<CertStatus, string> = {
   DRAFT: "Chờ xác nhận TT",
@@ -125,6 +126,25 @@ export default async function AdminCertificationsPage({
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
+  // Đơn tồn đọng: UNDER_REVIEW > STUCK_DAYS ngày, vẫn còn vote PENDING.
+  // User yêu cầu "không có deadline vote — admin monitoring và báo cáo cho hội".
+  const stuckThreshold = new Date(Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000)
+  const stuckCerts = await prisma.certification.findMany({
+    where: {
+      status: "UNDER_REVIEW",
+      updatedAt: { lt: stuckThreshold },
+      reviews: { some: { vote: "PENDING" } },
+    },
+    orderBy: { updatedAt: "asc" },
+    take: 10,
+    select: {
+      id: true,
+      updatedAt: true,
+      product: { select: { name: true } },
+      _count: { select: { reviews: { where: { vote: "PENDING" } } } },
+    },
+  })
+
   const statusTabs = [
     { label: "Tất cả", value: "" },
     { label: "Chờ xác nhận TT", value: "awaiting_payment" },
@@ -152,6 +172,44 @@ export default async function AdminCertificationsPage({
       <h1 className="text-2xl font-bold text-brand-900">
         Quản lý Chứng nhận Sản phẩm
       </h1>
+
+      {/* Stuck cases — UNDER_REVIEW quá STUCK_DAYS ngày chưa đủ vote */}
+      {stuckCerts.length > 0 && (
+        <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⏳</span>
+            <h2 className="font-semibold text-amber-900">
+              {stuckCerts.length} đơn đang tồn đọng quá {STUCK_DAYS} ngày
+            </h2>
+          </div>
+          <p className="text-xs text-amber-800">
+            Các đơn UNDER_REVIEW dưới đây chưa đủ vote. Cân nhắc báo cáo với hội để thúc đẩy hoặc thay thẩm định viên.
+          </p>
+          <ul className="divide-y divide-amber-200 rounded-lg border border-amber-200 bg-white">
+            {stuckCerts.map((c) => {
+              const daysAgo = Math.floor((Date.now() - new Date(c.updatedAt).getTime()) / (24 * 60 * 60 * 1000))
+              return (
+                <li key={c.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <Link href={`/admin/chung-nhan/${c.id}`} className="font-medium text-brand-900 hover:underline truncate block">
+                      {c.product.name}
+                    </Link>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Còn {c._count.reviews} thẩm định viên chưa vote · đã {daysAgo} ngày
+                    </p>
+                  </div>
+                  <Link
+                    href={`/admin/chung-nhan/${c.id}`}
+                    className="shrink-0 text-xs text-amber-800 underline hover:text-amber-900"
+                  >
+                    Xem →
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Status filter */}
       <div className="flex gap-1 rounded-lg border border-brand-200 bg-brand-50 p-1 w-fit">

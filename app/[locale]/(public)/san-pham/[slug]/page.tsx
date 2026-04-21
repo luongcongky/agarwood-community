@@ -39,7 +39,7 @@ const getProductBySlug = cache(async (slug: string) =>
         where: { status: "APPROVED" },
         orderBy: { approvedAt: "desc" },
         take: 1,
-        select: { id: true, approvedAt: true, isOnlineReview: true },
+        select: { id: true, approvedAt: true, reviewMode: true },
       },
     },
   }),
@@ -229,8 +229,8 @@ export default async function ProductDetailPage({ params }: Props) {
                 </div>
                 <div className="text-sm text-amber-800 space-y-1">
                   {certDate && <p>Ngày cấp: <span className="font-semibold">{certDate}</span></p>}
-                  {approvedCert?.isOnlineReview !== undefined && (
-                    <p>Hình thức: <span className="font-semibold">{approvedCert.isOnlineReview ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}</span></p>
+                  {approvedCert?.reviewMode && (
+                    <p>Hình thức: <span className="font-semibold">{approvedCert.reviewMode === "ONLINE" ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}</span></p>
                   )}
                 </div>
               </div>

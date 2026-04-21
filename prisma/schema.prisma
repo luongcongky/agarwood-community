@@ -95,6 +95,17 @@ enum CertStatus {
   REFUNDED       // đã hoàn tiền
 }
 
+enum ReviewMode {
+  ONLINE         // sản phẩm nhỏ, giá trị thấp — 2% giá bán, clamp [1tr, 20tr]
+  OFFLINE        // thẩm định tại chỗ — flat 200tr, all-inclusive
+}
+
+enum ReviewVote {
+  PENDING        // chưa vote
+  APPROVE        // đồng ý
+  REJECT         // phủ quyết — 1 REJECT khiến toàn bộ đơn bị auto reject
+}
+
 enum MediaOrderStatus {
   NEW            // vừa đặt hàng
   CONFIRMED      // admin đã xác nhận
@@ -183,6 +194,9 @@ model User {
   membershipExpires DateTime?
   isActive          Boolean   @default(true)
 
+  // Hội đồng thẩm định (HDTD) — admin toggle để cấp quyền thẩm định chứng nhận SP
+  isCouncilMember   Boolean   @default(false)
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -210,11 +224,13 @@ model User {
   contactMessagesHandled ContactMessage[]    @relation("ContactHandler")
   honoraryContributions        HonoraryContribution[] @relation("HonoraryRecipient")
   honoraryContributionsCreated HonoraryContribution[] @relation("HonoraryCreatedBy")
+  councilReviews               CertificationReview[]
 
   @@index([role])
   @@index([accountType])
   @@index([contributionTotal])
   @@index([displayPriority])
+  @@index([isCouncilMember])
   @@map("users")
 }
 
@@ -486,8 +502,8 @@ model Certification {
   applicantNote     String?     @db.Text
   reviewNote        String?     @db.Text // ghi chú của admin khi duyệt/từ chối
 
-  // Thanh toán & hoàn tiền
-  feePaid           Int         @default(500000000) // 5.000.000 VND (lưu bằng đồng, *100)
+  // Thanh toán & hoàn tiền — lưu trực tiếp VND (không *100)
+  feePaid           Int         // phí đã tính theo reviewMode + productSalePrice
   refundBankName    String?
   refundAccountName String?
   refundAccountNo   String?
@@ -495,13 +511,15 @@ model Certification {
   refundNote        String?
 
   // Xét duyệt
-  reviewedBy        String?     // adminId
+  reviewedBy        String?     // adminId (legacy — Sprint 2 sẽ thay bằng CertificationReview)
   reviewedAt        DateTime?
   approvedAt        DateTime?
   rejectedAt        DateTime?
 
   // Process type
-  isOnlineReview    Boolean     @default(true) // true = online, false = offline
+  reviewMode        ReviewMode  @default(ONLINE)
+  productSalePrice  BigInt?     // snapshot giá bán lúc nộp đơn — chỉ bắt buộc khi reviewMode=ONLINE (dùng để tính phí 2%)
+  certCode          String?     @unique // HTHVN-YYYY-NNNN — set khi APPROVED, dùng cho /verify
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -509,11 +527,32 @@ model Certification {
   product           Product     @relation(fields: [productId], references: [id])
   applicant         User        @relation(fields: [applicantId], references: [id])
   payment           Payment?
+  reviews           CertificationReview[]
 
   @@index([productId])
   @@index([applicantId])
   @@index([status])
   @@map("certifications")
+}
+
+// Vote record của 1 thành viên hội đồng thẩm định (HDTD) trên 1 đơn chứng nhận.
+// Luôn có đúng 5 record cho 1 Certification đã được admin chỉ định hội đồng.
+model CertificationReview {
+  id              String     @id @default(cuid())
+  certificationId String
+  reviewerId      String
+  vote            ReviewVote @default(PENDING)
+  comment         String?    @db.Text // bắt buộc khi vote != PENDING (validate ở API)
+  votedAt         DateTime?
+  createdAt       DateTime   @default(now())
+
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  reviewer        User          @relation(fields: [reviewerId], references: [id])
+
+  @@unique([certificationId, reviewerId])
+  @@index([reviewerId])
+  @@index([certificationId])
+  @@map("certification_reviews")
 }
 
 // ============================================================

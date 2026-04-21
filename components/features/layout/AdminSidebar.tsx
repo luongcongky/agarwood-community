@@ -74,6 +74,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Sản phẩm & Chứng nhận",
     items: [
       { label: "Chứng nhận", href: "/admin/chung-nhan", icon: BadgeCheck, pendingKey: "certification" },
+      { label: "Hội đồng thẩm định", href: "/admin/hoi-dong-tham-dinh", icon: Scale },
       { label: "Tiêu biểu", href: "/admin/tieu-bieu", icon: Star },
     ],
   },
