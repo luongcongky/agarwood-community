@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -17,33 +18,9 @@ export const revalidate = 3600
 
 type Props = { params: Promise<{ slug: string }> }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params
-  const product = await prisma.product.findUnique({
-    where: { slug, isPublished: true },
-    select: { name: true, name_en: true, name_zh: true, name_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, imageUrls: true, category: true },
-  })
-  if (!product) return { title: "Not found" }
-  return {
-    title: `${product.name} | Hội Trầm Hương Việt Nam`,
-    description: product.description?.slice(0, 160) ?? undefined,
-    openGraph: {
-      title: product.name,
-      description: product.description?.slice(0, 160) ?? undefined,
-      images: product.imageUrls.length > 0 ? [{ url: product.imageUrls[0] as string }] : [],
-    },
-  }
-}
-
-export default async function ProductDetailPage({ params }: Props) {
-  const tP = await getTranslations("productDetail")
-
-  const locale = await getLocale() as Locale
-  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
-  const { slug } = await params
-  const session = await auth()
-
-  const product = await prisma.product.findUnique({
+/** React.cache dedupe giữa generateMetadata và main page — 1 query/request. */
+const getProductBySlug = cache(async (slug: string) =>
+  prisma.product.findUnique({
     where: { slug, isPublished: true },
     include: {
       owner: {
@@ -65,7 +42,33 @@ export default async function ProductDetailPage({ params }: Props) {
         select: { id: true, approvedAt: true, isOnlineReview: true },
       },
     },
-  })
+  }),
+)
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const product = await getProductBySlug(slug)
+  if (!product) return { title: "Not found" }
+  return {
+    title: `${product.name} | Hội Trầm Hương Việt Nam`,
+    description: product.description?.slice(0, 160) ?? undefined,
+    openGraph: {
+      title: product.name,
+      description: product.description?.slice(0, 160) ?? undefined,
+      images: product.imageUrls.length > 0 ? [{ url: product.imageUrls[0] as string }] : [],
+    },
+  }
+}
+
+export default async function ProductDetailPage({ params }: Props) {
+  const tP = await getTranslations("productDetail")
+
+  const locale = await getLocale() as Locale
+  const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
+  const { slug } = await params
+  const session = await auth()
+
+  const product = await getProductBySlug(slug)
   if (!product) notFound()
 
   // Related products: same category OR same company/owner, cert products first

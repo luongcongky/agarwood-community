@@ -66,9 +66,6 @@ export default async function MembersPage({
       phone: true,
       website: true,
       isVerified: true,
-      owner: {
-        select: { contributionTotal: true },
-      },
     },
   })
 
@@ -135,6 +132,7 @@ export default async function MembersPage({
                         src={company.logoUrl}
                         alt={l(company, "name")}
                         fill
+                        sizes="64px"
                         className="rounded-full object-cover"
                       />
                     </div>
