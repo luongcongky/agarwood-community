@@ -36,30 +36,50 @@ const POST_CARD_SELECT = {
 
 // ── Section 1: Tin tức Hội ────────────────────────────────────────────────────
 
+const NEWS_CARD_SELECT = {
+  id: true,
+  title: true,
+  title_en: true,
+  title_zh: true,
+  title_ar: true,
+  slug: true,
+  excerpt: true,
+  excerpt_en: true,
+  excerpt_zh: true,
+  excerpt_ar: true,
+  coverImageUrl: true,
+  publishedAt: true,
+  isPinned: true,
+} as const
+
 export const getAssociationNews = unstable_cache(
   async () => {
+    // Chỉ lấy tin ngành (GENERAL) — RESEARCH đã render riêng ở section nghiên
+    // cứu; LEGAL dùng cho /privacy, /terms.
     return prisma.news.findMany({
-      where: { isPublished: true },
+      where: { isPublished: true, category: "GENERAL" },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 5,
-      select: {
-        id: true,
-        title: true,
-        title_en: true,
-        title_zh: true,
-        title_ar: true,
-        slug: true,
-        excerpt: true,
-        excerpt_en: true,
-        excerpt_zh: true,
-        excerpt_ar: true,
-        coverImageUrl: true,
-        publishedAt: true,
-        isPinned: true,
-      },
+      take: 7,
+      select: NEWS_CARD_SELECT,
     })
   },
   ["homepage_news"],
+  { revalidate: 300, tags: ["homepage", "news"] },
+)
+
+// ── Section 3b: Bài nghiên cứu mới ──────────────────────────────────────────
+// News với category=RESEARCH — hiển thị grid 3 cột tương tự LatestPostsSection.
+
+export const getLatestResearchNews = unstable_cache(
+  async (take = 3) => {
+    return prisma.news.findMany({
+      where: { isPublished: true, category: "RESEARCH" },
+      orderBy: [{ publishedAt: "desc" }],
+      take,
+      select: NEWS_CARD_SELECT,
+    })
+  },
+  ["homepage_research"],
   { revalidate: 300, tags: ["homepage", "news"] },
 )
 

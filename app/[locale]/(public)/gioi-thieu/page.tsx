@@ -6,8 +6,12 @@ import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
+import { MembersGrid, type MemberItem } from "./MembersGrid"
 
 export const revalidate = 600
+
+/** Số hội viên hiển thị ngay trên trang Giới thiệu — phần còn lại xem ở /hoi-vien */
+const MEMBERS_PREVIEW_LIMIT = 18
 
 export async function generateMetadata() {
   const t = await getTranslations("about")
@@ -56,29 +60,54 @@ export default async function GioiThieuPage() {
     getLocale() as Promise<Locale>,
   ])
 
-  // Fetch all leaders của nhiệm kỳ mới nhất — 3 category (BTV/BCH/BKT) cho tabs
-  const rawLeaders = await prisma.leader.findMany({
-    where: { isActive: true },
-    orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
-    select: {
-      id: true,
-      name: true, name_en: true, name_zh: true, name_ar: true,
-      honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
-      title: true, title_en: true, title_zh: true, title_ar: true,
-      workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
-      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
-      photoUrl: true,
-      term: true,
-      category: true,
-      user: { select: { avatarUrl: true, bio: true } },
-    },
-  })
+  // Fetch:
+  //  - Leaders (BTV/BCH/BKT/HDTD) cho tabs
+  //  - Active members (VIP/INFINITE) — preview dưới cơ cấu tổ chức
+  //  - Total member count — hiển thị trong subtitle + "Xem tất cả"
+  const [rawLeaders, rawMembers, totalMemberCount] = await Promise.all([
+    prisma.leader.findMany({
+      where: { isActive: true },
+      orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
+      select: {
+        id: true,
+        name: true, name_en: true, name_zh: true, name_ar: true,
+        honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
+        bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+        photoUrl: true,
+        term: true,
+        category: true,
+        user: { select: { avatarUrl: true, bio: true } },
+      },
+    }),
+    prisma.user.findMany({
+      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
+      orderBy: [
+        { contributionTotal: "desc" },
+        { displayPriority: "desc" },
+        { createdAt: "asc" },
+      ],
+      take: MEMBERS_PREVIEW_LIMIT,
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        company: {
+          select: { name: true, logoUrl: true, representativePosition: true },
+        },
+      },
+    }),
+    prisma.user.count({
+      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
+    }),
+  ])
 
   const currentTerm = rawLeaders[0]?.term ?? null
   const l = <T extends Record<string, unknown>>(record: T, field: string) =>
     localize(record, field, locale) as string | null
   const currentLeaders: LeaderItem[] = rawLeaders
-    .filter((l) => l.term === currentTerm)
+    .filter((leader) => leader.term === currentTerm)
     .map((leader) => ({
       id: leader.id,
       name: l(leader, "name") ?? leader.name,
@@ -89,17 +118,16 @@ export default async function GioiThieuPage() {
       bio: l(leader, "bio") ?? leader.user?.bio ?? null,
       photoUrl: leader.photoUrl ?? leader.user?.avatarUrl ?? null,
       term: leader.term,
-      category: leader.category as "BTV" | "BCH" | "BKT",
+      category: leader.category as "BTV" | "BCH" | "BKT" | "HDTD",
     }))
 
-  const benefits = [
-    { icon: "🏅", title: t("benefit1Title"), desc: t("benefit1Desc") },
-    { icon: "📋", title: t("benefit2Title"), desc: t("benefit2Desc") },
-    { icon: "💬", title: t("benefit3Title"), desc: t("benefit3Desc") },
-    { icon: "📣", title: t("benefit4Title"), desc: t("benefit4Desc") },
-    { icon: "🤝", title: t("benefit5Title"), desc: t("benefit5Desc") },
-    { icon: "📰", title: t("benefit6Title"), desc: t("benefit6Desc") },
-  ]
+  const members: MemberItem[] = rawMembers.map((m) => ({
+    id: m.id,
+    name: m.name,
+    avatarUrl: m.avatarUrl ?? m.company?.logoUrl ?? null,
+    companyName: m.company?.name ?? null,
+    position: m.company?.representativePosition ?? null,
+  }))
 
   const orgDepts = [
     t("inspectionBoard"),
@@ -131,40 +159,21 @@ export default async function GioiThieuPage() {
       <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
 
-      {/* ── History / Mission / Vision ── */}
-      <section className="py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
-              <div className="mb-4 text-3xl">📜</div>
-              <h2 className="text-lg font-bold text-brand-900">
-                {t("historyTitle")}
-              </h2>
-              <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                {t("historyContent")}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
-              <div className="mb-4 text-3xl">🎯</div>
-              <h2 className="text-lg font-bold text-brand-900">{t("missionTitle")}</h2>
-              <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                {t("missionContent")}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-brand-200 bg-brand-50 p-8">
-              <div className="mb-4 text-3xl">🌏</div>
-              <h2 className="text-lg font-bold text-brand-900">{t("visionTitle")}</h2>
-              <p className="mt-3 text-sm text-brand-700 leading-relaxed">
-                {t("visionContent")}
-              </p>
-            </div>
+      {/* ── Intro — 1 đoạn giới thiệu thay cho 3 cards History/Mission/Vision ── */}
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-3xl px-4">
+          <h2 className="text-center text-2xl font-bold text-brand-900 sm:text-3xl">
+            {t("introTitle")}
+          </h2>
+          <div className="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-8 sm:p-10">
+            <p className="text-brand-800 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
+              {t("introContent")}
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ── Leadership — tabs cho BTV / BCH / BKT ── */}
+      {/* ── Leadership — tabs cho BTV / BCH / BKT / HDTD ── */}
       <section className="bg-brand-50/50 py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
@@ -175,35 +184,8 @@ export default async function GioiThieuPage() {
         </div>
       </section>
 
-      {/* ── Membership Benefits ── */}
-      <section className="py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-10 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
-            {t("benefitsTitle")}
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {benefits.map((benefit) => (
-              <div
-                key={benefit.title}
-                className="flex gap-4 rounded-xl border border-brand-200 bg-brand-50 p-6"
-              >
-                <span className="shrink-0 text-2xl">{benefit.icon}</span>
-                <div>
-                  <h3 className="font-semibold text-brand-900">
-                    {benefit.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-brand-700 leading-relaxed">
-                    {benefit.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Organization Chart ── */}
-      <section className="bg-brand-50/50 py-20">
+      <section className="py-20">
         <div className="mx-auto max-w-4xl px-4">
           <h2 className="mb-2 text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             {t("orgChartTitle")}
@@ -245,6 +227,33 @@ export default async function GioiThieuPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Members list — dưới cơ cấu tổ chức, layout giống Ban Thường vụ ── */}
+      <section className="bg-brand-50/50 py-16 lg:py-20">
+        <div className="mx-auto max-w-7xl px-4">
+          <h2 className="text-center text-2xl font-bold text-brand-900 sm:text-3xl">
+            {t("membersTitle")}
+          </h2>
+          <p className="mt-2 mb-10 text-center text-sm text-brand-500">
+            {totalMemberCount > 0
+              ? t("membersSubtitle", { count: totalMemberCount })
+              : t("membersEmpty")}
+          </p>
+
+          <MembersGrid members={members} />
+
+          {totalMemberCount > MEMBERS_PREVIEW_LIMIT && (
+            <div className="mt-10 text-center">
+              <Link
+                href="/hoi-vien"
+                className="inline-flex items-center justify-center rounded-md border border-brand-300 bg-white px-6 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-100 transition-colors"
+              >
+                {t("viewAllMembers")} ({totalMemberCount})
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

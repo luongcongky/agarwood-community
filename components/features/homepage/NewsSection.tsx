@@ -28,15 +28,6 @@ export async function NewsSection() {
 
   return (
     <div className="min-w-0 lg:col-span-2 space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-          {t("newsTitle")}
-        </h2>
-        <p className="text-sm text-brand-500 mt-1">
-          {t("newsSubtitle")}
-        </p>
-      </header>
-
       {heroNews ? (
         <NewsHero news={heroNews} featuredLabel={t("newsFeatured")} locale={locale} />
       ) : (

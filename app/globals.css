@@ -204,3 +204,30 @@
 [data-page="home"] section h2 + div {
   margin-top: 0.5rem;
 }
+
+/* ── Breaking news ticker marquee ──────────────────────────────────────────
+   Seamless horizontal scroll by duplicating the content list and translating
+   exactly -50%. Pauses on hover/focus so user can read. Respects
+   prefers-reduced-motion: no animation, items render statically in a
+   horizontally-scrollable list instead. */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker-scroll 60s linear infinite;
+  will-change: transform;
+}
+.ticker-wrapper:hover .ticker-track,
+.ticker-wrapper:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+    transform: none;
+  }
+  .ticker-wrapper {
+    overflow-x: auto;
+  }
+}

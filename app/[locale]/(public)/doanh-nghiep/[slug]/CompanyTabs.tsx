@@ -8,6 +8,7 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { CompanyGallery, type GalleryImage } from "./CompanyGallery"
 
 type Product = {
   id: string
@@ -21,8 +22,10 @@ type Product = {
 }
 
 type Props = {
+  companyId: string
   description: string | null | undefined
   products: Product[]
+  galleryImages: GalleryImage[]
   companyName: string
   companySlug: string
   foundedYear?: number | null
@@ -35,11 +38,13 @@ type Props = {
   canEdit: boolean
 }
 
-type TabId = "intro" | "products" | "info"
+type TabId = "intro" | "products" | "gallery" | "info"
 
 export function CompanyTabs({
+  companyId,
   description,
   products,
+  galleryImages,
   companyName,
   companySlug,
   foundedYear,
@@ -59,6 +64,7 @@ export function CompanyTabs({
   const tabs: { id: TabId; label: string }[] = [
     { id: "intro", label: t("tabIntro") },
     { id: "products", label: `${t("tabProducts")} (${products.length})` },
+    { id: "gallery", label: `${t("tabGallery")} (${galleryImages.length})` },
     { id: "info", label: t("tabInfo") },
   ]
 
@@ -142,6 +148,15 @@ export function CompanyTabs({
               </div>
             )}
           </div>
+        )}
+
+        {/* ── {t("tabGallery")} ─────────────────────────────────────────── */}
+        {activeTab === "gallery" && (
+          <CompanyGallery
+            companyId={companyId}
+            images={galleryImages}
+            canEdit={canEdit}
+          />
         )}
 
         {/* ── {t("tabInfo")} ────────────────────────────────────────────────── */}

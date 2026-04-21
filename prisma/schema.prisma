@@ -389,11 +389,28 @@ model Company {
 
   owner            User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   products         Product[]
+  galleryImages    CompanyGalleryImage[]
 
   @@index([slug])
   @@index([isPublished])
   @@index([isFeatured, featuredOrder])
   @@map("companies")
+}
+
+/// Bộ sưu tập ảnh của doanh nghiệp — hiển thị ở tab "Bộ sưu tập" trên profile.
+/// Owner (VIP) và ADMIN được phép upload/delete.
+model CompanyGalleryImage {
+  id         String   @id @default(cuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  imageUrl   String   // Cloudinary secure_url (folder "doanh-nghiep/MM-YYYY")
+  caption    String?  // chú thích ảnh — tuỳ chọn
+  sortOrder  Int      @default(0) // số nhỏ = hiển thị trước; fallback theo createdAt DESC
+
+  createdAt  DateTime @default(now())
+
+  @@index([companyId, sortOrder])
+  @@map("company_gallery_images")
 }
 
 model Product {
@@ -964,6 +981,7 @@ model Document {
   @@index([category])
   @@index([isPublic])
   @@index([createdAt])
+  @@index([isPublic, createdAt]) // BreakingTicker: isPublic=true AND createdAt >= 30d ago
   @@map("documents")
 }
 
@@ -1016,9 +1034,10 @@ model Leader {
 }
 
 enum LeaderCategory {
-  BTV // Ban Thường vụ
-  BCH // Ủy viên Ban Chấp hành
-  BKT // Ban Kiểm tra
+  BTV  // Ban Thường vụ
+  BCH  // Ủy viên Ban Chấp hành
+  BKT  // Ban Kiểm tra
+  HDTD // Hội đồng thẩm định
 }
 
 // ============================================================

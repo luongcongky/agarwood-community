@@ -6,6 +6,9 @@ import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBanne
 import { PartnersCarousel } from "@/components/features/homepage/PartnersCarousel"
 import { NewsSection } from "@/components/features/homepage/NewsSection"
 import { LatestPostsSection } from "@/components/features/homepage/LatestPostsSection"
+import { LatestResearchSection } from "@/components/features/homepage/LatestResearchSection"
+import { FeaturedCompaniesCarousel } from "@/components/features/homepage/FeaturedCompaniesCarousel"
+import { BreakingTicker } from "@/components/features/layout/BreakingTicker"
 import {
   CarouselSkeleton,
   LatestPostsSkeleton,
@@ -67,6 +70,12 @@ export default async function HomePage() {
         <HomepageBannerSlot position="TOP" />
       </Suspense>
 
+      {/* ── Breaking news ticker — stream, ẩn nếu không có tin ghim/văn bản
+           trong 30 ngày. Đặt sau banner TOP theo yêu cầu. ── */}
+      <Suspense fallback={null}>
+        <BreakingTicker />
+      </Suspense>
+
       {/* Section 1 + 2: Tin Hội + Bản tin hội viên — stream song song. */}
       <section className="bg-brand-50/85 backdrop-blur-[2px] py-8 lg:py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -88,6 +97,11 @@ export default async function HomePage() {
       {/* ── Section 3: Sản phẩm chứng nhận ── */}
       <Suspense fallback={<CarouselSkeleton />}>
         <CertifiedProductsCarousel />
+      </Suspense>
+
+      {/* ── Section 3b: Nghiên cứu mới nhất ── */}
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <LatestResearchSection />
       </Suspense>
 
       {/* ── Section 4: Banner MID ── */}
@@ -113,6 +127,11 @@ export default async function HomePage() {
           subtitle={t("productNewsSubtitle")}
           emptyText={t("productNewsEmpty")}
         />
+      </Suspense>
+
+      {/* ── Section 6b: Doanh nghiệp tiêu biểu — marquee tương tự Partners ── */}
+      <Suspense fallback={<PartnersCarouselSkeleton />}>
+        <FeaturedCompaniesCarousel />
       </Suspense>
 
       {/* ── Section 7: Đối tác ── */}

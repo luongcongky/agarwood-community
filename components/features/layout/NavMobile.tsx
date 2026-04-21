@@ -8,16 +8,32 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Separator } from "@/components/ui/separator"
 import type { MenuNode } from "@/lib/menu"
 import { getActiveNodeIds } from "@/lib/menu-active"
+import { SocialLinks } from "./SocialLinks"
+import { LocaleFlags } from "./LocaleFlags"
+import type { Locale } from "@/i18n/config"
 
 interface NavMobileProps {
   menu: MenuNode[]
   isLoggedIn: boolean
+  currentLocale: Locale
+  facebookUrl?: string | null
+  youtubeUrl?: string | null
+  /** Chỉ hiện language switcher khi đang ở public route (giống desktop) */
+  showLocaleFlags?: boolean
 }
 
-export function NavMobile({ menu, isLoggedIn }: NavMobileProps) {
+export function NavMobile({
+  menu,
+  isLoggedIn,
+  currentLocale,
+  facebookUrl,
+  youtubeUrl,
+  showLocaleFlags = true,
+}: NavMobileProps) {
   const pathname = usePathname() ?? "/"
   const activeIds = getActiveNodeIds(menu, pathname)
   const [open, setOpen] = useState(false)
+  const hasSocial = Boolean(facebookUrl || youtubeUrl)
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -28,14 +44,14 @@ export function NavMobile({ menu, isLoggedIn }: NavMobileProps) {
         <Menu className="h-6 w-6" />
       </SheetTrigger>
 
-      <SheetContent side="right" className="w-full max-w-xs bg-brand-900 border-brand-700 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-brand-700">
+      <SheetContent side="right" className="w-full max-w-xs bg-brand-900 border-brand-700 p-0 flex flex-col">
+        <SheetHeader className="px-6 py-5 border-b border-brand-700 shrink-0">
           <SheetTitle className="text-brand-400 text-lg text-left">
             Hội Trầm Hương VN
           </SheetTitle>
         </SheetHeader>
 
-        <nav className="flex flex-col gap-1 p-4">
+        <nav className="flex flex-col gap-1 p-4 overflow-y-auto flex-1">
           {menu.map((node) => (
             <MobileNode
               key={node.id}
@@ -65,6 +81,34 @@ export function NavMobile({ menu, isLoggedIn }: NavMobileProps) {
             </>
           )}
         </nav>
+
+        {/* Footer utilities: language + social (shown on mobile drawer since we
+            hide the desktop utility bar on <lg breakpoints) */}
+        {(showLocaleFlags || hasSocial) && (
+          <div className="border-t border-brand-700 px-4 py-4 shrink-0 space-y-4">
+            {showLocaleFlags && (
+              <div>
+                <div className="text-[11px] text-brand-400 mb-2 uppercase tracking-wider font-medium">
+                  Ngôn ngữ
+                </div>
+                <LocaleFlags current={currentLocale} variant="labeled" />
+              </div>
+            )}
+
+            {hasSocial && (
+              <div>
+                <div className="text-[11px] text-brand-400 mb-1 uppercase tracking-wider font-medium">
+                  Kết nối
+                </div>
+                <SocialLinks
+                  facebookUrl={facebookUrl}
+                  youtubeUrl={youtubeUrl}
+                  variant="navbar"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   )

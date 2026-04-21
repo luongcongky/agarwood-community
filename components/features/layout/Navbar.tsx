@@ -8,7 +8,7 @@ import { UserMenu } from "./UserMenu"
 import { NavMobile } from "./NavMobile"
 import { NavDesktopMenu } from "./NavDesktopItem"
 import { SocialLinks } from "./SocialLinks"
-import { LocaleSwitcher } from "./LocaleSwitcher"
+import { LocaleFlags } from "./LocaleFlags"
 import { isValidLocale, defaultLocale, type Locale } from "@/i18n/config"
 import { localize } from "@/i18n/localize"
 import type { MenuNode } from "@/lib/menu"
@@ -110,79 +110,140 @@ export async function Navbar() {
   const socialMap = Object.fromEntries(socialConfigs.map((c) => [c.key, c.value]))
   const facebookUrl = socialMap.facebook_url || null
   const youtubeUrl = socialMap.youtube_url || null
-
+  const hasSocial = Boolean(facebookUrl || youtubeUrl)
+  const showLocaleFlags = mode === "public"
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
-
-          {/* Logo — luôn về trang chủ */}
-          <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Hội Trầm Hương Việt Nam"
-              width={48}
-              height={48}
-              className="h-11 w-11 shrink-0"
-              priority
-            />
-            <span className="text-brand-100 font-semibold text-lg leading-tight hidden sm:block">
-              Hội Trầm Hương<br />
-              <span className="text-brand-400 text-xs font-sans font-normal tracking-widest uppercase">
-                Việt Nam
-              </span>
-            </span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1" aria-label="Navigation chính">
-            <NavDesktopMenu tree={localizedMenu} />
-          </nav>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            {/* Language switcher */}
-            {mode === "public" && (
-              <LocaleSwitcher current={locale} />
-            )}
-
-            {/* Social icons luôn hiển thị ở navbar công khai */}
-            <div className="hidden lg:flex">
-              <SocialLinks facebookUrl={facebookUrl} youtubeUrl={youtubeUrl} variant="navbar" />
-            </div>
-
-            {user ? (
-              <UserMenu
-                name={user.name}
-                email={user.email}
-                image={user.image}
-                role={user.role}
-                accountType={accountType}
-                mode={mode}
-                membershipActive={membershipActive}
+    <header className="sticky top-0 z-50 w-full shadow-md">
+      {/* ── Line 1: Utility bar (desktop only) ───────────────────────────── */}
+      <div className="hidden lg:block bg-brand-900 border-b border-brand-700/60">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-12 items-center justify-between gap-4">
+            {/* Logo + brand */}
+            <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Hội Trầm Hương Việt Nam"
+                width={40}
+                height={40}
+                className="h-9 w-9 shrink-0"
+                priority
               />
-            ) : (
-              <div className="hidden lg:flex items-center gap-2 shrink-0">
-                <Link
-                  href={`/${locale}/login`}
-                  className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  href={`/${locale}/dang-ky`}
-                  className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
-                >
-                  Đăng ký hội viên
-                </Link>
-              </div>
-            )}
+              <span className="text-brand-100 font-semibold text-base leading-tight">
+                Hội Trầm Hương
+                <span className="ml-1.5 text-brand-400 text-[10px] font-sans font-normal tracking-widest uppercase">
+                  Việt Nam
+                </span>
+              </span>
+            </Link>
 
-            {/* Mobile hamburger */}
-            <NavMobile menu={localizedMenu} isLoggedIn={!!session} />
+            {/* Right utility cluster: social | language | user/login */}
+            <div className="flex items-center gap-2">
+              {hasSocial && (
+                <>
+                  <SocialLinks
+                    facebookUrl={facebookUrl}
+                    youtubeUrl={youtubeUrl}
+                    variant="navbar"
+                  />
+                  <div className="h-5 w-px bg-brand-700" aria-hidden="true" />
+                </>
+              )}
+
+              {showLocaleFlags && (
+                <>
+                  <LocaleFlags current={locale} />
+                  <div className="h-5 w-px bg-brand-700" aria-hidden="true" />
+                </>
+              )}
+
+              {user ? (
+                <UserMenu
+                  name={user.name}
+                  email={user.email}
+                  image={user.image}
+                  role={user.role}
+                  accountType={accountType}
+                  mode={mode}
+                  membershipActive={membershipActive}
+                />
+              ) : (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href={`/${locale}/login`}
+                    className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-medium text-brand-200 hover:bg-brand-700 hover:text-brand-100 transition-colors"
+                  >
+                    Đăng nhập
+                  </Link>
+                  <Link
+                    href={`/${locale}/dang-ky`}
+                    className="whitespace-nowrap px-3 py-1.5 rounded-md text-sm font-semibold bg-secondary text-secondary-foreground hover:bg-brand-300 transition-colors"
+                  >
+                    Đăng ký hội viên
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+      </div>
 
+      {/* ── Line 2: Main nav (mobile: also holds logo + hamburger) ──────── */}
+      <div className="bg-brand-800">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 lg:h-12 items-center gap-3">
+            {/* Mobile-only logo */}
+            <Link
+              href={`/${locale}`}
+              className="flex lg:hidden items-center gap-2 shrink-0"
+            >
+              <Image
+                src="/logo.png"
+                alt="Hội Trầm Hương Việt Nam"
+                width={40}
+                height={40}
+                className="h-9 w-9 shrink-0"
+                priority
+              />
+              <span className="text-brand-100 font-semibold text-sm leading-tight hidden sm:block">
+                Hội Trầm Hương<br />
+                <span className="text-brand-400 text-[10px] font-sans font-normal tracking-widest uppercase">
+                  Việt Nam
+                </span>
+              </span>
+            </Link>
+
+            {/* Desktop main nav */}
+            <nav
+              className="hidden lg:flex items-center gap-1 flex-1"
+              aria-label="Navigation chính"
+            >
+              <NavDesktopMenu tree={localizedMenu} />
+            </nav>
+
+            {/* Mobile right side: user + hamburger */}
+            <div className="flex lg:hidden items-center gap-2 ml-auto">
+              {user && (
+                <UserMenu
+                  name={user.name}
+                  email={user.email}
+                  image={user.image}
+                  role={user.role}
+                  accountType={accountType}
+                  mode={mode}
+                  membershipActive={membershipActive}
+                />
+              )}
+              <NavMobile
+                menu={localizedMenu}
+                isLoggedIn={!!session}
+                currentLocale={locale}
+                facebookUrl={facebookUrl}
+                youtubeUrl={youtubeUrl}
+                showLocaleFlags={showLocaleFlags}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </header>

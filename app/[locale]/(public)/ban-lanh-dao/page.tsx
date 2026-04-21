@@ -62,12 +62,13 @@ export default async function LeadershipPage({
     bio: l(leader, "bio"),
     photoUrl: leader.photoUrl,
     term: leader.term,
-    category: leader.category as "BTV" | "BCH" | "BKT",
+    category: leader.category as "BTV" | "BCH" | "BKT" | "HDTD",
   }))
 
   const sections: LeaderSection[] = [
     { category: "BTV", label: t("btvLabel"), description: t("btvDesc"), members: leaders.filter((x) => x.category === "BTV") },
     { category: "BKT", label: t("bktLabel"), description: t("bktDesc"), members: leaders.filter((x) => x.category === "BKT") },
+    { category: "HDTD", label: t("hdtdLabel"), description: t("hdtdDesc"), members: leaders.filter((x) => x.category === "HDTD") },
     { category: "BCH", label: t("bchLabel"), description: t("bchDesc"), members: leaders.filter((x) => x.category === "BCH") },
   ]
 

@@ -15,11 +15,11 @@ export type LeaderCardData = {
   bio: string | null
   photoUrl: string | null
   term: string
-  category: "BTV" | "BCH" | "BKT"
+  category: "BTV" | "BCH" | "BKT" | "HDTD"
 }
 
 export type LeaderSection = {
-  category: "BTV" | "BCH" | "BKT"
+  category: "BTV" | "BCH" | "BKT" | "HDTD"
   label: string
   description: string
   members: LeaderCardData[]

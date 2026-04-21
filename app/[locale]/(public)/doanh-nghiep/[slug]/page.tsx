@@ -64,6 +64,10 @@ export default async function CompanyProfilePage({ params }: Props) {
           category: true, priceRange: true, certStatus: true, badgeUrl: true,
         },
       },
+      galleryImages: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        select: { id: true, imageUrl: true, caption: true },
+      },
     },
   })
   if (!company) notFound()
@@ -157,8 +161,10 @@ export default async function CompanyProfilePage({ params }: Props) {
         </div>
 
         <CompanyTabs
+          companyId={company.id}
           description={l(company, "description")}
           products={company.products.map((p) => ({ ...p, imageUrls: p.imageUrls as string[] }))}
+          galleryImages={company.galleryImages}
           companyName={l(company, "name")}
           companySlug={company.slug}
           foundedYear={company.foundedYear}

@@ -14,7 +14,7 @@ function langKey(name: LangFieldName, locale: Locale): keyof FormData {
   return (locale === "vi" ? name : `${name}_${locale}`) as keyof FormData
 }
 
-type LeaderCategory = "BTV" | "BCH" | "BKT"
+type LeaderCategory = "BTV" | "BCH" | "BKT" | "HDTD"
 
 type Leader = {
   id: string
@@ -81,12 +81,14 @@ const EMPTY_FORM: FormData = {
 const CATEGORY_LABELS: Record<LeaderCategory, string> = {
   BTV: "Ban Thường vụ",
   BKT: "Ban Kiểm tra",
+  HDTD: "Hội đồng thẩm định",
   BCH: "UV Ban Chấp hành",
 }
 
 const CATEGORY_COLORS: Record<LeaderCategory, string> = {
   BTV: "bg-amber-100 text-amber-800",
   BKT: "bg-blue-100 text-blue-800",
+  HDTD: "bg-emerald-100 text-emerald-800",
   BCH: "bg-brand-100 text-brand-700",
 }
 
@@ -325,6 +327,7 @@ export function LeaderManager({
             >
               <option value="BTV">Ban Thường vụ</option>
               <option value="BKT">Ban Kiểm tra</option>
+              <option value="HDTD">Hội đồng thẩm định</option>
               <option value="BCH">UV Ban Chấp hành</option>
             </select>
           </div>
@@ -456,6 +459,7 @@ export function LeaderManager({
             { key: "ALL" as const, label: "Tất cả" },
             { key: "BTV" as const, label: "Ban Thường vụ" },
             { key: "BKT" as const, label: "Ban Kiểm tra" },
+            { key: "HDTD" as const, label: "Hội đồng thẩm định" },
             { key: "BCH" as const, label: "UV Ban Chấp hành" },
           ] as const
         ).map(({ key, label }) => (

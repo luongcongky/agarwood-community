@@ -6,6 +6,7 @@ export type MenuNode = {
   label: string
   label_en: string | null
   label_zh: string | null
+  label_ar: string | null
   href: string
   isNew: boolean
   comingSoon: boolean
@@ -47,6 +48,7 @@ export async function getMenuTree(): Promise<MenuNode[]> {
       label: it.label,
       label_en: it.label_en,
       label_zh: it.label_zh,
+      label_ar: it.label_ar,
       href: it.href,
       isNew: it.isNew,
       comingSoon: it.comingSoon,

@@ -23,15 +23,16 @@ export type LeaderItem = {
   bio: string | null
   photoUrl: string | null
   term: string
-  category: "BTV" | "BCH" | "BKT"
+  category: "BTV" | "BCH" | "BKT" | "HDTD"
 }
 
-type TabKey = "BTV" | "BCH" | "BKT"
+type TabKey = "BTV" | "BCH" | "BKT" | "HDTD"
 
-const TAB_I18N_KEYS: Record<TabKey, "btv" | "bch" | "bkt"> = {
+const TAB_I18N_KEYS: Record<TabKey, "btv" | "bch" | "bkt" | "hdtd"> = {
   BTV: "btv",
   BCH: "bch",
   BKT: "bkt",
+  HDTD: "hdtd",
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -230,7 +231,7 @@ export function LeadershipTabs({ leaders }: { leaders: LeaderItem[] }) {
   // Default tab — BTV if có, fallback sang tab đầu tiên có data
   const availableTabs = useMemo<TabKey[]>(() => {
     const all = new Set(leaders.map((l) => l.category))
-    return (["BTV", "BCH", "BKT"] as TabKey[]).filter((t) => all.has(t))
+    return (["BTV", "BCH", "BKT", "HDTD"] as TabKey[]).filter((t) => all.has(t))
   }, [leaders])
 
   const [activeTab, setActiveTab] = useState<TabKey>(availableTabs[0] ?? "BTV")
