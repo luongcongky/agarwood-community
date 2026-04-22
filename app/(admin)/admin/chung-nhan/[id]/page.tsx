@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { CertActionPanel } from "./CertActionPanel"
+import { AssignCouncilForm } from "./AssignCouncilForm"
+import { ReviewProgress } from "./ReviewProgress"
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -41,10 +43,29 @@ export default async function CertReviewPage({ params }: Props) {
           bankName: true,
         },
       },
+      reviews: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      },
     },
   })
 
   if (!cert) notFound()
+
+  // Load candidate council members only when we need the assign form (PENDING + no reviews yet).
+  const candidates =
+    cert.status === "PENDING" && cert.reviews.length === 0
+      ? await prisma.user.findMany({
+          where: {
+            isCouncilMember: true,
+            id: { not: cert.applicantId },
+          },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, email: true },
+        })
+      : []
 
   return (
     <div className="space-y-6">
@@ -95,17 +116,31 @@ export default async function CertReviewPage({ params }: Props) {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">
-                  Phương thức xét duyệt
+                  Phương thức thẩm định
                 </p>
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${
-                    cert.isOnlineReview
+                    cert.reviewMode === "ONLINE"
                       ? "bg-blue-100 text-blue-700"
                       : "bg-orange-100 text-orange-700"
                   }`}
                 >
-                  {cert.isOnlineReview ? "Online" : "Offline"}
+                  {cert.reviewMode === "ONLINE" ? "Online" : "Offline"}
                 </span>
+              </div>
+              {cert.reviewMode === "ONLINE" && cert.productSalePrice != null && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Giá bán khai báo</p>
+                  <p className="font-medium text-brand-900">
+                    {cert.productSalePrice.toLocaleString("vi-VN")}đ
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground">Phí thẩm định</p>
+                <p className="font-medium text-brand-900">
+                  {cert.feePaid.toLocaleString("vi-VN")}đ
+                </p>
               </div>
             </div>
           </section>
@@ -194,27 +229,46 @@ export default async function CertReviewPage({ params }: Props) {
         </div>
 
         {/* Right Column — 40% */}
-        <div className="lg:col-span-2">
-          <CertActionPanel
-            certId={cert.id}
-            status={cert.status}
-            approvedAt={cert.approvedAt}
-            rejectedAt={cert.rejectedAt}
-            refundBankName={
-              cert.refundBankName ?? cert.applicant.bankName ?? null
-            }
-            refundAccountName={
-              cert.refundAccountName ??
-              cert.applicant.bankAccountName ??
-              null
-            }
-            refundAccountNo={
-              cert.refundAccountNo ??
-              cert.applicant.bankAccountNumber ??
-              null
-            }
-            refundedAt={cert.refundedAt}
-          />
+        <div className="lg:col-span-2 space-y-4">
+          {/* PENDING + chưa chỉ định: hiển thị form chỉ định hội đồng */}
+          {cert.status === "PENDING" && cert.reviews.length === 0 && (
+            <AssignCouncilForm certId={cert.id} candidates={candidates} />
+          )}
+
+          {/* UNDER_REVIEW / APPROVED / REJECTED: tiến độ vote + nhận xét */}
+          {cert.reviews.length > 0 && (
+            <ReviewProgress
+              status={cert.status}
+              reviews={cert.reviews}
+              certCode={cert.certCode}
+              approvedAt={cert.approvedAt}
+              rejectedAt={cert.rejectedAt}
+            />
+          )}
+
+          {/* Refund flow chỉ hiện khi REJECTED/REFUNDED */}
+          {(cert.status === "REJECTED" || cert.status === "REFUNDED") && (
+            <CertActionPanel
+              certId={cert.id}
+              status={cert.status}
+              approvedAt={cert.approvedAt}
+              rejectedAt={cert.rejectedAt}
+              refundBankName={
+                cert.refundBankName ?? cert.applicant.bankName ?? null
+              }
+              refundAccountName={
+                cert.refundAccountName ??
+                cert.applicant.bankAccountName ??
+                null
+              }
+              refundAccountNo={
+                cert.refundAccountNo ??
+                cert.applicant.bankAccountNumber ??
+                null
+              }
+              refundedAt={cert.refundedAt}
+            />
+          )}
         </div>
       </div>
     </div>

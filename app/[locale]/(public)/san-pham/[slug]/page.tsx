@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -17,12 +18,36 @@ export const revalidate = 3600
 
 type Props = { params: Promise<{ slug: string }> }
 
+/** React.cache dedupe giữa generateMetadata và main page — 1 query/request. */
+const getProductBySlug = cache(async (slug: string) =>
+  prisma.product.findUnique({
+    where: { slug, isPublished: true },
+    include: {
+      owner: {
+        select: {
+          id: true, name: true, avatarUrl: true, phone: true,
+          role: true, contributionTotal: true,
+        },
+      },
+      company: {
+        select: {
+          name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true,
+          ownerId: true, phone: true, website: true,
+        },
+      },
+      certifications: {
+        where: { status: "APPROVED" },
+        orderBy: { approvedAt: "desc" },
+        take: 1,
+        select: { id: true, approvedAt: true, reviewMode: true },
+      },
+    },
+  }),
+)
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const product = await prisma.product.findUnique({
-    where: { slug, isPublished: true },
-    select: { name: true, name_en: true, name_zh: true, name_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, imageUrls: true, category: true },
-  })
+  const product = await getProductBySlug(slug)
   if (!product) return { title: "Not found" }
   return {
     title: `${product.name} | Hội Trầm Hương Việt Nam`,
@@ -43,29 +68,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params
   const session = await auth()
 
-  const product = await prisma.product.findUnique({
-    where: { slug, isPublished: true },
-    include: {
-      owner: {
-        select: {
-          id: true, name: true, avatarUrl: true, phone: true,
-          role: true, contributionTotal: true,
-        },
-      },
-      company: {
-        select: {
-          name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true,
-          ownerId: true, phone: true, website: true,
-        },
-      },
-      certifications: {
-        where: { status: "APPROVED" },
-        orderBy: { approvedAt: "desc" },
-        take: 1,
-        select: { id: true, approvedAt: true, isOnlineReview: true },
-      },
-    },
-  })
+  const product = await getProductBySlug(slug)
   if (!product) notFound()
 
   // Related products: same category OR same company/owner, cert products first
@@ -226,8 +229,8 @@ export default async function ProductDetailPage({ params }: Props) {
                 </div>
                 <div className="text-sm text-amber-800 space-y-1">
                   {certDate && <p>Ngày cấp: <span className="font-semibold">{certDate}</span></p>}
-                  {approvedCert?.isOnlineReview !== undefined && (
-                    <p>Hình thức: <span className="font-semibold">{approvedCert.isOnlineReview ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}</span></p>
+                  {approvedCert?.reviewMode && (
+                    <p>Hình thức: <span className="font-semibold">{approvedCert.reviewMode === "ONLINE" ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}</span></p>
                   )}
                 </div>
               </div>

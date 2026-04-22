@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma"
 import { locales, defaultLocale, type Locale } from "@/i18n/config"
 import { localizedUrl } from "@/lib/seo/site"
 
+/** Regenerate hourly as a safety net — news mutations also
+ *  `revalidatePath("/sitemap.xml")` for instant refresh. */
+export const revalidate = 3600
+
 /** Build the per-locale alternates map for a given canonical path. */
 function altLanguages(path: string): Record<string, string> {
   const langs: Record<string, string> = {}

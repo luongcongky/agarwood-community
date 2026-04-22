@@ -99,6 +99,14 @@ export default async function RootLayout({
             on slow mobile when the LCP element is a Cloudinary image. */}
         <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        {/* RSS autodiscovery — cho Feedly / NewsBlur / Google News / Bing hiểu
+            site có feed mà không cần vào robots.txt. */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Hội Trầm Hương Việt Nam — Tin tức"
+          href="/feed.xml"
+        />
       </head>
       <body className="min-h-screen flex flex-col antialiased refined-typography" suppressHydrationWarning>
         <ProgressBar />

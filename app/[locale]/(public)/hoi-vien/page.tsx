@@ -1,4 +1,3 @@
-import QRCode from "qrcode"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
@@ -8,6 +7,7 @@ import { MemberCardFlip } from "@/components/features/member-card/MemberCardFlip
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
+import { getMemberQrDataUrl } from "@/lib/memberQrCache"
 export async function generateMetadata() {
   const t = await getTranslations("members")
   return { title: t("metaTitle"), alternates: { canonical: "/hoi-vien" } }
@@ -96,7 +96,8 @@ export default async function VipMembersPage({
 
   const cfg = Object.fromEntries(configs.map((c) => [c.key, c.value]))
 
-  // Sinh QR trước (song song) — mỗi card có URL verify unique
+  // QR cache: mỗi QR deterministic theo memberId, unstable_cache giữ 24h →
+  // chỉ tốn CPU một lần, các lần sau (kể cả page ISR revalidation) dùng lại.
   const cardsData = await Promise.all(
     members.map(async (member) => {
       const thresholds =
@@ -108,17 +109,7 @@ export default async function VipMembersPage({
       )
       const memberCardId = generateMemberCardId(member.id, member.createdAt)
       const verifyUrl = `${SITE_URL}/hoi-vien/${member.id}`
-      let qrDataUrl: string | null = null
-      try {
-        qrDataUrl = await QRCode.toDataURL(verifyUrl, {
-          errorCorrectionLevel: "M",
-          margin: 1,
-          width: 256,
-          color: { dark: "#000", light: "#fff" },
-        })
-      } catch {
-        /* ignore */
-      }
+      const qrDataUrl = await getMemberQrDataUrl(member.id, SITE_URL)
       return { member, tierInfo, memberCardId, verifyUrl, qrDataUrl }
     }),
   )

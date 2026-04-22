@@ -1,15 +1,45 @@
 import Link from "next/link"
 import Image from "next/image"
+import { unstable_cache } from "next/cache"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+import { cloudinaryResize } from "@/lib/cloudinary"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductFilters } from "./ProductFilters"
 
 export const revalidate = 3600
+
+/** Stats + filter meta — shared across tất cả variant bộ lọc/phân trang →
+ *  cache chung 10 phút. Trước đây hit DB mỗi page. */
+const getCertProductsFilterMeta = unstable_cache(
+  async () => {
+    const [totalProducts, totalCompanies, rawCategories, activeAddresses] =
+      await Promise.all([
+        prisma.product.count({ where: { certStatus: "APPROVED", isPublished: true } }),
+        prisma.company.count({
+          where: { products: { some: { certStatus: "APPROVED", isPublished: true } } },
+        }),
+        prisma.product.findMany({
+          where: { certStatus: "APPROVED", isPublished: true, category: { not: null } },
+          select: { category: true },
+          distinct: ["category"],
+          orderBy: { category: "asc" },
+        }),
+        prisma.company.findMany({
+          where: { products: { some: { certStatus: "APPROVED", isPublished: true } } },
+          select: { address: true },
+        }),
+      ])
+    return { totalProducts, totalCompanies, rawCategories, activeAddresses }
+  },
+  ["cert-products_filter_meta"],
+  { revalidate: 600, tags: ["products", "cert-products"] },
+)
 
 export async function generateMetadata() {
   const t = await getTranslations("certProducts")
@@ -95,52 +125,36 @@ export default async function CertifiedProductsPage({
     }),
   }
 
-  const [total, products, totalProducts, totalCompanies, rawCategories, activeProvinces] =
-    await Promise.all([
-      prisma.product.count({ where: baseWhere }),
-      prisma.product.findMany({
-        where: baseWhere,
-        orderBy,
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-        select: {
-          id: true,
-          name: true, name_en: true, name_zh: true, name_ar: true,
-          slug: true,
-          imageUrls: true,
-          category: true, category_en: true, category_zh: true, category_ar: true,
-          priceRange: true,
-          certApprovedAt: true,
-          company: {
-            select: { name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true, address: true },
-          },
+  const [total, products, filterMeta] = await Promise.all([
+    prisma.product.count({ where: baseWhere }),
+    prisma.product.findMany({
+      where: baseWhere,
+      orderBy,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        name: true, name_en: true, name_zh: true, name_ar: true,
+        slug: true,
+        imageUrls: true,
+        category: true, category_en: true, category_zh: true, category_ar: true,
+        priceRange: true,
+        certApprovedAt: true,
+        company: {
+          select: { name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true, address: true },
         },
-      }),
-      // Stats (unfiltered)
-      prisma.product.count({ where: { certStatus: "APPROVED", isPublished: true } }),
-      prisma.company.count({
-        where: { products: { some: { certStatus: "APPROVED", isPublished: true } } },
-      }),
-      // Distinct categories for filter chips
-      prisma.product.findMany({
-        where: { certStatus: "APPROVED", isPublished: true, category: { not: null } },
-        select: { category: true },
-        distinct: ["category"],
-        orderBy: { category: "asc" },
-      }),
-      // Which known provinces actually have certified products
-      prisma.company.findMany({
-        where: { products: { some: { certStatus: "APPROVED", isPublished: true } } },
-        select: { address: true },
-      }),
-    ])
+      },
+    }),
+    getCertProductsFilterMeta(),
+  ])
 
+  const { totalProducts, totalCompanies, rawCategories, activeAddresses } = filterMeta
   const categories = rawCategories
     .map((r) => r.category)
     .filter((c): c is string => !!c)
 
   const provinces = KNOWN_PROVINCES.filter((prov) =>
-    activeProvinces.some((c) => c.address?.includes(prov))
+    activeAddresses.some((c) => c.address?.includes(prov))
   )
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -266,10 +280,14 @@ export default async function CertifiedProductsPage({
                   {/* Image */}
                   <div className="relative h-44 bg-brand-100">
                     {firstImage ? (
-                      <img
-                        src={firstImage}
+                      <Image
+                        src={cloudinaryResize(firstImage, 480)}
                         alt={l(product, "name")}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
                       />
                     ) : (
                       <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />

@@ -14,10 +14,12 @@ export function MemberMobileNav({
   accountType,
   role,
   membershipActive = true,
+  isCouncilMember = false,
 }: {
   accountType?: "BUSINESS" | "INDIVIDUAL" | null
   role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
   membershipActive?: boolean
+  isCouncilMember?: boolean
 }) {
   const [open, setOpen] = useState(false)
 
@@ -50,7 +52,7 @@ export function MemberMobileNav({
             </div>
           </SheetHeader>
 
-          <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} onNavigate={() => setOpen(false)} />
+          <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} isCouncilMember={isCouncilMember} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
 

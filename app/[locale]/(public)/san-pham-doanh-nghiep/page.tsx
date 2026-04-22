@@ -82,7 +82,10 @@ export default async function MarketplacePage({
     }
   })()
 
-  const [total, certifiedCount, businessCount, products] = await Promise.all([
+  // totalFiltered trùng với total khi filter=all → skip query thừa; ngược lại
+  // parallel trong cùng Promise.all thay vì sequential sau đó.
+  const isAllFilter = filter === "all"
+  const [total, certifiedCount, businessCount, products, totalFilteredRaw] = await Promise.all([
     prisma.product.count({ where: baseWhere }),
     prisma.product.count({ where: { ...baseWhere, certStatus: "APPROVED" } }),
     prisma.product.count({ where: { ...baseWhere, companyId: { not: null } } }),
@@ -122,6 +125,9 @@ export default async function MarketplacePage({
         _count: { select: { comments: { where: { deletedAt: null } } } },
       },
     }),
+    isAllFilter
+      ? Promise.resolve(null) // re-use `total` below — tránh chạy 2 COUNT trùng
+      : prisma.product.count({ where: sourceWhere }),
   ])
 
   // Sort certified products to the top within page results
@@ -138,7 +144,7 @@ export default async function MarketplacePage({
     return b.createdAt.getTime() - a.createdAt.getTime()
   })
 
-  const totalFiltered = await prisma.product.count({ where: sourceWhere })
+  const totalFiltered = totalFilteredRaw ?? total
   const totalPages = Math.ceil(totalFiltered / PAGE_SIZE)
   const individualCount = total - businessCount
   const isLoggedIn = !!session?.user

@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { auth } from "@/lib/auth"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
@@ -14,12 +15,32 @@ export const revalidate = 3600
 
 type Props = { params: Promise<{ slug: string }> }
 
+/** React.cache dedupe giữa generateMetadata và main page — 1 query/request
+ *  thay vì 2. Trả đủ field cho cả metadata lẫn render. */
+const getCompanyBySlug = cache(async (slug: string) =>
+  prisma.company.findUnique({
+    where: { slug, isPublished: true },
+    include: {
+      owner: { select: { id: true, name: true, role: true, contributionTotal: true } },
+      products: {
+        where: { isPublished: true },
+        orderBy: { certStatus: "desc" },
+        select: {
+          id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
+          category: true, priceRange: true, certStatus: true, badgeUrl: true,
+        },
+      },
+      galleryImages: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        select: { id: true, imageUrl: true, caption: true },
+      },
+    },
+  }),
+)
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const company = await prisma.company.findUnique({
-    where: { slug, isPublished: true },
-    select: { name: true, name_en: true, name_zh: true, name_ar: true, description: true, description_en: true, description_zh: true, description_ar: true, logoUrl: true, coverImageUrl: true, address: true, address_en: true, address_zh: true, address_ar: true, foundedYear: true },
-  })
+  const company = await getCompanyBySlug(slug)
   if (!company) return { title: "Not found" }
   return {
     title: `${company.name} | Hội Trầm Hương Việt Nam`,
@@ -52,37 +73,20 @@ export default async function CompanyProfilePage({ params }: Props) {
   const currentUserId = session?.user?.id
   const currentUserRole = session?.user?.role
 
-  const company = await prisma.company.findUnique({
-    where: { slug, isPublished: true },
-    include: {
-      owner: { select: { id: true, name: true, role: true, contributionTotal: true } },
-      products: {
-        where: { isPublished: true },
-        orderBy: { certStatus: "desc" },
-        select: {
-          id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
-          category: true, priceRange: true, certStatus: true, badgeUrl: true,
-        },
-      },
-      galleryImages: {
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-        select: { id: true, imageUrl: true, caption: true },
-      },
-    },
-  })
+  const company = await getCompanyBySlug(slug)
   if (!company) notFound()
 
   const isOwner = currentUserId === company.ownerId
   const isAdmin = currentUserRole === "ADMIN"
   const canEdit = isOwner || isAdmin
 
-  // VIP tier
-  const tier = await getMemberTier(company.owner.contributionTotal, "BUSINESS")
-
-  // Posts count for tab label
-  const postCount = await prisma.post.count({
-    where: { authorId: company.ownerId, status: "PUBLISHED" },
-  })
+  // VIP tier + posts count — độc lập nhau, cùng phụ thuộc company.ownerId
+  const [tier, postCount] = await Promise.all([
+    getMemberTier(company.owner.contributionTotal, "BUSINESS"),
+    prisma.post.count({
+      where: { authorId: company.ownerId, status: "PUBLISHED" },
+    }),
+  ])
 
   return (
     <div className="bg-brand-50/60 min-h-screen">

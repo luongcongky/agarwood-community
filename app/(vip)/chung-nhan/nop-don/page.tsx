@@ -1,9 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import {
+  calcCertFee,
+  CERT_FEE_ONLINE_MIN,
+  CERT_FEE_ONLINE_MAX,
+} from "@/lib/certification-fee"
 
 type BankInfo = {
   bankName: string
@@ -18,8 +23,11 @@ type Product = {
   name: string
   slug: string
   certStatus: string
+  certExpiredAt: string | null
   imageUrls: string[]
 }
+
+type ReviewMode = "ONLINE" | "OFFLINE"
 
 type Step1Data = {
   productId: string
@@ -28,7 +36,8 @@ type Step1Data = {
 
 type Step2Data = {
   applicantNote: string
-  isOnlineReview: boolean
+  reviewMode: ReviewMode
+  productSalePrice: string
   bankAccountName: string
   bankAccountNumber: string
   bankName: string
@@ -36,9 +45,8 @@ type Step2Data = {
 
 type Step2Errors = Partial<Record<keyof Step2Data, string>>
 
-const CERT_FEE = 5_000_000
-
-const ACTIVE_CERT_STATUSES = ["PENDING", "APPROVED", "UNDER_REVIEW"]
+// APPROVED không bao giờ chặn: nếu user muốn gia hạn thì cho. Chỉ chặn các đơn đang xử lý.
+const BLOCKING_CERT_STATUSES = ["DRAFT", "PENDING", "UNDER_REVIEW"]
 
 const STEP_LABELS = [
   { step: 1, label: "Chọn sản phẩm" },
@@ -93,6 +101,8 @@ function StepIndicator({ current }: { current: number }) {
 
 export default function NopDonPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const renewProductId = searchParams.get("renew")
   const [currentStep, setCurrentStep] = useState(1)
 
   // Step 1 state
@@ -100,13 +110,27 @@ export default function NopDonPage() {
   const [productsLoading, setProductsLoading] = useState(true)
   const [selectedProductId, setSelectedProductId] = useState("")
 
+  // Pre-select product khi đang gia hạn
+  useEffect(() => {
+    if (renewProductId && products.some((p) => p.id === renewProductId)) {
+      setSelectedProductId(renewProductId)
+    }
+  }, [renewProductId, products])
+
   // Step 2 state
   const [applicantNote, setApplicantNote] = useState("")
-  const [isOnlineReview, setIsOnlineReview] = useState(true)
+  const [reviewMode, setReviewMode] = useState<ReviewMode>("ONLINE")
+  const [productSalePrice, setProductSalePrice] = useState("")
   const [bankAccountName, setBankAccountName] = useState("")
   const [bankAccountNumber, setBankAccountNumber] = useState("")
   const [bankName, setBankName] = useState("")
   const [step2Errors, setStep2Errors] = useState<Step2Errors>({})
+
+  const salePriceNum = Number(productSalePrice.replace(/\D/g, "")) || 0
+  const estimatedFee = useMemo(
+    () => calcCertFee(reviewMode, salePriceNum),
+    [reviewMode, salePriceNum],
+  )
 
   // Step 3 state
   const [submitting, setSubmitting] = useState(false)
@@ -125,7 +149,8 @@ export default function NopDonPage() {
     if (s2) {
       const d: Step2Data = JSON.parse(s2)
       setApplicantNote(d.applicantNote)
-      setIsOnlineReview(d.isOnlineReview)
+      setReviewMode(d.reviewMode ?? "ONLINE")
+      setProductSalePrice(d.productSalePrice ?? "")
       setBankAccountName(d.bankAccountName)
       setBankAccountNumber(d.bankAccountNumber)
       setBankName(d.bankName)
@@ -157,6 +182,8 @@ export default function NopDonPage() {
 
   function validateStep2(): boolean {
     const errors: Step2Errors = {}
+    if (reviewMode === "ONLINE" && salePriceNum <= 0)
+      errors.productSalePrice = "Vui lòng khai báo giá bán sản phẩm (VND)"
     if (!bankAccountName.trim())
       errors.bankAccountName = "Vui lòng nhập tên chủ tài khoản"
     if (!bankAccountNumber.trim())
@@ -170,7 +197,8 @@ export default function NopDonPage() {
     if (!validateStep2()) return
     const step2Data: Step2Data = {
       applicantNote,
-      isOnlineReview,
+      reviewMode,
+      productSalePrice,
       bankAccountName,
       bankAccountNumber,
       bankName,
@@ -189,7 +217,8 @@ export default function NopDonPage() {
         body: JSON.stringify({
           productId: selectedProductId,
           applicantNote,
-          isOnlineReview,
+          reviewMode,
+          productSalePrice: reviewMode === "ONLINE" ? salePriceNum : null,
           bankAccountName,
           bankAccountNumber,
           bankName,
@@ -213,9 +242,16 @@ export default function NopDonPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-6">
-      <h1 className="text-2xl font-bold text-brand-900 mb-6 text-center">
-        Nộp đơn chứng nhận sản phẩm
+      <h1 className="text-2xl font-bold text-brand-900 mb-3 text-center">
+        {renewProductId ? "Gia hạn chứng nhận sản phẩm" : "Nộp đơn chứng nhận sản phẩm"}
       </h1>
+
+      {renewProductId && (
+        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-center text-xs text-amber-900">
+          🔄 Bạn đang <strong>gia hạn</strong> — quy trình thẩm định đầy đủ (5 thành viên hội đồng + phí đầy đủ) như nộp mới.
+          Chứng nhận cũ giữ hiệu lực đến ngày hết hạn.
+        </div>
+      )}
 
       <StepIndicator current={currentStep} />
 
@@ -243,7 +279,11 @@ export default function NopDonPage() {
           ) : (
             <div className="space-y-3">
               {products.map((product) => {
-                const isBlocked = ACTIVE_CERT_STATUSES.includes(product.certStatus)
+                const isBlocked = BLOCKING_CERT_STATUSES.includes(product.certStatus)
+                const isApproved = product.certStatus === "APPROVED"
+                const expiredAt = product.certExpiredAt ? new Date(product.certExpiredAt) : null
+                const daysLeft = expiredAt ? Math.floor((expiredAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
+                const isRenewal = isApproved && daysLeft !== null
                 return (
                   <label
                     key={product.id}
@@ -272,6 +312,17 @@ export default function NopDonPage() {
                       {isBlocked ? (
                         <p className="text-sm text-brand-500 mt-0.5">
                           Đang trong quá trình xét duyệt
+                        </p>
+                      ) : isRenewal ? (
+                        <p className={cn(
+                          "text-xs mt-0.5",
+                          daysLeft! <= 0 ? "text-red-600 font-semibold" : daysLeft! <= 60 ? "text-amber-700 font-semibold" : "text-brand-500",
+                        )}>
+                          {daysLeft! <= 0
+                            ? `Đã hết hạn (gia hạn)`
+                            : daysLeft! <= 60
+                              ? `Còn ${daysLeft} ngày — nên gia hạn`
+                              : `Hiệu lực đến ${expiredAt!.toLocaleDateString("vi-VN")}`}
                         </p>
                       ) : (
                         <p className="text-xs text-brand-500 mt-0.5">
@@ -321,28 +372,87 @@ export default function NopDonPage() {
           {/* Review method */}
           <div className="space-y-2">
             <p className="text-sm font-medium text-brand-700">
-              Hình thức xét duyệt
+              Hình thức thẩm định
             </p>
-            <div className="flex gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { value: true, label: "Online" },
-                { value: false, label: "Offline (gửi mẫu)" },
+                {
+                  value: "ONLINE" as const,
+                  title: "Online",
+                  desc: "Sản phẩm nhỏ, dễ di chuyển, giá trị thấp. Phí = 2% giá bán, tối thiểu 1tr, tối đa 20tr.",
+                },
+                {
+                  value: "OFFLINE" as const,
+                  title: "Offline",
+                  desc: "Hội đồng thẩm định tại chỗ. Áp dụng cho sản phẩm giá trị cao, khó di chuyển. Phí cố định 200tr (all-inclusive).",
+                },
               ].map((opt) => (
                 <label
-                  key={String(opt.value)}
-                  className="flex items-center gap-2 cursor-pointer"
+                  key={opt.value}
+                  className={cn(
+                    "flex flex-col gap-1 p-3 rounded-xl border-2 cursor-pointer transition-all",
+                    reviewMode === opt.value
+                      ? "border-brand-600 bg-brand-50"
+                      : "border-brand-200 bg-white hover:border-brand-400",
+                  )}
                 >
-                  <input
-                    type="radio"
-                    name="reviewMethod"
-                    checked={isOnlineReview === opt.value}
-                    onChange={() => setIsOnlineReview(opt.value)}
-                    className="accent-brand-600"
-                  />
-                  <span className="text-sm text-brand-800">{opt.label}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="reviewMode"
+                      checked={reviewMode === opt.value}
+                      onChange={() => setReviewMode(opt.value)}
+                      className="accent-brand-600"
+                    />
+                    <span className="text-sm font-semibold text-brand-900">{opt.title}</span>
+                  </div>
+                  <p className="text-xs text-brand-500 pl-6">{opt.desc}</p>
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Sale price (chỉ khi ONLINE) */}
+          {reviewMode === "ONLINE" && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-brand-700">
+                Giá bán sản phẩm (VND) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={productSalePrice ? Number(productSalePrice.replace(/\D/g, "")).toLocaleString("vi-VN") : ""}
+                onChange={(e) => setProductSalePrice(e.target.value.replace(/\D/g, ""))}
+                placeholder="Ví dụ: 50.000.000"
+                className={cn(
+                  "w-full rounded-lg border px-3 py-2 text-sm text-brand-900 placeholder:text-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500",
+                  step2Errors.productSalePrice
+                    ? "border-red-400 bg-red-50"
+                    : "border-brand-300 bg-white",
+                )}
+              />
+              {step2Errors.productSalePrice && (
+                <p className="text-xs text-red-600">{step2Errors.productSalePrice}</p>
+              )}
+              <p className="text-xs text-brand-500">
+                Phí thẩm định = 2% giá bán, clamp [{CERT_FEE_ONLINE_MIN.toLocaleString("vi-VN")}đ – {CERT_FEE_ONLINE_MAX.toLocaleString("vi-VN")}đ].
+              </p>
+            </div>
+          )}
+
+          {/* Live fee preview */}
+          <div className="rounded-xl bg-linear-to-r from-brand-50 to-amber-50 border border-brand-200 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-brand-600">Phí thẩm định ({reviewMode === "ONLINE" ? "Online" : "Offline"})</p>
+              <p className="text-lg font-bold text-brand-900">
+                {estimatedFee.toLocaleString("vi-VN")}đ
+              </p>
+            </div>
+            {reviewMode === "OFFLINE" && (
+              <span className="text-xs text-brand-500 text-right max-w-48">
+                Đã bao gồm chi phí đi lại & sinh hoạt của hội đồng
+              </span>
+            )}
           </div>
 
           {/* File upload */}
@@ -480,11 +590,19 @@ export default function NopDonPage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-brand-600">Hình thức xét duyệt</span>
+                  <span className="text-brand-600">Hình thức thẩm định</span>
                   <span className="font-semibold text-brand-900">
-                    {isOnlineReview ? "Online" : "Offline"}
+                    {reviewMode === "ONLINE" ? "Online" : "Offline"}
                   </span>
                 </div>
+                {reviewMode === "ONLINE" && salePriceNum > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-brand-600">Giá bán khai báo</span>
+                    <span className="font-semibold text-brand-900">
+                      {salePriceNum.toLocaleString("vi-VN")}đ
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-brand-600">Tài khoản hoàn phí</span>
                   <span className="font-semibold text-brand-900 text-right max-w-48 truncate">
@@ -493,10 +611,10 @@ export default function NopDonPage() {
                 </div>
                 <div className="border-t border-brand-200 pt-3 flex justify-between">
                   <span className="text-brand-700 font-semibold">
-                    Phí xét duyệt
+                    Phí thẩm định
                   </span>
                   <span className="text-brand-900 font-bold text-lg">
-                    {CERT_FEE.toLocaleString("vi-VN")} VND
+                    {estimatedFee.toLocaleString("vi-VN")} VND
                   </span>
                 </div>
               </div>

@@ -19,46 +19,46 @@ enum Role {
   GUEST
   VIP
   ADMIN
-  INFINITE     // Hạng đặc biệt — full quyền VIP Vàng + quyền admin, cấp thủ công
+  INFINITE // Hạng đặc biệt — full quyền VIP Vàng + quyền admin, cấp thủ công
 }
 
 enum AccountType {
-  BUSINESS     // doanh nghiệp — có company, SP, chứng nhận
-  INDIVIDUAL   // cá nhân/chuyên gia — chỉ feed, hồ sơ, tài liệu
+  BUSINESS // doanh nghiệp — có company, SP, chứng nhận
+  INDIVIDUAL // cá nhân/chuyên gia — chỉ feed, hồ sơ, tài liệu
 }
 
 // Phân hạng hội viên theo Điều lệ Hội (Chương II, Điều 7)
 enum MemberCategory {
-  OFFICIAL     // Hội viên chính thức — đầy đủ quyền biểu quyết, ứng cử, bầu cử
-  AFFILIATE    // Hội viên liên kết — DN không đủ tiêu chuẩn chính thức, hoặc DN FDI
-  HONORARY     // Hội viên danh dự — cá nhân/tổ chức uy tín, có đóng góp cho Hội
+  OFFICIAL // Hội viên chính thức — đầy đủ quyền biểu quyết, ứng cử, bầu cử
+  AFFILIATE // Hội viên liên kết — DN không đủ tiêu chuẩn chính thức, hoặc DN FDI
+  HONORARY // Hội viên danh dự — cá nhân/tổ chức uy tín, có đóng góp cho Hội
 }
 
 // Trạng thái đơn xin kết nạp Hội viên (Điều lệ Hội, Điều 11)
 enum ApplicationStatus {
-  PENDING      // đã nộp, chờ Ban Thường vụ xét duyệt
-  APPROVED     // Chủ tịch đã ký quyết định công nhận
-  REJECTED     // bị từ chối
+  PENDING // đã nộp, chờ Ban Thường vụ xét duyệt
+  APPROVED // Chủ tịch đã ký quyết định công nhận
+  REJECTED // bị từ chối
 }
 
 // Phân loại bài viết trong News
 /// LEGAL — văn bản pháp lý (Chính sách bảo mật, Điều khoản sử dụng) hiển thị
 /// ở /privacy, /terms; KHÔNG xuất hiện trong /tin-tuc hay /nghien-cuu.
 enum NewsCategory {
-  GENERAL      // Tin tức ngành — hiển thị ở /tin-tuc
-  RESEARCH     // Nghiên cứu khoa học, báo cáo học thuật — hiển thị ở /nghien-cuu
-  LEGAL        // Văn bản pháp lý (privacy, terms) — render trực tiếp ở /privacy, /terms
+  GENERAL // Tin tức ngành — hiển thị ở /tin-tuc
+  RESEARCH // Nghiên cứu khoa học, báo cáo học thuật — hiển thị ở /nghien-cuu
+  LEGAL // Văn bản pháp lý (privacy, terms) — render trực tiếp ở /privacy, /terms
 }
 
 /// Phân loại đối tác / cơ quan đoàn thể liên kết — dùng cho marquee trang chủ.
 enum PartnerCategory {
-  GOVERNMENT      // Cơ quan quản lý nhà nước (Bộ, Sở, Cục, Tổng cục…)
-  ASSOCIATION     // Hiệp hội, hội nghề nghiệp
-  RESEARCH        // Viện, trường, đơn vị nghiên cứu
-  ENTERPRISE      // Doanh nghiệp đối tác chiến lược
-  INTERNATIONAL   // Tổ chức quốc tế
-  MEDIA           // Cơ quan báo chí, đài phát thanh – truyền hình
-  OTHER           // Khác
+  GOVERNMENT // Cơ quan quản lý nhà nước (Bộ, Sở, Cục, Tổng cục…)
+  ASSOCIATION // Hiệp hội, hội nghề nghiệp
+  RESEARCH // Viện, trường, đơn vị nghiên cứu
+  ENTERPRISE // Doanh nghiệp đối tác chiến lược
+  INTERNATIONAL // Tổ chức quốc tế
+  MEDIA // Cơ quan báo chí, đài phát thanh – truyền hình
+  OTHER // Khác
 }
 
 enum MembershipStatus {
@@ -69,47 +69,58 @@ enum MembershipStatus {
 
 enum PostStatus {
   PUBLISHED
-  LOCKED   // bị lock do report vi phạm
+  LOCKED // bị lock do report vi phạm
   DELETED
 }
 
 enum PostCategory {
-  GENERAL   // bài viết chung — mặc định, hiển thị ở /feed
-  NEWS      // tin tức của doanh nghiệp — section "Tin doanh nghiệp" trang chủ
-  PRODUCT   // tin sản phẩm (giới thiệu / vừa được chứng nhận) — section "Tin sản phẩm" trang chủ
+  GENERAL // bài viết chung — mặc định, hiển thị ở /feed
+  NEWS // tin tức của doanh nghiệp — section "Tin doanh nghiệp" trang chủ
+  PRODUCT // tin sản phẩm (giới thiệu / vừa được chứng nhận) — section "Tin sản phẩm" trang chủ
 }
 
 enum ReportStatus {
-  PENDING    // chờ admin xử lý
-  REVIEWED   // đã xem xét, giữ bài
-  DISMISSED  // bác report
-  ACTIONED   // đã lock bài
+  PENDING // chờ admin xử lý
+  REVIEWED // đã xem xét, giữ bài
+  DISMISSED // bác report
+  ACTIONED // đã lock bài
 }
 
 enum CertStatus {
-  DRAFT          // hội viên đang điền form
-  PENDING        // đã nộp, chờ xét duyệt
-  UNDER_REVIEW   // admin đang xét duyệt
-  APPROVED       // được cấp badge
-  REJECTED       // từ chối
-  REFUNDED       // đã hoàn tiền
+  DRAFT // hội viên đang điền form
+  PENDING // đã nộp, chờ xét duyệt
+  UNDER_REVIEW // admin đang xét duyệt
+  APPROVED // được cấp badge
+  REJECTED // từ chối
+  REFUNDED // đã hoàn tiền
+}
+
+enum ReviewMode {
+  ONLINE // sản phẩm nhỏ, giá trị thấp — 2% giá bán, clamp [1tr, 20tr]
+  OFFLINE // thẩm định tại chỗ — flat 200tr, all-inclusive
+}
+
+enum ReviewVote {
+  PENDING // chưa vote
+  APPROVE // đồng ý
+  REJECT // phủ quyết — 1 REJECT khiến toàn bộ đơn bị auto reject
 }
 
 enum MediaOrderStatus {
-  NEW            // vừa đặt hàng
-  CONFIRMED      // admin đã xác nhận
-  IN_PROGRESS    // đang thực hiện
-  DELIVERED      // đã bàn giao bài viết
-  REVISION       // khách yêu cầu chỉnh sửa
-  COMPLETED      // hoàn tất, đã thanh toán
+  NEW // vừa đặt hàng
+  CONFIRMED // admin đã xác nhận
+  IN_PROGRESS // đang thực hiện
+  DELIVERED // đã bàn giao bài viết
+  REVISION // khách yêu cầu chỉnh sửa
+  COMPLETED // hoàn tất, đã thanh toán
   CANCELLED
 }
 
 enum MediaServiceType {
-  ARTICLE_COMPANY   // viết bài giới thiệu doanh nghiệp
-  ARTICLE_PRODUCT   // viết bài giới thiệu sản phẩm
-  PRESS_RELEASE     // thông cáo báo chí
-  SOCIAL_CONTENT    // nội dung mạng xã hội
+  ARTICLE_COMPANY // viết bài giới thiệu doanh nghiệp
+  ARTICLE_PRODUCT // viết bài giới thiệu sản phẩm
+  PRESS_RELEASE // thông cáo báo chí
+  SOCIAL_CONTENT // nội dung mạng xã hội
 }
 
 enum PaymentStatus {
@@ -120,32 +131,38 @@ enum PaymentStatus {
 }
 
 enum PaymentType {
-  MEMBERSHIP_FEE      // phí hội viên hàng năm
-  CERTIFICATION_FEE   // phí xét duyệt chứng nhận SP
-  MEDIA_SERVICE       // phí dịch vụ truyền thông
-  BANNER_FEE          // [Phase 6] phí đăng ký / gia hạn banner quảng cáo
+  MEMBERSHIP_FEE // phí hội viên hàng năm
+  CERTIFICATION_FEE // phí xét duyệt chứng nhận SP
+  MEDIA_SERVICE // phí dịch vụ truyền thông
+  BANNER_FEE // [Phase 6] phí đăng ký / gia hạn banner quảng cáo
 }
 
 enum BannerStatus {
-  PENDING_PAYMENT     // user vừa tạo, chờ chuyển khoản
-  PENDING_APPROVAL    // user đã CK, chờ admin duyệt content
-  ACTIVE              // admin đã duyệt, đang chạy
-  REJECTED            // admin từ chối content
-  EXPIRED             // hết hạn (cron daily check)
+  PENDING_PAYMENT // user vừa tạo, chờ chuyển khoản
+  PENDING_APPROVAL // user đã CK, chờ admin duyệt content
+  ACTIVE // admin đã duyệt, đang chạy
+  REJECTED // admin từ chối content
+  EXPIRED // hết hạn (cron daily check)
 }
 
 enum BannerPosition {
-  TOP        // Đầu trang chủ — ngay sau thanh menu
-  MID        // Giữa trang chủ — sau section Sản phẩm chứng nhận
-  SIDEBAR    // Rail dọc bên phải trang /feed (sticky khi scroll)
+  TOP // Đầu trang chủ — ngay sau thanh menu
+  MID // Giữa trang chủ — sau section Sản phẩm chứng nhận
+  SIDEBAR // Rail dọc bên phải trang /feed (sticky khi scroll)
 }
 
 // Danh mục đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
 enum HonoraryCategory {
-  RESEARCH           // Nghiên cứu khoa học, báo cáo học thuật
-  LOGISTICS          // Hậu cần sự kiện, tổ chức hoạt động
+  RESEARCH // Nghiên cứu khoa học, báo cáo học thuật
+  LOGISTICS // Hậu cần sự kiện, tổ chức hoạt động
   EXTERNAL_RELATIONS // Đối ngoại, kết nối đối tác
-  OTHER              // Khác
+  OTHER // Khác
+}
+
+// Loại multimedia hiển thị ở homepage section "MULTIMEDIA"
+enum MultimediaType {
+  PHOTO_COLLECTION // Bộ sưu tập ảnh — dùng imageUrls[]
+  VIDEO // Video YouTube — dùng youtubeId
 }
 
 // ============================================================
@@ -153,27 +170,27 @@ enum HonoraryCategory {
 // ============================================================
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  emailVerified     DateTime?
-  name              String
-  phone             String?
-  avatarUrl         String?
-  passwordHash      String?   // null cho OAuth users
-  role              Role           @default(GUEST)
-  accountType       AccountType    @default(BUSINESS)
-  memberCategory    MemberCategory @default(OFFICIAL) // Điều lệ Hội, Chương II
+  id             String         @id @default(cuid())
+  email          String         @unique
+  emailVerified  DateTime?
+  name           String
+  phone          String?
+  avatarUrl      String?
+  passwordHash   String? // null cho OAuth users
+  role           Role           @default(GUEST)
+  accountType    AccountType    @default(BUSINESS)
+  memberCategory MemberCategory @default(OFFICIAL) // Điều lệ Hội, Chương II
 
   // Membership & ranking
-  contributionTotal Int       @default(0) // tổng phí membership tích lũy (VND)
-  displayPriority   Int       @default(0) // thứ tự ưu tiên hiển thị bài — tính từ contributionTotal
-  reputationScore   Int       @default(100) // điểm uy tín — future use, schema sẵn sàng
+  contributionTotal Int @default(0) // tổng phí membership tích lũy (VND)
+  displayPriority   Int @default(0) // thứ tự ưu tiên hiển thị bài — tính từ contributionTotal
+  reputationScore   Int @default(100) // điểm uy tín — future use, schema sẵn sàng
 
   // Giới thiệu bản thân / tiểu sử — hiển thị trên trang hồ sơ cá nhân
-  bio               String?   @db.Text
-  bio_en            String?   @db.Text
-  bio_zh            String?   @db.Text
-  bio_ar            String?   @db.Text
+  bio    String? @db.Text
+  bio_en String? @db.Text
+  bio_zh String? @db.Text
+  bio_ar String? @db.Text
 
   // Refund info — dùng khi hoàn phí chứng nhận bị từ chối
   bankAccountName   String?
@@ -183,38 +200,43 @@ model User {
   membershipExpires DateTime?
   isActive          Boolean   @default(true)
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  // Hội đồng thẩm định (HDTD) — admin toggle để cấp quyền thẩm định chứng nhận SP
+  isCouncilMember Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  accounts          Account[]
-  sessions          Session[]
-  memberships       Membership[]
-  leaderPositions   Leader[]
-  company           Company?
-  products          Product[]       @relation("ProductOwner")
-  posts             Post[]
-  reports           Report[]        @relation("ReporterRelation")
-  certifications    Certification[]
-  mediaOrders       MediaOrder[]
-  payments          Payment[]
-  postReactions     PostReaction[]
-  comments          Comment[]
-  commentLikes      CommentLike[]
-  banners           Banner[]
-  applications      MembershipApplication[] @relation("ApplicantRelation")
-  applicationsReviewed MembershipApplication[] @relation("ReviewerRelation")
-  surveyResponses   SurveyResponse[]
-  consultationRequests ConsultationRequest[] @relation("ConsultationRequester")
-  consultationsHandled ConsultationRequest[] @relation("ConsultationHandler")
-  contactMessagesHandled ContactMessage[]    @relation("ContactHandler")
-  honoraryContributions        HonoraryContribution[] @relation("HonoraryRecipient")
-  honoraryContributionsCreated HonoraryContribution[] @relation("HonoraryCreatedBy")
+  accounts                     Account[]
+  sessions                     Session[]
+  memberships                  Membership[]
+  leaderPositions              Leader[]
+  company                      Company?
+  products                     Product[]               @relation("ProductOwner")
+  posts                        Post[]
+  reports                      Report[]                @relation("ReporterRelation")
+  certifications               Certification[]
+  mediaOrders                  MediaOrder[]
+  payments                     Payment[]
+  postReactions                PostReaction[]
+  comments                     Comment[]
+  commentLikes                 CommentLike[]
+  banners                      Banner[]
+  applications                 MembershipApplication[] @relation("ApplicantRelation")
+  applicationsReviewed         MembershipApplication[] @relation("ReviewerRelation")
+  surveyResponses              SurveyResponse[]
+  consultationRequests         ConsultationRequest[]   @relation("ConsultationRequester")
+  consultationsHandled         ConsultationRequest[]   @relation("ConsultationHandler")
+  contactMessagesHandled       ContactMessage[]        @relation("ContactHandler")
+  honoraryContributions        HonoraryContribution[]  @relation("HonoraryRecipient")
+  honoraryContributionsCreated HonoraryContribution[]  @relation("HonoraryCreatedBy")
+  councilReviews               CertificationReview[]
 
   @@index([role])
   @@index([accountType])
   @@index([contributionTotal])
   @@index([displayPriority])
+  @@index([isCouncilMember])
   @@map("users")
 }
 
@@ -264,20 +286,20 @@ model VerificationToken {
 // ============================================================
 
 model Membership {
-  id            String           @id @default(cuid())
-  userId        String
-  amountPaid    Int              // VND
-  validFrom     DateTime
-  validTo       DateTime
-  status        MembershipStatus @default(ACTIVE)
-  paymentRef    String?          // mã giao dịch PayOS
-  note          String?
+  id         String           @id @default(cuid())
+  userId     String
+  amountPaid Int // VND
+  validFrom  DateTime
+  validTo    DateTime
+  status     MembershipStatus @default(ACTIVE)
+  paymentRef String? // mã giao dịch PayOS
+  note       String?
 
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payment       Payment?
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment?
 
   @@index([userId])
   @@index([status])
@@ -286,30 +308,30 @@ model Membership {
 }
 
 model Payment {
-  id               String        @id @default(cuid())
-  userId           String
-  type             PaymentType
-  status           PaymentStatus @default(PENDING)
-  amount           Int           // VND
-  payosOrderCode   String?       @unique  // mã đơn hàng PayOS
-  payosTransId     String?       // mã giao dịch PayOS sau khi thành công
-  description      String?
-  failureReason    String?
+  id             String        @id @default(cuid())
+  userId         String
+  type           PaymentType
+  status         PaymentStatus @default(PENDING)
+  amount         Int // VND
+  payosOrderCode String?       @unique // mã đơn hàng PayOS
+  payosTransId   String? // mã giao dịch PayOS sau khi thành công
+  description    String?
+  failureReason  String?
 
   // Polymorphic reference — chỉ 1 trong 4 field này có giá trị
-  membershipId     String?       @unique
-  certificationId  String?       @unique
-  mediaOrderId     String?       @unique
-  bannerId         String?       // KHÔNG unique — 1 banner có thể có nhiều payment (đăng ký + nhiều lần gia hạn)
+  membershipId    String? @unique
+  certificationId String? @unique
+  mediaOrderId    String? @unique
+  bannerId        String? // KHÔNG unique — 1 banner có thể có nhiều payment (đăng ký + nhiều lần gia hạn)
 
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user             User          @relation(fields: [userId], references: [id])
-  membership       Membership?   @relation(fields: [membershipId], references: [id])
-  certification    Certification? @relation(fields: [certificationId], references: [id])
-  mediaOrder       MediaOrder?   @relation(fields: [mediaOrderId], references: [id])
-  banner           Banner?       @relation(fields: [bannerId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  membership    Membership?    @relation(fields: [membershipId], references: [id])
+  certification Certification? @relation(fields: [certificationId], references: [id])
+  mediaOrder    MediaOrder?    @relation(fields: [mediaOrderId], references: [id])
+  banner        Banner?        @relation(fields: [bannerId], references: [id])
 
   @@index([userId])
   @@index([type])
@@ -323,18 +345,18 @@ model Payment {
 // Đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
 // mà không cần chuyển khoản (NCKH, hậu cần sự kiện, đối ngoại...)
 model HonoraryContribution {
-  id             String           @id @default(cuid())
-  userId         String           // hội viên được ghi nhận
-  creditAmount   Int              // số tiền quy đổi (VND) — cộng vào contributionTotal
-  reason         String           @db.Text
-  category       HonoraryCategory
-  extendMonths   Int              @default(12) // số tháng gia hạn membershipExpires
-  createdByAdminId String         // admin nào tạo record này
+  id               String           @id @default(cuid())
+  userId           String // hội viên được ghi nhận
+  creditAmount     Int // số tiền quy đổi (VND) — cộng vào contributionTotal
+  reason           String           @db.Text
+  category         HonoraryCategory
+  extendMonths     Int              @default(12) // số tháng gia hạn membershipExpires
+  createdByAdminId String // admin nào tạo record này
 
-  createdAt      DateTime         @default(now())
+  createdAt DateTime @default(now())
 
-  user           User             @relation("HonoraryRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy      User             @relation("HonoraryCreatedBy", fields: [createdByAdminId], references: [id])
+  user      User @relation("HonoraryRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("HonoraryCreatedBy", fields: [createdByAdminId], references: [id])
 
   @@index([userId])
   @@index([createdByAdminId])
@@ -347,49 +369,49 @@ model HonoraryContribution {
 // ============================================================
 
 model Company {
-  id               String    @id @default(cuid())
-  ownerId          String    @unique  // 1 VIP = 1 company
-  name             String
-  name_en          String?
-  name_zh          String?
-  name_ar          String?
-  slug             String    @unique  // dùng cho URL: /companies/[slug]
-  description      String?   @db.Text
-  description_en   String?   @db.Text
-  description_zh   String?   @db.Text
-  description_ar   String?   @db.Text
-  logoUrl          String?
-  coverImageUrl    String?
-  website          String?
-  phone            String?
-  address          String?
-  address_en       String?
-  address_zh       String?
-  address_ar       String?
-  foundedYear      Int?
-  employeeCount    String?   // "1-10", "10-50", "50-200",...
-  businessLicense  String?   // số ĐKKD
+  id              String  @id @default(cuid())
+  ownerId         String  @unique // 1 VIP = 1 company
+  name            String
+  name_en         String?
+  name_zh         String?
+  name_ar         String?
+  slug            String  @unique // dùng cho URL: /companies/[slug]
+  description     String? @db.Text
+  description_en  String? @db.Text
+  description_zh  String? @db.Text
+  description_ar  String? @db.Text
+  logoUrl         String?
+  coverImageUrl   String?
+  website         String?
+  phone           String?
+  address         String?
+  address_en      String?
+  address_zh      String?
+  address_ar      String?
+  foundedYear     Int?
+  employeeCount   String? // "1-10", "10-50", "50-200",...
+  businessLicense String? // số ĐKKD
 
   // Người đại diện tổ chức — bắt buộc theo Điều lệ Hội, Điều 7 Khoản 2c
-  representativeName     String?
-  representativePosition String?
+  representativeName        String?
+  representativePosition    String?
   representativePosition_en String?
   representativePosition_zh String?
   representativePosition_ar String?
 
-  isVerified       Boolean   @default(false) // admin verify
-  isPublished      Boolean   @default(true)
+  isVerified  Boolean @default(false) // admin verify
+  isPublished Boolean @default(true)
 
   // Featured (admin pin) — dùng cho landing page "Top doanh nghiệp tiêu biểu"
-  isFeatured       Boolean   @default(false)
-  featuredOrder    Int?      // null = chưa pin, số nhỏ = ưu tiên cao
+  isFeatured    Boolean @default(false)
+  featuredOrder Int? // null = chưa pin, số nhỏ = ưu tiên cao
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  owner            User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  products         Product[]
-  galleryImages    CompanyGalleryImage[]
+  owner         User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products      Product[]
+  galleryImages CompanyGalleryImage[]
 
   @@index([slug])
   @@index([isPublished])
@@ -400,67 +422,67 @@ model Company {
 /// Bộ sưu tập ảnh của doanh nghiệp — hiển thị ở tab "Bộ sưu tập" trên profile.
 /// Owner (VIP) và ADMIN được phép upload/delete.
 model CompanyGalleryImage {
-  id         String   @id @default(cuid())
-  companyId  String
-  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  imageUrl   String   // Cloudinary secure_url (folder "doanh-nghiep/MM-YYYY")
-  caption    String?  // chú thích ảnh — tuỳ chọn
-  sortOrder  Int      @default(0) // số nhỏ = hiển thị trước; fallback theo createdAt DESC
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  imageUrl  String // Cloudinary secure_url (folder "doanh-nghiep/MM-YYYY")
+  caption   String? // chú thích ảnh — tuỳ chọn
+  sortOrder Int     @default(0) // số nhỏ = hiển thị trước; fallback theo createdAt DESC
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([companyId, sortOrder])
   @@map("company_gallery_images")
 }
 
 model Product {
-  id              String      @id @default(cuid())
-  ownerId         String      // userId — ai đăng sản phẩm
-  companyId       String?     // optional — chỉ có nếu owner có company (VIP)
-  name            String
-  name_en         String?
-  name_zh         String?
-  name_ar         String?
-  slug            String      @unique
-  description     String?     @db.Text
-  description_en  String?     @db.Text
-  description_zh  String?     @db.Text
-  description_ar  String?     @db.Text
-  imageUrls       String[]    // mảng URL ảnh sản phẩm (Cloudinary)
-  category        String?     // loại trầm: trầm tự nhiên, trầm nuôi cấy, tinh dầu,...
-  category_en     String?
-  category_zh     String?
-  category_ar     String?
-  priceRange      String?     // "500k-1tr", "1tr-5tr",...
-  isPublished     Boolean     @default(true)
+  id             String   @id @default(cuid())
+  ownerId        String // userId — ai đăng sản phẩm
+  companyId      String? // optional — chỉ có nếu owner có company (VIP)
+  name           String
+  name_en        String?
+  name_zh        String?
+  name_ar        String?
+  slug           String   @unique
+  description    String?  @db.Text
+  description_en String?  @db.Text
+  description_zh String?  @db.Text
+  description_ar String?  @db.Text
+  imageUrls      String[] // mảng URL ảnh sản phẩm (Cloudinary)
+  category       String? // loại trầm: trầm tự nhiên, trầm nuôi cấy, tinh dầu,...
+  category_en    String?
+  category_zh    String?
+  category_ar    String?
+  priceRange     String? // "500k-1tr", "1tr-5tr",...
+  isPublished    Boolean  @default(true)
 
   // Certification
-  certStatus      CertStatus  @default(DRAFT)
-  badgeUrl        String?     // URL badge chứng nhận (Cloudinary)
-  certAppliedAt   DateTime?
-  certApprovedAt  DateTime?
-  certExpiredAt   DateTime?   // badge có thể có hạn sử dụng — future use
+  certStatus     CertStatus @default(DRAFT)
+  badgeUrl       String? // URL badge chứng nhận (Cloudinary)
+  certAppliedAt  DateTime?
+  certApprovedAt DateTime?
+  certExpiredAt  DateTime? // badge có thể có hạn sử dụng — future use
 
   // Featured (admin pin) — dùng cho menu "Sản phẩm tiêu biểu" + landing page "Top SP hot trend"
-  isFeatured      Boolean     @default(false)
-  featuredOrder   Int?        // null = chưa pin, số nhỏ = ưu tiên cao
+  isFeatured    Boolean @default(false)
+  featuredOrder Int? // null = chưa pin, số nhỏ = ưu tiên cao
 
   // Ranking — denormalized từ owner.displayPriority tại thời điểm đăng
-  ownerPriority   Int         @default(0)
+  ownerPriority Int @default(0)
 
   // Liên kết với bài post trên feed (MXH Trầm Hương). 1-1 optional.
   // Khi Post bị xoá → cascade xoá Product (merge model: product luôn đi kèm 1 post).
   // Với product tạo trước khi gộp, cột này null cho đến khi backfill.
-  postId          String?     @unique
+  postId String? @unique
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  owner           User        @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  company         Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  post            Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  certifications  Certification[]
-  comments        Comment[]
+  owner          User            @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  company        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  post           Post?           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  certifications Certification[]
+  comments       Comment[]
 
   @@index([ownerId])
   @@index([companyId])
@@ -476,18 +498,18 @@ model Product {
 // ============================================================
 
 model Certification {
-  id                String      @id @default(cuid())
-  productId         String
-  applicantId       String      // userId của hội viên nộp đơn
-  status            CertStatus  @default(PENDING)
+  id          String     @id @default(cuid())
+  productId   String
+  applicantId String // userId của hội viên nộp đơn
+  status      CertStatus @default(PENDING)
 
   // Thông tin hồ sơ
-  documentUrls      String[]    // tài liệu đính kèm (Cloudinary)
-  applicantNote     String?     @db.Text
-  reviewNote        String?     @db.Text // ghi chú của admin khi duyệt/từ chối
+  documentUrls  String[] // tài liệu đính kèm (Cloudinary)
+  applicantNote String?  @db.Text
+  reviewNote    String?  @db.Text // ghi chú của admin khi duyệt/từ chối
 
-  // Thanh toán & hoàn tiền
-  feePaid           Int         @default(500000000) // 5.000.000 VND (lưu bằng đồng, *100)
+  // Thanh toán & hoàn tiền — lưu trực tiếp VND (không *100)
+  feePaid           Int // phí đã tính theo reviewMode + productSalePrice
   refundBankName    String?
   refundAccountName String?
   refundAccountNo   String?
@@ -495,20 +517,23 @@ model Certification {
   refundNote        String?
 
   // Xét duyệt
-  reviewedBy        String?     // adminId
-  reviewedAt        DateTime?
-  approvedAt        DateTime?
-  rejectedAt        DateTime?
+  reviewedBy String? // adminId (legacy — Sprint 2 sẽ thay bằng CertificationReview)
+  reviewedAt DateTime?
+  approvedAt DateTime?
+  rejectedAt DateTime?
 
   // Process type
-  isOnlineReview    Boolean     @default(true) // true = online, false = offline
+  reviewMode       ReviewMode @default(ONLINE)
+  productSalePrice BigInt? // snapshot giá bán lúc nộp đơn — chỉ bắt buộc khi reviewMode=ONLINE (dùng để tính phí 2%)
+  certCode         String?    @unique // HTHVN-YYYY-NNNN — set khi APPROVED, dùng cho /verify
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  product           Product     @relation(fields: [productId], references: [id])
-  applicant         User        @relation(fields: [applicantId], references: [id])
-  payment           Payment?
+  product   Product               @relation(fields: [productId], references: [id])
+  applicant User                  @relation(fields: [applicantId], references: [id])
+  payment   Payment?
+  reviews   CertificationReview[]
 
   @@index([productId])
   @@index([applicantId])
@@ -516,47 +541,67 @@ model Certification {
   @@map("certifications")
 }
 
+// Vote record của 1 thành viên hội đồng thẩm định (HDTD) trên 1 đơn chứng nhận.
+// Luôn có đúng 5 record cho 1 Certification đã được admin chỉ định hội đồng.
+model CertificationReview {
+  id              String     @id @default(cuid())
+  certificationId String
+  reviewerId      String
+  vote            ReviewVote @default(PENDING)
+  comment         String?    @db.Text // bắt buộc khi vote != PENDING (validate ở API)
+  votedAt         DateTime?
+  createdAt       DateTime   @default(now())
+
+  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  reviewer      User          @relation(fields: [reviewerId], references: [id])
+
+  @@unique([certificationId, reviewerId])
+  @@index([reviewerId])
+  @@index([certificationId])
+  @@map("certification_reviews")
+}
+
 // ============================================================
 // SOCIAL FEED — POSTS & INTERACTIONS
 // ============================================================
 
 model Post {
-  id              String      @id @default(cuid())
-  authorId        String
-  title           String?
-  content         String      @db.Text
-  imageUrls       String[]    // ảnh đính kèm (Cloudinary)
-  status          PostStatus  @default(PUBLISHED)
+  id        String     @id @default(cuid())
+  authorId  String
+  title     String?
+  content   String     @db.Text
+  imageUrls String[] // ảnh đính kèm (Cloudinary)
+  status    PostStatus @default(PUBLISHED)
 
   // Loại bài — phân biệt tin tức DN / tin sản phẩm / bài thường
-  category        PostCategory @default(GENERAL)
+  category PostCategory @default(GENERAL)
 
   // Visibility
-  isPremium       Boolean     @default(false) // true nếu author là VIP — set tự động
-  isPromoted      Boolean     @default(false) // admin có thể pin bài lên top
+  isPremium  Boolean @default(false) // true nếu author là VIP — set tự động
+  isPromoted Boolean @default(false) // admin có thể pin bài lên top
 
   // Ranking — denormalized từ author.displayPriority tại thời điểm đăng
   // Cập nhật lại khi hội viên gia hạn membership
-  authorPriority  Int         @default(0)
+  authorPriority Int @default(0)
 
   // Engagement
-  viewCount       Int         @default(0)
-  reportCount     Int         @default(0)
+  viewCount   Int @default(0)
+  reportCount Int @default(0)
 
   // Lock info
-  lockedAt        DateTime?
-  lockedBy        String?     // adminId
-  lockReason      String?
+  lockedAt   DateTime?
+  lockedBy   String? // adminId
+  lockReason String?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  product         Product?    // sidecar metadata khi category=PRODUCT
-  reports         Report[]
-  reactions       PostReaction[]
-  tags            PostTag[]
-  comments        Comment[]
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  product   Product? // sidecar metadata khi category=PRODUCT
+  reports   Report[]
+  reactions PostReaction[]
+  tags      PostTag[]
+  comments  Comment[]
 
   @@index([authorId])
   @@index([status])
@@ -565,21 +610,21 @@ model Post {
   @@index([status, createdAt])
   @@index([isPromoted, authorPriority, createdAt]) // feed ORDER BY
   @@index([createdAt])
-  @@index([category, createdAt])                    // homepage queries: latest by category
-  @@index([category, isPremium, authorPriority])    // homepage VIP-priority queries
+  @@index([category, createdAt]) // homepage queries: latest by category
+  @@index([category, isPremium, authorPriority]) // homepage VIP-priority queries
   @@map("posts")
 }
 
 model PostReaction {
-  id        String   @id @default(cuid())
-  postId    String
-  userId    String
-  type      String   @default("LIKE") // LIKE, LOVE,... mở rộng sau
+  id     String @id @default(cuid())
+  postId String
+  userId String
+  type   String @default("LIKE") // LIKE, LOVE,... mở rộng sau
 
   createdAt DateTime @default(now())
 
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId]) // 1 user chỉ react 1 lần / bài
   @@map("post_reactions")
@@ -590,29 +635,29 @@ model PostReaction {
 // ============================================================
 
 model Comment {
-  id          String    @id @default(cuid())
-  authorId    String
-  content     String    @db.Text
+  id       String @id @default(cuid())
+  authorId String
+  content  String @db.Text
 
   // Polymorphic target — exactly one of postId/productId must be set
-  postId      String?
-  productId   String?
+  postId    String?
+  productId String?
 
   // Reply — flat with mention (parentId = comment being replied to)
-  parentId    String?
+  parentId String?
 
   // Soft delete
-  deletedAt   DateTime?
+  deletedAt DateTime?
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  post        Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
-  replies     Comment[] @relation("CommentReplies")
-  likes       CommentLike[]
+  author  User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post    Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  product Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies Comment[]     @relation("CommentReplies")
+  likes   CommentLike[]
 
   @@index([postId, createdAt])
   @@index([productId, createdAt])
@@ -622,23 +667,23 @@ model Comment {
 }
 
 model CommentLike {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   commentId String
   userId    String
 
   createdAt DateTime @default(now())
 
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId]) // 1 user chỉ like 1 lần / comment
   @@map("comment_likes")
 }
 
 model Tag {
-  id    String    @id @default(cuid())
-  name  String    @unique
-  slug  String    @unique
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
 
   posts PostTag[]
 
@@ -649,8 +694,8 @@ model PostTag {
   postId String
   tagId  String
 
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([postId, tagId])
   @@map("post_tags")
@@ -661,22 +706,22 @@ model PostTag {
 // ============================================================
 
 model Report {
-  id           String       @id @default(cuid())
-  postId       String
-  reporterId   String
-  reason       String       // "SPAM", "FAKE_INFO", "INAPPROPRIATE", "OTHER"
-  description  String?      @db.Text
-  status       ReportStatus @default(PENDING)
+  id          String       @id @default(cuid())
+  postId      String
+  reporterId  String
+  reason      String // "SPAM", "FAKE_INFO", "INAPPROPRIATE", "OTHER"
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
 
-  reviewedBy   String?      // adminId
-  reviewedAt   DateTime?
-  adminNote    String?
+  reviewedBy String? // adminId
+  reviewedAt DateTime?
+  adminNote  String?
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  post         Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reporter     User         @relation("ReporterRelation", fields: [reporterId], references: [id])
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User @relation("ReporterRelation", fields: [reporterId], references: [id])
 
   @@unique([postId, reporterId]) // 1 user chỉ report 1 lần / bài
   @@index([postId])
@@ -689,61 +734,101 @@ model Report {
 // ============================================================
 
 model News {
-  id           String       @id @default(cuid())
-  title        String
-  title_en     String?
-  title_zh     String?
-  title_ar     String?
-  slug         String       @unique
-  excerpt      String?
-  excerpt_en   String?
-  excerpt_zh   String?
-  excerpt_ar   String?
-  content      String       @db.Text
-  content_en   String?      @db.Text
-  content_zh   String?      @db.Text
-  content_ar   String?      @db.Text
+  id            String       @id @default(cuid())
+  title         String
+  title_en      String?
+  title_zh      String?
+  title_ar      String?
+  slug          String       @unique
+  excerpt       String?
+  excerpt_en    String?
+  excerpt_zh    String?
+  excerpt_ar    String?
+  content       String       @db.Text
+  content_en    String?      @db.Text
+  content_zh    String?      @db.Text
+  content_ar    String?      @db.Text
   coverImageUrl String?
-  category     NewsCategory @default(GENERAL)
-  isPublished  Boolean      @default(false)
-  isPinned     Boolean      @default(false)
-  publishedAt  DateTime?
-  authorId     String       // adminId
+  category      NewsCategory @default(GENERAL)
+  isPublished   Boolean      @default(false)
+  isPinned      Boolean      @default(false)
+  publishedAt   DateTime?
+  authorId      String // adminId
 
   // Import metadata — dùng khi crawl từ website cũ
-  sourceUrl      String?    // URL gốc trên trang cũ (step 2 crawl sẽ dùng)
-  originalAuthor String?    // Tên tác giả gốc (vd "Admin", "BBT") — hiển thị khi có, không thay authorId
+  sourceUrl      String? // URL gốc trên trang cũ (step 2 crawl sẽ dùng)
+  originalAuthor String? // Tên tác giả gốc (vd "Admin", "BBT") — hiển thị khi có, không thay authorId
 
   // SEO — per-locale overrides for <title>, meta description, image alt.
   // Fallback chain: localize() picks seoTitle_{locale} → siblings → seoTitle → title.
-  seoTitle           String?
-  seoTitle_en        String?
-  seoTitle_zh        String?
-  seoTitle_ar        String?
-  seoDescription     String?
-  seoDescription_en  String?
-  seoDescription_zh  String?
-  seoDescription_ar  String?
-  coverImageAlt      String?
-  coverImageAlt_en   String?
-  coverImageAlt_zh   String?
-  coverImageAlt_ar   String?
+  seoTitle          String?
+  seoTitle_en       String?
+  seoTitle_zh       String?
+  seoTitle_ar       String?
+  seoDescription    String?
+  seoDescription_en String?
+  seoDescription_zh String?
+  seoDescription_ar String?
+  coverImageAlt     String?
+  coverImageAlt_en  String?
+  coverImageAlt_zh  String?
+  coverImageAlt_ar  String?
 
   // SEO — single (VI source-of-truth). focusKeyword feeds the 19-point
   // scoring rubric. seoScore + seoScoreDetail are recomputed on save.
-  focusKeyword       String?
-  secondaryKeywords  String[]   @default([])
-  seoScore           Int?
-  seoScoreDetail     Json?
+  focusKeyword      String?
+  secondaryKeywords String[] @default([])
+  seoScore          Int?
+  seoScoreDetail    Json?
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category, isPublished, publishedAt])
-  @@index([isPublished, isPinned, publishedAt])  // homepage news carousel: WHERE isPublished ORDER BY isPinned, publishedAt
+  @@index([isPublished, isPinned, publishedAt]) // homepage news carousel: WHERE isPublished ORDER BY isPinned, publishedAt
   @@index([slug])
   @@index([seoScore])
   @@map("news")
+}
+
+// ============================================================
+// MULTIMEDIA — BỘ SƯU TẬP ẢNH + VIDEO YOUTUBE
+// ============================================================
+// Dùng cho section "MULTIMEDIA" trên trang chủ /v2 và trang chi tiết
+// tương lai. type phân biệt: PHOTO_COLLECTION → imageUrls[]; VIDEO → youtubeId.
+// coverImageUrl luôn dùng làm thumbnail ngoài danh sách. Với VIDEO mà không
+// có coverImageUrl, app có thể fallback về https://img.youtube.com/vi/{id}/maxresdefault.jpg.
+
+model Multimedia {
+  id   String         @id @default(cuid())
+  type MultimediaType
+  slug String         @unique
+
+  title      String
+  title_en   String?
+  title_zh   String?
+  title_ar   String?
+  excerpt    String?
+  excerpt_en String?
+  excerpt_zh String?
+  excerpt_ar String?
+
+  coverImageUrl String?
+  imageUrls     String[] @default([]) // PHOTO_COLLECTION: full gallery
+  youtubeId     String? // VIDEO: e.g. "dQw4w9WgXcQ"
+
+  isPublished Boolean   @default(true)
+  isPinned    Boolean   @default(false)
+  publishedAt DateTime?
+  viewCount   Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, isPublished, publishedAt])
+  @@index([isPublished, isPinned, publishedAt])
+  @@index([slug])
+  @@map("multimedia")
 }
 
 // ============================================================
@@ -751,36 +836,36 @@ model News {
 // ============================================================
 
 model MediaOrder {
-  id              String           @id @default(cuid())
-  requesterId     String?          // userId đặt dịch vụ (null nếu là guest)
-  requesterName   String           // lưu lại tên lúc đặt
-  requesterEmail  String
-  requesterPhone  String
+  id             String  @id @default(cuid())
+  requesterId    String? // userId đặt dịch vụ (null nếu là guest)
+  requesterName  String // lưu lại tên lúc đặt
+  requesterEmail String
+  requesterPhone String
 
-  serviceType     MediaServiceType
-  status          MediaOrderStatus @default(NEW)
+  serviceType MediaServiceType
+  status      MediaOrderStatus @default(NEW)
 
   // Yêu cầu từ khách
-  requirements    String           @db.Text
-  targetKeywords  String?          // từ khóa SEO mong muốn
-  referenceUrls   String[]         // URL tham khảo
-  deadline        DateTime?        // deadline mong muốn của khách
-  budget          String?          // ngân sách dự kiến
+  requirements   String    @db.Text
+  targetKeywords String? // từ khóa SEO mong muốn
+  referenceUrls  String[] // URL tham khảo
+  deadline       DateTime? // deadline mong muốn của khách
+  budget         String? // ngân sách dự kiến
 
   // Xử lý nội bộ
-  assignedTo      String?          // email/tên nhân sự phụ trách
-  quotedPrice     Int?             // giá báo (VND)
-  internalNote    String?          @db.Text
-  deliveryFileUrls String[]        // URL file bài viết bàn giao (Cloudinary)
-  deliveredAt     DateTime?
-  completedAt     DateTime?
-  cancelReason    String?
+  assignedTo       String? // email/tên nhân sự phụ trách
+  quotedPrice      Int? // giá báo (VND)
+  internalNote     String?   @db.Text
+  deliveryFileUrls String[] // URL file bài viết bàn giao (Cloudinary)
+  deliveredAt      DateTime?
+  completedAt      DateTime?
+  cancelReason     String?
 
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  requester       User?            @relation(fields: [requesterId], references: [id])
-  payment         Payment?
+  requester User?    @relation(fields: [requesterId], references: [id])
+  payment   Payment?
 
   @@index([requesterId])
   @@index([status])
@@ -794,7 +879,7 @@ model MediaOrder {
 
 model SiteConfig {
   id          String   @id @default(cuid())
-  key         String   @unique  // "membership_fee_min", "membership_fee_max", "cert_fee",...
+  key         String   @unique // "membership_fee_min", "membership_fee_max", "cert_fee",...
   value       String
   description String?
   updatedAt   DateTime @updatedAt
@@ -843,13 +928,13 @@ model MenuItem {
 // ============================================================
 
 model HeroImage {
-  id          String   @id @default(cuid())
-  imageUrl    String   // Cloudinary secure_url (folder "gallery/MM-YYYY")
-  label       String?  // Ghi chú admin ("Rừng gió — tháng 11/2026")
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  imageUrl  String // Cloudinary secure_url (folder "gallery/MM-YYYY")
+  label     String? // Ghi chú admin ("Rừng gió — tháng 11/2026")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
   @@map("hero_images")
@@ -860,40 +945,40 @@ model HeroImage {
 // ============================================================
 
 model Banner {
-  id            String       @id @default(cuid())
-  userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Content
-  imageUrl      String       // Cloudinary URL
-  targetUrl     String       // link tới DN/SP/bài post (mở tab mới khi click)
-  title         String       // tiêu đề ngắn (hiện tooltip + alt)
-  position      BannerPosition @default(TOP) // vị trí hiển thị trên trang chủ
+  imageUrl  String // Cloudinary URL
+  targetUrl String // link tới DN/SP/bài post (mở tab mới khi click)
+  title     String // tiêu đề ngắn (hiện tooltip + alt)
+  position  BannerPosition @default(TOP) // vị trí hiển thị trên trang chủ
 
   // Schedule
-  startDate     DateTime     // ngày bắt đầu hiển thị
-  endDate       DateTime     // ngày hết hạn (extend khi gia hạn)
+  startDate DateTime // ngày bắt đầu hiển thị
+  endDate   DateTime // ngày hết hạn (extend khi gia hạn)
 
   // Workflow
-  status        BannerStatus @default(PENDING_PAYMENT)
-  rejectReason  String?      @db.Text  // ghi chú khi admin từ chối
-  approvedAt    DateTime?
-  approvedBy    String?      // adminId
+  status       BannerStatus @default(PENDING_PAYMENT)
+  rejectReason String?      @db.Text // ghi chú khi admin từ chối
+  approvedAt   DateTime?
+  approvedBy   String? // adminId
 
   // Payment & pricing
-  price         Int          // tổng tiền đăng ký lần đầu (VND) — không update khi gia hạn
+  price Int // tổng tiền đăng ký lần đầu (VND) — không update khi gia hạn
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  payments      Payment[]    // 1 banner → nhiều payment (lần đầu + các lần gia hạn)
+  payments Payment[] // 1 banner → nhiều payment (lần đầu + các lần gia hạn)
 
   @@index([userId])
   @@index([status])
   @@index([endDate])
-  @@index([status, endDate])  // homepage query: ACTIVE + đang trong khoảng startDate-endDate
-  @@index([status, position, endDate])  // homepage query tách theo position
-  @@index([status, position, startDate, endDate])  // covers full date-window filter on TOP/MID/SIDEBAR queries
+  @@index([status, endDate]) // homepage query: ACTIVE + đang trong khoảng startDate-endDate
+  @@index([status, position, endDate]) // homepage query tách theo position
+  @@index([status, position, startDate, endDate]) // covers full date-window filter on TOP/MID/SIDEBAR queries
   @@map("banners")
 }
 
@@ -904,16 +989,16 @@ model Banner {
 model Partner {
   id          String          @id @default(cuid())
   name        String
-  shortName   String?         // viết tắt để hiển thị khi không có logo (initials fallback)
+  shortName   String? // viết tắt để hiển thị khi không có logo (initials fallback)
   category    PartnerCategory @default(OTHER)
-  logoUrl     String?         // Cloudinary — null = dùng initials placeholder
-  websiteUrl  String?         // link mở tab mới khi click; null = không clickable
-  description String?         // hiển thị tooltip / hover
+  logoUrl     String? // Cloudinary — null = dùng initials placeholder
+  websiteUrl  String? // link mở tab mới khi click; null = không clickable
+  description String? // hiển thị tooltip / hover
   sortOrder   Int             @default(0) // số nhỏ = ưu tiên hiển thị trước
   isActive    Boolean         @default(true)
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
   @@index([category])
@@ -925,58 +1010,58 @@ model Partner {
 // ============================================================
 
 enum DocumentCategory {
-  CONG_VAN_DEN    // công văn đến
-  CONG_VAN_DI     // công văn đi
-  BIEN_BAN_HOP    // biên bản họp
-  QUYET_DINH      // quyết định
-  HOP_DONG        // hợp đồng
+  CONG_VAN_DEN // công văn đến
+  CONG_VAN_DI // công văn đi
+  BIEN_BAN_HOP // biên bản họp
+  QUYET_DINH // quyết định
+  HOP_DONG // hợp đồng
   // ── Văn bản pháp quy (Public, hiển thị trên /phap-ly) ──
-  DIEU_LE         // Điều lệ Hội
-  QUY_CHE         // Quy chế nội bộ (VAWA)
-  GIAY_PHEP       // Giấy phép Đại hội
+  DIEU_LE // Điều lệ Hội
+  QUY_CHE // Quy chế nội bộ (VAWA)
+  GIAY_PHEP // Giấy phép Đại hội
 }
 
 model Document {
-  id                String            @id @default(cuid())
-  title             String
-  title_en          String?
-  title_zh          String?
-  title_ar          String?
-  description       String?           @db.Text
-  description_en    String?           @db.Text
-  description_zh    String?           @db.Text
-  description_ar    String?           @db.Text
-  category          DocumentCategory
-  documentNumber    String?           // số hiệu công văn (vd: CV-2026-001, 56/QĐ-VAWA)
-  issuedDate        DateTime?         // ngày ban hành
-  issuer            String?           // cơ quan / người ban hành (vd: "Chủ tịch VAWA", "Bộ Nội vụ")
-  issuer_en         String?
-  issuer_zh         String?
-  issuer_ar         String?
-  sortOrder         Int               @default(0) // thứ tự hiển thị trên /phap-ly
-  isPublic          Boolean           @default(false) // true = hiển thị trên /phap-ly (public)
+  id             String           @id @default(cuid())
+  title          String
+  title_en       String?
+  title_zh       String?
+  title_ar       String?
+  description    String?          @db.Text
+  description_en String?          @db.Text
+  description_zh String?          @db.Text
+  description_ar String?          @db.Text
+  category       DocumentCategory
+  documentNumber String? // số hiệu công văn (vd: CV-2026-001, 56/QĐ-VAWA)
+  issuedDate     DateTime? // ngày ban hành
+  issuer         String? // cơ quan / người ban hành (vd: "Chủ tịch VAWA", "Bộ Nội vụ")
+  issuer_en      String?
+  issuer_zh      String?
+  issuer_ar      String?
+  sortOrder      Int              @default(0) // thứ tự hiển thị trên /phap-ly
+  isPublic       Boolean          @default(false) // true = hiển thị trên /phap-ly (public)
 
   // Google Drive
-  driveFileId       String            @unique
-  driveViewUrl      String
-  driveDownloadUrl  String
-  fileName          String
-  mimeType          String
-  fileSize          Int               // bytes
+  driveFileId      String @unique
+  driveViewUrl     String
+  driveDownloadUrl String
+  fileName         String
+  mimeType         String
+  fileSize         Int // bytes
 
   // AI extracted content
-  extractedText     String?           @db.Text
-  summary           String?           @db.Text
-  summary_en        String?           @db.Text
-  summary_zh        String?           @db.Text
-  summary_ar        String?           @db.Text
+  extractedText String? @db.Text
+  summary       String? @db.Text
+  summary_en    String? @db.Text
+  summary_zh    String? @db.Text
+  summary_ar    String? @db.Text
 
   // Metadata
-  uploadedBy        String            // adminId
-  downloadCount     Int               @default(0)
+  uploadedBy    String // adminId
+  downloadCount Int    @default(0)
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@index([isPublic])
@@ -995,21 +1080,21 @@ model Document {
 // ============================================================
 
 model Leader {
-  id        String         @id @default(cuid())
+  id           String         @id @default(cuid())
   name         String
   name_en      String?
   name_zh      String?
   name_ar      String?
-  honorific    String?        // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
+  honorific    String? // "Ông" / "Bà" — prefix hiển thị trước tên. Null = ẩn prefix.
   honorific_en String?
   honorific_zh String?
   honorific_ar String?
-  title        String         // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
+  title        String // "Chủ tịch", "Phó Chủ tịch", "Tổng Thư ký", "Ủy viên", ...
   title_en     String?
   title_zh     String?
   title_ar     String?
   category     LeaderCategory @default(BCH) // nhóm chính hiển thị
-  workTitle    String?        // chức vụ đơn vị công tác
+  workTitle    String? // chức vụ đơn vị công tác
   workTitle_en String?
   workTitle_zh String?
   workTitle_ar String?
@@ -1017,16 +1102,16 @@ model Leader {
   bio_en       String?        @db.Text
   bio_zh       String?        @db.Text
   bio_ar       String?        @db.Text
-  photoUrl  String?
-  term      String         // "Nhiệm kỳ III (2023–2028)"
-  sortOrder Int            @default(0)
-  isActive  Boolean        @default(true)
+  photoUrl     String?
+  term         String // "Nhiệm kỳ III (2023–2028)"
+  sortOrder    Int            @default(0)
+  isActive     Boolean        @default(true)
 
-  userId    String?
-  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, category, sortOrder])
   @@index([term])
@@ -1034,9 +1119,9 @@ model Leader {
 }
 
 enum LeaderCategory {
-  BTV  // Ban Thường vụ
-  BCH  // Ủy viên Ban Chấp hành
-  BKT  // Ban Kiểm tra
+  BTV // Ban Thường vụ
+  BCH // Ủy viên Ban Chấp hành
+  BKT // Ban Kiểm tra
   HDTD // Hội đồng thẩm định
 }
 
@@ -1046,26 +1131,26 @@ enum LeaderCategory {
 // ============================================================
 
 model MembershipApplication {
-  id                String             @id @default(cuid())
-  userId            String
-  user              User               @relation("ApplicantRelation", fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("ApplicantRelation", fields: [userId], references: [id], onDelete: Cascade)
 
   // Nội dung đơn
-  requestedCategory MemberCategory     @default(OFFICIAL) // hạng hội viên xin kết nạp
-  reason            String             @db.Text // lý do xin gia nhập, giới thiệu bản thân / tổ chức
-  representativeName     String?       // với tổ chức
-  representativePosition String?       // với tổ chức
+  requestedCategory      MemberCategory @default(OFFICIAL) // hạng hội viên xin kết nạp
+  reason                 String         @db.Text // lý do xin gia nhập, giới thiệu bản thân / tổ chức
+  representativeName     String? // với tổ chức
+  representativePosition String? // với tổ chức
 
   // Xử lý
-  status            ApplicationStatus  @default(PENDING)
-  submittedAt       DateTime           @default(now())
-  reviewedAt        DateTime?
-  reviewedById      String?
-  reviewer          User?              @relation("ReviewerRelation", fields: [reviewedById], references: [id], onDelete: SetNull)
-  rejectReason      String?            @db.Text
+  status       ApplicationStatus @default(PENDING)
+  submittedAt  DateTime          @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewer     User?             @relation("ReviewerRelation", fields: [reviewedById], references: [id], onDelete: SetNull)
+  rejectReason String?           @db.Text
 
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -1078,10 +1163,10 @@ model MembershipApplication {
 // ============================================================
 
 enum SurveyAudience {
-  ALL          // mọi user (kể cả guest đã login)
-  BUSINESS     // chỉ accountType = BUSINESS
-  INDIVIDUAL   // chỉ accountType = INDIVIDUAL
-  BOTH_VIP     // cả BUSINESS + INDIVIDUAL (loại GUEST)
+  ALL // mọi user (kể cả guest đã login)
+  BUSINESS // chỉ accountType = BUSINESS
+  INDIVIDUAL // chỉ accountType = INDIVIDUAL
+  BOTH_VIP // cả BUSINESS + INDIVIDUAL (loại GUEST)
 }
 
 enum SurveyStatus {
@@ -1100,22 +1185,21 @@ enum ConsultationStatus {
 /**
  * Bộ khảo sát động — admin tạo qua UI. Câu hỏi lưu dạng JSON, có thể có
  * `mapsTo` để tự đồng bộ câu trả lời sang field User/Company tương ứng.
- *
  * Cấu trúc 1 câu hỏi (trong `questions` JSON):
- *   {
- *     id: string,                    // unique trong scope survey
- *     label: string,                 // câu hỏi hiển thị
- *     type: "text"|"textarea"|"number"|"select"|"multiselect"|"scale",
- *     options?: string[],            // cho select/multiselect
- *     required?: boolean,
- *     mapsTo?: "user.fieldName"|"company.fieldName",
- *     scoreRule?: Record<string, number>,  // map giá trị → điểm cho recommendation
- *     helpText?: string,
- *   }
+ * {
+ * id: string,                    // unique trong scope survey
+ * label: string,                 // câu hỏi hiển thị
+ * type: "text"|"textarea"|"number"|"select"|"multiselect"|"scale",
+ * options?: string[],            // cho select/multiselect
+ * required?: boolean,
+ * mapsTo?: "user.fieldName"|"company.fieldName",
+ * scoreRule?: Record<string, number>,  // map giá trị → điểm cho recommendation
+ * helpText?: string,
+ * }
  */
 model Survey {
-  id          String         @id @default(cuid())
-  slug        String         @unique
+  id             String         @id @default(cuid())
+  slug           String         @unique
   title          String
   title_en       String?
   title_zh       String?
@@ -1124,20 +1208,20 @@ model Survey {
   description_en String?        @db.Text
   description_zh String?        @db.Text
   description_ar String?        @db.Text
-  audience    SurveyAudience @default(BOTH_VIP)
-  status      SurveyStatus   @default(DRAFT)
-  questions   Json           // mảng câu hỏi (xem comment trên)
-  questions_en Json?         // translated questions array (same structure, labels in English)
-  questions_zh Json?         // translated questions array (same structure, labels in Chinese)
-  questions_ar Json?         // translated questions array (same structure, labels in Arabic)
-  config      Json?          // { scoring: {...}, recommendation: {...} } — tùy loại survey
-  startsAt    DateTime?
-  endsAt      DateTime?
+  audience       SurveyAudience @default(BOTH_VIP)
+  status         SurveyStatus   @default(DRAFT)
+  questions      Json // mảng câu hỏi (xem comment trên)
+  questions_en   Json? // translated questions array (same structure, labels in English)
+  questions_zh   Json? // translated questions array (same structure, labels in Chinese)
+  questions_ar   Json? // translated questions array (same structure, labels in Arabic)
+  config         Json? // { scoring: {...}, recommendation: {...} } — tùy loại survey
+  startsAt       DateTime?
+  endsAt         DateTime?
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  responses   SurveyResponse[]
+  responses SurveyResponse[]
 
   @@index([status, audience])
   @@map("surveys")
@@ -1145,23 +1229,23 @@ model Survey {
 
 /**
  * Phản hồi khảo sát — cho phép cả user đã đăng nhập và khách public.
- *  - userId: set nếu người trả lời là member đã login (giữ mirror mapsTo)
- *  - contact*: thông tin user tự điền (bắt buộc với public submissions)
- *  - submitterType: "INDIVIDUAL" | "BUSINESS" — user tự chọn ở step đầu
+ * - userId: set nếu người trả lời là member đã login (giữ mirror mapsTo)
+ * - contact*: thông tin user tự điền (bắt buộc với public submissions)
+ * - submitterType: "INDIVIDUAL" | "BUSINESS" — user tự chọn ở step đầu
  */
 model SurveyResponse {
-  id          String   @id @default(cuid())
-  surveyId    String
-  userId      String?
+  id       String  @id @default(cuid())
+  surveyId String
+  userId   String?
 
   // Contact info (do user tự điền, bắt buộc cho anon)
-  contactName    String?
-  contactEmail   String?
-  contactPhone   String?
-  avatarUrl      String?  // ảnh đại diện cá nhân (cho INDIVIDUAL)
-  companyName    String?
-  logoUrl        String?
-  submitterType  String?  // "INDIVIDUAL" | "BUSINESS"
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  avatarUrl     String? // ảnh đại diện cá nhân (cho INDIVIDUAL)
+  companyName   String?
+  logoUrl       String?
+  submitterType String? // "INDIVIDUAL" | "BUSINESS"
 
   answers         Json
   score           Int?
@@ -1186,23 +1270,23 @@ model SurveyResponse {
  * để admin liên hệ lại.
  */
 model ConsultationRequest {
-  id          String             @id @default(cuid())
-  userId      String?            // null nếu anon (từ /khao-sat public)
-  fullName    String
-  phone       String
-  email       String?
-  companyName String?
-  note        String?            @db.Text
-  context     String?            // "survey:member-onboarding" — nguồn phát sinh
+  id              String             @id @default(cuid())
+  userId          String? // null nếu anon (từ /khao-sat public)
+  fullName        String
+  phone           String
+  email           String?
+  companyName     String?
+  note            String?            @db.Text
+  context         String? // "survey:member-onboarding" — nguồn phát sinh
   recommendedTier String?
-  status      ConsultationStatus @default(PENDING)
-  handledById String?
-  handledAt   DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  status          ConsultationStatus @default(PENDING)
+  handledById     String?
+  handledAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
-  user        User?              @relation("ConsultationRequester", fields: [userId], references: [id], onDelete: SetNull)
-  handledBy   User?              @relation("ConsultationHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  user      User? @relation("ConsultationRequester", fields: [userId], references: [id], onDelete: SetNull)
+  handledBy User? @relation("ConsultationHandler", fields: [handledById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([userId])
@@ -1217,25 +1301,25 @@ model ConsultationRequest {
 // notification bell kể cả khi email bị lọc / inbox chung bị bỏ sót.
 
 enum ContactStatus {
-  NEW        // vừa gửi, chờ admin đọc
-  HANDLED    // admin đã liên hệ lại / xử lý xong
-  ARCHIVED   // lưu trữ, không cần xử lý (spam, trùng...)
+  NEW // vừa gửi, chờ admin đọc
+  HANDLED // admin đã liên hệ lại / xử lý xong
+  ARCHIVED // lưu trữ, không cần xử lý (spam, trùng...)
 }
 
 model ContactMessage {
-  id          String         @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
   email       String
   phone       String?
-  message     String         @db.Text
-  status      ContactStatus  @default(NEW)
+  message     String        @db.Text
+  status      ContactStatus @default(NEW)
   handledAt   DateTime?
   handledById String?
-  adminNote   String?        @db.Text
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  adminNote   String?       @db.Text
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  handledBy   User?          @relation("ContactHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledBy User? @relation("ContactHandler", fields: [handledById], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@map("contact_messages")

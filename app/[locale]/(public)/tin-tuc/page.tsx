@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { cloudinaryResize } from "@/lib/cloudinary"
@@ -9,6 +10,23 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
+
+/** Sidebar "Tin nổi bật" giống nhau trên mọi paginated page → cache chung 10 phút. */
+const getSidebarFeaturedNews = unstable_cache(
+  async () =>
+    prisma.news.findMany({
+      where: { isPublished: true, category: "GENERAL" },
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+      take: 6,
+      select: {
+        id: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        slug: true, publishedAt: true, isPinned: true,
+      },
+    }),
+  ["tin-tuc_sidebar_featured"],
+  { revalidate: 600, tags: ["news", "tin-tuc"] },
+)
 
 export async function generateMetadata() {
   const t = await getTranslations("news")
@@ -95,13 +113,8 @@ export default async function NewsPage({
         publishedAt: true,
       },
     }),
-    // Sidebar: latest 6 pinned or most recent (always fresh regardless of page/search)
-    prisma.news.findMany({
-      where: { isPublished: true, category: "GENERAL" },
-      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 6,
-      select: { id: true, title: true, title_en: true, title_zh: true, title_ar: true, slug: true, publishedAt: true, isPinned: true },
-    }),
+    // Sidebar "Tin nổi bật" — cache 10 min (same across all paginated pages)
+    getSidebarFeaturedNews(),
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)

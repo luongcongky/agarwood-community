@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
@@ -12,25 +13,41 @@ import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
 import { addAnchorIdsToH2, extractTocFromHtml } from "@/lib/seo/toc"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { CopyLinkButton } from "../../tin-tuc/[slug]/CopyLinkButton"
 
 export const revalidate = 1800
 
 type Props = { params: Promise<{ locale: Locale; slug: string }> }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, slug } = await params
-  const news = await prisma.news.findFirst({
-    where: { slug, category: "RESEARCH" },
+/** React.cache dedupe giữa generateMetadata và main page — 1 query/request
+ *  thay vì 2. Explicit select thay vì findFirst không select. */
+const getResearchBySlug = cache(async (slug: string) =>
+  prisma.news.findFirst({
+    where: { slug, isPublished: true, category: "RESEARCH" },
     select: {
+      id: true,
+      slug: true,
       title: true, title_en: true, title_zh: true, title_ar: true,
       excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+      content: true, content_en: true, content_zh: true, content_ar: true,
       seoTitle: true, seoTitle_en: true, seoTitle_zh: true, seoTitle_ar: true,
       seoDescription: true, seoDescription_en: true, seoDescription_zh: true, seoDescription_ar: true,
+      coverImageAlt: true, coverImageAlt_en: true, coverImageAlt_zh: true, coverImageAlt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
+      updatedAt: true,
+      authorId: true,
+      originalAuthor: true,
+      focusKeyword: true,
+      secondaryKeywords: true,
     },
-  })
+  }),
+)
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale, slug } = await params
+  const news = await getResearchBySlug(slug)
   if (!news) return { title: "Bài nghiên cứu không tồn tại" }
   const title =
     (localize(news, "seoTitle", locale) as string | null) ||
@@ -65,9 +82,7 @@ export default async function ResearchDetailPage({ params }: Props) {
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
 
-  const news = await prisma.news.findFirst({
-    where: { slug, isPublished: true, category: "RESEARCH" },
-  })
+  const news = await getResearchBySlug(slug)
 
   // If not found, try slugifying the input (e.g. user typed with diacritics)
   if (!news) {
@@ -84,32 +99,41 @@ export default async function ResearchDetailPage({ params }: Props) {
 
   if (!news) notFound()
 
-  // Related research articles — prefer same focus keyword, fallback to recency.
-  const relatedPool = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      category: "RESEARCH",
-      slug: { not: slug },
-      ...(news.focusKeyword
-        ? {
-            OR: [
-              { focusKeyword: news.focusKeyword },
-              { secondaryKeywords: { has: news.focusKeyword } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 3,
-    select: {
-      id: true,
-      title: true, title_en: true, title_zh: true, title_ar: true,
-      slug: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
-      coverImageUrl: true,
-      publishedAt: true,
-    },
-  })
+  // Related + author cùng phụ thuộc news → parallel, không sequential như trước.
+  const [relatedPool, author] = await Promise.all([
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: "RESEARCH",
+        slug: { not: slug },
+        ...(news.focusKeyword
+          ? {
+              OR: [
+                { focusKeyword: news.focusKeyword },
+                { secondaryKeywords: { has: news.focusKeyword } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 3,
+      select: {
+        id: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        slug: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+        coverImageUrl: true,
+        publishedAt: true,
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: news.authorId },
+      select: {
+        id: true, name: true, avatarUrl: true, role: true,
+        bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+      },
+    }),
+  ])
   let related = relatedPool
   if (related.length < 3) {
     const fill = await prisma.news.findMany({
@@ -132,15 +156,6 @@ export default async function ResearchDetailPage({ params }: Props) {
     })
     related = [...related, ...fill]
   }
-
-  // Fetch author for E-E-A-T signals.
-  const author = await prisma.user.findUnique({
-    where: { id: news.authorId },
-    select: {
-      id: true, name: true, avatarUrl: true, role: true,
-      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
-    },
-  })
   const authorDisplayName = news.originalAuthor || author?.name || SITE_NAME
   const authorBio = author ? (l(author, "bio") as string | null) : null
   const authorUrl = author ? localizedUrl(`/thanh-vien/${author.id}`, locale) : BASE_URL
@@ -228,6 +243,8 @@ export default async function ResearchDetailPage({ params }: Props) {
                   className="object-cover"
                   priority
                   sizes="(max-width: 1280px) 100vw, 1280px"
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
                 />
               </div>
             </div>

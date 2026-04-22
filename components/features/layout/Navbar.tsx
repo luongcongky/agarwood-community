@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { headers } from "next/headers"
+import { Palette } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMenuTree } from "@/lib/menu"
@@ -146,6 +147,20 @@ export async function Navbar() {
                     youtubeUrl={youtubeUrl}
                     variant="navbar"
                   />
+                  <div className="h-5 w-px bg-brand-700" aria-hidden="true" />
+                </>
+              )}
+
+              {mode === "public" && (
+                <>
+                  <Link
+                    href="/v2"
+                    aria-label="Xem giao diện mới (v2)"
+                    title="Giao diện mới — phiên bản báo chí"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-brand-200 hover:bg-brand-700 hover:text-brand-100"
+                  >
+                    <Palette className="h-4 w-4" />
+                  </Link>
                   <div className="h-5 w-px bg-brand-700" aria-hidden="true" />
                 </>
               )}

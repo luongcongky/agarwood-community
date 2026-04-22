@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { getLocale, getTranslations } from "next-intl/server"
 import Image from "next/image"
 import Link from "next/link"
@@ -8,6 +9,41 @@ import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import type { Metadata } from "next"
 
+export const revalidate = 600
+
+/** Fetch member 1 lần per request — React.cache dedupe giữa generateMetadata
+ *  và MemberProfilePage. Trả đủ field cho cả 2. */
+const getMember = cache(async (id: string) =>
+  prisma.user.findFirst({
+    where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+      avatarUrl: true,
+      role: true,
+      accountType: true,
+      memberCategory: true,
+      contributionTotal: true,
+      membershipExpires: true,
+      createdAt: true,
+      company: {
+        select: {
+          name: true,
+          slug: true,
+          logoUrl: true,
+          representativeName: true,
+          representativePosition: true,
+          representativePosition_en: true,
+          representativePosition_zh: true,
+          representativePosition_ar: true,
+          isPublished: true,
+        },
+      },
+    },
+  }),
+)
+
 // ── Metadata động theo user ──────────────────────────────────────────────────
 
 export async function generateMetadata({
@@ -16,10 +52,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const member = await prisma.user.findFirst({
-    where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
-    select: { name: true, bio: true, bio_en: true, bio_zh: true, bio_ar: true },
-  })
+  const member = await getMember(id)
   if (!member) return { title: "Not found" }
   const locale = (await getLocale()) as Locale
   const bio = (localize(member, "bio", locale) as string | null) ?? member.bio
@@ -52,37 +85,7 @@ export default async function MemberProfilePage({
   const { id } = await params
 
   const [member, businessThresholds, individualThresholds] = await Promise.all([
-    prisma.user.findFirst({
-      where: { id, role: { in: ["VIP", "INFINITE"] }, isActive: true },
-      select: {
-        id: true,
-        name: true,
-        bio: true,
-        bio_en: true,
-        bio_zh: true,
-        bio_ar: true,
-        avatarUrl: true,
-        role: true,
-        accountType: true,
-        memberCategory: true,
-        contributionTotal: true,
-        membershipExpires: true,
-        createdAt: true,
-        company: {
-          select: {
-            name: true,
-            slug: true,
-            logoUrl: true,
-            representativeName: true,
-            representativePosition: true,
-            representativePosition_en: true,
-            representativePosition_zh: true,
-            representativePosition_ar: true,
-            isPublished: true,
-          },
-        },
-      },
-    }),
+    getMember(id), // React.cache dedupe — reuse kết quả từ generateMetadata
     getTierThresholds("BUSINESS"),
     getTierThresholds("INDIVIDUAL"),
   ])

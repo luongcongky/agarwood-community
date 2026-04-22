@@ -1,8 +1,9 @@
+import { cache } from "react"
 import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -19,19 +20,34 @@ export const revalidate = 1800
 
 type Props = { params: Promise<{ locale: Locale; slug: string }> }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale, slug } = await params
-  const news = await prisma.news.findFirst({
-    where: { slug, category: "GENERAL" },
+/** Tất cả field cần cho metadata + main render — dedupe qua React.cache.
+ *  Explicit select thay vì findFirst không select (over-fetch). */
+const getNewsBySlug = cache(async (slug: string) =>
+  prisma.news.findFirst({
+    where: { slug, isPublished: true, category: "GENERAL" },
     select: {
+      id: true,
+      slug: true,
       title: true, title_en: true, title_zh: true, title_ar: true,
       excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+      content: true, content_en: true, content_zh: true, content_ar: true,
       seoTitle: true, seoTitle_en: true, seoTitle_zh: true, seoTitle_ar: true,
       seoDescription: true, seoDescription_en: true, seoDescription_zh: true, seoDescription_ar: true,
+      coverImageAlt: true, coverImageAlt_en: true, coverImageAlt_zh: true, coverImageAlt_ar: true,
       coverImageUrl: true,
       publishedAt: true,
+      updatedAt: true,
+      authorId: true,
+      originalAuthor: true,
+      focusKeyword: true,
+      secondaryKeywords: true,
     },
-  })
+  }),
+)
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale, slug } = await params
+  const news = await getNewsBySlug(slug)
   if (!news) return { title: "Tin tức không tồn tại" }
   // Prefer SEO override; fall back to article title/excerpt when null.
   const title =
@@ -52,6 +68,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: news.coverImageUrl ? [{ url: news.coverImageUrl }] : [],
       type: "article",
       publishedTime: news.publishedAt?.toISOString(),
+      modifiedTime: news.updatedAt?.toISOString(),
+      authors: news.originalAuthor ? [news.originalAuthor] : undefined,
+      section: "Tin tức",
+      tags:
+        news.secondaryKeywords && news.secondaryKeywords.length > 0
+          ? news.secondaryKeywords
+          : undefined,
       siteName: SITE_NAME,
       locale: locale === "vi" ? "vi_VN" : locale === "en" ? "en_US" : locale === "zh" ? "zh_CN" : "ar_AR",
     },
@@ -67,9 +90,7 @@ export default async function NewsDetailPage({ params }: Props) {
   const tc = await getTranslations("common")
   const { slug } = await params
 
-  const news = await prisma.news.findFirst({
-    where: { slug, isPublished: true, category: "GENERAL" },
-  })
+  const news = await getNewsBySlug(slug)
 
   // If not found, try slugifying the input
   if (!news) {
@@ -106,34 +127,42 @@ export default async function NewsDetailPage({ params }: Props) {
 
   if (!news) notFound()
 
-  // Fetch related articles — prefer the same focus keyword, then same
-  // category. Rank: keyword match > category-only; break ties by recency.
-  // Fetch a slightly wider pool and trim to 3 after scoring.
-  const relatedPool = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      category: "GENERAL",
-      slug: { not: slug },
-      ...(news.focusKeyword
-        ? {
-            OR: [
-              { focusKeyword: news.focusKeyword },
-              { secondaryKeywords: { has: news.focusKeyword } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 3,
-    select: {
-      id: true,
-      title: true, title_en: true, title_zh: true, title_ar: true,
-      slug: true,
-      excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
-      coverImageUrl: true,
-      publishedAt: true,
-    },
-  })
+  // Related + author cùng phụ thuộc `news` → parallel, không sequential như trước.
+  const [relatedPool, author] = await Promise.all([
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: "GENERAL",
+        slug: { not: slug },
+        ...(news.focusKeyword
+          ? {
+              OR: [
+                { focusKeyword: news.focusKeyword },
+                { secondaryKeywords: { has: news.focusKeyword } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 3,
+      select: {
+        id: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        slug: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+        coverImageUrl: true,
+        publishedAt: true,
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: news.authorId },
+      select: {
+        id: true, name: true, avatarUrl: true, role: true,
+        bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+      },
+    }),
+  ])
+
   // Fallback: if keyword search returned fewer than 3, top up by recency.
   let related = relatedPool
   if (related.length < 3) {
@@ -157,15 +186,6 @@ export default async function NewsDetailPage({ params }: Props) {
     })
     related = [...related, ...fill]
   }
-
-  // Fetch the author (admin) — drives the Person JSON-LD + bio card below.
-  const author = await prisma.user.findUnique({
-    where: { id: news.authorId },
-    select: {
-      id: true, name: true, avatarUrl: true, role: true,
-      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
-    },
-  })
   // Display name falls back to the crawl-import `originalAuthor` string
   // (used when we ingested articles from the old website without matching
   // to a real User row).
@@ -177,7 +197,7 @@ export default async function NewsDetailPage({ params }: Props) {
   // Also rewrite any Cloudinary URLs in the body to include width limit +
   // f_auto + q_auto — saves bandwidth for readers on mobile since the
   // content HTML can't use Next.js Image.
-  const sanitizedContent = DOMPurify.sanitize(l(news, "content") ?? "")
+  const sanitizedContent = sanitizeArticleHtml(l(news, "content") ?? "")
   const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
   const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
   const toc = extractTocFromHtml(sanitizedContent)

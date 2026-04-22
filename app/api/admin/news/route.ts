@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { scoreSeo } from "@/lib/seo/score"
+
+/**
+ * Invalidate every surface that depends on the News table:
+ *  - /sitemap.xml + /feed.xml so Google + RSS subscribers see the new slug
+ *  - /tin-tuc + /nghien-cuu layouts so listing + detail re-render across locales
+ *  - Cache tags "homepage" + "news" so section fetchers re-query
+ */
+function revalidateNewsSurfaces() {
+  revalidatePath("/sitemap.xml")
+  revalidatePath("/feed.xml")
+  revalidatePath("/[locale]/tin-tuc", "layout")
+  revalidatePath("/[locale]/nghien-cuu", "layout")
+  revalidateTag("homepage", "max")
+  revalidateTag("news", "max")
+}
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -43,7 +59,7 @@ export async function POST(req: Request) {
   // Compute SEO score against VI content (source-of-truth). previousTitles
   // is fetched once per save; the live editor uses /api/admin/news/seo-score
   // for typing-time previews.
-  const sanitizedContent = content ? DOMPurify.sanitize(content) : ""
+  const sanitizedContent = content ? sanitizeArticleHtml(content) : ""
   const previous = await prisma.news.findMany({
     where: { isPublished: true },
     select: { title: true },
@@ -80,9 +96,9 @@ export async function POST(req: Request) {
       excerpt_zh: excerpt_zh || null,
       excerpt_ar: excerpt_ar || null,
       content: sanitizedContent,
-      content_en: content_en ? DOMPurify.sanitize(content_en) : null,
-      content_zh: content_zh ? DOMPurify.sanitize(content_zh) : null,
-      content_ar: content_ar ? DOMPurify.sanitize(content_ar) : null,
+      content_en: content_en ? sanitizeArticleHtml(content_en) : null,
+      content_zh: content_zh ? sanitizeArticleHtml(content_zh) : null,
+      content_ar: content_ar ? sanitizeArticleHtml(content_ar) : null,
       coverImageUrl: coverImageUrl ?? null,
       category: validCategory,
       isPublished: isPublished ?? false,
@@ -108,6 +124,8 @@ export async function POST(req: Request) {
       seoScoreDetail: seoResult as unknown as object,
     },
   })
+
+  revalidateNewsSurfaces()
 
   return NextResponse.json({ news }, { status: 201 })
 }

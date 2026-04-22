@@ -16,6 +16,7 @@ import {
   LogOut,
   Globe,
   ClipboardList,
+  Scale,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -53,17 +54,27 @@ interface VipNavLinksProps {
   role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
   /** Hội viên còn hiệu lực — false → chỉ hiện mục Gia hạn */
   membershipActive?: boolean
+  /** Thành viên Hội đồng thẩm định — có quyền vote các đơn chứng nhận SP */
+  isCouncilMember?: boolean
   onNavigate?: () => void
 }
 
+const COUNCIL_NAV_ITEM: VipNavItem = {
+  label: "Hội đồng thẩm định",
+  href: "/hoi-dong/cho-duyet",
+  icon: Scale,
+}
+
 /** Dùng lại cả trong sidebar desktop và Sheet mobile */
-export function VipNavLinks({ accountType, role, membershipActive = true, onNavigate }: VipNavLinksProps) {
+export function VipNavLinks({ accountType, role, membershipActive = true, isCouncilMember = false, onNavigate }: VipNavLinksProps) {
   const pathname = usePathname()
-  const items = role === "GUEST"
-    ? GUEST_NAV_ITEMS
-    : !membershipActive
-      ? INACTIVE_VIP_NAV_ITEMS
-      : VIP_NAV_ITEMS.filter((it) => !it.businessOnly || accountType !== "INDIVIDUAL")
+  const baseItems =
+    role === "GUEST"
+      ? GUEST_NAV_ITEMS
+      : !membershipActive
+        ? INACTIVE_VIP_NAV_ITEMS
+        : VIP_NAV_ITEMS.filter((it) => !it.businessOnly || accountType !== "INDIVIDUAL")
+  const items = isCouncilMember && role !== "GUEST" ? [...baseItems, COUNCIL_NAV_ITEM] : baseItems
 
   return (
     <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
@@ -118,13 +129,14 @@ interface MemberSidebarProps {
   accountType?: "BUSINESS" | "INDIVIDUAL" | null
   role?: "GUEST" | "VIP" | "ADMIN" | "INFINITE" | null
   membershipActive?: boolean
+  isCouncilMember?: boolean
 }
 
 /**
  * Sidebar cố định cho khu vực quản lý Hội viên — chỉ hiển thị từ md (768px) trở lên.
  * Mobile dùng MemberMobileNav.
  */
-export function MemberSidebar({ accountType, role, membershipActive = true }: MemberSidebarProps) {
+export function MemberSidebar({ accountType, role, membershipActive = true, isCouncilMember = false }: MemberSidebarProps) {
   return (
     <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col bg-sidebar h-full">
       <Link
@@ -148,7 +160,7 @@ export function MemberSidebar({ accountType, role, membershipActive = true }: Me
         </div>
       </Link>
 
-      <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} />
+      <VipNavLinks accountType={accountType} role={role} membershipActive={membershipActive} isCouncilMember={isCouncilMember} />
     </aside>
   )
 }
