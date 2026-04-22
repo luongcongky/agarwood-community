@@ -12,7 +12,13 @@ import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
  * - Drag handle giữa-phải (E) để resize chỉ chiều ngang
  * - Ghi kết quả width/height (px) vào node attributes
  */
-export function NodeViewImage({ node, updateAttributes, selected }: NodeViewProps) {
+export function NodeViewImage({
+  node,
+  editor,
+  getPos,
+  updateAttributes,
+  selected,
+}: NodeViewProps) {
   const imgRef = useRef<HTMLImageElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [isResizing, setIsResizing] = useState(false)
@@ -98,6 +104,43 @@ export function NodeViewImage({ node, updateAttributes, selected }: NodeViewProp
     [updateAttributes],
   )
 
+  /** Mở ContentImageEditor cho ảnh đang chọn.
+   *  Nếu ảnh nằm trong <figure>, replace range = toàn bộ figure (giữ caption).
+   *  Nếu ảnh đứng riêng, replace range = chỉ image (sẽ wrap vào figure mới). */
+  const handleEditClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const pos = typeof getPos === "function" ? getPos() : null
+      if (pos === null || pos === undefined) return
+
+      const $pos = editor.state.doc.resolve(pos)
+      const parent = $pos.parent
+
+      let caption = ""
+      let from = pos
+      let to = pos + node.nodeSize
+
+      if (parent.type.name === "figure") {
+        parent.forEach((child) => {
+          if (child.type.name === "figcaption") {
+            caption = child.textContent
+          }
+        })
+        from = $pos.before()
+        to = from + parent.nodeSize
+      }
+
+      // @ts-expect-error — storage augmented at runtime by RichTextEditor
+      const requestEdit = editor.storage.imageEditor?.requestEdit as
+        | ((src: string, caption: string, from: number, to: number) => void)
+        | undefined
+      requestEdit?.(src, caption, from, to)
+    },
+    [editor, getPos, node.nodeSize, src],
+  )
+
   // Reset inline style when attrs change (tránh drift giữa DOM + state)
   useEffect(() => {
     const img = imgRef.current
@@ -134,6 +177,16 @@ export function NodeViewImage({ node, updateAttributes, selected }: NodeViewProp
 
         {selected && (
           <>
+            {/* Edit button — top-left góc, mở modal crop/resize + caption */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleEditClick}
+              className="absolute top-2 left-2 z-20 rounded bg-brand-700 px-2 py-1 text-[11px] font-semibold text-white shadow hover:bg-brand-800"
+              title="Chỉnh sửa ảnh (cắt / resize / caption)"
+            >
+              ✎ Sửa ảnh
+            </button>
             {/* East (right-middle) — resize width only */}
             <div
               onMouseDown={(e) => startResize(e, "e")}

@@ -53,6 +53,36 @@ import {
   Heading4,
 } from "lucide-react"
 import { NodeViewImage } from "./NodeViewImage"
+import { Figure, Figcaption } from "./extensions/Figure"
+import { ContentImageEditor } from "./ContentImageEditor"
+
+// ────────────────────────────────────────────────────────────────────────────
+// Helper: build ProseMirror JSON block cho <figure>[image][figcaption].
+// Figcaption luôn render trong output để edit-flow tìm lại được caption.
+// Default display width 500px — ảnh full-res vẫn upload (≤1000px) nhưng
+// hiển thị co lại 500px; user có thể kéo handle để resize nếu muốn lớn hơn.
+// ────────────────────────────────────────────────────────────────────────────
+const DEFAULT_CONTENT_IMAGE_WIDTH = "500px"
+
+function buildFigureBlock(
+  src: string,
+  caption: string,
+): Record<string, unknown> {
+  const figcaption: Record<string, unknown> = { type: "figcaption" }
+  if (caption) {
+    figcaption.content = [{ type: "text", text: caption }]
+  }
+  return {
+    type: "figure",
+    content: [
+      {
+        type: "image",
+        attrs: { src, width: DEFAULT_CONTENT_IMAGE_WIDTH },
+      },
+      figcaption,
+    ],
+  }
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Resizable Image extension
@@ -133,6 +163,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           allowBase64: false,
           HTMLAttributes: { class: "editor-image" },
         }),
+        Figure,
+        Figcaption,
         TextAlign.configure({
           types: ["heading", "paragraph", "image"],
           alignments: ["left", "center", "right", "justify"],
@@ -178,17 +210,90 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
     // ── Blob → File mapping for local images ──
     const pendingFilesRef = useRef<Map<string, File>>(new Map())
 
+    /** State điều khiển modal ContentImageEditor. */
+    type EditorTarget =
+      | { kind: "insert"; imageSrc: string }
+      | {
+          kind: "edit"
+          imageSrc: string
+          caption: string
+          replaceRange: { from: number; to: number }
+        }
+      | null
+    const [imageEditorState, setImageEditorState] =
+      useState<EditorTarget>(null)
+
+    /** Khi user pick file mới từ toolbar → mở modal thay vì insert thẳng. */
     const insertLocalImage = useCallback(
       (file: File) => {
         if (!editor) return
         const blobUrl = URL.createObjectURL(file)
         pendingFilesRef.current.set(blobUrl, file)
-        queueMicrotask(() => {
-          editor.chain().focus().setImage({ src: blobUrl }).run()
-        })
+        setImageEditorState({ kind: "insert", imageSrc: blobUrl })
       },
       [editor],
     )
+
+    /** Khi NodeViewImage request edit ảnh hiện tại.
+     *  `from/to` là range để replace — có thể là (figure start, figure end)
+     *  nếu image nằm trong figure, hoặc (image start, image end) nếu không. */
+    const openEditExisting = useCallback(
+      (src: string, caption: string, from: number, to: number) => {
+        setImageEditorState({
+          kind: "edit",
+          imageSrc: src,
+          caption,
+          replaceRange: { from, to },
+        })
+      },
+      [],
+    )
+
+    /** Expose hook cho NodeViewImage qua editor.storage. */
+    useEffect(() => {
+      if (!editor) return
+      // @ts-expect-error — augment storage at runtime; type defined inline
+      editor.storage.imageEditor = { requestEdit: openEditExisting }
+    }, [editor, openEditExisting])
+
+    function handleImageEditorCancel() {
+      const st = imageEditorState
+      if (st?.kind === "insert") {
+        // User huỷ chèn mới → xóa blob tạm khỏi pending map
+        URL.revokeObjectURL(st.imageSrc)
+        pendingFilesRef.current.delete(st.imageSrc)
+      }
+      setImageEditorState(null)
+    }
+
+    async function handleImageEditorDone(result: { blob: Blob; caption: string }) {
+      if (!editor || !imageEditorState) return
+      const { blob, caption } = result
+      const newBlobUrl = URL.createObjectURL(blob)
+      const newFile = new File([blob], "content-image.jpg", {
+        type: "image/jpeg",
+      })
+      pendingFilesRef.current.set(newBlobUrl, newFile)
+
+      if (imageEditorState.kind === "insert") {
+        // Cũ: chỉ file gốc trong pending. User đã crop/resize → xóa blob cũ
+        // vì không dùng nữa, chỉ upload blob mới.
+        URL.revokeObjectURL(imageEditorState.imageSrc)
+        pendingFilesRef.current.delete(imageEditorState.imageSrc)
+
+        const figureNode = buildFigureBlock(newBlobUrl, caption)
+        editor.chain().focus().insertContent(figureNode).run()
+      } else {
+        // Edit mode: replace range (image hoặc figure cũ) bằng figure mới
+        const newBlock = buildFigureBlock(newBlobUrl, caption)
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(imageEditorState.replaceRange, newBlock)
+          .run()
+      }
+      setImageEditorState(null)
+    }
 
     const processImages = useCallback(async (): Promise<string[]> => {
       if (!editor) return []
@@ -197,7 +302,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
 
       const json = editor.getJSON()
 
-      // Collect all blob URLs still in the document
+      // Collect all blob URLs still in the document — walk cả image lẫn image
+      // nested trong figure/figcaption.
       const blobsInDoc = new Set<string>()
       const walk = (node: Record<string, unknown>) => {
         if (node.type === "image" && typeof (node.attrs as Record<string, unknown>)?.src === "string") {
@@ -322,6 +428,16 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
 
     return (
       <div className={`rounded-xl border bg-white shadow-sm ${className}`}>
+        {imageEditorState && (
+          <ContentImageEditor
+            imageSrc={imageEditorState.imageSrc}
+            initialCaption={
+              imageEditorState.kind === "edit" ? imageEditorState.caption : ""
+            }
+            onDone={handleImageEditorDone}
+            onCancel={handleImageEditorCancel}
+          />
+        )}
         <Toolbar editor={editor} state={editorState} onInsertLocalImage={insertLocalImage} />
         <EditorContent
           editor={editor}
@@ -351,6 +467,13 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
             "[&_.ProseMirror_h4]:text-base [&_.ProseMirror_h4]:font-semibold [&_.ProseMirror_h4]:text-brand-800 [&_.ProseMirror_h4]:my-2",
             // Horizontal rule
             "[&_.ProseMirror_hr]:border-brand-200 [&_.ProseMirror_hr]:my-4",
+            // Figure + figcaption — dùng display:table để figure co về bằng
+            // width của ảnh, figcaption canh giữa SO VỚI ẢNH (không phải với
+            // editor). Caption-side:bottom đẩy figcaption xuống dưới.
+            "[&_.ProseMirror_figure]:table [&_.ProseMirror_figure]:mx-auto [&_.ProseMirror_figure]:my-4",
+            "[&_.ProseMirror_figure_img]:table-cell [&_.ProseMirror_figure_img]:my-0 [&_.ProseMirror_figure_img]:align-top",
+            "[&_.ProseMirror_figcaption]:table-caption [&_.ProseMirror_figcaption]:caption-bottom [&_.ProseMirror_figcaption]:pt-1 [&_.ProseMirror_figcaption]:text-[13px] [&_.ProseMirror_figcaption]:italic [&_.ProseMirror_figcaption]:text-neutral-600 [&_.ProseMirror_figcaption]:leading-snug [&_.ProseMirror_figcaption]:text-center [&_.ProseMirror_figcaption]:min-h-[1.2em]",
+            "[&_.ProseMirror_figcaption:empty::before]:content-['Nhập_chú_thích_ảnh…'] [&_.ProseMirror_figcaption:empty::before]:text-neutral-400",
           ].join(" ")}
           style={{ minHeight: minHeightValue }}
         />

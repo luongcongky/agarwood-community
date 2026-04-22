@@ -83,6 +83,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Nội dung & Truyền thông",
     items: [
       { label: "Tin tức", href: "/admin/tin-tuc", icon: Newspaper },
+      { label: "Multimedia", href: "/admin/multimedia", icon: Images },
       { label: "Tài liệu", href: "/admin/tai-lieu", icon: FileText },
       { label: "Văn bản pháp quy", href: "/admin/phap-ly", icon: Scale },
       { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone, pendingKey: "mediaOrder" },

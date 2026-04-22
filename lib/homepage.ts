@@ -108,46 +108,57 @@ export const getTopVipMemberPosts = unstable_cache(
 )
 
 /**
- * Pool cho slot rotate — VIP thường + non-VIP, weighted random theo authorPriority.
- * Lấy pool 50 bài, shuffle deterministic theo bucket 5 phút, trả về 5 bài.
- *
- * Loại trừ các bài top VIP đã hiển thị ở slot trên (`excludeIds`).
+ * Pool cho slot rotate — 50 bài VIP+non-VIP mới nhất, KHÔNG filter excludeIds
+ * ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`) để MemberRailV2
+ * có thể fetch pool + top song song (bỏ serialization cũ: top xong → pool).
  */
-export async function getRotatingMemberPosts(excludeIds: string[]) {
+export function getMemberPostsPool() {
   const bucket = Math.floor(Date.now() / 300_000) // 5-min bucket
-  return getRotatingMemberPostsCached(bucket, excludeIds)
+  return getMemberPostsPoolCached(bucket)
 }
 
-const getRotatingMemberPostsCached = unstable_cache(
-  async (_bucket: number, excludeIds: string[]) => {
-    void _bucket // chỉ dùng làm cache key
-    const pool = await prisma.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        id: { notIn: excludeIds.length > 0 ? excludeIds : ["__none__"] },
-      },
+const getMemberPostsPoolCached = unstable_cache(
+  async (_bucket: number) => {
+    void _bucket
+    return prisma.post.findMany({
+      where: { status: "PUBLISHED" },
       orderBy: [{ createdAt: "desc" }],
       take: 50,
       select: POST_CARD_SELECT,
     })
-
-    // Weighted random shuffle: weight = authorPriority + 1 (đảm bảo > 0)
-    const seed = _bucket
-    const rng = mulberry32(seed)
-    const weighted = pool
-      .map((p) => ({
-        post: p,
-        score: (p.authorPriority + 1) * (0.5 + rng()),
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map((x) => x.post)
-
-    return weighted
   },
-  ["homepage_rotating_members"],
+  ["homepage_member_posts_pool"],
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
+
+/** Filter pool exclude top IDs + weighted random theo authorPriority.
+ *  Shuffle deterministic theo bucket 5 phút để "xoay vòng" slot. */
+export function pickRotatingMembers(
+  pool: HomepagePost[],
+  excludeIds: string[],
+  count: number = 6,
+): HomepagePost[] {
+  const bucket = Math.floor(Date.now() / 300_000)
+  const rng = mulberry32(bucket)
+  const excludeSet = new Set(excludeIds)
+  return pool
+    .filter((p) => !excludeSet.has(p.id))
+    .map((p) => ({
+      post: p,
+      score: (p.authorPriority + 1) * (0.5 + rng()),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, count)
+    .map((x) => x.post)
+}
+
+/** Backward-compat wrapper cho code cũ dùng `getRotatingMemberPosts(ids)`.
+ *  Serial (pool then filter) — caller mới nên dùng getMemberPostsPool +
+ *  pickRotatingMembers để fetch parallel. */
+export async function getRotatingMemberPosts(excludeIds: string[]) {
+  const pool = await getMemberPostsPool()
+  return pickRotatingMembers(pool, excludeIds)
+}
 
 // Mulberry32 PRNG — small, fast, deterministic
 function mulberry32(seed: number) {
@@ -222,8 +233,61 @@ const getLatestPostsByCategoryCached = unstable_cache(
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
+// ── Multimedia Section (v2): ảnh bộ sưu tập + video YouTube ──────────────────
+
+const MULTIMEDIA_CARD_SELECT = {
+  id: true,
+  type: true,
+  slug: true,
+  title: true,
+  title_en: true,
+  title_zh: true,
+  title_ar: true,
+  excerpt: true,
+  excerpt_en: true,
+  excerpt_zh: true,
+  excerpt_ar: true,
+  coverImageUrl: true,
+  imageUrls: true,
+  youtubeId: true,
+  publishedAt: true,
+  isPinned: true,
+} as const
+
+export const getLatestMultimedia = unstable_cache(
+  async (take = 3) => {
+    return prisma.multimedia.findMany({
+      where: { isPublished: true },
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+      take,
+      select: MULTIMEDIA_CARD_SELECT,
+    })
+  },
+  ["homepage_multimedia"],
+  { revalidate: 300, tags: ["homepage", "multimedia"] },
+)
+
+/**
+ * Filtered by type — dùng cho tabs "Hình ảnh" vs "Video" trong section
+ * MULTIMEDIA trên /v2. Fetch song song cả 2 type để user switch không cần
+ * round-trip server.
+ */
+export const getMultimediaByType = unstable_cache(
+  async (type: "PHOTO_COLLECTION" | "VIDEO", take = 3) => {
+    return prisma.multimedia.findMany({
+      where: { isPublished: true, type },
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+      take,
+      select: MULTIMEDIA_CARD_SELECT,
+    })
+  },
+  ["homepage_multimedia_by_type"],
+  { revalidate: 300, tags: ["homepage", "multimedia"] },
+)
+
 // ── Type exports cho components ──────────────────────────────────────────────
 
 export type HomepageNewsItem = Awaited<ReturnType<typeof getAssociationNews>>[number]
 export type HomepagePost = Awaited<ReturnType<typeof getTopVipMemberPosts>>[number]
 export type HomepageProduct = Awaited<ReturnType<typeof getFeaturedProductsForHomepage>>[number]
+export type HomepageMultimediaItem = Awaited<ReturnType<typeof getLatestMultimedia>>[number]

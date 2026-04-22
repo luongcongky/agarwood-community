@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -68,6 +68,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: news.coverImageUrl ? [{ url: news.coverImageUrl }] : [],
       type: "article",
       publishedTime: news.publishedAt?.toISOString(),
+      modifiedTime: news.updatedAt?.toISOString(),
+      authors: news.originalAuthor ? [news.originalAuthor] : undefined,
+      section: "Tin tức",
+      tags:
+        news.secondaryKeywords && news.secondaryKeywords.length > 0
+          ? news.secondaryKeywords
+          : undefined,
       siteName: SITE_NAME,
       locale: locale === "vi" ? "vi_VN" : locale === "en" ? "en_US" : locale === "zh" ? "zh_CN" : "ar_AR",
     },
@@ -190,7 +197,7 @@ export default async function NewsDetailPage({ params }: Props) {
   // Also rewrite any Cloudinary URLs in the body to include width limit +
   // f_auto + q_auto — saves bandwidth for readers on mobile since the
   // content HTML can't use Next.js Image.
-  const sanitizedContent = DOMPurify.sanitize(l(news, "content") ?? "")
+  const sanitizedContent = sanitizeArticleHtml(l(news, "content") ?? "")
   const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
   const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
   const toc = extractTocFromHtml(sanitizedContent)

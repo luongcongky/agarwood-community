@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import Image from "next/image"
+import Link from "next/link"
 import { cloudinaryFit } from "@/lib/cloudinary"
 import { AdminBannerActions } from "./AdminBannerActions"
 
@@ -56,14 +57,22 @@ export default async function AdminBannerPage({
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-brand-900">Quản lý Banner Quảng cáo</h1>
-        <p className="mt-1 text-sm text-brand-500">
-          Duyệt nội dung banner sau khi xác nhận chuyển khoản tại{" "}
-          <a href="/admin/thanh-toan" className="underline text-brand-700">
-            /admin/thanh-toan
-          </a>
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-brand-900">Quản lý Banner Quảng cáo</h1>
+          <p className="mt-1 text-sm text-brand-500">
+            Duyệt nội dung banner sau khi xác nhận chuyển khoản tại{" "}
+            <a href="/admin/thanh-toan" className="underline text-brand-700">
+              /admin/thanh-toan
+            </a>
+          </p>
+        </div>
+        <Link
+          href="/admin/banner/tao-moi"
+          className="shrink-0 rounded bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+        >
+          + Tạo banner
+        </Link>
       </header>
 
       {/* Stats */}

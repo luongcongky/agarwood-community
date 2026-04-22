@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { isAdmin, canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { scoreSeo } from "@/lib/seo/score"
+
+function revalidateNewsSurfaces() {
+  revalidatePath("/sitemap.xml")
+  revalidatePath("/feed.xml")
+  revalidatePath("/[locale]/tin-tuc", "layout")
+  revalidatePath("/[locale]/nghien-cuu", "layout")
+  revalidateTag("homepage", "max")
+  revalidateTag("news", "max")
+}
 
 export async function GET(
   _req: Request,
@@ -63,10 +73,10 @@ export async function PATCH(
   if ("excerpt_en" in body) data.excerpt_en = excerpt_en || null
   if ("excerpt_zh" in body) data.excerpt_zh = excerpt_zh || null
   if ("excerpt_ar" in body) data.excerpt_ar = excerpt_ar || null
-  if (content !== undefined) data.content = content ? DOMPurify.sanitize(content) : ""
-  if ("content_en" in body) data.content_en = content_en ? DOMPurify.sanitize(content_en) : null
-  if ("content_zh" in body) data.content_zh = content_zh ? DOMPurify.sanitize(content_zh) : null
-  if ("content_ar" in body) data.content_ar = content_ar ? DOMPurify.sanitize(content_ar) : null
+  if (content !== undefined) data.content = content ? sanitizeArticleHtml(content) : ""
+  if ("content_en" in body) data.content_en = content_en ? sanitizeArticleHtml(content_en) : null
+  if ("content_zh" in body) data.content_zh = content_zh ? sanitizeArticleHtml(content_zh) : null
+  if ("content_ar" in body) data.content_ar = content_ar ? sanitizeArticleHtml(content_ar) : null
   if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl
   if (category !== undefined)
     data.category =
@@ -132,6 +142,8 @@ export async function PATCH(
 
   const news = await prisma.news.update({ where: { id }, data })
 
+  revalidateNewsSurfaces()
+
   return NextResponse.json({ news })
 }
 
@@ -147,6 +159,8 @@ export async function DELETE(
   const { id } = await params
 
   await prisma.news.delete({ where: { id } })
+
+  revalidateNewsSurfaces()
 
   return NextResponse.json({ success: true })
 }

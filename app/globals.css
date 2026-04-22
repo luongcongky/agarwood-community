@@ -158,6 +158,33 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* Figure + figcaption — ảnh + chú thích trong bài viết. RichTextEditor phát
+   ra <figure><img/><figcaption/></figure>; cần style consistent cho cả
+   editor view và public article page.
+
+   Dùng display:table để figure co về đúng width của ảnh; figcaption với
+   caption-side:bottom render dưới ảnh + auto constrain width = table width
+   → caption luôn canh giữa SO VỚI ẢNH (không phải so với editor/editor).
+   Override prose default img margin vì prose add margin-top/bottom ~2em. */
+.prose :where(figure):not(:where([class~="not-prose"] *)) {
+  display: table;
+  margin: 1.5em auto;
+}
+.prose :where(figure img):not(:where([class~="not-prose"] *)) {
+  display: table-cell;
+  margin: 0;
+  vertical-align: top;
+}
+.prose :where(figcaption):not(:where([class~="not-prose"] *)) {
+  display: table-caption;
+  caption-side: bottom;
+  padding-top: 0.4em;
+  text-align: center;
+  font-size: 0.875em;
+  font-style: italic;
+  color: #6b7280;
+  line-height: 1.4;
+}
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   color: var(--brand-800, #6e4420);
 }
@@ -173,36 +200,81 @@
    Goal: tighter, more editorial / premium-news feel without swapping fonts —
    tighten heading tracking + line-height, drop heading weight from bold→
    medium for a thinner stroke, relax body line-height for reading comfort,
-   and turn on common OpenType features. Class-level specificity beats
-   Tailwind's font-bold / font-semibold utilities on raw element selectors. */
-.refined-typography h1,
-.refined-typography h2,
-.refined-typography h3,
-.refined-typography h4 {
-  /* Lighter stroke — overrides Tailwind font-bold (700) applied inline in
-     section components. Thinner headlines while visual hierarchy stays
-     via size. */
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  font-feature-settings: "liga", "kern";
-  text-wrap: balance;
-}
-.refined-typography h1 { line-height: 1.1; font-weight: 600; }
-.refined-typography h2 { line-height: 1.15; }
-.refined-typography h3 { line-height: 1.2; }
+   and turn on common OpenType features.
 
-/* Body copy — a hair more breathing room for longer reading passages.
-   Small meta text (≤12px) keeps a compact rhythm. */
-.refined-typography p { line-height: 1.7; }
-.refined-typography p.text-xs,
-.refined-typography p.text-\[11px\],
-.refined-typography p.text-\[10px\] { line-height: 1.45; }
+   Wrapped in `@layer base` so Tailwind utility classes (`font-bold`,
+   `font-normal`, …) — which live in `@layer utilities` — can win via the
+   cascade-layer ordering. Before this move the rule lived "outside layers"
+   and beat Tailwind utilities on specificity, forcing all v2 headings to the
+   refined weight regardless of inline classes. */
+@layer base {
+  .refined-typography h1,
+  .refined-typography h2,
+  .refined-typography h3,
+  .refined-typography h4 {
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-feature-settings: "liga", "kern";
+    text-wrap: balance;
+  }
+  .refined-typography h1 { line-height: 1.1; font-weight: 600; }
+  .refined-typography h2 { line-height: 1.15; }
+  .refined-typography h3 { line-height: 1.2; }
+
+  /* Body copy — a hair more breathing room for longer reading passages.
+     Small meta text (≤12px) keeps a compact rhythm. */
+  .refined-typography p { line-height: 1.7; }
+  .refined-typography p.text-xs,
+  .refined-typography p.text-\[11px\],
+  .refined-typography p.text-\[10px\] { line-height: 1.45; }
+}
 
 /* Homepage — thin gold divider below first <h2> of each major
    white-card section for a subtle editorial accent. */
 [data-page="home"] section h2 + p,
 [data-page="home"] section h2 + div {
   margin-top: 0.5rem;
+}
+
+/* ── Homepage v2 — VTV-faithful "báo chí" prototype ───────────────────────
+   Scoped under data-page="home-v2" so it only applies to /v2. Style goals:
+   fully flat (no shadows/scale/hover-bg), classic Helvetica/Arial sans,
+   pure white bg, uppercase section headers with brown underline rule,
+   no rounded cards, tight padding. Overrides the global refined-typography
+   softener (weight 500 + negative letter-spacing) back to VTV-like 700 +
+   neutral tracking since newspaper headlines need bolder, straighter strokes. */
+[data-page="home-v2"] {
+  /* Inter — VTV's primary webfont, loaded via next/font in v2/layout.tsx.
+     Fallback to Helvetica/Arial if CSS var is not yet injected. */
+  font-family: var(--font-inter-v2), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #222;
+  background: #ffffff;
+  /* Inter looks best with these OpenType features on. */
+  font-feature-settings: "cv11", "ss03", "kern";
+}
+/* Section header styling — see components/features/homepage/v2/SectionV2.tsx.
+   Refined-typography is now in @layer base so Tailwind utilities
+   (font-bold / font-normal / font-medium) win via cascade-layer ordering.
+   Components control weight directly via class; no blanket override needed. */
+[data-page="home-v2"] h1,
+[data-page="home-v2"] h2,
+[data-page="home-v2"] h3,
+[data-page="home-v2"] h4 {
+  letter-spacing: 0;
+}
+[data-page="home-v2"] h3 {
+  font-weight: 700;
+  line-height: 1.3;
+}
+[data-page="home-v2"] p {
+  line-height: 1.55;
+}
+[data-page="home-v2"] .v2-category-scroll {
+  scrollbar-width: none;
+}
+[data-page="home-v2"] .v2-category-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Breaking news ticker marquee ──────────────────────────────────────────

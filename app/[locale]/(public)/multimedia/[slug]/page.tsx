@@ -1,0 +1,116 @@
+import { notFound } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
+import type { Metadata } from "next"
+import { prisma } from "@/lib/prisma"
+import { getLocale } from "next-intl/server"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
+import { MultimediaLightbox } from "@/components/features/multimedia/MultimediaLightbox"
+
+export const revalidate = 300
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const item = await prisma.multimedia.findUnique({ where: { slug } })
+  if (!item) return { title: "Không tìm thấy" }
+  return {
+    title: item.title,
+    description: item.excerpt ?? undefined,
+    alternates: { canonical: `/multimedia/${slug}` },
+    openGraph: {
+      title: item.title,
+      description: item.excerpt ?? undefined,
+      images: item.coverImageUrl
+        ? [{ url: item.coverImageUrl }]
+        : item.youtubeId
+          ? [{ url: `https://img.youtube.com/vi/${item.youtubeId}/maxresdefault.jpg` }]
+          : undefined,
+    },
+  }
+}
+
+export default async function MultimediaDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const locale = (await getLocale()) as Locale
+
+  const item = await prisma.multimedia.findUnique({ where: { slug } })
+  if (!item || !item.isPublished) notFound()
+
+  const title = localize(item, "title", locale) as string
+  const excerpt = localize(item, "excerpt", locale) as string | null
+
+  return (
+    <article className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <nav className="mb-4 text-xs text-neutral-500">
+        <Link href="/" className="hover:text-brand-700">
+          Trang chủ
+        </Link>
+        <span className="mx-2">/</span>
+        <Link href="/tin-tuc" className="hover:text-brand-700">
+          Multimedia
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="text-neutral-800">{title}</span>
+      </nav>
+
+      <header className="mb-6">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">
+          {item.type === "VIDEO" ? "Video" : "Bộ sưu tập ảnh"}
+        </p>
+        <h1 className="text-3xl font-bold leading-tight text-brand-900 lg:text-4xl">
+          {title}
+        </h1>
+        {excerpt && (
+          <p className="mt-3 text-[17px] leading-relaxed text-neutral-700">{excerpt}</p>
+        )}
+        {item.publishedAt && (
+          <p className="mt-3 text-xs uppercase tracking-wide text-neutral-500">
+            {new Date(item.publishedAt).toLocaleDateString("vi-VN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        )}
+      </header>
+
+      {item.type === "VIDEO" && item.youtubeId ? (
+        <div className="relative aspect-video w-full overflow-hidden bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${item.youtubeId}`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 h-full w-full"
+          />
+        </div>
+      ) : item.type === "PHOTO_COLLECTION" && item.imageUrls.length > 0 ? (
+        <MultimediaLightbox images={item.imageUrls} alt={title} />
+      ) : item.coverImageUrl ? (
+        <div className="relative aspect-video w-full overflow-hidden bg-neutral-100">
+          <Image
+            src={item.coverImageUrl}
+            alt={title}
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 1000px"
+            className="object-contain"
+          />
+        </div>
+      ) : (
+        <div className="border border-dashed border-neutral-300 p-12 text-center text-neutral-400">
+          Nội dung đang được cập nhật.
+        </div>
+      )}
+    </article>
+  )
+}
