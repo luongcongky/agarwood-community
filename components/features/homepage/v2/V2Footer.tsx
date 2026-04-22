@@ -57,9 +57,9 @@ export async function V2Footer() {
 
   return (
     <footer className="bg-brand-900 text-neutral-200">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-6 lg:gap-10 lg:px-8 lg:py-12">
-        {/* About (col-span-2) */}
-        <div className="sm:col-span-2 lg:col-span-2">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 py-10 sm:px-6 lg:grid-cols-6 lg:gap-10 lg:px-8 lg:py-12">
+        {/* About — full width mobile + sm, col-span-2 on desktop */}
+        <div className="col-span-2 lg:col-span-2">
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
             Hội Trầm Hương Việt Nam
           </h3>
