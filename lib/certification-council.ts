@@ -1,8 +1,13 @@
+import "server-only"
 import { prisma } from "@/lib/prisma"
 import type { ReviewVote } from "@prisma/client"
+import {
+  COUNCIL_SIZE,
+  CERT_VALIDITY_YEARS,
+} from "@/lib/certification-council-constants"
 
-export const COUNCIL_SIZE = 5
-export const CERT_VALIDITY_YEARS = 2 // thời hạn chứng nhận mặc định
+// Re-export để các server importer cũ không phải đổi import path.
+export { COUNCIL_SIZE, CERT_VALIDITY_YEARS }
 
 function addYears(d: Date, years: number): Date {
   const next = new Date(d)

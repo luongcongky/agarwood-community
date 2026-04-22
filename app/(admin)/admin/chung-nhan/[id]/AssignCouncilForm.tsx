@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
-import { COUNCIL_SIZE } from "@/lib/certification-council"
+import { COUNCIL_SIZE } from "@/lib/certification-council-constants"
 
 interface Candidate {
   id: string
