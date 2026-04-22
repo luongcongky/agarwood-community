@@ -15,7 +15,10 @@ const CATEGORIES: { label: string; href: string }[] = [
 
 export function CategoryBarV2() {
   return (
-    <nav aria-label="Chuyên mục" className="bg-brand-700 text-white">
+    <nav
+      aria-label="Chuyên mục"
+      className="sticky top-0 z-40 bg-brand-700 text-white shadow-sm"
+    >
       <div className="mx-auto max-w-7xl px-2 sm:px-4">
         <ul className="v2-category-scroll flex overflow-x-auto whitespace-nowrap">
           {CATEGORIES.map((c) => (

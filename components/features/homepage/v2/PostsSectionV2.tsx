@@ -76,7 +76,7 @@ export async function PostsSectionV2({
   variant?: "grid" | "feature-list" | "hero-list"
 }) {
   const take =
-    variant === "feature-list" ? 6 : variant === "hero-list" ? 4 : 8
+    variant === "feature-list" ? 6 : variant === "hero-list" ? 5 : 8
   const [posts] = await Promise.all([
     getLatestPostsByCategory(category, take),
     getTranslations("homepage"),
@@ -159,7 +159,7 @@ function HeroListLayout({
   locale: Locale
 }) {
   const [main, ...rest] = posts
-  const list = rest.slice(0, 3)
+  const list = rest.slice(0, 4)
 
   return (
     <SectionV2 title={title} titleHref="/feed">
@@ -225,7 +225,10 @@ function SideThumbItem({
   return (
     <Link href={`/feed?post=${post.id}`} className="group flex gap-3">
       <div className="min-w-0 flex-1">
-        <h3 className="line-clamp-3 text-[15px] font-bold leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline">
+        <h3
+          style={{ fontWeight: 400 }}
+          className="line-clamp-3 text-[15px] leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline"
+        >
           {title}
         </h3>
         <div className="mt-1.5">

@@ -26,9 +26,10 @@ export async function V2Header() {
   const locale = (await getLocale()) as Locale
 
   return (
-    <header>
-      {/* Top utility strip — báo chí style: ngày bên trái, locale + utility links bên phải */}
-      <div className="border-b border-neutral-200 bg-neutral-50">
+    <>
+      <header>
+        {/* Top utility strip — báo chí style: ngày bên trái, locale + utility links bên phải */}
+        <div className="border-b border-neutral-200 bg-neutral-50">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 text-[13px] text-neutral-600 sm:px-6 lg:px-8">
           <span className="uppercase tracking-wide">{today}</span>
           <nav aria-label="Tiện ích" className="flex items-center gap-4 sm:gap-5">
@@ -72,8 +73,12 @@ export async function V2Header() {
           </Link>
         </div>
       </div>
+      </header>
 
+      {/* CategoryBarV2 RA NGOÀI <header> để position:sticky không bị containing
+          block của <header> chặn — khi scroll, top strip + masthead đi lên
+          mất, nhưng category bar pin cứng top viewport. */}
       <CategoryBarV2 />
-    </header>
+    </>
   )
 }

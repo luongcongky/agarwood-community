@@ -40,7 +40,7 @@ function timeAgo(date: Date | string | null, locale: Locale): string {
 
 export async function ResearchSectionV2() {
   const [items, t, locale] = await Promise.all([
-    getLatestResearchNews(5),
+    getLatestResearchNews(4),
     getTranslations("homepage"),
     getLocale() as Promise<Locale>,
   ])
@@ -48,7 +48,7 @@ export async function ResearchSectionV2() {
   if (items.length === 0) return null
 
   const main = items[0]
-  const list = items.slice(1, 5)
+  const list = items.slice(1, 4)
 
   return (
     <SectionV2 title={t("researchTitle")} titleHref="/nghien-cuu">

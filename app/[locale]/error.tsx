@@ -2,27 +2,26 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "next-intl"
 
 /**
- * Root error boundary — fallback cuối cùng cho mọi error bên NGOÀI [locale]
- * subtree (vd /admin, /api, /tong-quan, hoặc top-level routing error).
+ * Error boundary cho mọi route under /[locale]/*.
+ * Khác với root `app/error.tsx`, file này nằm BÊN TRONG NextIntlClientProvider
+ * (provider gắn ở app/[locale]/layout.tsx) nên `useTranslations` dùng được.
  *
- * KHÔNG dùng `useTranslations` vì file này có thể render ngoài
- * NextIntlClientProvider scope — nếu dùng sẽ throw "context not found" và
- * crash chồng chất error. Hardcode text tiếng Việt làm default.
- *
- * Errors bên TRONG /[locale]/* được handle bởi app/[locale]/error.tsx
- * (cùng nội dung nhưng dùng useTranslations chính xác).
- *
- * Next.js 16.2: retry prop là `unstable_retry`.
+ * Root error.tsx chỉ trigger khi error xảy ra NGOÀI [locale] subtree (vd
+ * /admin, /api, hoặc top-level routing error) — nơi không có locale context.
  */
-export default function RootError({
+export default function LocaleError({
   error,
   unstable_retry,
 }: {
   error: Error & { digest?: string }
   unstable_retry: () => void
 }) {
+  const t = useTranslations("errors")
+  const tc = useTranslations("common")
+
   return (
     <div
       className={cn(
@@ -33,15 +32,15 @@ export default function RootError({
       <div className="mb-6 text-6xl">⚠️</div>
 
       <h1 className="text-2xl font-bold text-brand-900 sm:text-3xl">
-        Đã xảy ra lỗi
+        {t("genericError")}
       </h1>
 
-      <p className="mt-3 max-w-md text-brand-600">
-        Có lỗi không mong muốn xảy ra. Vui lòng thử lại hoặc quay về trang chủ.
-      </p>
+      <p className="mt-3 max-w-md text-brand-600">{t("genericErrorDesc")}</p>
 
       {error.digest && (
-        <p className="mt-2 text-xs text-brand-400">Mã lỗi: {error.digest}</p>
+        <p className="mt-2 text-xs text-brand-400">
+          {t("errorCode", { code: error.digest })}
+        </p>
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -54,7 +53,7 @@ export default function RootError({
             "transition-colors hover:bg-brand-800 active:bg-brand-900",
           )}
         >
-          Thử lại
+          {tc("retry")}
         </button>
 
         <Link
@@ -65,7 +64,7 @@ export default function RootError({
             "transition-colors hover:bg-brand-100",
           )}
         >
-          Về trang chủ
+          {tc("backToHome")}
         </Link>
       </div>
     </div>
