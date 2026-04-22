@@ -256,12 +256,16 @@
 /* Section header styling — see components/features/homepage/v2/SectionV2.tsx.
    Refined-typography is now in @layer base so Tailwind utilities
    (font-bold / font-normal / font-medium) win via cascade-layer ordering.
-   Components control weight directly via class; no blanket override needed. */
+   Components control weight directly via class; no blanket override needed.
+   text-wrap: wrap override refined-typography's `text-wrap: balance` — balance
+   cân bằng 2 dòng làm title list/card bị wrap SỚM trước khi line 1 đầy; news
+   style muốn fill line 1 maximum trước khi rớt line. */
 [data-page="home-v2"] h1,
 [data-page="home-v2"] h2,
 [data-page="home-v2"] h3,
 [data-page="home-v2"] h4 {
   letter-spacing: 0;
+  text-wrap: wrap;
 }
 [data-page="home-v2"] h3 {
   font-weight: 700;
