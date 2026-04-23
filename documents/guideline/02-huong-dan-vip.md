@@ -190,7 +190,20 @@ Truy cap: `/ho-so` (hoac click "Ho so" tren thanh menu)
 
 ### Xem truoc & Dang
 - Click "Xem truoc" de xem bai nhu khi hien thi tren feed
-- Click "Dang bai" de xuat ban
+- Click "Dang bai" de gui bai len he thong
+
+### Kiem duyet bai viet (MOI)
+- Sau khi dang, bai o trang thai **CHO DUYET** (`PENDING`):
+  - Ban van THAY duoc bai cua minh tren `/feed` voi badge vang "Cho duyet"
+  - Nguoi khac KHONG thay bai nay
+  - Ai vao link truc tiep `/bai-viet/[id]` se bi tra 404
+- Admin se kiem duyet va:
+  - **Duyet**: bai chuyen sang PUBLISHED → cong khai voi moi nguoi
+  - **Tu choi**: bai bi khoa + hien banner do voi ly do tu choi. Ban co the
+    chinh sua (menu "..." → "Sua bai") → bai tu dong quay lai hang cho duyet
+- Neu admin chua duyet sau 24 gio, lien he BTV.
+- Neu ban sua bai da PUBLISHED (thay doi noi dung), bai tu dong quay lai
+  trang thai CHO DUYET de admin duyet lai phan edit.
 
 ### Quy dinh dang bai (Phase 2 — quota theo thang)
 
@@ -220,7 +233,9 @@ Khi tao bai moi, chon **loai bai**:
 - Noi dung khong lien quan den nganh tram huong
 - Spam, quang cao qua muc
 - Thong tin sai lech
-- Bai vi pham se bi admin khoa
+- Hinh anh kem chat luong, sai chu de
+- Bai vi pham se bi admin khoa o khau kiem duyet (ky hieu banner do + ly do)
+  hoac bi khoa sau nay neu nhan 5+ bao cao tu nguoi dung khac
 
 ### Tuong tac
 - **Huu ich**: Click de danh dau bai co gia tri (tuong tu "Thich")

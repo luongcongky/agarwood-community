@@ -1,5 +1,6 @@
 import { prisma } from "./prisma"
 import { calcTier } from "./tier"
+import { isPocUnlimitedMode } from "./poc-mode"
 import type { Role } from "@prisma/client"
 
 /**
@@ -65,6 +66,8 @@ export async function getMonthlyQuota(args: {
   contributionTotal?: number
   accountType?: "BUSINESS" | "INDIVIDUAL"
 }): Promise<number> {
+  // PoC mode: mọi account đã kích hoạt đều unlimit. Xem lib/poc-mode.ts để tắt.
+  if (isPocUnlimitedMode()) return -1
   if (args.role === "ADMIN" || args.role === "INFINITE") return -1
 
   const config = await loadQuotaConfig()

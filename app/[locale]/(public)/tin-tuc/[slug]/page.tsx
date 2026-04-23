@@ -24,7 +24,7 @@ type Props = { params: Promise<{ locale: Locale; slug: string }> }
  *  Explicit select thay vì findFirst không select (over-fetch). */
 const getNewsBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
-    where: { slug, isPublished: true, category: "GENERAL" },
+    where: { slug, isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
     select: {
       id: true,
       slug: true,
@@ -97,7 +97,7 @@ export default async function NewsDetailPage({ params }: Props) {
     const normalizedSlug = slugify(slug)
     if (normalizedSlug !== slug) {
       const redirectedNews = await prisma.news.findFirst({
-        where: { slug: normalizedSlug, isPublished: true, category: "GENERAL" },
+        where: { slug: normalizedSlug, isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
       })
       if (redirectedNews) {
         redirect(`/tin-tuc/${normalizedSlug}`)
@@ -118,6 +118,8 @@ export default async function NewsDetailPage({ params }: Props) {
       if (other.category === "LEGAL") {
         if (other.slug === "chinh-sach-bao-mat") redirect("/privacy")
         if (other.slug === "dieu-khoan-su-dung") redirect("/terms")
+        // LEGAL khác → hub văn bản pháp quy
+        redirect("/phap-ly")
       }
       if (other.category === "RESEARCH") {
         redirect(`/nghien-cuu/${other.slug}`)
@@ -132,7 +134,7 @@ export default async function NewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "GENERAL",
+        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
         slug: { not: slug },
         ...(news.focusKeyword
           ? {
@@ -169,7 +171,7 @@ export default async function NewsDetailPage({ params }: Props) {
     const fill = await prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "GENERAL",
+        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
         slug: { not: slug },
         id: { notIn: related.map((r) => r.id) },
       },

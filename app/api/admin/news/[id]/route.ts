@@ -80,7 +80,13 @@ export async function PATCH(
   if (coverImageUrl !== undefined) data.coverImageUrl = coverImageUrl
   if (category !== undefined)
     data.category =
-      category === "RESEARCH" ? "RESEARCH" : category === "LEGAL" ? "LEGAL" : "GENERAL"
+      category === "RESEARCH"
+        ? "RESEARCH"
+        : category === "LEGAL"
+          ? "LEGAL"
+          : category === "SPONSORED_PRODUCT"
+            ? "SPONSORED_PRODUCT"
+            : "GENERAL"
   if (isPublished !== undefined) data.isPublished = isPublished
   if (isPinned !== undefined) data.isPinned = isPinned
   if (publishedAt !== undefined)

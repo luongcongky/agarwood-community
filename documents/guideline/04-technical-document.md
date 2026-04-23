@@ -995,6 +995,94 @@ Hien tai:
 
 ---
 
+## 10.10 Post moderation (2026-04)
+
+Pre-moderation workflow cho moi bai do hoi vien dang qua `/feed` hoac
+`/feed/tao-bai`. Admin phai duyet truoc khi bai cong khai.
+
+### Schema changes (prisma/schema.prisma)
+```prisma
+enum PostStatus {
+  PENDING     // moi — cho admin duyet, chi owner thay
+  PUBLISHED   // admin da duyet, cong khai
+  LOCKED      // admin reject HOAC auto-lock do 5+ reports
+  DELETED
+}
+
+model Post {
+  // ...
+  status           PostStatus @default(PENDING)  // doi tu PUBLISHED sang PENDING
+  moderationNote   String?    @db.Text           // moi — ly do reject cua admin
+  moderatedAt      DateTime?                      // moi
+  moderatedBy      String?                        // moi — adminId
+
+  @@index([status, authorId])  // moi — cho feed filter OR
+}
+```
+
+### Create flow — `POST /api/posts`
+```ts
+const initialStatus = session.user.role === "ADMIN" ? "PUBLISHED" : "PENDING"
+// INFINITE/VIP KHONG bypass — cong bang moi tier
+```
+
+### Edit flow — `PATCH /api/posts/[id]`
+- **Author edit** → `status: "PENDING"`, clear `moderationNote/moderatedAt/moderatedBy`
+- **Admin edit** → preserve status hien tai
+
+### Feed filter — `/feed/page.tsx` + `GET /api/posts`
+Visibility rules (moderation-aware):
+- `PUBLISHED` → public
+- `LOCKED + moderationNote=null` → public (auto-lock tu 5+ reports, hien banner)
+- `LOCKED + moderationNote!=null` → owner-only (admin REJECTED, noi dung co the xau)
+- `PENDING` → owner-only (cho admin duyet)
+
+```ts
+where: userId ? {
+  OR: [
+    { status: "PUBLISHED" },
+    { status: "LOCKED", moderationNote: null },
+    { status: "PENDING", authorId: userId },
+    { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+  ],
+} : {
+  OR: [
+    { status: "PUBLISHED" },
+    { status: "LOCKED", moderationNote: null },
+  ],
+}
+```
+
+### Detail page guard — `/bai-viet/[id]/page.tsx`
+```ts
+const isModerationHidden =
+  post.status === "PENDING" ||
+  (post.status === "LOCKED" && !!post.moderationNote)
+if (isModerationHidden && !isOwnerOrAdmin) {
+  notFound()  // 404 cho nguoi khong phai owner/admin
+}
+```
+
+### Admin approve/reject — `PATCH /api/admin/posts/[id]`
+```ts
+body = { action: "approve" }              // → PUBLISHED, clear moderation fields
+body = { action: "reject", note: string } // → LOCKED + moderationNote (5-500 chars)
+```
+Require `canAdminWrite()`; 409 neu bai khong PENDING.
+
+### Admin UI
+- **Page**: `/admin/bai-viet/cho-duyet` (server) list pending posts sort by `createdAt ASC`
+- **Sidebar**: menu "Duyet bai viet" (group "Tuong tac") voi `pendingKey: "post"`
+- **pending-counts API**: them key `post` → count `prisma.post.count({ where: { status: "PENDING" }})`
+- **NotificationBell**: them meta + order cho `post`
+
+### UI Banner phan biet
+- **PENDING** (chi owner thay): banner vang "Cho duyet — Chi ban thay duoc bai nay cho den khi duoc duyet"
+- **LOCKED + moderationNote** (admin reject): banner do "Bi tu choi — Ly do: {note}. Ban co the chinh sua va gui lai de admin duyet"
+- **LOCKED + lockReason** (auto-lock tu report): banner vang "Bai viet da bi tam khoa — {lockReason}"
+
+---
+
 ## 11. Conventions & Patterns
 
 ### File naming

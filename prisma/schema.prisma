@@ -42,12 +42,18 @@ enum ApplicationStatus {
 }
 
 // Phân loại bài viết trong News
-/// LEGAL — văn bản pháp lý (Chính sách bảo mật, Điều khoản sử dụng) hiển thị
-/// ở /privacy, /terms; KHÔNG xuất hiện trong /tin-tuc hay /nghien-cuu.
+/// LEGAL — văn bản pháp lý (Chính sách bảo mật, Điều khoản sử dụng, ...).
+/// 2 slug đặc biệt `chinh-sach-bao-mat` → /privacy, `dieu-khoan-su-dung` → /terms.
+/// Các LEGAL khác redirect về /phap-ly (hub văn bản pháp quy).
+///
+/// SPONSORED_PRODUCT — bài sản phẩm admin viết theo yêu cầu KH (có trả phí).
+/// Khác với PostCategory.PRODUCT (bài VIP tự đăng). Hiển thị chung trang /tin-tuc
+/// với GENERAL và section "Tin Hội" trên homepage.
 enum NewsCategory {
   GENERAL // Tin tức ngành — hiển thị ở /tin-tuc
   RESEARCH // Nghiên cứu khoa học, báo cáo học thuật — hiển thị ở /nghien-cuu
-  LEGAL // Văn bản pháp lý (privacy, terms) — render trực tiếp ở /privacy, /terms
+  LEGAL // Văn bản pháp lý — /privacy, /terms hoặc /phap-ly
+  SPONSORED_PRODUCT // Bài sản phẩm trả phí — hiển thị chung với GENERAL
 }
 
 /// Phân loại đối tác / cơ quan đoàn thể liên kết — dùng cho marquee trang chủ.
@@ -68,8 +74,9 @@ enum MembershipStatus {
 }
 
 enum PostStatus {
-  PUBLISHED
-  LOCKED // bị lock do report vi phạm
+  PENDING // chờ admin kiểm duyệt — chỉ owner thấy, người khác 404
+  PUBLISHED // đã duyệt, mọi người thấy
+  LOCKED // bị lock do report vi phạm HOẶC admin reject khi duyệt
   DELETED
 }
 
@@ -571,7 +578,14 @@ model Post {
   title     String?
   content   String     @db.Text
   imageUrls String[] // ảnh đính kèm (Cloudinary)
-  status    PostStatus @default(PUBLISHED)
+  status    PostStatus @default(PENDING) // mới: mặc định chờ admin duyệt. Admin tạo thì code override sang PUBLISHED.
+
+  // Moderation — lý do admin reject khi duyệt (khác với lockReason của
+  // auto-lock từ report). Hiển thị cho owner ở trang bài viết để biết
+  // cần sửa gì trước khi submit lại.
+  moderationNote String?   @db.Text
+  moderatedAt    DateTime?
+  moderatedBy    String? // adminId
 
   // Loại bài — phân biệt tin tức DN / tin sản phẩm / bài thường
   category PostCategory @default(GENERAL)
@@ -612,6 +626,7 @@ model Post {
   @@index([createdAt])
   @@index([category, createdAt]) // homepage queries: latest by category
   @@index([category, isPremium, authorPriority]) // homepage VIP-priority queries
+  @@index([status, authorId]) // feed: owner's PENDING + everyone's PUBLISHED
   @@map("posts")
 }
 

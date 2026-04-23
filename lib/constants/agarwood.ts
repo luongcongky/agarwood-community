@@ -38,6 +38,7 @@ export const COMPANY_FIELDS = [
   "Xuất khẩu",
   "Chế biến",
   "Trồng & khai thác",
+  "Khác",
 ] as const
 
 export const EMPLOYEE_COUNTS = [

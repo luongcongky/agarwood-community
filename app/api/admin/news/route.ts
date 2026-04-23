@@ -54,7 +54,13 @@ export async function POST(req: Request) {
   }
 
   const validCategory =
-    category === "RESEARCH" ? "RESEARCH" : category === "LEGAL" ? "LEGAL" : "GENERAL"
+    category === "RESEARCH"
+      ? "RESEARCH"
+      : category === "LEGAL"
+        ? "LEGAL"
+        : category === "SPONSORED_PRODUCT"
+          ? "SPONSORED_PRODUCT"
+          : "GENERAL"
 
   // Compute SEO score against VI content (source-of-truth). previousTitles
   // is fetched once per save; the live editor uses /api/admin/news/seo-score

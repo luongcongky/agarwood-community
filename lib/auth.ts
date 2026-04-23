@@ -28,15 +28,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (dbUser) {
-          if (!dbUser.isActive) {
-            // VIP/ADMIN inactive = admin chủ động disable → block
-            if (dbUser.role !== "GUEST") return false
-            // GUEST inactive = legacy pre-Phase 2 (chờ duyệt) → auto-activate
-            await prisma.user.update({
-              where: { id: dbUser.id },
-              data: { isActive: true },
-            })
-          }
+          // Phase 3 (Cách A): user inactive = ĐỀU chặn login, bất kể role.
+          //  - VIP/ADMIN inactive = admin chủ động disable
+          //  - GUEST inactive = đơn đăng ký chưa được admin duyệt
+          // User sẽ thấy trang error mặc định của NextAuth + được hướng dẫn
+          // qua email "đã nhận đơn, chờ duyệt" khi đăng ký.
+          if (!dbUser.isActive) return false
 
           // Link Google account to existing user if not already linked
           const existingAccount = await prisma.account.findFirst({
@@ -98,7 +95,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             avatarUrl: user.image ?? null,
             role: "GUEST",
             accountType: selectedAccountType,
-            isActive: true,
+            // Phase 3 (Cách A): đơn đăng ký qua Google cũng phải chờ admin duyệt.
+            isActive: false,
             accounts: {
               create: {
                 type: account.type,
@@ -150,9 +148,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.error("Failed to send Google registration notification:", err)
         }
 
-        // Override user.id so NextAuth links to our DB user, not create a new one
-        user.id = newUser.id
-        return true
+        // Ack email cho user — thông báo đơn đã nhận, chờ duyệt.
+        try {
+          const { Resend } = await import("resend")
+          const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
+          await resend.emails.send({
+            from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
+            to: user.email,
+            subject: "Đã nhận đơn đăng ký — Hội Trầm Hương Việt Nam",
+            html: `
+              <div style="font-family:sans-serif;max-width:600px;">
+                <h2>Xin chào ${userName},</h2>
+                <p>Chúng tôi đã <strong>tiếp nhận đơn đăng ký hội viên</strong> của bạn qua Google.</p>
+                <p>Ban quản trị sẽ xem xét và phản hồi trong vòng <strong>1–2 ngày làm việc</strong>. Khi đơn được chấp thuận, bạn có thể đăng nhập lại bằng Google để sử dụng tài khoản.</p>
+                <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+                <p style="color:#888;font-size:12px;">Hội Trầm Hương Việt Nam</p>
+              </div>
+            `,
+          })
+        } catch (err) {
+          console.error("Failed to send Google ack email:", err)
+        }
+
+        // Phase 3 (Cách A): KHÔNG cho login lần này — user phải chờ admin
+        // duyệt. NextAuth sẽ redirect về /login với error. User sẽ hiểu qua
+        // ack email vừa gửi.
+        void newUser
+        return false
       }
 
       return true // Credentials handled in authorize()
@@ -265,14 +287,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         )
         if (!valid) return null
 
-        // Phase 2: auto-activate legacy GUEST users (pre-Phase 2 inactive state)
-        if (!user.isActive) {
-          if (user.role !== "GUEST") return null // VIP/ADMIN inactive = admin disabled
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { isActive: true },
-          })
-        }
+        // Phase 3 (Cách A): inactive = chặn login ĐỀU, bất kể role.
+        //  - VIP/ADMIN inactive = admin disable
+        //  - GUEST inactive = đơn chưa được admin duyệt
+        if (!user.isActive) return null
 
         return { id: user.id, name: user.name, email: user.email, image: user.avatarUrl }
       },

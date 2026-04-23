@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { getAssociationNews, type HomepageNewsItem } from "@/lib/homepage"
+import { getAssociationNews, newsHref, type HomepageNewsItem } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -69,7 +69,7 @@ function NewsHero({
   const excerpt = localize(news, "excerpt", locale) as string | null
   return (
     <Link
-      href={`/tin-tuc/${news.slug}`}
+      href={newsHref(news.category, news.slug)}
       className="group block overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm hover:shadow-md transition-all"
     >
       <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-brand-100">
@@ -114,7 +114,7 @@ function NewsListItem({ news, locale }: { news: HomepageNewsItem; locale: Locale
   const title = localize(news, "title", locale) as string
   return (
     <Link
-      href={`/tin-tuc/${news.slug}`}
+      href={newsHref(news.category, news.slug)}
       className="group flex gap-3 p-3 rounded-lg border border-brand-200 bg-white hover:border-brand-300 hover:shadow-sm transition-all"
     >
       {news.coverImageUrl ? (

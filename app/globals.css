@@ -188,6 +188,43 @@
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   color: var(--brand-800, #6e4420);
 }
+
+/* Media embed — YouTube iframe + direct audio. Rendered by RichTextEditor's
+   MediaEmbed node; cùng markup với editor preview.
+
+   Width có thể bị override inline qua style="width: Xpx" (user drag resize
+   trong editor). aspect-ratio: 16/9 trên .media-embed-youtube auto-derive
+   chiều cao, nên co/giãn vẫn giữ nguyên tỉ lệ. */
+.prose :where(.media-embed):not(:where([class~="not-prose"] *)) {
+  margin: 1.5em auto;
+  max-width: 100%;
+}
+.prose :where(.media-embed-youtube):not(:where([class~="not-prose"] *)) {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background: #000;
+}
+.prose :where(.media-embed-youtube iframe):not(:where([class~="not-prose"] *)) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.prose :where(.media-embed-audio):not(:where([class~="not-prose"] *)) {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f7f3ee;
+  border: 1px solid #e5dccf;
+}
+.prose :where(.media-embed-audio audio):not(:where([class~="not-prose"] *)) {
+  width: 100%;
+  display: block;
+}
 .prose :where(h1, h2, h3, h4):not(:where([class~="not-prose"] *)) {
   color: var(--brand-900, #3d2817);
 }

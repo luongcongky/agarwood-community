@@ -61,11 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // which 404'd for LEGAL + RESEARCH items.
   // No `take` limit: sitemap.xml caps at 50,000 URLs per file (Google spec).
   const newsItems = await prisma.news.findMany({
-    where: { isPublished: true, category: { in: ["GENERAL", "RESEARCH"] } },
+    where: {
+      isPublished: true,
+      category: { in: ["GENERAL", "RESEARCH", "SPONSORED_PRODUCT"] },
+    },
     select: { slug: true, updatedAt: true, category: true },
     orderBy: { publishedAt: "desc" },
   })
   const newsRoutes: MetadataRoute.Sitemap = newsItems.map((n) => {
+    // RESEARCH → /nghien-cuu, GENERAL + SPONSORED_PRODUCT → /tin-tuc.
+    // LEGAL không emit (privacy/terms đã có trong staticRoutes, /phap-ly là hub).
     const path = `/${n.category === "RESEARCH" ? "nghien-cuu" : "tin-tuc"}/${n.slug}`
     return entry(path, n.updatedAt, "monthly", 0.7)
   })

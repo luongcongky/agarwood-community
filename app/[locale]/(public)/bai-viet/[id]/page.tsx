@@ -21,6 +21,7 @@ export default async function PostDetailPage({
       content: true,
       imageUrls: true,
       status: true,
+      moderationNote: true,
       isPremium: true,
       isPromoted: true,
       viewCount: true,
@@ -50,6 +51,18 @@ export default async function PostDetailPage({
   })
 
   if (!post || post.status === "DELETED") notFound()
+
+  // Moderation guard: PENDING (cho duyet) + LOCKED co moderationNote (admin
+  // reject) chi owner/admin truy cap duoc. LOCKED no-note (auto-lock tu
+  // report) van public — hien banner "bai bi tam khoa" cho nguoi doc biet.
+  const isAdminViewer = session?.user?.role === "ADMIN"
+  const isOwnerOrAdmin = post.authorId === userId || isAdminViewer
+  const isModerationHidden =
+    post.status === "PENDING" ||
+    (post.status === "LOCKED" && !!post.moderationNote)
+  if (isModerationHidden && !isOwnerOrAdmin) {
+    notFound()
+  }
 
   // Increment view count (fire-and-forget)
   prisma.post.update({ where: { id }, data: { viewCount: { increment: 1 } } }).catch(() => {})

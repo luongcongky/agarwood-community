@@ -60,21 +60,17 @@ export default async function DangKyPage() {
         </p>
       </section>
 
-      {/* Benefits */}
-      <section className="max-w-5xl mx-auto px-4 py-14">
-        <h2 className="text-2xl font-bold text-brand-900 text-center mb-10">{t("benefitsTitle")}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {benefits.map((b) => (
-            <div key={b.title} className="bg-white rounded-xl border border-brand-200 p-5 space-y-2">
-              <span className="text-2xl">{b.icon}</span>
-              <h3 className="font-semibold text-brand-900">{b.title}</h3>
-              <p className="text-sm text-brand-600 leading-relaxed">{b.desc}</p>
-            </div>
-          ))}
+      {/* Form — Nộp đơn (section đầu theo yêu cầu khách, user thấy CTA ngay).
+          max-w-3xl cho phép các row grid 2-cột (email/phone, industry/address)
+          hiển thị đúng 2 cột trên desktop → khung lùn hơn, ít scroll hơn. */}
+      <section className="max-w-3xl mx-auto px-4 py-14">
+        <div className="bg-white rounded-2xl border border-brand-200 p-6 sm:p-8 lg:p-10 shadow-sm space-y-6">
+          <h2 className="text-xl font-bold text-brand-900 text-center">{t("submitForm")}</h2>
+          <RegisterSection />
         </div>
       </section>
 
-      {/* Process */}
+      {/* Process — Quy trình đăng ký */}
       <section className="bg-brand-50 py-14 px-4">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-brand-900 text-center mb-10">{t("processTitle")}</h2>
@@ -90,7 +86,7 @@ export default async function DangKyPage() {
         </div>
       </section>
 
-      {/* Official fees */}
+      {/* Official fees — Phí hội viên */}
       <section className="bg-white py-14 px-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-brand-900 text-center mb-3">
@@ -175,11 +171,17 @@ export default async function DangKyPage() {
         </div>
       </section>
 
-      {/* Form */}
-      <section className="max-w-xl mx-auto px-4 py-14">
-        <div className="bg-white rounded-2xl border border-brand-200 p-6 sm:p-8 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-brand-900 text-center">{t("submitForm")}</h2>
-          <RegisterSection />
+      {/* Benefits — Quyền lợi (section cuối) */}
+      <section className="max-w-5xl mx-auto px-4 py-14">
+        <h2 className="text-2xl font-bold text-brand-900 text-center mb-10">{t("benefitsTitle")}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {benefits.map((b) => (
+            <div key={b.title} className="bg-white rounded-xl border border-brand-200 p-5 space-y-2">
+              <span className="text-2xl">{b.icon}</span>
+              <h3 className="font-semibold text-brand-900">{b.title}</h3>
+              <p className="text-sm text-brand-600 leading-relaxed">{b.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
     </div>

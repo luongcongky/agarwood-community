@@ -50,14 +50,39 @@ const NEWS_CARD_SELECT = {
   coverImageUrl: true,
   publishedAt: true,
   isPinned: true,
+  category: true, // để href helper route theo category
 } as const
+
+/**
+ * Href helper — route News item theo category.
+ *  - GENERAL, SPONSORED_PRODUCT → /tin-tuc/[slug] (list + detail chung)
+ *  - RESEARCH                    → /nghien-cuu/[slug]
+ *  - LEGAL                       → /phap-ly (hub văn bản pháp quy)
+ *
+ * LEGAL đặc biệt: 2 slug cố định chinh-sach-bao-mat / dieu-khoan-su-dung có
+ * trang riêng /privacy /terms, nhưng từ section "Tin Hội" ta đều route về
+ * /phap-ly để user browse toàn bộ văn bản pháp quy cùng chỗ.
+ */
+export function newsHref(category: string, slug: string): string {
+  switch (category) {
+    case "RESEARCH":
+      return `/nghien-cuu/${slug}`
+    case "LEGAL":
+      return "/phap-ly"
+    case "GENERAL":
+    case "SPONSORED_PRODUCT":
+    default:
+      return `/tin-tuc/${slug}`
+  }
+}
 
 export const getAssociationNews = unstable_cache(
   async () => {
-    // Chỉ lấy tin ngành (GENERAL) — RESEARCH đã render riêng ở section nghiên
-    // cứu; LEGAL dùng cho /privacy, /terms.
+    // Tất cả 4 category đổ chung vào section "Tin Hội" theo yêu cầu customer.
+    // Trùng lặp với /nghien-cuu section là có chủ đích — RESEARCH quan trọng
+    // xuất hiện ở cả 2 nơi. Click-through dùng newsHref() route đúng loại.
     return prisma.news.findMany({
-      where: { isPublished: true, category: "GENERAL" },
+      where: { isPublished: true },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 7,
       select: NEWS_CARD_SELECT,

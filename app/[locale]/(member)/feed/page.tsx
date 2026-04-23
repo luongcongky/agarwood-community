@@ -13,8 +13,31 @@ export default async function FeedPage() {
 
   // Initial 10 posts — promoted first, then by authorPriority + createdAt.
   // Smaller initial page = faster TTFB; cursor pagination loads 10 more on scroll.
+  //
+  // Moderation visibility rules:
+  //  - PUBLISHED → visible to all
+  //  - LOCKED + moderationNote=null → auto-lock tu 5+ reports → visible to all
+  //    (show banner "Bai da bi tam khoa")
+  //  - LOCKED + moderationNote!=null → admin REJECTED trong moderation → CHI
+  //    owner thay (voi banner do + ly do). Hien cho public se trai tinh than
+  //    moderation (bai xau khong nen lo ra cho moi nguoi).
+  //  - PENDING → CHI owner thay (banner vang "Cho duyet")
   const initialPosts = await prisma.post.findMany({
-    where: { status: { in: ["PUBLISHED", "LOCKED"] } },
+    where: userId
+      ? {
+          OR: [
+            { status: "PUBLISHED" },
+            { status: "LOCKED", moderationNote: null },
+            { status: "PENDING", authorId: userId },
+            { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+          ],
+        }
+      : {
+          OR: [
+            { status: "PUBLISHED" },
+            { status: "LOCKED", moderationNote: null },
+          ],
+        },
     orderBy: [
       { isPromoted: "desc" },
       { authorPriority: "desc" },
@@ -36,6 +59,7 @@ export default async function FeedPage() {
       reportCount: true,
       lockedBy: true,
       lockReason: true,
+      moderationNote: true,
       createdAt: true,
       updatedAt: true,
       lockedAt: true,

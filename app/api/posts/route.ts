@@ -49,9 +49,26 @@ export async function GET(request: Request) {
     ? (categoryParam as PostCategory)
     : undefined
 
+  // Moderation visibility — match logic in feed/page.tsx:
+  //  PUBLISHED → all; LOCKED no-note → all (auto-lock); LOCKED with note or
+  //  PENDING → owner only (bai admin reject voi ly do, hoac cho duyet).
   const posts = await prisma.post.findMany({
     where: {
-      status: { in: ["PUBLISHED", "LOCKED"] },
+      ...(userId
+        ? {
+            OR: [
+              { status: "PUBLISHED" },
+              { status: "LOCKED", moderationNote: null },
+              { status: "PENDING", authorId: userId },
+              { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+            ],
+          }
+        : {
+            OR: [
+              { status: "PUBLISHED" },
+              { status: "LOCKED", moderationNote: null },
+            ],
+          }),
       ...(category ? { category } : {}),
       ...(certifiedOnly
         ? { category: "PRODUCT", product: { is: { certStatus: "APPROVED" } } }
@@ -79,6 +96,7 @@ export async function GET(request: Request) {
       reportCount: true,
       lockedBy: true,
       lockReason: true,
+      moderationNote: true,
       createdAt: true,
       updatedAt: true,
       lockedAt: true,
@@ -238,6 +256,11 @@ export async function POST(request: Request) {
 
   const sanitizedContent = DOMPurify.sanitize(content)
 
+  // Moderation: ADMIN bypass (auto-PUBLISHED), mọi role khác vào hàng PENDING
+  // chờ admin duyệt. Không bypass cho VIP/INFINITE để giữ công bằng mọi tier.
+  const initialStatus: "PENDING" | "PUBLISHED" =
+    session.user.role === "ADMIN" ? "PUBLISHED" : "PENDING"
+
   // Trường hợp đơn giản — chỉ tạo Post
   if (!wantsProduct) {
     const post = await prisma.post.create({
@@ -247,6 +270,7 @@ export async function POST(request: Request) {
         content: sanitizedContent,
         imageUrls: [],
         category: cat,
+        status: initialStatus,
         // INFINITE = "full quyền VIP Vàng" per schema — their posts get
         // the premium badge alongside regular VIP. Admins don't typically
         // post via this flow, so they're left out.
@@ -273,6 +297,7 @@ export async function POST(request: Request) {
         content: sanitizedContent,
         imageUrls: productImages,
         category: "PRODUCT",
+        status: initialStatus,
         // INFINITE = "full quyền VIP Vàng" per schema — their posts get
         // the premium badge alongside regular VIP. Admins don't typically
         // post via this flow, so they're left out.

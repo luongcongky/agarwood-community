@@ -56,11 +56,17 @@ export async function PATCH(
 
   const sanitizedContent = DOMPurify.sanitize(content)
 
+  // Author edit → quay lại PENDING để admin duyệt lại phần edit.
+  // Admin edit → giữ nguyên status hiện tại (preserve moderation state).
+  const isAdminEdit = isAdmin(session.user.role)
   await prisma.post.update({
     where: { id },
     data: {
       title: title || null,
       content: sanitizedContent,
+      ...(isAdminEdit
+        ? {}
+        : { status: "PENDING", moderationNote: null, moderatedAt: null, moderatedBy: null }),
     },
   })
 

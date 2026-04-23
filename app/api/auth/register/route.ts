@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import crypto from "crypto"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import { z } from "zod"
@@ -48,9 +47,10 @@ export async function POST(request: Request) {
     // Phase 2: bỏ slot limit cho GUEST — GUEST là free tier, đăng ký không giới hạn.
     // `max_vip_accounts` chỉ enforce ở flow nâng cấp lên VIP (đóng phí), không ở đây.
 
-    // Phase 2: tạo user kích hoạt ngay (isActive=true). Mọi account đều post được,
-    // điểm khác biệt chỉ là quota tháng + ưu tiên hiển thị (xem lib/quota.ts).
-    // Account vẫn ở role GUEST cho tới khi đóng phí membership → ADMIN nâng lên VIP.
+    // Phase 3 (Cách A — duyệt thủ công): user đăng ký vào trạng thái CHỜ DUYỆT
+    // (isActive=false). Chưa đăng nhập được — phải chờ admin approve trong
+    // /admin/hoi-vien?status=registration. Khi admin approve → gửi email link
+    // đặt mật khẩu → sau khi đặt xong mới set isActive=true.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userData: any = {
       email,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       phone,
       role: "GUEST",
       accountType,
-      isActive: true,
+      isActive: false,
       accounts: {
         create: {
           type: "credentials",
@@ -118,42 +118,26 @@ export async function POST(request: Request) {
       console.error("Failed to send registration email:", err)
     }
 
-    // Tạo token đặt mật khẩu (dùng chung flow /dat-mat-khau)
-    const token = crypto.randomBytes(32).toString("hex")
-    const tokenExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48h
-
-    await prisma.verificationToken.create({
-      data: { identifier: email, token, expires: tokenExpires },
-    })
-
-    const setPasswordUrl = `${process.env.NEXTAUTH_URL}/dat-mat-khau?token=${token}&email=${encodeURIComponent(email)}`
-
-    // Email chào mừng + link đặt mật khẩu
+    // Email xác nhận đã nhận đơn — KHÔNG kèm link đặt mật khẩu.
+    // Link đặt mật khẩu chỉ gửi khi admin approve trong /admin/hoi-vien.
     try {
-      console.log("[Register] Sending set-password email to:", email)
-      const emailResult = await resend.emails.send({
+      await resend.emails.send({
         from: "Hội Trầm Hương Việt Nam <noreply@hoitramhuong.vn>",
         to: email,
-        subject: "Chào mừng đến với Hội Trầm Hương Việt Nam — Đặt mật khẩu",
+        subject: "Đã nhận đơn đăng ký — Hội Trầm Hương Việt Nam",
         html: `
           <div style="font-family:sans-serif;max-width:600px;">
             <h2>Xin chào ${name},</h2>
-            <p>Tài khoản của bạn đã được tạo thành công và <strong>kích hoạt ngay</strong>.</p>
-            <p>Vui lòng nhấn nút bên dưới để <strong>đặt mật khẩu đăng nhập</strong>:</p>
-            <p style="margin:24px 0;">
-              <a href="${setPasswordUrl}" style="display:inline-block;background:#1a5632;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Đặt mật khẩu ngay</a>
-            </p>
-            <p style="color:#888;font-size:13px;">Liên kết có hiệu lực trong 48 giờ.</p>
-            <p style="margin-top:20px;">Sau khi đặt mật khẩu, bạn có thể đăng nhập và bắt đầu chia sẻ bài viết trên cộng đồng.</p>
-            <p>Để hưởng các quyền lợi nâng cao (hạn mức bài viết cao hơn, ưu tiên hiển thị trang chủ, chứng nhận sản phẩm...), bạn có thể nâng cấp lên hội viên VIP.</p>
+            <p>Chúng tôi đã <strong>tiếp nhận đơn đăng ký hội viên</strong> của bạn.</p>
+            <p>Ban quản trị sẽ xem xét và phản hồi trong vòng <strong>1–2 ngày làm việc</strong>. Khi đơn được chấp thuận, bạn sẽ nhận được email kèm liên kết để đặt mật khẩu và kích hoạt tài khoản.</p>
+            <p style="color:#888;font-size:13px;margin-top:20px;">Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email.</p>
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
             <p style="color:#888;font-size:12px;">Hội Trầm Hương Việt Nam</p>
           </div>
         `,
       })
-      console.log("[Register] Resend response:", JSON.stringify(emailResult))
     } catch (err) {
-      console.error("[Register] Failed to send confirmation email:", err)
+      console.error("[Register] Failed to send acknowledgement email:", err)
     }
 
     return NextResponse.json({ success: true, userId: user.id })

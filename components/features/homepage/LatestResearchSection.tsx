@@ -82,7 +82,7 @@ function ResearchCard({
       href={`/nghien-cuu/${item.slug}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm hover:shadow-md transition-all"
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-brand-100">
+      <div className="relative aspect-16/10 w-full overflow-hidden bg-brand-100">
         {item.coverImageUrl ? (
           <Image
             src={item.coverImageUrl}

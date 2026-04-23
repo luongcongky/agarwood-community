@@ -28,6 +28,7 @@ import {
   Images,
   ChevronDown,
   Mail,
+  UserPlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
@@ -65,6 +66,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Hội viên & Tổ chức",
     items: [
       { label: "Hội viên", href: "/admin/hoi-vien", icon: Users },
+      { label: "Đơn đăng ký", href: "/admin/hoi-vien?status=registration", icon: UserPlus, pendingKey: "newRegistration" },
       { label: "Đơn kết nạp", href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck, pendingKey: "membershipApplication" },
       { label: "Ban lãnh đạo", href: "/admin/ban-lanh-dao", icon: Crown },
     ],
@@ -94,6 +96,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     key: "interaction",
     label: "Tương tác",
     items: [
+      { label: "Duyệt bài viết", href: "/admin/bai-viet/cho-duyet", icon: FileCheck, pendingKey: "post" },
       { label: "Liên hệ", href: "/admin/lien-he", icon: Mail, pendingKey: "contact" },
       { label: "Báo cáo", href: "/admin/bao-cao", icon: Flag, pendingKey: "report" },
       { label: "Khảo sát", href: "/admin/khao-sat", icon: ClipboardList },

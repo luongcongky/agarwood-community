@@ -8,6 +8,7 @@ import { NewsSection } from "@/components/features/homepage/NewsSection"
 import { LatestPostsSection } from "@/components/features/homepage/LatestPostsSection"
 import { LatestResearchSection } from "@/components/features/homepage/LatestResearchSection"
 import { FeaturedCompaniesCarousel } from "@/components/features/homepage/FeaturedCompaniesCarousel"
+import { MultimediaSection } from "@/components/features/homepage/MultimediaSection"
 import { BreakingTicker } from "@/components/features/layout/BreakingTicker"
 import {
   CarouselSkeleton,
@@ -93,6 +94,11 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── Section 2b: Đa phương tiện (ảnh bộ sưu tập + video YouTube) ── */}
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <MultimediaSection />
+      </Suspense>
 
       {/* ── Section 3: Sản phẩm chứng nhận ── */}
       <Suspense fallback={<CarouselSkeleton />}>

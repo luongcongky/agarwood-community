@@ -43,6 +43,7 @@ import {
   Minus,
   Table as TableIcon,
   Image as ImageIcon,
+  Film,
   IndentIncrease,
   IndentDecrease,
   Palette,
@@ -54,7 +55,9 @@ import {
 } from "lucide-react"
 import { NodeViewImage } from "./NodeViewImage"
 import { Figure, Figcaption } from "./extensions/Figure"
+import { MediaEmbed, type MediaType } from "./extensions/MediaEmbed"
 import { ContentImageEditor } from "./ContentImageEditor"
+import { MediaEmbedModal } from "./MediaEmbedModal"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helper: build ProseMirror JSON block cho <figure>[image][figcaption].
@@ -165,6 +168,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
         }),
         Figure,
         Figcaption,
+        MediaEmbed,
         TextAlign.configure({
           types: ["heading", "paragraph", "image"],
           alignments: ["left", "center", "right", "justify"],
@@ -222,6 +226,21 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       | null
     const [imageEditorState, setImageEditorState] =
       useState<EditorTarget>(null)
+
+    const [showMediaModal, setShowMediaModal] = useState(false)
+
+    const handleMediaEmbedInsert = useCallback(
+      ({ src, type }: { src: string; type: MediaType }) => {
+        if (!editor) return
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: "mediaEmbed", attrs: { src, type } })
+          .run()
+        setShowMediaModal(false)
+      },
+      [editor],
+    )
 
     /** Khi user pick file mới từ toolbar → mở modal thay vì insert thẳng. */
     const insertLocalImage = useCallback(
@@ -438,7 +457,18 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
             onCancel={handleImageEditorCancel}
           />
         )}
-        <Toolbar editor={editor} state={editorState} onInsertLocalImage={insertLocalImage} />
+        {showMediaModal && (
+          <MediaEmbedModal
+            onConfirm={handleMediaEmbedInsert}
+            onCancel={() => setShowMediaModal(false)}
+          />
+        )}
+        <Toolbar
+          editor={editor}
+          state={editorState}
+          onInsertLocalImage={insertLocalImage}
+          onOpenMediaModal={() => setShowMediaModal(true)}
+        />
         <EditorContent
           editor={editor}
           className={[
@@ -531,10 +561,12 @@ function Toolbar({
   editor,
   state,
   onInsertLocalImage,
+  onOpenMediaModal,
 }: {
   editor: Editor | null
   state: EditorState | null
   onInsertLocalImage: (file: File) => void
+  onOpenMediaModal: () => void
 }) {
   const run = useMemo(
     () => (fn: () => void) => {
@@ -759,6 +791,14 @@ function Toolbar({
           title="Chèn ảnh"
         >
           <ImageIcon size={ICON_SIZE} />
+        </TbBtn>
+
+        {/* Media embed — YouTube video hoặc audio direct URL */}
+        <TbBtn
+          onClick={onOpenMediaModal}
+          title="Chèn media (YouTube / audio)"
+        >
+          <Film size={ICON_SIZE} />
         </TbBtn>
       </div>
 

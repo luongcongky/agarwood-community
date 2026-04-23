@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier } from "@/lib/tier"
+import { getLocale } from "@/i18n/get-locale"
 
 export const revalidate = 60
 
@@ -26,6 +27,9 @@ export default async function VipDashboardPage() {
   if (!session?.user) redirect("/login")
 
   const userId = session.user.id
+  // /feed/* route files nằm dưới [locale] nên cần prefix locale. Các link
+  // nội bộ khác (/chung-nhan, /gia-han, …) ở ngoài [locale] nên bare path OK.
+  const locale = await getLocale()
 
   const [user, postCount, certProducts, recentPayments, recentCerts] = await Promise.all([
     prisma.user.findUnique({
@@ -194,7 +198,7 @@ export default async function VipDashboardPage() {
         <h2 className="text-base font-semibold text-brand-900 mb-4">Thao tác nhanh</h2>
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/feed/tao-bai"
+            href={`/${locale}/feed/tao-bai`}
             className="inline-flex items-center gap-2 rounded-lg bg-brand-800 text-white px-4 py-2.5 text-sm font-medium hover:bg-brand-700 transition-colors"
           >
             + Đăng bài
@@ -204,7 +208,7 @@ export default async function VipDashboardPage() {
               href="/chung-nhan/nop-don"
               className="inline-flex items-center gap-2 rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
             >
-              Nộp đơn chứng nhận
+              Nộp đơn chứng nhận sản phẩm
             </Link>
           )}
           <Link

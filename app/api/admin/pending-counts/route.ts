@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma"
 export const dynamic = "force-dynamic"
 
 export type PendingWorkflowKey =
+  | "newRegistration"
   | "membershipApplication"
   | "payment"
   | "certification"
@@ -22,6 +23,7 @@ export type PendingWorkflowKey =
   | "mediaOrder"
   | "consultation"
   | "contact"
+  | "post"
 
 type RecentItem = {
   id: string
@@ -52,6 +54,7 @@ export async function GET() {
   }
 
   const [
+    newRegistrations,
     membershipApps,
     payments,
     certifications,
@@ -60,7 +63,22 @@ export async function GET() {
     mediaOrders,
     consultations,
     contactMessages,
+    pendingPosts,
   ] = await Promise.all([
+    // Đơn đăng ký user mới đang chờ admin duyệt (role=GUEST + isActive=false).
+    // Approve → upgrade VIP + gửi link đặt mật khẩu; Reject → xóa user.
+    prisma.user.findMany({
+      where: { role: "GUEST", isActive: false },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        accountType: true,
+        createdAt: true,
+        company: { select: { name: true } },
+      },
+    }),
     prisma.membershipApplication.findMany({
       where: { status: "PENDING" },
       orderBy: { submittedAt: "asc" },
@@ -143,9 +161,33 @@ export async function GET() {
         createdAt: true,
       },
     }),
+    prisma.post.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+        author: { select: { name: true } },
+      },
+    }),
   ])
 
   const workflows: PendingCountsResponse["workflows"] = {
+    newRegistration: {
+      count: newRegistrations.length,
+      recent: newRegistrations.slice(0, 3).map((u) => ({
+        id: u.id,
+        title: u.name || u.email,
+        subtitle:
+          u.accountType === "BUSINESS"
+            ? u.company?.name ?? "Doanh nghiệp"
+            : "Cá nhân",
+        href: `/admin/hoi-vien?status=registration`,
+        createdAt: iso(u.createdAt),
+      })),
+    },
     membershipApplication: {
       count: membershipApps.length,
       recent: membershipApps.slice(0, 3).map((a) => ({
@@ -225,6 +267,20 @@ export async function GET() {
         href: `/admin/lien-he?id=${m.id}`,
         createdAt: iso(m.createdAt),
       })),
+    },
+    post: {
+      count: pendingPosts.length,
+      recent: pendingPosts.slice(0, 3).map((p) => {
+        // content là HTML đã sanitize — strip tags để làm subtitle preview
+        const plainText = p.content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+        return {
+          id: p.id,
+          title: p.title ?? (plainText.slice(0, 60) || "Bài viết"),
+          subtitle: p.author?.name ?? undefined,
+          href: `/admin/bai-viet/cho-duyet?id=${p.id}`,
+          createdAt: iso(p.createdAt),
+        }
+      }),
     },
   }
 

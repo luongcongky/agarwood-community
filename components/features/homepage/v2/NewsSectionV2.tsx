@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { getAssociationNews, type HomepageNewsItem } from "@/lib/homepage"
+import { getAssociationNews, newsHref, type HomepageNewsItem } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -76,7 +76,7 @@ function HeroV2({
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
   return (
-    <Link href={`/tin-tuc/${item.slug}`} className="group block">
+    <Link href={newsHref(item.category, item.slug)} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
         {item.coverImageUrl ? (
           <Image
@@ -120,7 +120,7 @@ function ExcerptCard({
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
   return (
-    <Link href={`/tin-tuc/${item.slug}`} className="group block">
+    <Link href={newsHref(item.category, item.slug)} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
         {item.coverImageUrl ? (
           <Image
@@ -157,7 +157,7 @@ function StackedItem({
 }) {
   const title = localize(item, "title", locale) as string
   return (
-    <Link href={`/tin-tuc/${item.slug}`} className="group block">
+    <Link href={newsHref(item.category, item.slug)} className="group block">
       {item.coverImageUrl ? (
         <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
           <Image

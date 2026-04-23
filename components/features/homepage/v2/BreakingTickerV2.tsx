@@ -107,18 +107,23 @@ export async function BreakingTickerV2() {
   const l = <T extends Record<string, unknown>>(rec: T, field: string) =>
     localize(rec, field, locale) as string
 
+  // unstable_cache serialize Date → ISO string; phải new Date() lại
+  // trước khi .getTime() / toLocaleDateString.
+  const toDate = (v: Date | string | null | undefined): Date =>
+    v ? (typeof v === "string" ? new Date(v) : v) : new Date(0)
+
   const items: TickerItem[] = [
     ...pinnedNews.map((n) => ({
       id: `news-${n.id}`,
       label: l(n, "title"),
       href: `/tin-tuc/${n.slug}`,
-      date: n.publishedAt as Date,
+      date: toDate(n.publishedAt),
     })),
     ...recentDocs.map((d) => ({
       id: `doc-${d.id}`,
       label: l(d, "title"),
       href: mapDocHref(d.category),
-      date: d.issuedDate ?? d.createdAt,
+      date: toDate(d.issuedDate ?? d.createdAt),
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime())
 

@@ -1120,3 +1120,89 @@ Pattern idempotent:
 
 (Hai lenh resolve dau khong chay SQL — cac doi tuong da co tren Supabase. Lenh deploy cuoi
 apply migration mới — vd `20260420010000_add_news_banner_perf_indexes`.)
+
+---
+
+## ADR-032: Pre-moderation cho bai viet cua hoi vien (2026-04)
+
+### Van de
+Truoc day, moi bai user dang (`POST /api/posts`) gan `status: "PUBLISHED"` ngay lap tuc
+va xuat hien cong khai. Rui ro:
+- Noi dung khong lien quan tram huong hoac spam
+- Hinh anh kem chat luong / vi pham ban quyen
+- Chi co the xu ly sau qua bao cao (5+ report → auto-lock), da cong khai mot thoi gian
+
+Khach hang muon admin kiem duyet TRUOC khi bai cong khai.
+
+### Quyet dinh
+Chuyen sang **pre-moderation workflow**:
+- Bai moi → `status: "PENDING"` (default enum da doi)
+- Owner van thay bai cua minh trong feed voi banner "Cho duyet"
+- Nguoi khac KHONG thay bai PENDING (feed filter loai ra, detail → 404)
+- Admin duyet qua `/admin/bai-viet/cho-duyet` (approve → PUBLISHED, reject → LOCKED + note)
+- Edit bai → tu dong quay ve PENDING (tru khi admin edit)
+
+### Bypass rules
+- **ADMIN** → auto-PUBLISHED (bypass queue)
+- **INFINITE, VIP, GUEST** → KHONG bypass (cong bang moi tier)
+
+### Schema changes
+```prisma
+enum PostStatus {
+  PENDING   // moi
+  PUBLISHED
+  LOCKED
+  DELETED
+}
+model Post {
+  status          PostStatus @default(PENDING)  // doi tu PUBLISHED
+  moderationNote  String?    @db.Text           // moi — admin reject reason
+  moderatedAt     DateTime?
+  moderatedBy     String?
+  @@index([status, authorId])                    // moi — cho OR query
+}
+```
+
+### Feed filter
+```ts
+where: userId ? {
+  OR: [
+    { status: { in: ["PUBLISHED", "LOCKED"] } },
+    { status: "PENDING", authorId: userId },
+  ],
+} : { status: { in: ["PUBLISHED", "LOCKED"] } }
+```
+
+### Phan biet reject voi auto-lock (ca 2 dung `status: "LOCKED"`)
+| | Admin reject (moderation) | Auto-lock (5+ reports) |
+|---|---|---|
+| Field evidence | `moderationNote` (set) | `lockReason` (set) |
+| UI banner cua owner | Do "Bi tu choi — Ly do: {note}" | Vang "Da tam khoa" |
+| Visible cho public? | **KHONG** (giong PENDING) | **CO** (hien banner cho nguoi doc biet) |
+| Filter query | `{status: LOCKED, moderationNote: null}` public only | Same |
+
+Ly do rejected an khoi public: noi dung co the xau (admin da duoc xem thu cong
+va tu choi). Auto-lock van hien de nguoi report xac nhan bai da duoc xu ly.
+
+### Alternatives KHONG chon
+1. **Post-moderation** (de bai cong khai, admin lock sau): bai xau van xuat hien
+   mot luc, anh huong uy tin. Khach tu choi.
+2. **Trusted tier bypass** (VIP★★★ auto-approve): tao bat cong giua cac tier.
+   Khach chon "cong bang moi tier". Co the xem lai sau neu admin qua tai.
+3. **Separate moderationStatus field** (giu status=PUBLISHED/LOCKED/DELETED +
+   them moderationStatus=PENDING/APPROVED): 2 field doi boi, logic phuc tap hon.
+   Chon gop vao status enum de don gian + tan dung @@index co san.
+
+### Rui ro + trade-off
+- **Admin bottleneck**: user post xong phai cho duyet. Neu admin cham → UX kem.
+  Mitigation: email notification (Phase 3, chua lam), SLA 24h.
+- **Spam abuse**: user re-edit bai bi reject nhieu lan → lam tat queue.
+  Mitigation: future feature rate-limit edit-after-reject.
+- **Existing posts**: tat ca 202 bai hien tai giu `PUBLISHED` (migration khong force
+  downgrade). Chi bai moi va bai edit sau date nay moi vao PENDING.
+
+### Ref
+- Admin guide: section 21 (`01-huong-dan-admin.md`)
+- VIP guide: section 6 (`02-huong-dan-vip.md`)
+- API doc: section 1.5 (`06-api-documentation.md`)
+- Technical doc: section 10.10 (`04-technical-document.md`)

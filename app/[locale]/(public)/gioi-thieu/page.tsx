@@ -10,9 +10,6 @@ import { MembersGrid, type MemberItem } from "./MembersGrid"
 
 export const revalidate = 600
 
-/** Số hội viên hiển thị ngay trên trang Giới thiệu — phần còn lại xem ở /hoi-vien */
-const MEMBERS_PREVIEW_LIMIT = 18
-
 export async function generateMetadata() {
   const t = await getTranslations("about")
   return {
@@ -62,9 +59,8 @@ export default async function GioiThieuPage() {
 
   // Fetch:
   //  - Leaders (BTV/BCH/BKT/HDTD) cho tabs
-  //  - Active members (VIP/INFINITE) — preview dưới cơ cấu tổ chức
-  //  - Total member count — hiển thị trong subtitle + "Xem tất cả"
-  const [rawLeaders, rawMembers, totalMemberCount] = await Promise.all([
+  //  - TẤT CẢ hội viên VIP/INFINITE active (không giới hạn, không "Xem tất cả")
+  const [rawLeaders, rawMembers] = await Promise.all([
     prisma.leader.findMany({
       where: { isActive: true },
       orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
@@ -88,7 +84,6 @@ export default async function GioiThieuPage() {
         { displayPriority: "desc" },
         { createdAt: "asc" },
       ],
-      take: MEMBERS_PREVIEW_LIMIT,
       select: {
         id: true,
         name: true,
@@ -98,10 +93,8 @@ export default async function GioiThieuPage() {
         },
       },
     }),
-    prisma.user.count({
-      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
-    }),
   ])
+  const totalMemberCount = rawMembers.length
 
   const currentTerm = rawLeaders[0]?.term ?? null
   const l = <T extends Record<string, unknown>>(record: T, field: string) =>
@@ -243,17 +236,6 @@ export default async function GioiThieuPage() {
           </p>
 
           <MembersGrid members={members} />
-
-          {totalMemberCount > MEMBERS_PREVIEW_LIMIT && (
-            <div className="mt-10 text-center">
-              <Link
-                href="/hoi-vien"
-                className="inline-flex items-center justify-center rounded-md border border-brand-300 bg-white px-6 py-2.5 text-sm font-semibold text-brand-800 hover:bg-brand-100 transition-colors"
-              >
-                {t("viewAllMembers")} ({totalMemberCount})
-              </Link>
-            </div>
-          )}
         </div>
       </section>
 

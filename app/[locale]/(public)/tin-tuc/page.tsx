@@ -15,7 +15,7 @@ import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo
 const getSidebarFeaturedNews = unstable_cache(
   async () =>
     prisma.news.findMany({
-      where: { isPublished: true, category: "GENERAL" },
+      where: { isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
       select: {
@@ -86,7 +86,7 @@ export default async function NewsPage({
 
   const where = {
     isPublished: true,
-    category: "GENERAL" as const,
+    category: { in: ["GENERAL" as const, "SPONSORED_PRODUCT" as const] },
     ...(q && {
       OR: [
         { title: { contains: q, mode: "insensitive" as const } },

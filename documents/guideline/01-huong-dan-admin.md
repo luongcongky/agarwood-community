@@ -26,6 +26,9 @@
 16. [Chinh sach bao mat & Dieu khoan (`/privacy`, `/terms`)](#16-chinh-sach--dieu-khoan)
 17. [Hang Infinite — admin chi-doc](#17-hang-infinite)
 18. [Quan ly Menu navbar (`/admin/menu`)](#18-quan-ly-menu-navbar)
+19. [Gallery anh nen trang chu (`/admin/gallery`)](#19-gallery-anh-nen-trang-chu)
+20. [Tin nhan lien he tu website (`/admin/lien-he`)](#20-tin-nhan-lien-he-tu-website)
+21. [Duyet bai viet cua hoi vien (`/admin/bai-viet/cho-duyet`)](#21-duyet-bai-viet-cua-hoi-vien)
 
 ---
 
@@ -828,6 +831,57 @@ Tin nhan NEW tu dong xuat hien:
 - Badge do tren menu "Lien he" trong sidebar
 - Trong dropdown chuong (workflow `contact`) o header
 - Cap nhat moi 30s (poll) + refetch khi focus tab
+
+---
+
+## 21. Duyet bai viet cua hoi vien
+
+### Tai sao co moi truong nay
+Tu phien ban hien tai, MOI bai viet do hoi vien dang (qua `/feed` hoac `/feed/tao-bai`)
+deu PHAI qua admin kiem duyet truoc khi cong khai. Co che:
+- Bai moi dang → `status: PENDING`
+- Tac gia thay bai cua minh ngay trong feed, kem badge vang "Cho duyet"
+- NGUOI KHAC khong thay bai PENDING — feed filter loai ra, truy cap truc tiep
+  URL `/bai-viet/[id]` tra 404
+- Admin duyet → `status: PUBLISHED` → cong khai voi moi nguoi
+- Admin tu choi → `status: LOCKED` + `moderationNote` (ly do). Tac gia thay
+  banner do voi ly do de sua lai; con sua → status tu PENDING ve lai hang cho
+
+### Admin bypass
+Bai do admin tao (role=ADMIN) thi tu dong PUBLISHED (khong qua cho duyet).
+INFINITE, VIP, va user binh thuong KHONG bypass — moi tier phai qua kiem duyet.
+
+### Khi co bai moi cho duyet
+- Sidebar: menu "Duyet bai viet" hien badge do voi so luong bai cho duyet
+- NotificationBell (chuong o header): workflow `post` trong dropdown
+- Badge poll 30s tu api `/api/admin/pending-counts`
+
+### Cach xu ly
+1. Truy cap: `/admin/bai-viet/cho-duyet`
+2. Moi bai hien:
+   - Avatar + ten + email tac gia
+   - Noi dung plain text preview
+   - Anh dinh kem (toi da 4 anh hien — con lai click "Xem chi tiet")
+   - Thoi gian dang
+3. Cac nut hanh dong:
+   - **"Xem chi tiet ↗"**: mo tab moi xem bai day du (admin co quyen xem bai PENDING)
+   - **"Duyet"** (xanh): confirm → bai PUBLISHED, cap nhat cache feed
+   - **"Tu choi"** (do): prompt nhap ly do (5-500 ky tu) → bai LOCKED + `moderationNote`
+
+### Luu y xu ly
+- Duyet nhanh: uu tien bai dau hang (sort theo `createdAt ASC`, bai cu nhat len dau)
+- Ly do tu choi NEN CU THE de user sua dung: "Hinh anh khong lien quan trang huong"
+  tot hon "Noi dung khong phu hop"
+- Tac gia edit bai bi tu choi → bai tu dong quay ve PENDING + xoa
+  `moderationNote` cu. Admin se thay lai trong hang cho voi noi dung moi.
+
+### Khac biet voi bai cao vi pham (Section 6)
+- **Duyet bai** (section nay): pre-moderation, bai moi chua bao gio cong khai
+- **Bao cao vi pham**: post-moderation, bai da cong khai nhung user report vi pham
+  → auto-lock khi 5+ reports → admin xu ly qua `/admin/bao-cao`
+
+Ca 2 khi LOCKED: moderation reject dung `moderationNote`, auto-lock tu report
+dung `lockReason`. Tac gia thay banner khac nhau (do/vang) de phan biet nguon goc.
 
 ---
 

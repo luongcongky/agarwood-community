@@ -188,10 +188,20 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-tight whitespace-nowrap",
                       news.category === "RESEARCH"
                         ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                        : "bg-blue-50 text-blue-700 border border-blue-100",
+                        : news.category === "LEGAL"
+                          ? "bg-amber-50 text-amber-700 border border-amber-100"
+                          : news.category === "SPONSORED_PRODUCT"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                            : "bg-blue-50 text-blue-700 border border-blue-100",
                     )}
                   >
-                    {news.category === "RESEARCH" ? "📚 Nghiên cứu" : "📰 Tin tức"}
+                    {news.category === "RESEARCH"
+                      ? "📚 Nghiên cứu"
+                      : news.category === "LEGAL"
+                        ? "⚖️ Pháp lý"
+                        : news.category === "SPONSORED_PRODUCT"
+                          ? "💰 Bài SP"
+                          : "📰 Tin tức"}
                   </span>
                 </td>
                 <td className="px-4 py-3">

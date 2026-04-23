@@ -134,6 +134,19 @@ accountType, contributionTotal, company), va kem `product` neu `category=PRODUCT
 dung response truc tiep cho optimistic UI (vd FeedClient prepend post moi qua sessionStorage
 hand-off khi redirect tu /feed/tao-bai → /feed).
 
+**Moderation (2026-04 — them moi):** Bai moi duoc gan `status: "PENDING"` mac dinh,
+chi co admin (role=ADMIN) tao bai moi tu dong PUBLISHED. INFINITE/VIP/user thuong
+KHONG bypass. Sau khi tao:
+- Tac gia thay bai cua minh trong feed voi badge "Cho duyet"
+- Nguoi khac KHONG thay bai PENDING (feed filter loai ra)
+- Truy cap URL `/bai-viet/{id}` khi PENDING → 404 cho nguoi khong phai owner/admin
+
+Bai sau khi admin REJECT (`status: LOCKED` + `moderationNote`): cung an khoi public
+(giong PENDING), chi owner/admin thay. Bai auto-lock tu 5+ reports (`status: LOCKED`
+KHONG co `moderationNote`) van public de nguoi report xac nhan da xu ly.
+
+Admin duyet qua `PATCH /api/admin/posts/{id}` (xem section 1.5 ben duoi).
+
 **Cache invalidation:** Sau khi tao post thanh cong, server goi `revalidatePath("/[locale]/feed", "page")`
 → feed page (revalidate=60) bi invalidate ngay, bai moi hien tuc thi thay vi cho ~60s.
 
@@ -188,6 +201,69 @@ Bao cao bai viet. Yeu cau: VIP hoac ADMIN. Moi user chi bao cao 1 lan / bai.
 Khoa / mo khoa bai viet. Yeu cau: ADMIN.
 
 **Response:** `{ status: "LOCKED" | "PUBLISHED" }`
+
+### PATCH /api/posts/{id}
+Chinh sua noi dung bai. Yeu cau: tac gia hoac ADMIN.
+
+**Body:**
+```json
+{ "title": "Tieu de moi", "content": "<p>Noi dung...</p>" }
+```
+
+**Moderation (2026-04):** Khi tac gia (khong phai admin) edit bai, bai tu dong
+quay ve `status: "PENDING"` va clear cac field `moderationNote/moderatedAt/moderatedBy`.
+Admin edit thi giu nguyen status hien tai.
+
+**Response:** `{ success: true }`
+**Errors:** `400` — noi dung < 50 ky tu. `403` — khong phai tac gia/admin. `404` — khong tim thay.
+
+---
+
+## 1.5 Post moderation (Admin-only, 2026-04)
+
+### GET /api/admin/pending-counts
+(Extend existing endpoint — xem section 4 chi tiet)
+
+Response workflow `post` them moi:
+```json
+{
+  "workflows": {
+    "post": {
+      "count": 5,
+      "recent": [
+        { "id": "...", "title": "...", "subtitle": "Nguyen Van A",
+          "href": "/admin/bai-viet/cho-duyet?id=...", "createdAt": "..." }
+      ]
+    }
+  }
+}
+```
+
+### PATCH /api/admin/posts/{id}
+Admin duyet hoac tu choi bai PENDING. Yeu cau: `canAdminWrite()` (ADMIN, khong INFINITE).
+
+**Body — approve:**
+```json
+{ "action": "approve" }
+```
+Set `status: "PUBLISHED"`, clear `moderationNote`, cap nhat `moderatedAt/moderatedBy`.
+
+**Body — reject:**
+```json
+{ "action": "reject", "note": "Ly do tu choi (5-500 ky tu)" }
+```
+Set `status: "LOCKED"`, luu `moderationNote`. Tac gia se thay banner do voi ly do,
+co the chinh sua va gui lai.
+
+**Response:** `{ ok: true }` khi thanh cong
+**Errors:**
+- `400` — action sai hoac note rong (reject)
+- `403` — khong co quyen (role khong phai ADMIN)
+- `404` — khong tim thay bai
+- `409` — bai khong o trang thai PENDING (vd da duyet roi)
+
+**Cache invalidation:** Goi `revalidatePath("/[locale]/feed", "page")` sau khi
+update de feed moi nguoi (public) thay bai vua duyet ngay.
 
 ---
 

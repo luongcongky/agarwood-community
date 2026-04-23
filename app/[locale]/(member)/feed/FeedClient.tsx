@@ -8,6 +8,12 @@ import { cn } from "@/lib/utils"
 import { isMember as isMemberRole } from "@/lib/roles"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
+import {
+  saveMyRecentPost,
+  loadMyRecentPosts,
+  pruneMyRecentPosts,
+  removeMyRecentPost,
+} from "@/lib/my-recent-posts"
 import { useLocale, useTranslations } from "next-intl"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -48,6 +54,9 @@ type Post = {
   lockedAt: string | null
   lockedBy: string | null
   lockReason: string | null
+  /** Moderation reject reason — set bởi admin khi reject. Khác với lockReason
+   *  của auto-lock từ report. Hiển thị cho owner biết cần sửa gì. */
+  moderationNote?: string | null
   createdAt: string
   updatedAt: string
   author: PostAuthor
@@ -273,6 +282,120 @@ function Lightbox({
   )
 }
 
+// ── PostImageGrid — Facebook-style image layout ─────────────────────────────
+// 1 ảnh: full width, aspect-video.
+// 2 ảnh: grid 2 cột, aspect-video total.
+// 3 ảnh: 1 big left (row-span-2) + 2 nhỏ stacked right, aspect-square total.
+// 4+ ảnh: 2×2 grid, ảnh thứ 4 có overlay "+N" nếu total > 4.
+//
+// Click thumbnail → onImageClick(index) → caller mở Lightbox tại index đó.
+
+function FeedThumb({
+  url,
+  index,
+  onClick,
+  overlay,
+  sizes = "(max-width: 768px) 50vw, 400px",
+}: {
+  url: string
+  index: number
+  onClick: (i: number) => void
+  overlay?: ReactNode
+  sizes?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(index)}
+      className="relative h-full w-full overflow-hidden bg-brand-100 transition-opacity hover:opacity-95"
+      aria-label={`Xem ảnh ${index + 1}`}
+    >
+      <Image
+        src={cloudinaryResize(url, 1000)}
+        alt=""
+        fill
+        className="object-cover"
+        sizes={sizes}
+        placeholder="blur"
+        blurDataURL={BLUR_DATA_URL}
+      />
+      {overlay}
+    </button>
+  )
+}
+
+function PostImageGrid({
+  images,
+  onImageClick,
+}: {
+  images: string[]
+  onImageClick: (index: number) => void
+}) {
+  const count = images.length
+  if (count === 0) return null
+
+  if (count === 1) {
+    return (
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-brand-100">
+        <FeedThumb
+          url={images[0]}
+          index={0}
+          onClick={onImageClick}
+          sizes="(max-width: 768px) 100vw, 600px"
+        />
+      </div>
+    )
+  }
+
+  if (count === 2) {
+    return (
+      <div className="grid aspect-video w-full grid-cols-2 gap-1 overflow-hidden rounded-lg">
+        <FeedThumb url={images[0]} index={0} onClick={onImageClick} />
+        <FeedThumb url={images[1]} index={1} onClick={onImageClick} />
+      </div>
+    )
+  }
+
+  if (count === 3) {
+    return (
+      <div className="grid aspect-square w-full grid-cols-2 grid-rows-2 gap-1 overflow-hidden rounded-lg">
+        <div className="row-span-2">
+          <FeedThumb
+            url={images[0]}
+            index={0}
+            onClick={onImageClick}
+            sizes="(max-width: 768px) 50vw, 400px"
+          />
+        </div>
+        <FeedThumb url={images[1]} index={1} onClick={onImageClick} />
+        <FeedThumb url={images[2]} index={2} onClick={onImageClick} />
+      </div>
+    )
+  }
+
+  // count >= 4 — show 4 tiles trong 2×2 grid, ảnh thứ 4 overlay "+N" nếu còn
+  const extra = count - 4
+  return (
+    <div className="grid aspect-square w-full grid-cols-2 grid-rows-2 gap-1 overflow-hidden rounded-lg">
+      <FeedThumb url={images[0]} index={0} onClick={onImageClick} />
+      <FeedThumb url={images[1]} index={1} onClick={onImageClick} />
+      <FeedThumb url={images[2]} index={2} onClick={onImageClick} />
+      <FeedThumb
+        url={images[3]}
+        index={3}
+        onClick={onImageClick}
+        overlay={
+          extra > 0 ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+              <span className="text-2xl font-bold text-white">+{extra}</span>
+            </div>
+          ) : undefined
+        }
+      />
+    </div>
+  )
+}
+
 function getTierBadge(
   contribution: number,
   accountType: string,
@@ -331,6 +454,8 @@ function PostCard({
   const [linkCopied, setLinkCopied] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const isLocked = post.status === "LOCKED"
+  const isPendingModeration = post.status === "PENDING"
+  const isRejected = isLocked && !!post.moderationNote
 
   // Unify image sources: use the DB column when populated, otherwise pull
   // from embedded <img> tags in the sanitized HTML content. Posts from
@@ -354,8 +479,10 @@ function PostCard({
 
   // Strip HTML for truncation. Use the image-stripped content so <img>
   // tags don't inflate the character count for text-only truncation.
+  // Threshold ~140 chars ≈ 2 dòng text-sm ở width ~600px — match với
+  // line-clamp-2 CSS dưới. Vượt threshold → hiển thị "... Xem thêm".
   const plainText = contentForProse.replace(/<[^>]*>/g, "")
-  const needsTruncation = plainText.length > 300
+  const needsTruncation = plainText.length > 140
 
   // Menu options based on role
   const menuItems: { label: string; action: () => void; destructive?: boolean }[] = []
@@ -435,12 +562,41 @@ function PostCard({
           </button>
         </div>
       )}
-      {/* Locked banner */}
-      {isLocked && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-          Bài viết đã bị tạm khoá
-          {post.lockReason && <span className="text-xs text-amber-600">— {post.lockReason}</span>}
+      {/* Moderation PENDING — chỉ owner thấy (query đã filter PENDING + authorId).
+          Thông báo cho user biết bài chưa công khai tới khi admin duyệt. */}
+      {isPendingModeration && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6l4 2" strokeLinecap="round" />
+          </svg>
+          <span className="font-semibold">Chờ duyệt</span>
+          <span className="text-xs text-amber-700">
+            — Bài đang chờ admin kiểm duyệt. Chỉ bạn thấy được bài này cho đến khi được duyệt.
+          </span>
         </div>
+      )}
+
+      {/* Moderation REJECTED (= LOCKED + moderationNote) — admin đã từ chối.
+          Hiển thị lý do để owner biết cần sửa gì. Người khác không thấy. */}
+      {isRejected ? (
+        <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+          <p className="font-semibold">❌ Bị từ chối</p>
+          <p className="mt-1 text-xs text-red-700">
+            Lý do: {post.moderationNote}
+          </p>
+          <p className="mt-1 text-xs text-red-600">
+            Bạn có thể chỉnh sửa bài và gửi lại để admin duyệt.
+          </p>
+        </div>
+      ) : (
+        /* Locked từ auto-report (không có moderationNote) → banner cũ */
+        isLocked && (
+          <div className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+            Bài viết đã bị tạm khoá
+            {post.lockReason && <span className="text-xs text-amber-600">— {post.lockReason}</span>}
+          </div>
+        )
       )}
 
       {/* Author row */}
@@ -545,37 +701,58 @@ function PostCard({
         </h2>
       )}
 
-      {/* Images first when post has them — quick-scan mode prioritizes
-          visuals. Rendered as extra-large icon thumbnails; clicking any
-          one opens a lightbox with prev/next navigation across the
-          post's full image set. */}
-      {!isGuestBlurred && displayImages.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {displayImages.slice(0, 4).map((url, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setLightboxIndex(i)}
-              className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-brand-200 hover:ring-2 hover:ring-brand-400 transition-all shrink-0"
-              aria-label={`Xem ảnh ${i + 1}`}
+      {/* TEXT TRƯỚC — line-clamp-2, "... Xem thêm" nếu vượt threshold.
+          Facebook-style: text intro → hình ảnh phía dưới. */}
+      {isGuestBlurred ? (
+        <div className="relative mb-3" suppressHydrationWarning>
+          <div className="line-clamp-2 text-sm text-brand-800 blur-sm select-none">
+            {plainText}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Link
+              href="/login"
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow transition-colors hover:bg-brand-800"
             >
-              <Image
-                src={cloudinaryResize(url, 256)}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="128px"
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-              />
-              {/* Show +N overlay on the 4th thumb when the post has >4 images */}
-              {i === 3 && displayImages.length > 4 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold text-lg">
-                  +{displayImages.length - 4}
-                </div>
-              )}
+              Đăng nhập để đọc
+            </Link>
+          </div>
+        </div>
+      ) : isLocked && !isAdmin ? (
+        <p className="mb-3 text-sm italic text-brand-400">
+          Nội dung đã bị ẩn do vi phạm quy định.
+        </p>
+      ) : (
+        <div className="mb-3" suppressHydrationWarning>
+          <div
+            className={cn(
+              "prose prose-sm max-w-none text-sm text-brand-800",
+              !expanded && needsTruncation && "line-clamp-2",
+            )}
+            dangerouslySetInnerHTML={{
+              __html: rewriteCloudinaryInHtml(
+                DOMPurify.sanitize(contentForProse),
+                800,
+              ),
+            }}
+          />
+          {needsTruncation && !expanded && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="mt-1 text-sm font-semibold text-brand-700 hover:text-brand-900"
+            >
+              {t("readMore")}
             </button>
-          ))}
+          )}
+        </div>
+      )}
+
+      {/* IMAGES SAU — Facebook-style layout 1/2/3/4+ ảnh full container width */}
+      {!isGuestBlurred && displayImages.length > 0 && (
+        <div className="mb-3">
+          <PostImageGrid
+            images={displayImages}
+            onImageClick={setLightboxIndex}
+          />
         </div>
       )}
 
@@ -585,38 +762,6 @@ function PostCard({
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
-      )}
-
-      {/* Content — blurred for guests after GUEST_VISIBLE_COUNT */}
-      {isGuestBlurred ? (
-        <div className="relative mb-3" suppressHydrationWarning>
-          <div className="line-clamp-3 text-sm text-brand-800 blur-sm select-none">{plainText}</div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Link
-              href="/login"
-              className="bg-brand-700 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-brand-800 transition-colors shadow"
-            >
-              Đăng nhập để đọc
-            </Link>
-          </div>
-        </div>
-      ) : isLocked && !isAdmin ? (
-        <p className="text-sm text-brand-400 italic mb-3">Nội dung đã bị ẩn do vi phạm quy định.</p>
-      ) : (
-        <div className="mb-3" suppressHydrationWarning>
-          <div
-            className={cn(
-              "text-sm text-brand-800 prose prose-sm max-w-none",
-              !expanded && needsTruncation && "line-clamp-4",
-            )}
-            dangerouslySetInnerHTML={{ __html: rewriteCloudinaryInHtml(DOMPurify.sanitize(contentForProse), 800) }}
-          />
-          {needsTruncation && !expanded && (
-            <button onClick={() => setExpanded(true)} className="text-sm font-medium text-brand-600 hover:text-brand-800 mt-1">
-              {t("readMore")}
-            </button>
-          )}
-        </div>
       )}
 
       {/* Stats + reaction bar */}
@@ -815,7 +960,7 @@ function InlinePostCreator({
         // Swap in server data. React remounts the PostCard because the
         // ID changes, but since it was in `pending` state (no user
         // interactions), the remount is invisible to the user.
-        onPostUpdated(tempId, {
+        const patch = {
           id: post.id,
           content: realContent,
           imageUrls: uploadedUrls,
@@ -823,7 +968,13 @@ function InlinePostCreator({
           updatedAt: post.updatedAt ?? optimisticPost.updatedAt,
           isPending: false,
           pendingError: null,
-        })
+        }
+        onPostUpdated(tempId, patch)
+
+        // Sticky zone: lưu bài của viewer vào localStorage để lần sau vào
+        // /feed vẫn thấy ở top (TTL 2h). Khắc phục vấn đề user priority=0
+        // bị đẩy xuống dưới VIP ngay sau khi đăng.
+        saveMyRecentPost(currentUserId, { ...optimisticPost, ...patch })
 
         // Now safe to free the blob URLs — images are served from Cloudinary.
         blobUrls.forEach((url) => URL.revokeObjectURL(url))
@@ -1019,10 +1170,11 @@ export function FeedClient({
     setNow(Date.now())
     setIsMounted(true)
 
-    // Optimistic hand-off from /feed/tao-bai full editor: PostEditor stashes
-    // the freshly-created post in sessionStorage before redirecting here.
-    // Prepend it so the user sees their post instantly instead of waiting
-    // for the next ISR revalidate. Skip if the ISR refresh already included it.
+    if (!currentUserId) return
+
+    // Phase 1: hand-off 1 lần từ /feed/tao-bai PostEditor (sessionStorage).
+    // Nếu có, chuyển vào localStorage sticky zone để từ giờ trở đi hiển thị
+    // qua cơ chế chung (TTL 2h). Giữ tương thích ngược với PostEditor.
     try {
       const raw = sessionStorage.getItem("freshPost")
       if (raw) {
@@ -1043,12 +1195,22 @@ export function FeedClient({
           _count: { reactions: 0, comments: 0 },
           ...fresh,
         } as Post
-        setPosts((prev) => (prev.some((p) => p.id === hydrated.id) ? prev : [hydrated, ...prev]))
+        saveMyRecentPost(currentUserId, hydrated)
       }
     } catch {
       /* ignore corrupt sessionStorage entry */
     }
-  }, [])
+
+    // Phase 2: prepend sticky zone của viewer (từ localStorage, TTL 2h).
+    // Dedupe với initialPosts từ server — nếu bài đã xuất hiện qua rank thật,
+    // prune khỏi localStorage luôn.
+    setPosts((prev) => {
+      const serverIds = new Set(prev.map((p) => p.id))
+      pruneMyRecentPosts(serverIds)
+      const sticky = loadMyRecentPosts<Post>(currentUserId, serverIds)
+      return sticky.length > 0 ? [...sticky, ...prev] : prev
+    })
+  }, [currentUserId])
   const [loading, setLoading] = useState(false)
   const observerRef = useRef<HTMLDivElement>(null)
   const cursorRef = useRef<string | null>(initialPosts.at(-1)?.id ?? null)
@@ -1151,6 +1313,7 @@ export function FeedClient({
       const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" })
       if (res.ok) {
         setPosts((prev) => prev.filter((p) => p.id !== postId))
+        removeMyRecentPost(postId)
       }
     } catch { /* */ }
   }
