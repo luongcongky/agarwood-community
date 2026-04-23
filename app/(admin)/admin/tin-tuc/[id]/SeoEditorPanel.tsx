@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { Locale } from "@/components/ui/lang-tabs-bar"
 import type { SeoCheck, SeoResult } from "@/lib/seo/score"
 
@@ -70,6 +70,18 @@ export function SeoEditorPanel(props: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastReqRef = useRef(0)
 
+  // translatedLocaleCount chỉ thay đổi khi số locale có title khác rỗng
+  // thay đổi. Memo theo string key để deps của useEffect ổn định —
+  // gõ EN/ZH/AR không trigger re-score, chỉ khi chuyển "có / không" mới.
+  const translatedLocaleCount = useMemo(
+    () => [title.en, title.zh, title.ar].filter((t) => t.trim()).length,
+    [title.en, title.zh, title.ar],
+  )
+
+  // secondaryKeywords là array — so sánh tham chiếu sẽ trigger re-fetch mỗi
+  // lần parent render. Dùng join làm khóa ổn định cho deps.
+  const secondaryKeywordsKey = secondaryKeywords.join("\n")
+
   // Debounced scoring against VI fields (source-of-truth for scoring).
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -92,7 +104,7 @@ export function SeoEditorPanel(props: Props) {
             coverImageUrl,
             coverImageAlt: coverImageAlt.vi,
             slug,
-            translatedLocaleCount: [title.en, title.zh, title.ar].filter((t) => t.trim()).length,
+            translatedLocaleCount,
           }),
         })
         if (!res.ok || reqId !== lastReqRef.current) return
@@ -105,13 +117,14 @@ export function SeoEditorPanel(props: Props) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
+    // `secondaryKeywords` dùng qua `secondaryKeywordsKey` để deps ổn định
+    // theo nội dung thay vì reference — xem ghi chú phía trên.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     excludeId,
-    title.vi, title.en, title.zh, title.ar,
-    excerpt.vi,
-    content.vi,
+    title.vi, excerpt.vi, content.vi,
     seoTitle.vi, seoDescription.vi, coverImageAlt.vi,
-    focusKeyword, secondaryKeywords,
+    focusKeyword, secondaryKeywordsKey, translatedLocaleCount,
     slug, coverImageUrl,
   ])
 

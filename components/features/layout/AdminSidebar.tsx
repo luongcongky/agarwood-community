@@ -97,6 +97,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Tương tác",
     items: [
       { label: "Duyệt bài viết", href: "/admin/bai-viet/cho-duyet", icon: FileCheck, pendingKey: "post" },
+      { label: "Xin đẩy lên trang chủ", href: "/admin/bai-viet/xin-dang", icon: Star, pendingKey: "promotionRequest" },
       { label: "Liên hệ", href: "/admin/lien-he", icon: Mail, pendingKey: "contact" },
       { label: "Báo cáo", href: "/admin/bao-cao", icon: Flag, pendingKey: "report" },
       { label: "Khảo sát", href: "/admin/khao-sat", icon: ClipboardList },

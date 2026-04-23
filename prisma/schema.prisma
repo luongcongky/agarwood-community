@@ -86,6 +86,13 @@ enum PostCategory {
   PRODUCT // tin sản phẩm (giới thiệu / vừa được chứng nhận) — section "Tin sản phẩm" trang chủ
 }
 
+enum PromotionRequestStatus {
+  PENDING // chờ admin duyệt
+  APPROVED // admin duyệt → bài được đẩy lên trang chủ (isPromoted=true)
+  REJECTED // admin từ chối (kèm lý do ở reviewNote)
+  CANCELLED // owner tự rút trước khi admin xử lý
+}
+
 enum ReportStatus {
   PENDING // chờ admin xử lý
   REVIEWED // đã xem xét, giữ bài
@@ -238,6 +245,8 @@ model User {
   honoraryContributions        HonoraryContribution[]  @relation("HonoraryRecipient")
   honoraryContributionsCreated HonoraryContribution[]  @relation("HonoraryCreatedBy")
   councilReviews               CertificationReview[]
+  promotionRequestsMade        PostPromotionRequest[]  @relation("PromotionRequester")
+  promotionRequestsReviewed    PostPromotionRequest[]  @relation("PromotionReviewer")
 
   @@index([role])
   @@index([accountType])
@@ -610,12 +619,13 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  product   Product? // sidecar metadata khi category=PRODUCT
-  reports   Report[]
-  reactions PostReaction[]
-  tags      PostTag[]
-  comments  Comment[]
+  author            User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  product           Product? // sidecar metadata khi category=PRODUCT
+  reports           Report[]
+  reactions         PostReaction[]
+  tags              PostTag[]
+  comments          Comment[]
+  promotionRequests PostPromotionRequest[]
 
   @@index([authorId])
   @@index([status])
@@ -643,6 +653,50 @@ model PostReaction {
 
   @@unique([postId, userId]) // 1 user chỉ react 1 lần / bài
   @@map("post_reactions")
+}
+
+// ============================================================
+// POST PROMOTION REQUEST — owner xin admin đẩy bài lên trang chủ
+// ============================================================
+//
+// Flow:
+//   1. Owner click "Xin đẩy lên trang chủ" trên feed card → tạo row PENDING
+//      (API: POST /api/posts/[id]/request-promotion, body: { reason })
+//   2. Admin thấy trong inbox /admin/bai-viet/xin-dang
+//   3. Admin APPROVE → Post.isPromoted = true + request.status = APPROVED
+//      Admin REJECT  → request.status = REJECTED + reviewNote (lý do)
+//   4. Owner thấy badge status trên card bài của mình
+//
+// Invariant: mỗi Post chỉ có 1 row PENDING tại 1 thời điểm — enforce ở
+// app layer (API check trước khi create), vì Prisma không hỗ trợ partial
+// unique index. Row cũ chuyển REJECTED/APPROVED/CANCELLED rồi mới cho phép
+// tạo row PENDING mới.
+//
+// Admin CŨNG có cách chủ động — toggle isPromoted trực tiếp qua
+// PATCH /api/admin/posts/[id]/promote (không cần qua request). Request chỉ
+// là kênh "thụ động" khi owner muốn đề xuất.
+model PostPromotionRequest {
+  id          String  @id @default(cuid())
+  postId      String
+  requestedBy String
+  reason      String? @db.Text // owner's ask — tại sao đáng đẩy
+
+  status     PromotionRequestStatus @default(PENDING)
+  reviewedBy String? // adminId xử lý
+  reviewedAt DateTime?
+  reviewNote String?                @db.Text // bắt buộc khi REJECT — lý do từ chối hiển thị cho owner
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post      Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  requester User  @relation("PromotionRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewer  User? @relation("PromotionReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([postId])
+  @@index([status, createdAt]) // admin inbox: WHERE status=PENDING ORDER BY createdAt DESC
+  @@index([requestedBy])
+  @@map("post_promotion_requests")
 }
 
 // ============================================================

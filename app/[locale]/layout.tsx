@@ -4,7 +4,7 @@ import { getMessages } from "next-intl/server"
 import { isValidLocale } from "@/i18n/config"
 
 export function generateStaticParams() {
-  return [{ locale: "vi" }, { locale: "en" }, { locale: "zh" }]
+  return [{ locale: "vi" }, { locale: "en" }, { locale: "zh" }, { locale: "ar" }]
 }
 
 export default async function LocaleLayout({

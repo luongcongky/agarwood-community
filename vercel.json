@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/warm-homepage",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/sweep-cloudinary",
+      "schedule": "0 3 1 * *"
     }
   ]
 }

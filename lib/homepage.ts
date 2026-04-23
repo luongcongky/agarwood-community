@@ -111,16 +111,22 @@ export const getLatestResearchNews = unstable_cache(
 // ── Section 2: Bản tin hội viên (right rail) ─────────────────────────────────
 
 /**
- * Top 3 slots — VIP top theo authorPriority. Sticky, không rotate.
+ * Top 3 slots — bài được admin đẩy lên đứng trước, tiếp theo VIP top theo
+ * authorPriority. `isPromoted` = admin đã chủ động gắn cờ (qua menu feed
+ * hoặc qua việc duyệt promotion-request từ owner).
  */
 export const getTopVipMemberPosts = unstable_cache(
   async () => {
     return prisma.post.findMany({
       where: {
         status: "PUBLISHED",
-        isPremium: true,
+        // Mặc định chỉ VIP post lên homepage. Nếu admin chủ động
+        // `isPromoted=true` (qua menu feed hoặc duyệt promotion-request)
+        // thì override — bài được feature bất kể tier tác giả.
+        OR: [{ isPremium: true }, { isPromoted: true }],
       },
       orderBy: [
+        { isPromoted: "desc" },
         { authorPriority: "desc" },
         { createdAt: "desc" },
       ],
@@ -243,10 +249,12 @@ const getLatestPostsByCategoryCached = unstable_cache(
     return prisma.post.findMany({
       where: {
         status: "PUBLISHED",
-        isPremium: true, // CHỈ VIP lên trang chủ (section 5+6)
+        // VIP mặc định; admin promote override (xem getTopVipMemberPosts).
+        OR: [{ isPremium: true }, { isPromoted: true }],
         category,
       },
       orderBy: [
+        { isPromoted: "desc" }, // bài admin đẩy đứng top section
         { authorPriority: "desc" },
         { createdAt: "desc" },
       ],

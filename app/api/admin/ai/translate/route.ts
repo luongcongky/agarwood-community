@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { canAdminWrite } from "@/lib/roles"
+import { canWriteNews } from "@/lib/roles"
 import { generateJSON, AllModelsFailedError } from "@/lib/gemini-models"
 
 const LOCALE_NAMES: Record<string, string> = {
@@ -33,7 +33,11 @@ const MAX_TOTAL_CHARS = 120_000
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
+  // Dùng `canWriteNews` thay vì `canAdminWrite` để INFINITE soạn news có thể
+  // gọi AI dịch. Các admin surface khác (LeaderManager, SettingsForm,
+  // SurveyEditor) vẫn gate UI bằng `readOnly` cho INFINITE nên họ không
+  // chạm được tới endpoint này từ đó.
+  if (!session?.user || !canWriteNews(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

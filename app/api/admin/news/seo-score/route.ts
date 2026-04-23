@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
-import { prisma } from "@/lib/prisma"
+import { getPreviousTitles } from "@/lib/news-seo-cache"
 import { scoreSeo, type SeoInput } from "@/lib/seo/score"
 
 /** Real-time SEO scoring endpoint used by the news editor.
@@ -30,17 +30,10 @@ export async function POST(req: Request) {
     translatedLocaleCount,
   } = body as Partial<SeoInput> & { excludeId?: string }
 
-  // Fetch a window of recent published titles for the duplicate check.
-  // 1000 is plenty: a writer almost never repeats wording from beyond that.
-  const previous = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-    },
-    select: { title: true },
-    orderBy: { publishedAt: "desc" },
-    take: 1000,
-  })
+  // Danh sách title cho duplicate check. Đi qua unstable_cache (tag
+  // "news:titles") nên đa số keystroke burst hit cache, không chạm DB.
+  // Invalidation: POST/PATCH/DELETE news đều revalidateTag.
+  const previousTitles = await getPreviousTitles(excludeId)
 
   const result = scoreSeo({
     title: title ?? "",
@@ -53,7 +46,7 @@ export async function POST(req: Request) {
     coverImageUrl: coverImageUrl ?? null,
     coverImageAlt: coverImageAlt ?? null,
     slug: slug ?? null,
-    previousTitles: previous.map((p) => p.title),
+    previousTitles,
     translatedLocaleCount: translatedLocaleCount ?? 0,
   })
 

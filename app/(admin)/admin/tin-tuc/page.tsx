@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils"
 import { DeleteNewsButton } from "./DeleteNewsButton"
 import { Prisma, NewsCategory } from "@prisma/client"
 
-export const revalidate = 0
+// Admin list không cần real-time — mỗi POST/PATCH/DELETE news đã gọi
+// `revalidatePath("/admin/tin-tuc")` nên sau khi admin tạo/sửa/xóa quay về
+// là đã fresh. 30s là fallback cho phòng trường hợp CRUD bên ngoài (seed
+// script, Prisma Studio).
+export const revalidate = 30
 
 type Props = {
   searchParams: Promise<{

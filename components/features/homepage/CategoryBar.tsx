@@ -2,30 +2,31 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { locales } from "@/i18n/config"
 
 type NavItem =
-  | { label: string; href: string; children?: never }
-  | { label: string; href: string; children: { label: string; href: string }[] }
+  | { labelKey: string; href: string; children?: never }
+  | { labelKey: string; href: string; children: { labelKey: string; href: string }[] }
 
 const CATEGORIES: NavItem[] = [
-  { label: "Trang chủ", href: "/" },
-  { label: "Tin tức", href: "/tin-tuc" },
-  { label: "Nghiên cứu", href: "/nghien-cuu" },
-  { label: "MXH Trầm Hương", href: "/feed" },
-  { label: "Doanh nghiệp", href: "/doanh-nghiep" },
-  { label: "Sản phẩm", href: "/san-pham-chung-nhan" },
+  { labelKey: "home", href: "/" },
+  { labelKey: "news", href: "/tin-tuc" },
+  { labelKey: "research", href: "/nghien-cuu" },
+  { labelKey: "socialFeed", href: "/feed" },
+  { labelKey: "businesses", href: "/doanh-nghiep" },
+  { labelKey: "products", href: "/san-pham-chung-nhan" },
   {
-    label: "Giới thiệu",
+    labelKey: "about",
     href: "/gioi-thieu",
     children: [
-      { label: "Ban lãnh đạo", href: "/ban-lanh-dao" },
-      { label: "Hội viên", href: "/hoi-vien" },
-      { label: "Văn bản pháp lý", href: "/phap-ly" },
-      { label: "Điều lệ", href: "/dieu-le" },
+      { labelKey: "leadership", href: "/ban-lanh-dao" },
+      { labelKey: "members", href: "/hoi-vien" },
+      { labelKey: "legalDocs", href: "/phap-ly" },
+      { labelKey: "charter", href: "/dieu-le" },
     ],
   },
-  { label: "Liên hệ", href: "/lien-he" },
+  { labelKey: "contact", href: "/lien-he" },
 ]
 
 /** Strip locale prefix (/vi, /en, ...) để so khớp với href đã khai báo. */
@@ -63,10 +64,11 @@ type Props = {
 
 export function CategoryBar({ loggedIn = false }: Props) {
   const pathname = stripLocale(usePathname() || "/")
+  const t = useTranslations("navbar")
 
   return (
     <nav
-      aria-label="Chuyên mục"
+      aria-label={t("categoriesLabel")}
       /* `sticky top-0` — thanh pin đầu viewport khi scroll.
          `shadow-md` + `isolation-isolate`: visual feedback rõ hơn khi stuck
          và tạo stacking context riêng để tránh bị content overlay trên
@@ -102,7 +104,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                   aria-haspopup="true"
                   aria-current={active ? "page" : undefined}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                   <Chevron />
                 </Link>
                 <ul
@@ -127,7 +129,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                           ].join(" ")}
                           aria-current={subActive ? "page" : undefined}
                         >
-                          {sub.label}
+                          {t(sub.labelKey)}
                         </Link>
                       </li>
                     )
@@ -141,7 +143,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                   className={triggerClass}
                   aria-current={active ? "page" : undefined}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               </li>
             )
@@ -157,7 +159,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                   href="/login"
                   className="inline-flex items-center px-3.5 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-white/95 border border-white/40 ml-2 transition-colors hover:bg-white/10"
                 >
-                  Đăng nhập
+                  {t("login")}
                 </Link>
               </li>
               <li>
@@ -165,7 +167,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                   href="/dang-ky"
                   className="inline-flex items-center px-4 py-2.5 text-[13px] font-bold uppercase tracking-wide text-brand-900 bg-amber-400 ml-2 transition-colors hover:bg-amber-300"
                 >
-                  Đăng ký hội viên
+                  {t("register")}
                 </Link>
               </li>
             </>

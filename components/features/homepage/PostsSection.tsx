@@ -107,7 +107,7 @@ export async function PostsSection({
         {posts.map((p) => (
           <ThumbnailCard
             key={p.id}
-            href={`/feed?post=${p.id}`}
+            href={`/bai-viet/${p.id}`}
             coverUrl={getCover(p)}
             title={cardTitle(p)}
             meta={fmtDate(p.createdAt)}
@@ -187,7 +187,7 @@ function HeroCard({
   const cover = getCover(post)
   const title = cardTitle(post)
   return (
-    <Link href={`/feed?post=${post.id}`} className="group block">
+    <Link href={`/bai-viet/${post.id}`} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
         {cover ? (
           <Image
@@ -223,7 +223,7 @@ function SideThumbItem({
   const cover = getCover(post)
   const title = cardTitle(post)
   return (
-    <Link href={`/feed?post=${post.id}`} className="group flex gap-3">
+    <Link href={`/bai-viet/${post.id}`} className="group flex gap-3">
       <div className="min-w-0 flex-1">
         <h3
           style={{ fontWeight: 400 }}
@@ -269,7 +269,7 @@ function FeaturedCard({
   const cover = getCover(post)
   const title = cardTitle(post)
   return (
-    <Link href={`/feed?post=${post.id}`} className="group block">
+    <Link href={`/bai-viet/${post.id}`} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
         {cover ? (
           <Image
@@ -304,7 +304,7 @@ function ListItem({
 }) {
   const title = cardTitle(post)
   return (
-    <Link href={`/feed?post=${post.id}`} className="group block">
+    <Link href={`/bai-viet/${post.id}`} className="group block">
       <h3
         style={{ fontWeight: 400 }}
         className="text-[15px] leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline"

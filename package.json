@@ -20,6 +20,8 @@
     "db:studio": "prisma studio",
     "db:backup": "npx tsx scripts/backup-supabase-to-local.ts",
     "db:restore-public": "npx tsx scripts/restore-backup-to-public.ts",
+    "cloudinary:sweep": "npx tsx scripts/sweep-cloudinary-orphans.ts",
+    "cloudinary:sweep:execute": "npx tsx scripts/sweep-cloudinary-orphans.ts --execute",
     "postinstall": "prisma generate"
   },
   "dependencies": {

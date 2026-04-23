@@ -10,7 +10,9 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  const readOnly = session?.user?.role === "INFINITE"
+  const role = session?.user?.role
+  const readOnly = role === "INFINITE"
+  const canPublishNews = role === "ADMIN"
   return (
     // h-screen (thay cho min-h-screen) để main thực sự scroll bên trong,
     // không cho phép outer container grow theo content → sticky toolbar hoạt động
@@ -28,11 +30,12 @@ export default async function AdminLayout({
           {readOnly && (
             <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <span className="font-semibold">∞ Chế độ chỉ-đọc</span> — Tài khoản
-              hạng Infinite có quyền xem mọi trang quản trị nhưng không thể
-              thực hiện thay đổi (duyệt, sửa, xóa, cấu hình).
+              hạng Infinite có quyền xem mọi trang quản trị và <strong>Đăng tin tức</strong>
+              {" "}(soạn/sửa bài). Các thao tác khác (duyệt, sửa, xóa, cấu hình, xuất bản tin)
+              {" "}chỉ dành cho Admin.
             </div>
           )}
-          <AdminReadOnlyProvider readOnly={readOnly}>
+          <AdminReadOnlyProvider readOnly={readOnly} canPublishNews={canPublishNews}>
             {children}
           </AdminReadOnlyProvider>
         </main>

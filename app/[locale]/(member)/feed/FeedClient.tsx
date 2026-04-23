@@ -39,6 +39,8 @@ type ProductSidecar = {
   certStatus: string
 }
 
+type PromotionRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
+
 type Post = {
   id: string
   authorId: string
@@ -58,6 +60,12 @@ type Post = {
   /** Moderation reject reason — set bởi admin khi reject. Khác với lockReason
    *  của auto-lock từ report. Hiển thị cho owner biết cần sửa gì. */
   moderationNote?: string | null
+  /** Chỉ attach khi viewer === author. Dùng để hiện badge "đang chờ duyệt"
+   *  hay "bị từ chối (lý do)" trên card của chính owner. */
+  latestPromotionRequest?: {
+    status: PromotionRequestStatus
+    reviewNote: string | null
+  } | null
   createdAt: string
   updatedAt: string
   author: PostAuthor
@@ -73,13 +81,20 @@ type Post = {
   pendingError?: string | null
 }
 
-type FilterKey = "NEWS" | "PRODUCT"
+type FilterKey = "NEWS" | "PRODUCT" | "MINE"
+/** Filter "MINE" không có composer (không biết tạo category nào) — dùng
+ *  type này để narrow prop `mode` cho InlinePostCreator. */
+type ComposerMode = Exclude<FilterKey, "MINE">
 
 // FILTERS moved inside component to access translations
 
 function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
   const params = new URLSearchParams()
-  params.set("category", filter)
+  if (filter === "MINE") {
+    params.set("mine", "1")
+  } else {
+    params.set("category", filter)
+  }
   if (cursor) params.set("cursor", cursor)
   return `/api/posts?${params.toString()}`
 }
@@ -425,6 +440,9 @@ function PostCard({
   onLock,
   onDelete,
   onDismiss,
+  onPromote,
+  onRequestPromotion,
+  onCancelRequest,
   tierSilver,
   tierGold,
   tierIndSilver,
@@ -440,6 +458,12 @@ function PostCard({
   /** Used for optimistic-post error dismissal only (removes the failed card
    *  from the feed). No-op for normal posts. */
   onDismiss: (id: string) => void
+  /** Admin action: toggle isPromoted. */
+  onPromote: (id: string) => void
+  /** Owner action: submit promotion request. */
+  onRequestPromotion: (id: string) => void
+  /** Owner action: cancel pending request. */
+  onCancelRequest: (id: string) => void
   tierSilver?: number
   tierGold?: number
   tierIndSilver?: number
@@ -483,14 +507,35 @@ function PostCard({
   const plainText = contentForProse.replace(/<[^>]*>/g, "")
   const needsTruncation = plainText.length > 140
 
+  // Promotion state helpers
+  const promoStatus = post.latestPromotionRequest?.status
+  const hasPendingRequest = promoStatus === "PENDING"
+  const canRequestPromotion =
+    isAuthor &&
+    !post.isPromoted &&
+    !hasPendingRequest &&
+    post.status === "PUBLISHED"
+
   // Menu options based on role
   const menuItems: { label: string; action: () => void; destructive?: boolean }[] = []
   if (isAuthor) {
     menuItems.push({ label: t("menuEdit"), action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` } })
+    if (canRequestPromotion) {
+      menuItems.push({ label: t("menuRequestPromotion"), action: () => onRequestPromotion(post.id) })
+    }
+    if (hasPendingRequest) {
+      menuItems.push({ label: t("menuCancelPromotionRequest"), action: () => onCancelRequest(post.id) })
+    }
     menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
   }
   if (isAdmin) {
     menuItems.push({ label: isLocked ? t("menuUnlock") : t("menuLock"), action: () => onLock(post.id) })
+    if (post.status === "PUBLISHED") {
+      menuItems.push({
+        label: post.isPromoted ? t("menuUnpromote") : t("menuPromote"),
+        action: () => onPromote(post.id),
+      })
+    }
     if (!isAuthor) menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
   }
   if (currentUserRole && currentUserRole !== "GUEST" && !isAuthor) {
@@ -660,9 +705,32 @@ function PostCard({
         )}
       </div>
 
-      {/* Promoted badge */}
+      {/* Promoted badge — hiển thị cho tất cả viewer khi bài đang được đẩy. */}
       {post.isPromoted && (
-        <span className="inline-flex text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full mb-2">Ghim bởi admin</span>
+        <span className="inline-flex text-xs font-medium bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full mb-2">
+          {t("promotedBadge")}
+        </span>
+      )}
+
+      {/* Promotion request status — chỉ owner thấy (API đã filter). */}
+      {isAuthor && !post.isPromoted && post.latestPromotionRequest && (
+        <>
+          {post.latestPromotionRequest.status === "PENDING" && (
+            <span className="inline-flex text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full mb-2">
+              {t("promotionPendingBadge")}
+            </span>
+          )}
+          {post.latestPromotionRequest.status === "REJECTED" && (
+            <div className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <p className="font-semibold">{t("promotionRejectedBadge")}</p>
+              {post.latestPromotionRequest.reviewNote && (
+                <p className="mt-1 leading-relaxed">
+                  {post.latestPromotionRequest.reviewNote}
+                </p>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Product sidecar strip — hiện khi bài post là sản phẩm */}
@@ -859,8 +927,8 @@ function InlinePostCreator({
 }: {
   /** Filter đang active — quyết định layout form (NEWS: textarea đơn; PRODUCT:
    *  form có tên/danh mục/giá/tiêu đề + mô tả). Post được tạo với category
-   *  trùng mode này. */
-  mode: FilterKey
+   *  trùng mode này. MINE không tạo được bài → caller phải ẩn composer. */
+  mode: ComposerMode
   currentUserName: string | null
   currentUserAvatarUrl: string | null
   currentUserId: string
@@ -1310,9 +1378,13 @@ export function FeedClient({
 }: FeedClientProps) {
   const t = useTranslations("feed")
 
+  // MINE chỉ hiện khi đã login — guest không có "bài của tôi".
   const FILTERS: { key: FilterKey; label: string }[] = [
     { key: "NEWS", label: t("filterNews") },
     { key: "PRODUCT", label: t("filterProduct") },
+    ...(currentUserId
+      ? ([{ key: "MINE" as const, label: t("filterMine") }])
+      : []),
   ]
 
   const [isMounted, setIsMounted] = useState(false)
@@ -1473,6 +1545,97 @@ export function FeedClient({
     } catch { /* */ }
   }
 
+  /** Admin: toggle isPromoted (đẩy bài lên / gỡ khỏi trang chủ). */
+  async function handlePromote(postId: string) {
+    const post = posts.find((p) => p.id === postId)
+    if (!post) return
+    const promote = !post.isPromoted
+    const confirmMsg = promote
+      ? t("promoteConfirm")
+      : t("unpromoteConfirm")
+    if (!window.confirm(confirmMsg)) return
+    try {
+      const res = await fetch(`/api/admin/posts/${postId}/promote`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ promote }),
+      })
+      const data = (await res.json()) as { isPromoted?: boolean; error?: string }
+      if (!res.ok) {
+        alert(data.error ?? t("genericError"))
+        return
+      }
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, isPromoted: data.isPromoted ?? promote } : p,
+        ),
+      )
+    } catch {
+      alert(t("genericError"))
+    }
+  }
+
+  /** Owner: xin admin đẩy bài lên trang chủ. */
+  async function handleRequestPromotion(postId: string) {
+    const reason = window.prompt(t("requestPromotionPrompt"))
+    if (reason === null) return // user cancelled
+    try {
+      const res = await fetch(`/api/posts/${postId}/request-promotion`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error ?? t("genericError"))
+        return
+      }
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                latestPromotionRequest: { status: "PENDING", reviewNote: null },
+              }
+            : p,
+        ),
+      )
+      alert(t("requestPromotionSubmitted"))
+    } catch {
+      alert(t("genericError"))
+    }
+  }
+
+  /** Owner: rút yêu cầu đang PENDING. */
+  async function handleCancelRequest(postId: string) {
+    if (!window.confirm(t("cancelRequestConfirm"))) return
+    try {
+      const res = await fetch(`/api/posts/${postId}/request-promotion`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        alert(data.error ?? t("genericError"))
+        return
+      }
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                latestPromotionRequest: {
+                  status: "CANCELLED",
+                  reviewNote: null,
+                },
+              }
+            : p,
+        ),
+      )
+    } catch {
+      alert(t("genericError"))
+    }
+  }
+
   function handlePostCreated(post: Post) {
     setPosts((prev) => [post, ...prev])
     setNow(Date.now())
@@ -1524,8 +1687,9 @@ export function FeedClient({
           ))}
         </div>
 
-        {/* Inline post creator — layout đổi theo filter (mode). */}
-        {canPost && currentUserId && currentUserRole && (
+        {/* Inline post creator — layout đổi theo filter (mode). Filter MINE
+            là view-only (không tạo được) → ẩn composer + hint chuyển filter. */}
+        {canPost && currentUserId && currentUserRole && filter !== "MINE" && (
           <InlinePostCreator
             mode={filter}
             currentUserName={currentUserName}
@@ -1537,12 +1701,19 @@ export function FeedClient({
             onPostUpdated={handlePostUpdated}
           />
         )}
+        {filter === "MINE" && canPost && (
+          <div className="rounded-xl border border-dashed border-brand-200 bg-brand-50/40 p-4 text-center text-sm text-brand-600">
+            {t("mineComposerHint")}
+          </div>
+        )}
 
         {/* Posts */}
         {posts.length === 0 && !loading && (
           <div className="bg-white rounded-xl border border-brand-200 p-12 text-center space-y-2">
-            <p className="text-brand-500">Chưa có bài viết nào.</p>
-            {canPost && (
+            <p className="text-brand-500">
+              {filter === "MINE" ? t("mineEmpty") : t("feedEmpty")}
+            </p>
+            {canPost && filter !== "MINE" && (
               <Link href="/feed/tao-bai" className="text-sm text-brand-600 hover:text-brand-800 underline">
                 Hãy là người đầu tiên đăng bài!
               </Link>
@@ -1561,6 +1732,9 @@ export function FeedClient({
             onLock={handleLock}
             onDelete={handleDelete}
             onDismiss={handlePostDismiss}
+            onPromote={handlePromote}
+            onRequestPromotion={handleRequestPromotion}
+            onCancelRequest={handleCancelRequest}
             tierSilver={tierSilver}
             tierGold={tierGold}
             tierIndSilver={tierIndSilver}

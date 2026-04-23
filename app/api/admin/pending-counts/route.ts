@@ -24,6 +24,7 @@ export type PendingWorkflowKey =
   | "consultation"
   | "contact"
   | "post"
+  | "promotionRequest"
 
 type RecentItem = {
   id: string
@@ -64,6 +65,7 @@ export async function GET() {
     consultations,
     contactMessages,
     pendingPosts,
+    promotionRequests,
   ] = await Promise.all([
     // Đơn đăng ký user mới đang chờ admin duyệt (role=GUEST + isActive=false).
     // Approve → upgrade VIP + gửi link đặt mật khẩu; Reject → xóa user.
@@ -170,6 +172,17 @@ export async function GET() {
         content: true,
         createdAt: true,
         author: { select: { name: true } },
+      },
+    }),
+    prisma.postPromotionRequest.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        reason: true,
+        createdAt: true,
+        requester: { select: { name: true } },
+        post: { select: { id: true, title: true, content: true } },
       },
     }),
   ])
@@ -279,6 +292,24 @@ export async function GET() {
           subtitle: p.author?.name ?? undefined,
           href: `/admin/bai-viet/cho-duyet?id=${p.id}`,
           createdAt: iso(p.createdAt),
+        }
+      }),
+    },
+    promotionRequest: {
+      count: promotionRequests.length,
+      recent: promotionRequests.slice(0, 3).map((r) => {
+        const plainText = r.post.content
+          .replace(/<[^>]*>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+        return {
+          id: r.id,
+          title: r.post.title ?? (plainText.slice(0, 60) || "Bài viết"),
+          subtitle: r.requester?.name
+            ? `${r.requester.name} xin đẩy lên trang chủ`
+            : "Xin đẩy lên trang chủ",
+          href: `/admin/bai-viet/xin-dang`,
+          createdAt: iso(r.createdAt),
         }
       }),
     },

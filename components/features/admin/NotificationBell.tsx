@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { Bell, FileCheck, BadgeCheck, Megaphone, ImageIcon, Flag, Headset, Mail, MessageSquareText, UserPlus } from "lucide-react"
+import { Bell, FileCheck, BadgeCheck, Megaphone, ImageIcon, Flag, Headset, Mail, MessageSquareText, UserPlus, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 import type { PendingWorkflowKey } from "@/app/api/admin/pending-counts/route"
@@ -25,6 +25,7 @@ const WORKFLOW_META: Record<PendingWorkflowKey, WorkflowMeta> = {
   certification:         { label: "Chứng nhận sản phẩm",   viewAllHref: "/admin/chung-nhan",           icon: BadgeCheck },
   banner:                { label: "Duyệt banner",          viewAllHref: "/admin/banner",               icon: ImageIcon },
   post:                  { label: "Duyệt bài viết",        viewAllHref: "/admin/bai-viet/cho-duyet",   icon: MessageSquareText },
+  promotionRequest:      { label: "Xin đẩy lên trang chủ", viewAllHref: "/admin/bai-viet/xin-dang",    icon: Star },
   report:                { label: "Báo cáo bài viết",      viewAllHref: "/admin/bao-cao",              icon: Flag },
   mediaOrder:            { label: "Đơn truyền thông",      viewAllHref: "/admin/truyen-thong",         icon: Megaphone },
   consultation:          { label: "Yêu cầu tư vấn",        viewAllHref: "/admin/tu-van",               icon: Headset },
@@ -40,6 +41,7 @@ const WORKFLOW_ORDER: PendingWorkflowKey[] = [
   "certification",
   "banner",
   "post",
+  "promotionRequest",
   "mediaOrder",
   "contact",
   "report",

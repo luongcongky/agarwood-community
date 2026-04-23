@@ -114,16 +114,29 @@ export default async function FeedPage() {
         where: { userId: userId ?? "none" },
         select: { type: true },
       },
+      // Latest promotion request — cùng logic như /api/posts route.
+      promotionRequests: {
+        take: 1,
+        orderBy: { createdAt: "desc" },
+        select: { status: true, reviewNote: true },
+      },
       _count: { select: { reactions: true, comments: { where: { deletedAt: null } } } },
     },
   })
 
-  const posts = initialPosts.map((p) => ({
-    ...p,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
-    lockedAt: p.lockedAt?.toISOString() ?? null,
-  }))
+  const posts = initialPosts.map((p) => {
+    const { promotionRequests, ...rest } = p
+    return {
+      ...rest,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      lockedAt: p.lockedAt?.toISOString() ?? null,
+      latestPromotionRequest:
+        userId && p.authorId === userId
+          ? (promotionRequests[0] ?? null)
+          : null,
+    }
+  })
 
   // Sidebar data — membershipInfo per-user (không cache được); topContributors
   // dùng cache 10 phút chung cho mọi viewer.

@@ -83,7 +83,7 @@ function TopItem({ post }: { post: HomepagePost }) {
   const title = plainTitle(post)
   return (
     <Link
-      href={`/feed?post=${post.id}`}
+      href={`/bai-viet/${post.id}`}
       className="group flex items-start gap-3 py-3"
     >
       {cover ? (
@@ -122,7 +122,7 @@ function CompactItem({ post }: { post: HomepagePost }) {
   const title = plainTitle(post)
   return (
     <Link
-      href={`/feed?post=${post.id}`}
+      href={`/bai-viet/${post.id}`}
       className="group flex gap-2 text-sm"
     >
       <span className="shrink-0 font-bold text-brand-700">▸</span>

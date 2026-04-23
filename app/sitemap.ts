@@ -39,6 +39,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static routes. Legal pages (privacy, terms) live here because their
   // content is in the News table under category=LEGAL but their public
   // URLs are fixed, NOT /tin-tuc/{slug}.
+  //
+  // V2 redesign bổ sung `/phap-ly` (hub văn bản pháp lý, có trong submenu
+  // "Giới thiệu" của CategoryBar mới) + mở các surface `san-pham-tieu-bieu`,
+  // `san-pham-doanh-nghiep`, `multimedia` (đã có từ trước nhưng chưa index).
   const staticRoutes: MetadataRoute.Sitemap = [
     entry("/", now, "daily", 1.0),
     entry("/gioi-thieu", now, "monthly", 0.7),
@@ -48,6 +52,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/hoi-vien", now, "weekly", 0.8),
     entry("/doanh-nghiep", now, "weekly", 0.8),
     entry("/san-pham-chung-nhan", now, "weekly", 0.9),
+    entry("/san-pham-tieu-bieu", now, "weekly", 0.8),
+    entry("/san-pham-doanh-nghiep", now, "weekly", 0.8),
+    entry("/multimedia", now, "weekly", 0.7),
+    entry("/phap-ly", now, "monthly", 0.6),
     entry("/dich-vu", now, "monthly", 0.7),
     entry("/lien-he", now, "monthly", 0.6),
     entry("/dieu-le", now, "yearly", 0.5),
@@ -56,18 +64,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/feed", now, "hourly", 0.8),
   ]
 
+  // Chạy song song — 4 query độc lập, tiết kiệm ~3× RTT so với await tuần tự.
+  // No `take` limit: sitemap.xml caps at 50,000 URLs per file (Google spec).
+  const [newsItems, products, companies, posts, multimediaItems] = await Promise.all([
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: { in: ["GENERAL", "RESEARCH", "SPONSORED_PRODUCT"] },
+      },
+      select: { slug: true, updatedAt: true, category: true },
+      orderBy: { publishedAt: "desc" },
+    }),
+    prisma.product.findMany({
+      where: { certStatus: "APPROVED", isPublished: true },
+      select: { slug: true, updatedAt: true },
+    }),
+    prisma.company.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+    }),
+    // V2: homepage (PostsSection + MemberRail) link trực tiếp sang
+    // `/bai-viet/{id}` thay vì `/feed?post=`. Emit PUBLISHED posts để Google
+    // có tín hiệu lastmod/hreflang thay vì chỉ crawl nhờ internal link.
+    // Skip PENDING (chờ duyệt), DELETED, và LOCKED-with-moderationNote
+    // (admin reject — chỉ owner thấy). LOCKED no-note (auto-lock từ
+    // report) vẫn public nhưng bỏ khỏi sitemap cho an toàn — admin có thể
+    // unlock bất kỳ lúc nào.
+    prisma.post.findMany({
+      where: { status: "PUBLISHED" },
+      select: { id: true, updatedAt: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    // Multimedia (video + photo collection). `slug` unique + page có route
+    // `/multimedia/[slug]` → index được.
+    prisma.multimedia.findMany({
+      where: { isPublished: true },
+      select: { slug: true, updatedAt: true },
+      orderBy: { publishedAt: "desc" },
+    }),
+  ])
+
   // Dynamic news articles — split by category so each row maps to the
   // correct public URL. Previously every row was emitted as /tin-tuc/{slug}
   // which 404'd for LEGAL + RESEARCH items.
-  // No `take` limit: sitemap.xml caps at 50,000 URLs per file (Google spec).
-  const newsItems = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-      category: { in: ["GENERAL", "RESEARCH", "SPONSORED_PRODUCT"] },
-    },
-    select: { slug: true, updatedAt: true, category: true },
-    orderBy: { publishedAt: "desc" },
-  })
   const newsRoutes: MetadataRoute.Sitemap = newsItems.map((n) => {
     // RESEARCH → /nghien-cuu, GENERAL + SPONSORED_PRODUCT → /tin-tuc.
     // LEGAL không emit (privacy/terms đã có trong staticRoutes, /phap-ly là hub).
@@ -75,23 +114,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return entry(path, n.updatedAt, "monthly", 0.7)
   })
 
-  // Certified products
-  const products = await prisma.product.findMany({
-    where: { certStatus: "APPROVED", isPublished: true },
-    select: { slug: true, updatedAt: true },
-  })
   const productRoutes: MetadataRoute.Sitemap = products.map((p) =>
     entry(`/san-pham/${p.slug}`, p.updatedAt, "monthly", 0.8),
   )
 
-  // Published companies
-  const companies = await prisma.company.findMany({
-    where: { isPublished: true },
-    select: { slug: true, updatedAt: true },
-  })
   const companyRoutes: MetadataRoute.Sitemap = companies.map((c) =>
     entry(`/doanh-nghiep/${c.slug}`, c.updatedAt, "weekly", 0.7),
   )
 
-  return [...staticRoutes, ...newsRoutes, ...productRoutes, ...companyRoutes]
+  // Posts là user-generated nên priority thấp hơn news toà soạn (0.5 vs 0.7).
+  const postRoutes: MetadataRoute.Sitemap = posts.map((p) =>
+    entry(`/bai-viet/${p.id}`, p.updatedAt, "monthly", 0.5),
+  )
+
+  const multimediaRoutes: MetadataRoute.Sitemap = multimediaItems.map((m) =>
+    entry(`/multimedia/${m.slug}`, m.updatedAt, "monthly", 0.6),
+  )
+
+  return [
+    ...staticRoutes,
+    ...newsRoutes,
+    ...productRoutes,
+    ...companyRoutes,
+    ...postRoutes,
+    ...multimediaRoutes,
+  ]
 }

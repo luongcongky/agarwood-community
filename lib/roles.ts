@@ -24,6 +24,25 @@ export function canAdminWrite(role: Role | string | null | undefined): boolean {
 }
 
 /**
+ * Carve-out cho news editor: INFINITE (thẻ đen) được mở khóa để **viết**
+ * tin tức — tạo nháp, sửa nội dung, sửa SEO, gọi AI dịch. Nhưng không được
+ * xuất bản (`isPublished`) — xem `canPublishNews`. Các admin surface khác
+ * vẫn dùng `canAdminWrite` nên INFINITE vẫn chỉ-đọc ở đó.
+ */
+export function canWriteNews(role: Role | string | null | undefined): boolean {
+  return role === "ADMIN" || role === "INFINITE"
+}
+
+/**
+ * Quyền **xuất bản** tin tức (bật `isPublished`). Chỉ ADMIN. INFINITE viết
+ * được nhưng phải để admin review + publish. API phải strip `isPublished`
+ * khỏi PATCH body nếu `!canPublishNews`, không chỉ trông vào UI.
+ */
+export function canPublishNews(role: Role | string | null | undefined): boolean {
+  return role === "ADMIN"
+}
+
+/**
  * Role được coi là "thành viên" — có quyền đăng bài feed, xem nội dung VIP.
  * VIP (membership đang active) + ADMIN + INFINITE. GUEST bị loại.
  * Backend `/api/posts` không enforce role, nhưng UI cần check để ẩn nút đăng

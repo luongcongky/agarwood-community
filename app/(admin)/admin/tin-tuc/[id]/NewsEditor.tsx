@@ -3,17 +3,36 @@
 import { useState, useEffect, useRef, use } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import DOMPurify from "isomorphic-dompurify"
+import dynamic from "next/dynamic"
 import {
   RichTextEditor,
   type RichTextEditorHandle,
 } from "@/components/editor/RichTextEditor"
 
 import { slugify } from "@/lib/utils"
-import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
-import { CoverImageCropper } from "@/components/ui/CoverImageCropper"
+import {
+  useAdminCanPublishNews,
+  PUBLISH_LOCKED_TOOLTIP,
+} from "@/components/features/admin/AdminReadOnlyContext"
 import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
 import { SeoEditorPanel } from "./SeoEditorPanel"
+
+// Lazy-load để không kéo DOMPurify (~100KB) + 140 dòng JSX preview vào
+// chunk khởi tạo. Admin thường save rồi mới preview → load on-demand.
+const NewsPreviewModal = dynamic(() => import("./NewsPreviewModal"), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+      <span className="text-sm text-brand-600">Đang tải xem trước...</span>
+    </div>
+  ),
+})
+
+// Cropper chỉ dùng khi user chọn ảnh bìa mới — lazy để giảm bundle editor.
+const CoverImageCropper = dynamic(
+  () => import("@/components/ui/CoverImageCropper").then((m) => m.CoverImageCropper),
+  { ssr: false },
+)
 
 interface NewsData {
   title: string
@@ -35,7 +54,9 @@ export default function NewsEditorPage({
   const { id } = use(params)
   const isNew = id === "moi"
   const router = useRouter()
-  const readOnly = useAdminReadOnly()
+  // INFINITE được mở khóa để soạn/sửa tin tức — editor không còn bị gate
+  // chung theo `readOnly` nữa. Chỉ gate riêng toggle Xuất bản (ADMIN only).
+  const publishDisabled = !useAdminCanPublishNews()
 
   const EMPTY_LANG: Record<Locale, string> = { vi: "", en: "", zh: "", ar: "" }
   const [title, setTitle] = useState<Record<Locale, string>>(EMPTY_LANG)
@@ -372,7 +393,6 @@ export default function NewsEditorPage({
     )
   }
 
-  const previewContent = editorRef.current?.getHTML() ?? ""
   const displayCover = coverPreview || coverImageUrl
 
   return (
@@ -410,7 +430,6 @@ export default function NewsEditorPage({
                 activeLocale={activeLocale}
                 onLocaleChange={(l) => void handleLocaleSwitch(l)}
                 hasContent={computeHasContent(title, excerpt, content)}
-                disabled={readOnly}
                 helperText={
                   activeLocale === "vi"
                     ? "Bản tiếng Việt là bản gốc — bắt buộc. Dùng nút AI dịch khi chuyển sang EN / 中文 để dịch toàn bộ tiêu đề + tóm tắt + nội dung trong 1 lần."
@@ -430,7 +449,6 @@ export default function NewsEditorPage({
                   onChange={(e) => setTitleField(activeLocale, e.target.value)}
                   placeholder={activeLocale === "vi" ? "Tiêu đề bài viết" : `Tiêu đề (${activeLocale.toUpperCase()})`}
                   required={activeLocale === "vi"}
-                  disabled={readOnly}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
               </div>
@@ -458,7 +476,6 @@ export default function NewsEditorPage({
                   }
                   rows={3}
                   placeholder={activeLocale === "vi" ? "Tóm tắt nội dung" : `Tóm tắt (${activeLocale.toUpperCase()})`}
-                  disabled={readOnly}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
                 />
               </div>
@@ -570,10 +587,20 @@ export default function NewsEditorPage({
                 </p>
               </div>
 
-              {/* Published toggle */}
-              <label className="flex items-center gap-3 cursor-pointer">
+              {/* Published toggle — chỉ ADMIN bật được. INFINITE thấy toggle
+                  mờ + tooltip giải thích phải chờ admin duyệt. Server cũng
+                  strip `isPublished` khỏi PATCH body nếu user không có
+                  quyền, không chỉ dựa vào UI. */}
+              <label
+                className={`flex items-center gap-3 ${publishDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                title={publishDisabled ? PUBLISH_LOCKED_TOOLTIP : undefined}
+              >
                 <div
-                  onClick={() => setIsPublished((v) => !v)}
+                  onClick={() => {
+                    if (publishDisabled) return
+                    setIsPublished((v) => !v)
+                  }}
+                  aria-disabled={publishDisabled}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                     isPublished ? "bg-green-500" : "bg-gray-300"
                   }`}
@@ -585,7 +612,18 @@ export default function NewsEditorPage({
                   />
                 </div>
                 <span className="text-sm text-brand-800">Xuất bản</span>
+                {publishDisabled && (
+                  <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                    Chỉ Admin
+                  </span>
+                )}
               </label>
+              {publishDisabled && (
+                <p className="-mt-2 text-[11px] leading-snug text-amber-700">
+                  Tài khoản Infinite soạn bài và lưu nháp. Admin sẽ review + bật
+                  xuất bản khi bài sẵn sàng.
+                </p>
+              )}
 
               {/* Pinned toggle */}
               <label className="flex items-center gap-3 cursor-pointer">
@@ -636,7 +674,6 @@ export default function NewsEditorPage({
               setSeoDescriptionField={setSeoDescriptionField}
               coverImageAlt={coverImageAlt}
               setCoverImageAltField={setCoverImageAltField}
-              disabled={readOnly}
             />
 
             {error && (
@@ -653,8 +690,7 @@ export default function NewsEditorPage({
 
             <button
               type="submit"
-              disabled={loading || readOnly}
-              title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+              disabled={loading}
               className="w-full rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
             >
               {loading
@@ -675,144 +711,17 @@ export default function NewsEditorPage({
         </div>
       </form>
 
-      {/* ── Full-page Preview ── */}
+      {/* Lazy modal — code-split, DOMPurify chỉ load khi admin bấm Preview. */}
       {showPreview && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
-          {/* Simulated Navbar */}
-          <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md shrink-0">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex h-16 items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo.png" alt="Logo" className="h-11 w-11 shrink-0" />
-                  <span className="text-brand-100 font-semibold text-lg hidden sm:block">
-                    Hội Trầm Hương
-                    <span className="text-brand-400 text-xs font-normal tracking-widest uppercase block">
-                      Việt Nam
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    CHẾ ĐỘ XEM TRƯỚC
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(false)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors"
-                  >
-                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Đóng
-                  </button>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Article content — exactly like /tin-tuc/[slug] */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 py-10">
-              {/* Breadcrumb */}
-              <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 flex-wrap">
-                <span className="hover:text-brand-700 cursor-default">Trang chủ</span>
-                <span>/</span>
-                <span className="hover:text-brand-700 cursor-default">
-                  {category === "RESEARCH" ? "Nghiên cứu" : category === "LEGAL" ? "Văn bản pháp lý" : "Tin tức"}
-                </span>
-                <span>/</span>
-                <span className="text-foreground font-medium line-clamp-1">
-                  {title[activeLocale] || title.vi || "..."}
-                </span>
-              </nav>
-
-              {/* Article Header */}
-              <header className="mb-8 space-y-4">
-                <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-                  {title[activeLocale] || title.vi || <span className="text-brand-300 italic">Chưa có tiêu đề</span>}
-                </h1>
-                {publishedAt && (
-                  <p className="text-muted-foreground text-sm">
-                    Ngày đăng:{" "}
-                    {new Date(publishedAt).toLocaleDateString("vi-VN", {
-                      weekday: "long",
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </p>
-                )}
-                {displayCover && (
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={displayCover}
-                      alt={title.vi}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </header>
-
-              {/* Article Body */}
-              <article className="mb-10">
-                <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      previewContent || "<p class='text-brand-300 italic'>Chưa có nội dung...</p>"
-                    ),
-                  }}
-                />
-              </article>
-
-              {/* Share Buttons (visual only) */}
-              <div className="border-t border-border pt-6 mb-10">
-                <p className="text-sm font-medium text-foreground mb-3">Chia sẻ bài viết:</p>
-                <div className="flex flex-wrap gap-3">
-                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium opacity-60 cursor-default">
-                    Facebook
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-medium opacity-60 cursor-default">
-                    Zalo
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-100 text-brand-700 text-sm font-medium opacity-60 cursor-default">
-                    Sao chép liên kết
-                  </span>
-                </div>
-              </div>
-
-              {/* Related Articles placeholder */}
-              <section>
-                <h2 className="text-xl font-semibold text-foreground mb-5">Tin tức liên quan</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card rounded-xl overflow-hidden border border-border">
-                      <div className="w-full h-36 bg-brand-100 flex items-center justify-center text-brand-300 text-sm">
-                        Ảnh bài viết
-                      </div>
-                      <div className="p-3 space-y-1">
-                        <div className="h-4 bg-brand-100 rounded w-3/4" />
-                        <div className="h-3 bg-brand-50 rounded w-1/2" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-
-            {/* Simulated Footer */}
-            <footer className="bg-brand-900 text-brand-300 mt-10">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div className="text-center text-sm">
-                  <p className="text-brand-400">Hội Trầm Hương Việt Nam</p>
-                  <p className="text-brand-500 text-xs mt-1">Xem trước — Nội dung chưa được xuất bản</p>
-                </div>
-              </div>
-            </footer>
-          </main>
-        </div>
+        <NewsPreviewModal
+          category={category}
+          title={title}
+          activeLocale={activeLocale}
+          publishedAt={publishedAt}
+          displayCover={displayCover}
+          previewContent={editorRef.current?.getHTML() ?? ""}
+          onClose={() => setShowPreview(false)}
+        />
       )}
     </div>
   )

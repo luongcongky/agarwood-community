@@ -34,9 +34,11 @@ const getLeadership = unstable_cache(
 )
 
 export async function SiteFooter() {
-  const [leaders, t, locale] = await Promise.all([
+  const [leaders, t, tCommon, tNav, locale] = await Promise.all([
     getLeadership(),
     getTranslations("footer"),
+    getTranslations("common"),
+    getTranslations("navbar"),
     getLocale() as Promise<Locale>,
   ])
   const year = new Date().getFullYear()
@@ -61,14 +63,13 @@ export async function SiteFooter() {
         {/* About — full width mobile + sm, col-span-2 on desktop */}
         <div className="col-span-2 lg:col-span-2">
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
-            Hội Trầm Hương Việt Nam
+            {tCommon("siteName")}
           </h3>
           <p className="text-[13px] leading-relaxed text-neutral-300">
-            Kết nối cộng đồng doanh nghiệp trầm hương — chứng nhận sản phẩm,
-            chia sẻ tri thức và phát triển thị trường bền vững.
+            {t("brandDescDefault")}
           </p>
           <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
-            Thành lập theo Quyết định số 23/QĐ-BNV ngày 11/01/2010 của Bộ Nội Vụ.
+            {t("establishedNotice")}
           </p>
         </div>
 
@@ -120,41 +121,43 @@ export async function SiteFooter() {
         {/* Quick links */}
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
-            Liên kết nhanh
+            {t("quickLinks")}
           </h3>
           <ul className="space-y-1.5 text-[13px]">
             <li>
               <Link href="/gioi-thieu" className="hover:text-white hover:underline">
-                Giới thiệu
+                {tNav("about")}
               </Link>
             </li>
             <li>
               <Link href="/dieu-le" className="hover:text-white hover:underline">
-                Điều lệ
+                {tNav("charter")}
               </Link>
             </li>
             <li>
               <Link href="/ban-lanh-dao" className="hover:text-white hover:underline">
-                Ban lãnh đạo
+                {tNav("leadership")}
               </Link>
             </li>
             <li>
               <Link href="/tin-tuc" className="hover:text-white hover:underline">
-                Tin tức
+                {tNav("news")}
               </Link>
             </li>
             <li>
               <Link href="/nghien-cuu" className="hover:text-white hover:underline">
-                Nghiên cứu
+                {tNav("research")}
               </Link>
             </li>
           </ul>
         </div>
 
-        {/* Contact */}
+        {/* Contact — address cố tình giữ tiếng Việt: tên đường/phường là
+            danh từ riêng, dịch ra tiếng nước ngoài sẽ sai lệch khi tra cứu
+            bản đồ/giao nhận thư từ. Chỉ dịch heading. */}
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
-            Liên hệ
+            {t("contact")}
           </h3>
           <address className="text-[13px] not-italic leading-relaxed text-neutral-300">
             Số 150, Đường Lý Chính Thắng
@@ -175,12 +178,10 @@ export async function SiteFooter() {
         {/* Working hours */}
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
-            Giờ làm việc
+            {t("workingHours")}
           </h3>
           <p className="text-[13px] leading-relaxed text-neutral-300">
-            Thứ 2 - Thứ 6
-            <br />
-            8:00 - 17:00
+            {t("workingHoursDefault")}
           </p>
           <div className="mt-4 flex gap-3">
             <a
@@ -198,13 +199,13 @@ export async function SiteFooter() {
 
       <div className="border-t border-brand-800 bg-black/30">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-2 px-4 py-4 text-[12px] text-neutral-400 sm:flex-row sm:px-6 lg:px-8">
-          <span>© {year} Hội Trầm Hương Việt Nam. Bảo lưu mọi quyền.</span>
+          <span>{t("copyright", { year })}</span>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-white hover:underline">
-              Chính sách bảo mật
+              {t("privacyPolicy")}
             </Link>
             <Link href="/terms" className="hover:text-white hover:underline">
-              Điều khoản sử dụng
+              {t("termsOfService")}
             </Link>
           </div>
         </div>

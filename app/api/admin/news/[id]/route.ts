@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
-import { isAdmin, canAdminWrite } from "@/lib/roles"
+import { isAdmin, canAdminWrite, canWriteNews, canPublishNews } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { scoreSeo } from "@/lib/seo/score"
+import { getPreviousTitles } from "@/lib/news-seo-cache"
+import {
+  collectNewsCloudinaryIds,
+  destroyCloudinaryByPublicIds,
+} from "@/lib/cloudinary-server"
 
-function revalidateNewsSurfaces() {
+/** Xem ghi chú ở `app/api/admin/news/route.ts`. */
+function revalidateNewsSurfaces({ publicFacing = true }: { publicFacing?: boolean } = {}) {
+  revalidatePath("/admin/tin-tuc")
+  revalidateTag("news:titles", "max")
+  if (!publicFacing) return
   revalidatePath("/sitemap.xml")
   revalidatePath("/feed.xml")
   revalidatePath("/[locale]/tin-tuc", "layout")
@@ -39,9 +48,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
+  if (!session?.user || !canWriteNews(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+  // INFINITE write được content nhưng không flip được `isPublished`.
+  // Strip field khỏi patch body → trường cũ giữ nguyên, client tự tái hiện UI.
+  const canPublish = canPublishNews(session.user.role)
 
   const { id } = await params
   const body = await req.json()
@@ -87,7 +99,7 @@ export async function PATCH(
           : category === "SPONSORED_PRODUCT"
             ? "SPONSORED_PRODUCT"
             : "GENERAL"
-  if (isPublished !== undefined) data.isPublished = isPublished
+  if (isPublished !== undefined && canPublish) data.isPublished = isPublished
   if (isPinned !== undefined) data.isPinned = isPinned
   if (publishedAt !== undefined)
     data.publishedAt = publishedAt ? new Date(publishedAt) : null
@@ -120,12 +132,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
   const merged = { ...current, ...data } as typeof current
-  const previous = await prisma.news.findMany({
-    where: { isPublished: true, id: { not: id } },
-    select: { title: true },
-    orderBy: { publishedAt: "desc" },
-    take: 1000,
-  })
+  // Dùng cache (tag "news:titles"), loại trừ chính bài đang edit.
+  const previousTitles = await getPreviousTitles(id)
   const translatedLocaleCount = [merged.title_en, merged.title_zh, merged.title_ar].filter(
     (t): t is string => typeof t === "string" && t.trim().length > 0,
   ).length
@@ -140,7 +148,7 @@ export async function PATCH(
     coverImageUrl: merged.coverImageUrl,
     coverImageAlt: merged.coverImageAlt,
     slug: merged.slug,
-    previousTitles: previous.map((p) => p.title),
+    previousTitles,
     translatedLocaleCount,
   })
   data.seoScore = seoResult.legacyScore
@@ -148,7 +156,27 @@ export async function PATCH(
 
   const news = await prisma.news.update({ where: { id }, data })
 
-  revalidateNewsSurfaces()
+  // Bài đã publish hoặc vừa publish lần đầu → cần invalidate mọi public
+  // surface. Nếu draft-before + draft-after → content chưa bao giờ ra ngoài,
+  // không cần chạm cache homepage/tin-tuc/sitemap/feed.
+  const publicFacing = current.isPublished || news.isPublished
+  revalidateNewsSurfaces({ publicFacing })
+
+  // Dọn Cloudinary orphan: diff public_id giữa state cũ (current) và mới
+  // (news). Ảnh bị replace cover hoặc bị xoá trong editor → destroy.
+  // Fire-and-forget; sweep nền là safety net nếu lỗi.
+  const oldIds = collectNewsCloudinaryIds(current)
+  const newIds = collectNewsCloudinaryIds(news)
+  const removed = [...oldIds].filter((id) => !newIds.has(id))
+  if (removed.length > 0) {
+    void destroyCloudinaryByPublicIds(removed)
+      .then((r) =>
+        console.log(
+          `[news/${id}] cloudinary cleanup (patch): ${r.deleted} deleted, ${r.failed} failed`,
+        ),
+      )
+      .catch((e) => console.error(`[news/${id}] cloudinary cleanup failed:`, e))
+  }
 
   return NextResponse.json({ news })
 }
@@ -164,9 +192,38 @@ export async function DELETE(
 
   const { id } = await params
 
+  // Fetch state trước khi xoá: isPublished để biết có cần revalidate public
+  // cache không, cover + content 4-locale để biết ảnh nào cần destroy trên
+  // Cloudinary.
+  const target = await prisma.news.findUnique({
+    where: { id },
+    select: {
+      isPublished: true,
+      coverImageUrl: true,
+      content: true,
+      content_en: true,
+      content_zh: true,
+      content_ar: true,
+    },
+  })
   await prisma.news.delete({ where: { id } })
+  revalidateNewsSurfaces({ publicFacing: target?.isPublished === true })
 
-  revalidateNewsSurfaces()
+  // Dọn ảnh trên Cloudinary. Fire-and-forget sau khi DB đã xoá —
+  // nếu destroy fail, sweep nền (scripts/sweep-cloudinary-orphans.ts)
+  // sẽ dọn orphan ở lần chạy tiếp.
+  if (target) {
+    const ids = collectNewsCloudinaryIds(target)
+    if (ids.size > 0) {
+      void destroyCloudinaryByPublicIds(ids)
+        .then((r) =>
+          console.log(
+            `[news/${id}] cloudinary cleanup (delete): ${r.deleted} deleted, ${r.failed} failed`,
+          ),
+        )
+        .catch((e) => console.error(`[news/${id}] cloudinary cleanup failed:`, e))
+    }
+  }
 
   return NextResponse.json({ success: true })
 }

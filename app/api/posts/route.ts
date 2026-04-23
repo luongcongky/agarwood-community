@@ -40,6 +40,7 @@ export async function GET(request: Request) {
   const cursor = searchParams.get("cursor")
   const categoryParam = searchParams.get("category")
   const certifiedOnly = searchParams.get("certified") === "1"
+  const mineOnly = searchParams.get("mine") === "1"
   const session = await auth()
   const userId = session?.user?.id
 
@@ -49,31 +50,45 @@ export async function GET(request: Request) {
     ? (categoryParam as PostCategory)
     : undefined
 
+  // `mine=1` chỉ có nghĩa khi đã login. Guest gửi mine=1 → bỏ qua, trả
+  // feed mặc định (không empty cho viewer chưa login).
+  const effectiveMine = mineOnly && !!userId
+
   // Moderation visibility — match logic in feed/page.tsx:
   //  PUBLISHED → all; LOCKED no-note → all (auto-lock); LOCKED with note or
   //  PENDING → owner only (bai admin reject voi ly do, hoac cho duyet).
+  //
+  // mine=1 → loại bỏ moderation OR, chỉ lấy bài của chính user (bao gồm
+  // PENDING/LOCKED của họ để họ tracking moderation state). Ignore
+  // category filter cho view MINE — user muốn thấy TẤT CẢ bài của mình.
   const posts = await prisma.post.findMany({
-    where: {
-      ...(userId
-        ? {
-            OR: [
-              { status: "PUBLISHED" },
-              { status: "LOCKED", moderationNote: null },
-              { status: "PENDING", authorId: userId },
-              { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
-            ],
-          }
-        : {
-            OR: [
-              { status: "PUBLISHED" },
-              { status: "LOCKED", moderationNote: null },
-            ],
-          }),
-      ...(category ? { category } : {}),
-      ...(certifiedOnly
-        ? { category: "PRODUCT", product: { is: { certStatus: "APPROVED" } } }
-        : {}),
-    },
+    where: effectiveMine
+      ? {
+          authorId: userId,
+          // Loại DELETED để khỏi lộ bài đã xoá mềm
+          status: { not: "DELETED" },
+        }
+      : {
+          ...(userId
+            ? {
+                OR: [
+                  { status: "PUBLISHED" },
+                  { status: "LOCKED", moderationNote: null },
+                  { status: "PENDING", authorId: userId },
+                  { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+                ],
+              }
+            : {
+                OR: [
+                  { status: "PUBLISHED" },
+                  { status: "LOCKED", moderationNote: null },
+                ],
+              }),
+          ...(category ? { category } : {}),
+          ...(certifiedOnly
+            ? { category: "PRODUCT", product: { is: { certStatus: "APPROVED" } } }
+            : {}),
+        },
     orderBy: [
       { isPromoted: "desc" },
       { authorPriority: "desc" },
@@ -126,17 +141,33 @@ export async function GET(request: Request) {
         where: { userId: userId ?? "none" },
         select: { type: true },
       },
+      // Latest promotion request (chỉ 1 — dùng để hiện badge cho owner).
+      // Nếu không có request nào → array rỗng. Client filter theo authorId
+      // để chỉ attach vào owner's posts (tránh leak state ra viewer khác).
+      promotionRequests: {
+        take: 1,
+        orderBy: { createdAt: "desc" },
+        select: { status: true, reviewNote: true },
+      },
       _count: { select: { reactions: true } },
     },
   })
 
   const response = NextResponse.json({
-    posts: posts.map((p) => ({
-      ...p,
-      createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString(),
-      lockedAt: p.lockedAt?.toISOString() ?? null,
-    })),
+    posts: posts.map((p) => {
+      const { promotionRequests, ...rest } = p
+      return {
+        ...rest,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        lockedAt: p.lockedAt?.toISOString() ?? null,
+        // Only expose promotion state to the author of the post.
+        latestPromotionRequest:
+          userId && p.authorId === userId
+            ? (promotionRequests[0] ?? null)
+            : null,
+      }
+    }),
   })
   response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   return response
