@@ -5,7 +5,7 @@ import Link from "next/link"
 import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { isMember as isMemberRole } from "@/lib/roles"
+import { hasMemberAccess } from "@/lib/roles"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import {
@@ -1337,10 +1337,10 @@ export function FeedClient({
   }
 
   const isLoggedIn = !!currentUserId
-  // Includes INFINITE — bug fix: before this was hard-coded to VIP|ADMIN,
-  // which blocked the post form for users with the INFINITE role even
-  // though they have full member privileges.
-  const isMember = isMemberRole(currentUserRole)
+  // VIP/ADMIN/INFINITE LUÔN được post. GUEST được post nếu có
+  // membershipExpires trong tương lai (đã đóng phí nhưng role chưa upgrade).
+  // Xem lib/roles.ts → hasMemberAccess.
+  const isMember = hasMemberAccess(currentUserRole, membershipInfo?.expires)
   const canPost = isMember
 
   return (

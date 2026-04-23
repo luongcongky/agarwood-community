@@ -32,3 +32,25 @@ export function canAdminWrite(role: Role | string | null | undefined): boolean {
 export function isMember(role: Role | string | null | undefined): boolean {
   return role === "VIP" || role === "ADMIN" || role === "INFINITE"
 }
+
+/**
+ * Mềm hơn `isMember()` — cho phép GUEST đã đóng phí (membershipExpires trong
+ * tương lai) cũng được coi là thành viên. Dùng cho UI check đăng bài feed
+ * và membership sidebar.
+ *
+ * Lý do: payment confirm flow không upgrade role → VIP, nên user đã đóng phí
+ * vẫn có thể stuck ở role=GUEST. Thay vì chặn UI, check membership window
+ * trực tiếp. Còn logic quota/vote khác vẫn dùng `isMember()` strict.
+ */
+export function hasMemberAccess(
+  role: Role | string | null | undefined,
+  membershipExpires: string | Date | null | undefined,
+): boolean {
+  if (isMember(role)) return true
+  if (!membershipExpires) return false
+  const expiresAt =
+    typeof membershipExpires === "string"
+      ? new Date(membershipExpires)
+      : membershipExpires
+  return expiresAt.getTime() > Date.now()
+}
