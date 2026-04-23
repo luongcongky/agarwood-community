@@ -49,7 +49,7 @@ export async function POST(
       // 2. Get current user state
       const user = await tx.user.findUnique({
         where: { id: payment.userId },
-        select: { membershipExpires: true, contributionTotal: true },
+        select: { membershipExpires: true, contributionTotal: true, role: true },
       })
 
       // 3. Stack expiry from current or existing, whichever is later
@@ -69,13 +69,15 @@ export async function POST(
         data: { status: "ACTIVE", validFrom: new Date(), validTo: newExpiry },
       })
 
-      // 5. Update user
+      // 5. Update user — upgrade GUEST → VIP khi đây là lần đầu đóng phí
+      //    membership. VIP/ADMIN/INFINITE giữ nguyên role.
       await tx.user.update({
         where: { id: payment.userId },
         data: {
           membershipExpires: newExpiry,
           contributionTotal: newContrib,
           displayPriority: newPriority,
+          ...(user?.role === "GUEST" && { role: "VIP" }),
         },
       })
 
