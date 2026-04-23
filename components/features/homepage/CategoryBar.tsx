@@ -80,7 +80,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
       <div className="mx-auto max-w-7xl px-2 sm:px-4">
         {/* overflow-x-auto on mobile để scroll ngang; lg:overflow-visible để
             dropdown của "Giới thiệu" không bị clip trên desktop. */}
-        <ul className="category-scroll flex overflow-x-auto whitespace-nowrap lg:overflow-visible">
+        <ul className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] lg:overflow-visible">
           {CATEGORIES.map((item) => {
             const active = isItemActive(item, pathname)
             const triggerClass = [
