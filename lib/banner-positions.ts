@@ -21,9 +21,8 @@ export type BannerPositionConfig = {
  * Single source of truth cho aspect ratio + kích thước của từng vị trí banner.
  * Các render component + admin crop form đều import từ đây để không bị lệch.
  *
- * Lưu ý: khi 1 banner được hiển thị ở nhiều aspect khác nhau (vd TOP có V1 =
- * 5:1 và V2 = 970:90), Cloudinary sẽ re-crop từ source tại render time. Chọn
- * aspect source khớp với bản chủ đạo đang dùng — hiện tại là V2.
+ * Lưu ý: nếu sau này đổi aspect ratio của 1 vị trí, Cloudinary sẽ re-crop từ
+ * source tại render time. Chọn aspect source khớp với bản chủ đạo đang dùng.
  */
 export const BANNER_POSITION_CONFIG: Record<BannerPosition, BannerPositionConfig> = {
   TOP: {
@@ -49,7 +48,7 @@ export const BANNER_POSITION_CONFIG: Record<BannerPosition, BannerPositionConfig
   SIDEBAR: {
     label: "SIDEBAR — Rail dọc (2:3 portrait)",
     description:
-      "Hiển thị ở sidebar /feed (sticky khi scroll) và cột banner của section Multimedia /v2. Banner dọc, nội dung kiểu poster.",
+      "Hiển thị ở sidebar /feed (sticky khi scroll) và cột banner của section Multimedia trên trang chủ. Banner dọc, nội dung kiểu poster.",
     aspectRatio: 2 / 3,
     targetWidth: 600,
     targetHeight: 900,

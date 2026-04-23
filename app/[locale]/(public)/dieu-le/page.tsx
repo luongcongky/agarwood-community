@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { prisma } from "@/lib/prisma"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -399,24 +398,8 @@ export default async function DieuLePage() {
 
   return (
     <>
-      {/* ── Hero ── */}
-      <section className="bg-brand-800 text-white py-16">
-        <div className="mx-auto max-w-4xl px-4">
-          <nav className="mb-4 text-sm text-brand-300" aria-label="Breadcrumb">
-            <Link href={`/${locale}`} className="hover:text-white">
-              {t("breadcrumbHome")}
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-white">{t("breadcrumbCurrent")}</span>
-          </nav>
-          <h1 className="text-3xl font-bold sm:text-4xl">{t("heroTitle")}</h1>
-          <p className="mt-3 text-brand-200 max-w-xl">{t("heroSubtitle1")}</p>
-          <p className="mt-1 text-brand-300 text-sm">{t("heroSubtitle2")}</p>
-        </div>
-      </section>
-
-      <div className="bg-brand-50/60">
-        <div className="mx-auto max-w-4xl px-4 py-16">
+      <div>
+        <div className="mx-auto max-w-4xl px-4 py-10">
           {/* ── PDF Download (locale-aware, falls back to VI if localized PDF missing) ── */}
           {pdfInfo ? (
             <div className="mb-12 flex flex-col items-center gap-3 rounded-xl border-2 border-brand-300 bg-brand-50 p-8 text-center">

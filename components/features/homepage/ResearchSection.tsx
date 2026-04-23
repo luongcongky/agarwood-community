@@ -10,7 +10,7 @@ import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
-import { SectionV2 } from "./SectionV2"
+import { Section } from "./Section"
 
 const BCP47: Record<Locale, string> = {
   vi: "vi-VN",
@@ -38,7 +38,7 @@ function timeAgo(date: Date | string | null, locale: Locale): string {
   })
 }
 
-export async function ResearchSectionV2() {
+export async function ResearchSection() {
   const [items, t, locale] = await Promise.all([
     getLatestResearchNews(4),
     getTranslations("homepage"),
@@ -51,7 +51,7 @@ export async function ResearchSectionV2() {
   const list = items.slice(1, 4)
 
   return (
-    <SectionV2 title={t("researchTitle")} titleHref="/nghien-cuu">
+    <Section title={t("researchTitle")} titleHref="/nghien-cuu">
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left — 4 text-only items */}
         {list.length > 0 && (
@@ -67,7 +67,7 @@ export async function ResearchSectionV2() {
           <MainCard item={main} locale={locale} />
         </div>
       </div>
-    </SectionV2>
+    </Section>
   )
 }
 

@@ -14,6 +14,53 @@ import { ProductFilters } from "./ProductFilters"
 
 export const revalidate = 3600
 
+const PRODUCT_CARD_SELECT = {
+  id: true,
+  name: true, name_en: true, name_zh: true, name_ar: true,
+  slug: true,
+  imageUrls: true,
+  category: true, category_en: true, category_zh: true, category_ar: true,
+  priceRange: true,
+  certApprovedAt: true,
+  company: {
+    select: {
+      name: true, name_en: true, name_zh: true, name_ar: true,
+      slug: true, logoUrl: true, isVerified: true, address: true,
+    },
+  },
+} as const
+
+/** Default product list (page 1, no filter, sort moi-nhat, grid view) —
+ *  variant phổ biến nhất, cache 5 min. Mọi param khác bypass cache. */
+const getDefaultCertProducts = unstable_cache(
+  async (take: number) =>
+    prisma.product.findMany({
+      where: {
+        certStatus: "APPROVED",
+        isPublished: true,
+        companyId: { not: null },
+      },
+      orderBy: { certApprovedAt: "desc" },
+      take,
+      select: PRODUCT_CARD_SELECT,
+    }),
+  ["cert-products_list_default"],
+  { revalidate: 300, tags: ["products", "cert-products"] },
+)
+
+const getDefaultCertProductsCount = unstable_cache(
+  () =>
+    prisma.product.count({
+      where: {
+        certStatus: "APPROVED",
+        isPublished: true,
+        companyId: { not: null },
+      },
+    }),
+  ["cert-products_count_default"],
+  { revalidate: 300, tags: ["products", "cert-products"] },
+)
+
 /** Stats + filter meta — shared across tất cả variant bộ lọc/phân trang →
  *  cache chung 10 phút. Trước đây hit DB mỗi page. */
 const getCertProductsFilterMeta = unstable_cache(
@@ -125,26 +172,28 @@ export default async function CertifiedProductsPage({
     }),
   }
 
+  // Default variant (page 1, không filter, sort default, grid view) dùng
+  // cache 5 phút. Biến thể filter/sort/pagination bypass cache vì quá nhiều
+  // permutation.
+  const isDefaultVariant =
+    page === 1 &&
+    !q && !loai && !vung &&
+    sort === "moi-nhat" &&
+    view === "grid"
+
   const [total, products, filterMeta] = await Promise.all([
-    prisma.product.count({ where: baseWhere }),
-    prisma.product.findMany({
-      where: baseWhere,
-      orderBy,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      select: {
-        id: true,
-        name: true, name_en: true, name_zh: true, name_ar: true,
-        slug: true,
-        imageUrls: true,
-        category: true, category_en: true, category_zh: true, category_ar: true,
-        priceRange: true,
-        certApprovedAt: true,
-        company: {
-          select: { name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true, address: true },
-        },
-      },
-    }),
+    isDefaultVariant
+      ? getDefaultCertProductsCount()
+      : prisma.product.count({ where: baseWhere }),
+    isDefaultVariant
+      ? getDefaultCertProducts(PAGE_SIZE)
+      : prisma.product.findMany({
+          where: baseWhere,
+          orderBy,
+          skip: (page - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+          select: PRODUCT_CARD_SELECT,
+        }),
     getCertProductsFilterMeta(),
   ])
 
@@ -171,19 +220,8 @@ export default async function CertifiedProductsPage({
   if (view && view !== "grid") currentParams.set("view", view)
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
-
-      {/* ── Tầng 1: Page Banner ──────────────────────────────────────────── */}
-      <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          {t("pageTitle")}
-        </h1>
-        <p className="mt-2 text-brand-300 text-base">
-          {t("pageSubtitle")}
-        </p>
-      </div>
-
-      {/* ── Tầng 2 + 3: Filters (client component) ───────────────────────── */}
+    <div>
+      {/* ── Filters (client component) — ProductFilters tự render chrome riêng. */}
       <ProductFilters
         categories={categories}
         provinces={provinces}
@@ -192,10 +230,41 @@ export default async function CertifiedProductsPage({
         lastUpdated={lastUpdated}
       />
 
-      {/* ── Tầng 4: Kết quả — bọc trong card trắng ────────────────────── */}
-      <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
+      {/* ── Top CTA call-out — prominent placement để business thấy action ngay
+           above-the-fold. Thay thế bottom CTA cũ bị khuất. ────────────── */}
+      <div className="mx-auto max-w-7xl px-4 pt-6">
+        <div className="flex flex-col items-start gap-4 border border-brand-300 bg-linear-to-r from-brand-50 to-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-700 text-white shadow-sm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m9 11 3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[15px] font-bold leading-tight text-brand-900 sm:text-base">
+                Doanh nghiệp muốn được chứng nhận sản phẩm?
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-neutral-700">
+                Tăng uy tín, được ưu tiên hiển thị và gắn huy hiệu chứng nhận chính thức của Hội Trầm Hương Việt Nam.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/chung-nhan/nop-don"
+            className="inline-flex shrink-0 items-center gap-2 bg-brand-700 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-brand-800 sm:text-[13px]"
+          >
+            Nộp đơn chứng nhận
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+      </div>
 
+      {/* ── Kết quả — flat, no card wrapper ─────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Result count */}
         <div className="mb-5 flex items-center justify-between">
           <p className="text-sm text-brand-600">
@@ -381,17 +450,21 @@ export default async function CertifiedProductsPage({
           </div>
         )}
       </div>
-      </div>
 
-      {/* ── CTA ─────────────────────────────────────────────────────────────── */}
-      <div className="bg-brand-800 py-12 text-center text-white mt-8">
-        <p className="text-brand-200 mb-4 text-sm">Bạn muốn đăng ký chứng nhận sản phẩm của mình?</p>
-        <Link
-          href="/chung-nhan/nop-don"
-          className="inline-flex items-center justify-center rounded-lg bg-brand-400 text-brand-900 font-semibold px-6 py-3 hover:bg-brand-300 transition-colors"
-        >
-          Nộp đơn chứng nhận
-        </Link>
+      {/* ── CTA cuối trang — shorter reminder cho user đã scroll qua hết. Primary
+           CTA đã đặt ở top banner; đây là secondary exposure. ─────────── */}
+      <div className="mt-8 border-t border-neutral-200 bg-neutral-50 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 text-center">
+          <p className="text-sm text-neutral-600">
+            Đã xem hết danh sách? Hãy để sản phẩm của bạn cũng xuất hiện ở đây.
+          </p>
+          <Link
+            href="/chung-nhan/nop-don"
+            className="inline-flex items-center gap-2 border border-brand-700 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-brand-700 transition-colors hover:bg-brand-700 hover:text-white"
+          >
+            Nộp đơn chứng nhận
+          </Link>
+        </div>
       </div>
     </div>
   )

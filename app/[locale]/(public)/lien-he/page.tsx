@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { getTranslations } from "next-intl/server"
 import { ContactForm } from "./ContactForm"
@@ -17,28 +16,12 @@ export async function generateMetadata() {
 
 export default async function LienHePage() {
   const t = await getTranslations("contact")
-  const tc = await getTranslations("common")
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
-      {/* ── Hero ── */}
-      <section className="bg-brand-800 text-white py-16">
-        <div className="mx-auto max-w-4xl px-4">
-          <nav className="mb-4 text-sm text-brand-300" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-white">{tc("home")}</Link>
-            <span className="mx-2">/</span>
-            <span className="text-white">{t("breadcrumbContact")}</span>
-          </nav>
-          <h1 className="text-3xl font-bold sm:text-4xl">{t("heroTitle")}</h1>
-          <p className="mt-3 text-brand-200 max-w-xl">
-            {t("heroDesc")}
-          </p>
-        </div>
-      </section>
-
-      {/* ── Content card ── */}
+    <div>
+      {/* ── Content wrapper ── */}
       <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+      <div className="overflow-hidden">
 
       {/* ── Contact Info + Form ── */}
       <section className="py-16 px-6 sm:px-10">
@@ -137,24 +120,10 @@ export default async function LienHePage() {
         </div>
       </section>
 
-      {/* ── Kênh chính thức + cảnh báo giả mạo ── */}
+      {/* ── Cảnh báo giả mạo — ẩn grid badge kênh (Facebook/Zalo/…) vì
+           thông tin liên hệ đã hiển thị ở cột trái bên trên. ─────────── */}
       <section className="py-12 lg:py-16 border-t border-brand-100">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <OfficialChannelsBlock variant="full" />
-        </div>
-      </section>
-
-      {/* ── Map ── */}
-      <section className="pb-16 px-6 sm:px-10">
-        <div>
-          <div className="overflow-hidden rounded-xl border border-brand-200 shadow-sm">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125411.87690118406!2d106.62966155!3d10.7544272!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f4670702e31%3A0xa25c43e2beaadca4!2zVFAuIEjhu5MgQ2jDrSBNaW5o!5e0!3m2!1svi!2svn!4v1700000000000"
-              width="100%" height="400" style={{ border: 0 }} loading="lazy" allow=""
-              title={t("mapTitle")}
-            />
-          </div>
-        </div>
+        <OfficialChannelsBlock variant="full" showChannels={false} />
       </section>
 
       </div>

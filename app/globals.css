@@ -242,8 +242,8 @@
    Wrapped in `@layer base` so Tailwind utility classes (`font-bold`,
    `font-normal`, …) — which live in `@layer utilities` — can win via the
    cascade-layer ordering. Before this move the rule lived "outside layers"
-   and beat Tailwind utilities on specificity, forcing all v2 headings to the
-   refined weight regardless of inline classes. */
+   and beat Tailwind utilities on specificity, forcing all public-site
+   headings to the refined weight regardless of inline classes. */
 @layer base {
   .refined-typography h1,
   .refined-typography h2,
@@ -266,56 +266,64 @@
   .refined-typography p.text-\[10px\] { line-height: 1.45; }
 }
 
-/* Homepage — thin gold divider below first <h2> of each major
-   white-card section for a subtle editorial accent. */
-[data-page="home"] section h2 + p,
-[data-page="home"] section h2 + div {
-  margin-top: 0.5rem;
-}
-
-/* ── Homepage v2 — VTV-faithful "báo chí" prototype ───────────────────────
-   Scoped under data-page="home-v2" so it only applies to /v2. Style goals:
-   fully flat (no shadows/scale/hover-bg), classic Helvetica/Arial sans,
-   pure white bg, uppercase section headers with brown underline rule,
-   no rounded cards, tight padding. Overrides the global refined-typography
-   softener (weight 500 + negative letter-spacing) back to VTV-like 700 +
-   neutral tracking since newspaper headlines need bolder, straighter strokes. */
-[data-page="home-v2"] {
-  /* Inter — VTV's primary webfont, loaded via next/font in v2/layout.tsx.
+/* ── Public site — VTV-faithful "báo chí" style ───────────────────────────
+   Scoped under data-page="public" so it applies to all public routes (tin
+   tức, sản phẩm, hội viên, …). Fully flat (no shadows/scale/hover-bg),
+   classic Helvetica/Arial sans, pure white bg, uppercase section headers
+   with brown underline rule, no rounded cards, tight padding. Overrides the
+   global refined-typography softener (weight 500 + negative letter-spacing)
+   back to VTV-like 700 + neutral tracking since newspaper headlines need
+   bolder, straighter strokes. */
+[data-page="public"] {
+  /* Inter — VTV's primary webfont, loaded via next/font in (public)/layout.tsx.
      Fallback to Helvetica/Arial if CSS var is not yet injected. */
-  font-family: var(--font-inter-v2), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 15px;
   color: #222;
   background: #ffffff;
   /* Inter looks best with these OpenType features on. */
   font-feature-settings: "cv11", "ss03", "kern";
 }
-/* Section header styling — see components/features/homepage/v2/SectionV2.tsx.
+/* Section header styling — see components/features/homepage/Section.tsx.
    Refined-typography is now in @layer base so Tailwind utilities
    (font-bold / font-normal / font-medium) win via cascade-layer ordering.
    Components control weight directly via class; no blanket override needed.
    text-wrap: wrap override refined-typography's `text-wrap: balance` — balance
    cân bằng 2 dòng làm title list/card bị wrap SỚM trước khi line 1 đầy; news
    style muốn fill line 1 maximum trước khi rớt line. */
-[data-page="home-v2"] h1,
-[data-page="home-v2"] h2,
-[data-page="home-v2"] h3,
-[data-page="home-v2"] h4 {
+[data-page="public"] h1,
+[data-page="public"] h2,
+[data-page="public"] h3,
+[data-page="public"] h4 {
   letter-spacing: 0;
   text-wrap: wrap;
 }
-[data-page="home-v2"] h3 {
+[data-page="public"] h3 {
   font-weight: 700;
   line-height: 1.3;
 }
-[data-page="home-v2"] p {
+[data-page="public"] p {
   line-height: 1.55;
 }
-[data-page="home-v2"] .v2-category-scroll {
+[data-page="public"] .category-scroll {
   scrollbar-width: none;
 }
-[data-page="home-v2"] .v2-category-scroll::-webkit-scrollbar {
+[data-page="public"] .category-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* Merriweather serif — VTV-style nhấn mạnh cho article headline.
+   Dùng có chủ đích: H1 trang chi tiết bài báo (via `.font-serif-headline`).
+   `!important`: đè lên font-family của `[data-page="public"]` scope (Inter)
+   — đây là intent của component, không phải cascade accident. */
+.font-serif-headline {
+  font-family: var(--font-merriweather), Georgia, "Times New Roman", serif !important;
+}
+
+/* Toast slide-in animation — dùng cho ArticleToolbar copy / comment feedback. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* ── Breaking news ticker marquee ──────────────────────────────────────────

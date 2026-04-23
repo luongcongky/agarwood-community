@@ -1,9 +1,9 @@
-import { cache } from "react"
+import { cache, Suspense } from "react"
 import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -14,14 +14,17 @@ import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo
 import { addAnchorIdsToH2, extractTocFromHtml } from "@/lib/seo/toc"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
+import { Section } from "@/components/features/homepage/Section"
+import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
+import { SidebarList } from "@/components/features/article/SidebarList"
 import { CopyLinkButton } from "../../tin-tuc/[slug]/CopyLinkButton"
+import { ArticleToolbar } from "../../tin-tuc/[slug]/ArticleToolbar"
 
 export const revalidate = 1800
 
 type Props = { params: Promise<{ locale: Locale; slug: string }> }
 
-/** React.cache dedupe giữa generateMetadata và main page — 1 query/request
- *  thay vì 2. Explicit select thay vì findFirst không select. */
+/** React.cache dedupe giữa generateMetadata và main page — 1 query/request. */
 const getResearchBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
     where: { slug, isPublished: true, category: "RESEARCH" },
@@ -67,6 +70,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: news.coverImageUrl ? [{ url: news.coverImageUrl }] : [],
       type: "article",
       publishedTime: news.publishedAt?.toISOString(),
+      modifiedTime: news.updatedAt?.toISOString(),
+      authors: news.originalAuthor ? [news.originalAuthor] : undefined,
+      section: "Nghiên cứu khoa học",
+      tags:
+        news.secondaryKeywords && news.secondaryKeywords.length > 0
+          ? news.secondaryKeywords
+          : undefined,
       siteName: SITE_NAME,
       locale: locale === "vi" ? "vi_VN" : locale === "en" ? "en_US" : locale === "zh" ? "zh_CN" : "ar_AR",
     },
@@ -99,8 +109,16 @@ export default async function ResearchDetailPage({ params }: Props) {
 
   if (!news) notFound()
 
-  // Related + author cùng phụ thuộc news → parallel, không sequential như trước.
-  const [relatedPool, author] = await Promise.all([
+  // Related + author + sidebar data đều phụ thuộc news → parallel.
+  // Sidebar: pinned research (editor's pick) + latest research.
+  const SIDEBAR_LIST_SELECT = {
+    id: true,
+    title: true, title_en: true, title_zh: true, title_ar: true,
+    slug: true,
+    coverImageUrl: true,
+    publishedAt: true,
+  } as const
+  const [relatedPool, author, sidebarPinned, sidebarLatest] = await Promise.all([
     prisma.news.findMany({
       where: {
         isPublished: true,
@@ -133,7 +151,33 @@ export default async function ResearchDetailPage({ params }: Props) {
         bio: true, bio_en: true, bio_zh: true, bio_ar: true,
       },
     }),
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        isPinned: true,
+        category: "RESEARCH",
+        slug: { not: slug },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 5,
+      select: SIDEBAR_LIST_SELECT,
+    }),
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: "RESEARCH",
+        slug: { not: slug },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 6,
+      select: SIDEBAR_LIST_SELECT,
+    }),
   ])
+
+  // Dedupe sidebar: latest không trùng pinned.
+  const pinnedIdSet = new Set(sidebarPinned.map((n) => n.id))
+  const sidebarRecent = sidebarLatest.filter((n) => !pinnedIdSet.has(n.id)).slice(0, 5)
+
   let related = relatedPool
   if (related.length < 3) {
     const fill = await prisma.news.findMany({
@@ -160,10 +204,8 @@ export default async function ResearchDetailPage({ params }: Props) {
   const authorBio = author ? (l(author, "bio") as string | null) : null
   const authorUrl = author ? localizedUrl(`/thanh-vien/${author.id}`, locale) : BASE_URL
 
-  // Inject H2 anchor IDs + extract TOC. Also rewrite Cloudinary URLs in
-  // the body to include width limit so the browser doesn't pull the
-  // original full-size image into a content column.
-  const sanitizedContent = DOMPurify.sanitize(l(news, "content") ?? "")
+  // Inject H2 anchor IDs + extract TOC; rewrite Cloudinary URLs trong body.
+  const sanitizedContent = sanitizeArticleHtml(l(news, "content") ?? "")
   const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
   const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
   const toc = extractTocFromHtml(sanitizedContent)
@@ -211,214 +253,277 @@ export default async function ResearchDetailPage({ params }: Props) {
     ],
   }
 
+  const wasUpdatedAfterPublish =
+    news.updatedAt &&
+    news.publishedAt &&
+    news.updatedAt.getTime() - news.publishedAt.getTime() > 24 * 60 * 60 * 1000
+  const updatedDate = wasUpdatedAfterPublish && news.updatedAt
+    ? new Date(news.updatedAt).toLocaleDateString("vi-VN")
+    : null
+  const excerpt = l(news, "excerpt") as string | null
+  const hasDistinctCaption = coverAlt && coverAlt !== l(news, "title")
+  const publishedTimeLabel = news.publishedAt
+    ? new Date(news.publishedAt).toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null
+  const tags = keywords
+  const siteAbbr = "VAWA"
+
   return (
-    <div className="bg-brand-50/60 min-h-screen">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Article card */}
-        <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
-          {/* Breadcrumb — nằm trong card, phía trên cover ảnh */}
-          <nav className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap px-6 sm:px-10 pt-6 pb-4">
-            <Link href="/" className="hover:text-brand-700 transition-colors">
-              Trang chủ
-            </Link>
-            <span>/</span>
-            <Link href="/nghien-cuu" className="hover:text-brand-700 transition-colors">
-              Nghiên cứu khoa học
-            </Link>
-            <span>/</span>
-            <span className="text-foreground font-medium line-clamp-1">{l(news, "title")}</span>
-          </nav>
+      {/* 2-column layout — main article + right rail sidebar (sticky ≥ lg).
+          Không render breadcrumb visible ở đây, nhưng giữ BreadcrumbList
+          JSON-LD ở trên cho Google crawler. */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-10">
+        <article className="relative min-w-0 lg:col-span-9">
+          {/* Floating left toolbar — chỉ hiện từ breakpoint xl trở lên. */}
+          <ArticleToolbar articleUrl={articleUrl} />
 
-          {/* Cover image — khung beige ôm ảnh, tách khỏi nền trắng của card */}
+          {/* Headline — Merriweather serif, VTV-style */}
+          <h1 className="font-serif-headline mb-4 text-[24px] font-bold leading-tight text-neutral-900 sm:text-[28px] lg:text-[30px]">
+            {l(news, "title")}
+          </h1>
+
+          {/* Sapo — bold paragraph với prefix site abbreviation.
+              `data-article-lede` là hook cho ArticleToolbar zoom. */}
+          {excerpt && (
+            <p
+              data-article-lede
+              className="mb-5 text-[17px] font-bold leading-[1.55] text-neutral-800"
+            >
+              <span className="text-brand-700">{siteAbbr} - </span>
+              {excerpt}
+            </p>
+          )}
+
+          {/* Byline — inline, nhẹ */}
+          <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-neutral-200 pb-3 text-sm text-neutral-600">
+            <span className="font-semibold text-neutral-900">{authorDisplayName}</span>
+            {publishedTimeLabel && news.publishedAt && (
+              <>
+                <span className="text-neutral-300" aria-hidden>•</span>
+                <time dateTime={news.publishedAt.toISOString()} className="text-neutral-500">
+                  {publishedTimeLabel}
+                </time>
+              </>
+            )}
+            {updatedDate && (
+              <>
+                <span className="text-neutral-300" aria-hidden>•</span>
+                <span className="text-xs italic text-neutral-500">
+                  {t("updatedAt")} {updatedDate}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Cover image — flush full-width, figcaption nhỏ */}
           {news.coverImageUrl && (
-            <div className="bg-brand-100 p-2">
-              <div className="relative w-full aspect-video bg-muted rounded-md overflow-hidden ring-1 ring-brand-300/60">
+            <figure className="mb-6">
+              <div className="relative aspect-video w-full bg-neutral-100">
                 <Image
                   src={cloudinaryResize(news.coverImageUrl, 1280)}
                   alt={coverAlt}
                   fill
                   className="object-cover"
                   priority
-                  sizes="(max-width: 1280px) 100vw, 1280px"
+                  sizes="(max-width: 1024px) 100vw, 860px"
                   placeholder="blur"
                   blurDataURL={BLUR_DATA_URL}
                 />
               </div>
+              {hasDistinctCaption && (
+                <figcaption className="mt-2 text-center text-[13px] italic leading-relaxed text-neutral-600">
+                  {coverAlt}
+                </figcaption>
+              )}
+            </figure>
+          )}
+
+          {/* Table of Contents — với bài nghiên cứu thường dài, giữ TOC để reader navigate. */}
+          {toc.length >= 2 && (
+            <nav className="mb-6 border-l-[3px] border-brand-700 bg-neutral-50 py-3 pl-5 pr-4">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">
+                {t("tocTitle")}
+              </p>
+              <ol className="space-y-1 text-sm">
+                {toc.map((entry, i) => (
+                  <li key={entry.id} className="flex items-baseline gap-2">
+                    <span className="shrink-0 tabular-nums text-neutral-400">{i + 1}.</span>
+                    <a
+                      href={`#${entry.id}`}
+                      className="line-clamp-1 text-neutral-800 hover:text-brand-700 hover:underline"
+                    >
+                      {entry.text}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+
+          {/* Article body — `data-article-body` là hook cho zoom toolbar. */}
+          <div
+            data-article-body
+            className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-neutral-900 prose-p:text-neutral-800 prose-p:leading-[1.8] prose-a:text-brand-700 prose-a:no-underline hover:prose-a:underline prose-strong:text-neutral-900 prose-img:mx-auto prose-figcaption:text-center prose-figcaption:italic prose-figcaption:text-[13px] prose-figcaption:text-neutral-600"
+            dangerouslySetInnerHTML={{ __html: contentWithAnchors }}
+          />
+
+          {/* Tags */}
+          {tags.length > 0 && (
+            <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-neutral-200 pt-5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                Từ khoá:
+              </span>
+              {tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/nghien-cuu?q=${encodeURIComponent(tag)}`}
+                  className="border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 transition-colors hover:border-brand-700 hover:text-brand-700"
+                >
+                  {tag}
+                </Link>
+              ))}
             </div>
           )}
 
-          {/* Article Header + Body */}
-          <div className="px-6 sm:px-10 py-8 sm:py-10">
-            <header className="mb-8 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 text-brand-800 text-xs font-medium px-3 py-1">
-                  📚 Nghiên cứu khoa học
-                </span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight">
-                {l(news, "title")}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-sm">
-                {news.publishedAt && (
-                  <span>
-                    {t("publishedAt")}{" "}
-                    {new Date(news.publishedAt).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
+          {/* Share bar */}
+          <div className="mt-6 flex flex-wrap items-center gap-3 border-y border-neutral-300 py-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-700">
+              Chia sẻ bài nghiên cứu
+            </span>
+            <a
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="inline-flex items-center gap-1.5 border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:border-[#1877F2] hover:text-[#1877F2]"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+              </svg>
+              Facebook
+            </a>
+            <a
+              href={`https://zalo.me/share?url=${encodeURIComponent(articleUrl)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Zalo"
+              className="inline-flex items-center gap-1.5 border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 transition-colors hover:border-[#0068ff] hover:text-[#0068ff]"
+            >
+              <span className="font-bold tracking-tight">Zalo</span>
+            </a>
+            <CopyLinkButton />
+          </div>
+
+          {/* Author bio */}
+          {author && (authorBio || author.avatarUrl) && (
+            <aside className="mt-8 flex items-start gap-4 border-t-[3px] border-brand-700 pt-5">
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden bg-neutral-200">
+                {author.avatarUrl ? (
+                  <Image
+                    src={author.avatarUrl}
+                    alt={author.name}
+                    fill
+                    className="object-cover"
+                    sizes="64px"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-lg font-bold text-neutral-600">
+                    {author.name.slice(0, 1).toUpperCase()}
                   </span>
                 )}
-                {news.updatedAt && news.publishedAt &&
-                  news.updatedAt.getTime() - news.publishedAt.getTime() > 24 * 60 * 60 * 1000 && (
-                    <span>
-                      · {t("updatedAt")}{" "}
-                      {new Date(news.updatedAt).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </span>
-                  )}
-                <span className="text-brand-600 font-medium">· {authorDisplayName}</span>
               </div>
-            </header>
-
-            {/* Table of Contents — auto-generated from H2 tags. */}
-            {toc.length >= 2 && (
-              <nav className="mb-8 rounded-lg border border-brand-200 bg-brand-50/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-600 mb-2">
-                  {t("tocTitle")}
-                </p>
-                <ol className="space-y-1 text-sm">
-                  {toc.map((entry, i) => (
-                    <li key={entry.id} className="flex items-baseline gap-2">
-                      <span className="text-brand-400 shrink-0 tabular-nums">{i + 1}.</span>
-                      <a
-                        href={`#${entry.id}`}
-                        className="text-brand-700 hover:text-brand-900 hover:underline line-clamp-1"
-                      >
-                        {entry.text}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            )}
-
-            {/* Article Body */}
-            <article className="mb-10">
-              <div
-                className="prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: contentWithAnchors }}
-              />
-            </article>
-
-            {/* Author bio — E-E-A-T signal. */}
-            {author && (authorBio || author.avatarUrl) && (
-              <aside className="mb-8 rounded-xl border border-brand-200 bg-brand-50/40 p-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-600 mb-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700">
                   {t("aboutAuthor")}
                 </p>
-                <div className="flex items-start gap-4">
-                  <div className="relative w-14 h-14 shrink-0 rounded-full bg-brand-200 overflow-hidden">
-                    {author.avatarUrl ? (
-                      <Image
-                        src={author.avatarUrl}
-                        alt={author.name}
-                        fill
-                        className="object-cover"
-                        sizes="56px"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-brand-700 font-bold">
-                        {author.name.slice(0, 1).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-brand-900">{author.name}</p>
-                    {authorBio && (
-                      <p className="mt-1 text-sm text-brand-700 leading-relaxed whitespace-pre-line">
-                        {authorBio}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </aside>
-            )}
-
-            {/* Share Buttons */}
-            <div className="border-t border-border pt-6">
-              <p className="text-sm font-medium text-foreground mb-3">Chia sẻ bài nghiên cứu:</p>
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  📘 Facebook
-                </a>
-                <a
-                  href={`https://zalo.me/share?url=${encodeURIComponent(articleUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
-                >
-                  💬 Zalo
-                </a>
-                <CopyLinkButton />
+                <p className="mt-1 text-lg font-bold text-neutral-900">{author.name}</p>
+                {authorBio && (
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-neutral-700">
+                    {authorBio}
+                  </p>
+                )}
               </div>
-            </div>
-          </div>
-        </div>
+            </aside>
+          )}
+        </article>
 
-        {/* Related Research — cùng pattern card trắng như article chính */}
-        {related.length > 0 && (
-          <section className="mt-6 bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
-            <h2 className="text-xl font-semibold text-foreground mb-5">
-              Nghiên cứu liên quan
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Right rail — sticky desktop, mobile dồn xuống cuối article */}
+        <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
+          </Suspense>
+
+          <SidebarList
+            title="Nghiên cứu nổi bật"
+            items={sidebarPinned}
+            locale={locale}
+            itemHrefPrefix="/nghien-cuu"
+          />
+
+          <SidebarList
+            title="Mới đăng"
+            items={sidebarRecent}
+            locale={locale}
+            itemHrefPrefix="/nghien-cuu"
+            compact
+          />
+        </aside>
+      </div>
+
+      {/* Related — full-width grid cuối trang */}
+      {related.length > 0 && (
+        <div className="mt-14">
+          <Section title="Nghiên cứu liên quan" titleHref="/nghien-cuu">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((item) => (
                 <Link
                   key={item.id}
                   href={`/nghien-cuu/${item.slug}`}
-                  className="group block bg-brand-50/40 rounded-xl overflow-hidden border border-brand-200 hover:shadow-md hover:border-brand-300 transition-all"
+                  className="group block"
                 >
                   {item.coverImageUrl ? (
-                    <div className="relative w-full h-36">
+                    <div className="relative aspect-16/10 w-full overflow-hidden bg-neutral-100">
                       <Image
                         src={cloudinaryResize(item.coverImageUrl, 480)}
                         alt={l(item, "title")}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 640px) 100vw, 33vw"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                     </div>
                   ) : (
-                    <AgarwoodPlaceholder className="w-full h-36" size="md" shape="square" />
+                    <AgarwoodPlaceholder className="aspect-16/10 w-full" size="md" shape="square" />
                   )}
-                  <div className="p-3 space-y-1">
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">
+                  <div className="mt-3">
+                    <h3 className="line-clamp-3 text-base font-bold leading-snug text-neutral-900 group-hover:text-brand-700">
                       {l(item, "title")}
                     </h3>
                     {item.publishedAt && (
-                      <p className="text-xs text-muted-foreground">
+                      <time
+                        dateTime={item.publishedAt.toISOString()}
+                        className="mt-1 block text-xs uppercase tracking-wide text-neutral-500"
+                      >
                         {new Date(item.publishedAt).toLocaleDateString("vi-VN")}
-                      </p>
+                      </time>
                     )}
                   </div>
                 </Link>
               ))}
             </div>
-          </section>
-        )}
-      </div>
+          </Section>
+        </div>
+      )}
     </div>
   )
 }
+

@@ -3,7 +3,7 @@ import Image from "next/image"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 
-export function ThumbnailCardV2({
+export function ThumbnailCard({
   href,
   coverUrl,
   title,

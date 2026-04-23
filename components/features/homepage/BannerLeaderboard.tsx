@@ -15,7 +15,7 @@ type BannerItem = {
  * gap-3, each child takes 1/2 width and full height. If only 1 banner,
  * it spans the full row. Server component, no rotation.
  */
-export function BannerLeaderboardV2({ banners }: { banners: BannerItem[] }) {
+export function BannerLeaderboard({ banners }: { banners: BannerItem[] }) {
   const displayed = banners.slice(0, 2)
   if (displayed.length === 0) return null
 

@@ -21,13 +21,20 @@ const KEYS = [
 
 export async function OfficialChannelsBlock({
   variant = "full",
+  showChannels = true,
 }: {
   /** "full" — hiển thị mục cảnh báo dài (cho privacy/terms);
    *  "compact" — gọn hơn (cho gioi-thieu/lien-he) */
   variant?: "full" | "compact"
+  /** Ẩn grid badge Facebook/Zalo/YouTube/Website/Email/Hotline.
+   *  Dùng trên /lien-he vì thông tin liên hệ đã ở cột trái riêng. */
+  showChannels?: boolean
 }) {
+  // Bỏ qua siteConfig query khi showChannels=false — tiết kiệm 1 DB hit.
   const [rows, t] = await Promise.all([
-    prisma.siteConfig.findMany({ where: { key: { in: [...KEYS] } } }),
+    showChannels
+      ? prisma.siteConfig.findMany({ where: { key: { in: [...KEYS] } } })
+      : Promise.resolve([] as Array<{ key: string; value: string }>),
     getTranslations("officialChannels"),
   ])
   const cfg = Object.fromEntries(rows.map((r) => [r.key, r.value])) as Partial<
@@ -81,7 +88,7 @@ export async function OfficialChannelsBlock({
         </div>
       </header>
 
-      {channels.length > 0 && (
+      {showChannels && channels.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {channels.map((c) => (
             <Link

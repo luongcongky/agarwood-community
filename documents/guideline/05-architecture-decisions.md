@@ -1206,3 +1206,154 @@ va tu choi). Auto-lock van hien de nguoi report xac nhan bai da duoc xu ly.
 - VIP guide: section 6 (`02-huong-dan-vip.md`)
 - API doc: section 1.5 (`06-api-documentation.md`)
 - Technical doc: section 10.10 (`04-technical-document.md`)
+
+---
+
+## ADR-033: Journalistic redesign (v2 → v1 promotion, 2026-04)
+
+### Boi canh
+Khach hang feedback style goc (brand-800 page banner + white card + shadow +
+rounded-xl moi page) KHONG dep, muon phong cach thuan bao chi kieu VTV.vn —
+flat, typographic, editorial. Prototype trong `/v2` xac nhan client → promote
+thanh `/` chinh thuc, backup version cu.
+
+### Quyet dinh
+1. **Chrome thay the**: `Navbar` (brand-800 menu + HeroBackdrop) → `SiteHeader`
+   + `CategoryBar` + `SiteFooter`.
+   - `SiteHeader`: utility strip (date + locale) + masthead (logo + Hoi ten +
+     UserMenu phai khi login) — all tren nen trang.
+   - `CategoryBar`: sticky top-0 nen brand-700, 8 items + dropdown "Gioi thieu"
+     (Ban lanh dao / Hoi vien / Van ban phap ly / Dieu le) + 2 auth CTAs
+     (Dang nhap outlined + Dang ky amber) khi guest.
+   - `SiteFooter`: nen brand-900 4-col + footer bottom.
+2. **CSS scope**: `data-page="public"` tren root div cua `(public)` + `(member)`
+   layouts → apply Inter font + typographic rules scoped. `data-page="home-v2"`
+   cu bo.
+3. **Font**: `Inter` (body, 5 weights) + `Merriweather` (serif H1 bai bao,
+   weight 700 only) qua `next/font/google` trong public/member layout.
+4. **File layout**:
+   - Prototype `components/features/homepage/v2/*` → flatten len
+     `components/features/homepage/` + strip `V2` suffix tu filenames/exports
+     (via `git mv`).
+   - Old `app/[locale]/(public)/page.tsx` + layout + old homepage sections →
+     `backup/homepage-v1/` (ngoai `app/`, `tsconfig` exclude `backup/`).
+5. **Article detail** (`/tin-tuc/[slug]` + `/nghien-cuu/[slug]`): 2-col (main
+   col-9 + sticky sidebar col-3), Merriweather H1 30px, sapo bold prefix
+   "VAWA - ", byline single-line, flat share bar, `ArticleToolbar` dọc ben trai
+   (Facebook/Zalo/Copy/Comment/Print/Zoom — chi ≥xl), `SidebarList` shared
+   component (Tin noi bat + Moi dang).
+6. **List page template** (`/tin-tuc`, `/nghien-cuu`): 2-col grid 12-col voi
+   DOM order Hero → Aside → Latest. Mobile: tu nhien stack thu tu nay (match
+   user request). Desktop grid positioning: hero col-1/row-1, aside col-10/
+   row-span-2 sticky, latest col-1/row-2. Hero = ảnh-trai + text-phai (1/3) +
+   3 sub-hero grid 3-col duoi. Latest = lazy-load 10 items/batch qua server
+   action `loadMoreNews`/`loadMoreResearch` + `IntersectionObserver`
+   (rootMargin 200px). KHONG phan trang URL.
+
+### Tai sao VTV-style thay cards + shadow
+- Khach hang la hoi nghe nghiep → brand nghiem tuc, kieu bao chi hon marketing.
+- Flat design (khong shadow/rounded) load nhanh hon + readable hon cho nhieu
+  text.
+- Typography hierarchy ro rang (serif title + sans body) -> professional.
+
+### Impact
+- **5 list pages** chrome da simplified (doanh-nghiep, san-pham-chung-nhan,
+  lien-he, gioi-thieu, ban-lanh-dao, hoi-vien, phap-ly, dieu-le): bo page
+  banner nau + beige wash + white card wrapper.
+- **Feed** (`/(member)/feed`): layout switch sang SiteHeader/Footer giong
+  public (khong con Navbar cu). `data-page="public"` scope Inter font. Mobile
+  reorder CTAs: Hero → Sidebar → Latest.
+- **UserMenu**: them `variant: "light"` cho masthead (avatar 56-64px bang logo
+  Hoi, ten user TRUOC avatar voi font-black uppercase text-brand-900 match H1).
+  Default "dark" giu cho legacy `Navbar` (ở `app/(member)/layout.tsx`).
+
+### Trade-offs
+- Member layout (`[locale]/(member)/feed`) chia se chrome voi public — logged-in
+  user thay CategoryBar (khong co CTA auth) va UserMenu o masthead. Nhat quan
+  hon nhung member-specific UI (sidebar banner, tier card) giu nguyen trong
+  FeedClient.
+- Backup folder `backup/homepage-v1/` giu git history -> revert kha thi neu
+  khach doi y.
+
+### Ref
+- Dat van ban design: internal discussion 2026-04, prototype `/v2` show cho
+  khach hang.
+- Files: `components/features/homepage/{SiteHeader,SiteFooter,CategoryBar,
+  Section}.tsx`, `app/[locale]/(public)/{layout.tsx,page.tsx}`,
+  `backup/homepage-v1/`.
+
+---
+
+## ADR-034: List page pattern — lazy-load + unstable_cache + Date normalize
+
+### Boi canh
+Journalistic redesign giam chrome, nhung /tin-tuc + /nghien-cuu van giu
+pagination URL (`?page=N`) + fetch toan bo list moi request → poor UX
+(scroll → click page → wait → scroll lai) + DB hit moi request ke ca default
+no-search case.
+
+### Quyet dinh
+1. **Lazy-load 10 items/batch**:
+   - Server action trong file `actions.ts` cung route: `loadMoreNews`,
+     `loadMoreResearch`. Query skip/take + `take: n+1` trick de xac dinh
+     `hasMore` ma khong can COUNT rieng.
+   - Client component `LatestNewsList` / `LatestResearchList` (gan identical —
+     differ o `hrefPrefix` + action) dung `useRef` + `IntersectionObserver`
+     (rootMargin 200px) tren sentinel div cuoi list. Threshold 0.1 → fetch
+     truoc khi user cham day.
+   - Initial server render: fetch `HERO_COUNT + LIST_PAGE_SIZE + 1 =` 14 items
+     khi no-search, 11 items khi search. Slice out hero (4) + latest initial
+     (10) + probe (1). Client tiep tuc tu offset = heroConsumed + items.length.
+2. **unstable_cache cho default variant**:
+   - `getDefaultNewsList` / `getDefaultResearchList` voi key `"tin-tuc_list_
+     default"` / `"nghien-cuu_list_default"`, revalidate 300s, tags
+     `["news", "tin-tuc"]` / `["news", "research"]`.
+   - Search path bypass cache (keyword dong, permutation too many).
+   - Sidebar featured (`getSidebarFeaturedNews`) cache 600s.
+3. **Section title header**: dung `Section` component chung (brown underline +
+   uppercase) cho ca homepage + list + detail related → visual consistency.
+
+### Date serialization bug + normalization pattern
+`unstable_cache` serialize return value qua JSON.stringify → Date objects bi
+convert thanh string. Khi cache HIT, consumer gọi `.toLocaleDateString()` /
+`.toISOString()` / `.getFullYear()` -> crash `TypeError`.
+
+**Cac page da dinh + fix:**
+- `/tin-tuc` list (`formatDate`): accept `Date | string | null`, normalize qua
+  `new Date(d)`.
+- `SidebarList` component: same pattern, plus `normalizeDate()` helper noi
+  bo.
+- `/hoi-vien`: normalize `members.map` sau cache read — `createdAt` +
+  `membershipExpires` vi pass xuong `generateMemberCardId()` + `MemberCardFront`
+  expect Date.
+- `/phap-ly` (`fmtDate`): accept union type.
+- `/feed` FeedClient (optimistic post status): fix hardcoded "PUBLISHED" →
+  phu thuoc `currentUserRole === "ADMIN" ? PUBLISHED : PENDING` match server
+  logic + include `status` trong patch tu server response → badge "Cho duyet"
+  hien dung cho non-admin.
+
+### Pattern chung (reuse cho route moi dung unstable_cache + Date)
+```ts
+function normalizeDate(d: Date | string | null): Date | null {
+  if (!d) return null
+  return d instanceof Date ? d : new Date(d)
+}
+```
+
+Apply cho bat ky field Date nao di qua `unstable_cache` path truoc khi consumer
+goi Date API.
+
+### Trade-offs
+- Lazy-load → khong co URL deep-link toi page N. Acceptable vi news/research
+  browsing linear.
+- Duplicate `LatestNewsList` vs `LatestResearchList`: khac `hrefPrefix` +
+  action. Neu them route thu 3 can refactor thanh generic `LatestArticleList`
+  nhan `loadMoreAction` + `hrefPrefix` props.
+
+### Ref
+- `app/[locale]/(public)/tin-tuc/{actions.ts, LatestNewsList.tsx, page.tsx}`
+- `app/[locale]/(public)/nghien-cuu/{actions.ts, LatestResearchList.tsx, page.tsx}`
+- `components/features/article/SidebarList.tsx` (shared, `publishedAt: Date |
+  string | null` tolerant).
+- Revalidate khi admin CRUD: `revalidateTag("news")` / `revalidateTag("research")`
+  / `revalidateTag("tin-tuc")`.

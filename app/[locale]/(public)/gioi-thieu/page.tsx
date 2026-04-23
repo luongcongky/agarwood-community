@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
@@ -9,6 +9,48 @@ import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
 import { MembersGrid, type MemberItem } from "./MembersGrid"
 
 export const revalidate = 600
+
+/** Leaders + VIP/INFINITE members đều thay đổi chậm (admin CRUD),
+ *  cache 10 phút để chia sẻ across visitor requests. */
+const getLeadersAndMembers = unstable_cache(
+  () =>
+    Promise.all([
+      prisma.leader.findMany({
+        where: { isActive: true },
+        orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
+        select: {
+          id: true,
+          name: true, name_en: true, name_zh: true, name_ar: true,
+          honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
+          title: true, title_en: true, title_zh: true, title_ar: true,
+          workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
+          bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+          photoUrl: true,
+          term: true,
+          category: true,
+          user: { select: { avatarUrl: true, bio: true } },
+        },
+      }),
+      prisma.user.findMany({
+        where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
+        orderBy: [
+          { contributionTotal: "desc" },
+          { displayPriority: "desc" },
+          { createdAt: "asc" },
+        ],
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          company: {
+            select: { name: true, logoUrl: true, representativePosition: true },
+          },
+        },
+      }),
+    ]),
+  ["gioi-thieu_leaders_members"],
+  { revalidate: 600, tags: ["gioi-thieu", "leaders", "members"] },
+)
 
 export async function generateMetadata() {
   const t = await getTranslations("about")
@@ -57,43 +99,8 @@ export default async function GioiThieuPage() {
     getLocale() as Promise<Locale>,
   ])
 
-  // Fetch:
-  //  - Leaders (BTV/BCH/BKT/HDTD) cho tabs
-  //  - TẤT CẢ hội viên VIP/INFINITE active (không giới hạn, không "Xem tất cả")
-  const [rawLeaders, rawMembers] = await Promise.all([
-    prisma.leader.findMany({
-      where: { isActive: true },
-      orderBy: [{ term: "desc" }, { sortOrder: "asc" }],
-      select: {
-        id: true,
-        name: true, name_en: true, name_zh: true, name_ar: true,
-        honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
-        title: true, title_en: true, title_zh: true, title_ar: true,
-        workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
-        bio: true, bio_en: true, bio_zh: true, bio_ar: true,
-        photoUrl: true,
-        term: true,
-        category: true,
-        user: { select: { avatarUrl: true, bio: true } },
-      },
-    }),
-    prisma.user.findMany({
-      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
-      orderBy: [
-        { contributionTotal: "desc" },
-        { displayPriority: "desc" },
-        { createdAt: "asc" },
-      ],
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        company: {
-          select: { name: true, logoUrl: true, representativePosition: true },
-        },
-      },
-    }),
-  ])
+  // Fetch leaders + TẤT CẢ hội viên VIP/INFINITE active — qua cache 10 phút.
+  const [rawLeaders, rawMembers] = await getLeadersAndMembers()
   const totalMemberCount = rawMembers.length
 
   const currentTerm = rawLeaders[0]?.term ?? null
@@ -129,36 +136,26 @@ export default async function GioiThieuPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
+    <div>
       {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      {/* ── Hero ── */}
-      <section className="bg-brand-800 text-white py-16">
-        <div className="mx-auto max-w-4xl px-4">
-          <h1 className="text-3xl font-bold sm:text-4xl">
-            {t("heroTitle")}
-          </h1>
-          <p className="mt-3 text-brand-200 max-w-2xl">
-            {t("heroDesc")}
-          </p>
-        </div>
-      </section>
-
-      {/* ── Content card ── */}
+      {/* ── Page content wrapper ── */}
       <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
+      <div>
 
-      {/* ── Intro — 1 đoạn giới thiệu thay cho 3 cards History/Mission/Vision ── */}
-      <section className="py-16 lg:py-20">
-        <div className="mx-auto max-w-3xl px-4">
+      {/* ── Intro — mở rộng max-w-5xl cho cân với các section grid khác
+           (leadership/members ở max-w-7xl). Text column vẫn giữ leading dễ
+           đọc, không stretch tới viewport. ──────────────────────────── */}
+      <section className="py-12 lg:py-16">
+        <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-center text-2xl font-bold text-brand-900 sm:text-3xl">
             {t("introTitle")}
           </h2>
-          <div className="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-8 sm:p-10">
+          <div className="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-8 sm:p-10 lg:p-12">
             <p className="text-brand-800 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
               {t("introContent")}
             </p>
@@ -286,21 +283,17 @@ export default async function GioiThieuPage() {
       </div>
       </div>
 
-      {/* ── CTA ── */}
-      <section className="bg-brand-800 py-16 text-white text-center">
-        <div className="mx-auto max-w-xl px-4">
-          <h2 className="text-2xl font-bold">{t("ctaTitle")}</h2>
-          <p className="mt-3 text-brand-200">
+      {/* ── CTA — flat, border-t thay cho full-width dark banner cũ ── */}
+      <section className="border-t border-neutral-200 bg-neutral-50 py-10">
+        <div className="mx-auto max-w-xl px-4 text-center">
+          <h2 className="text-xl font-bold text-neutral-900">{t("ctaTitle")}</h2>
+          <p className="mt-2 text-sm text-neutral-600">
             {t("ctaDesc")}
           </p>
-          <div className="mt-6">
+          <div className="mt-5">
             <Link
               href="/dang-ky"
-              className={cn(
-                "inline-flex items-center justify-center rounded-md",
-                "bg-brand-400 px-8 py-3 text-base font-semibold text-brand-900",
-                "transition-colors hover:bg-brand-300"
-              )}
+              className="inline-flex items-center gap-2 border border-brand-700 bg-brand-700 px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-brand-800"
             >
               {t("ctaButton")}
             </Link>

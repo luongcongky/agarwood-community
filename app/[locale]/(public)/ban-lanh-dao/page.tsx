@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
 import { getLocale, getTranslations } from "next-intl/server"
@@ -7,6 +8,28 @@ import type { Locale } from "@/i18n/config"
 import { LeaderSectionGrid, type LeaderCardData, type LeaderSection } from "./LeaderSectionGrid"
 
 export const revalidate = 600
+
+/** Leaders thay đổi chậm (admin CRUD), cache 10 phút. */
+const getAllActiveLeaders = unstable_cache(
+  () =>
+    prisma.leader.findMany({
+      where: { isActive: true },
+      orderBy: [{ term: "desc" }, { category: "asc" }, { sortOrder: "asc" }],
+      select: {
+        id: true,
+        name: true, name_en: true, name_zh: true, name_ar: true,
+        honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
+        bio: true, bio_en: true, bio_zh: true, bio_ar: true,
+        photoUrl: true,
+        category: true,
+        term: true,
+      },
+    }),
+  ["ban-lanh-dao_leaders"],
+  { revalidate: 600, tags: ["leaders"] },
+)
 
 export async function generateMetadata() {
   const t = await getTranslations("leadership")
@@ -28,21 +51,7 @@ export default async function LeadershipPage({
     getLocale() as Promise<Locale>,
   ])
 
-  const allLeaders = await prisma.leader.findMany({
-    where: { isActive: true },
-    orderBy: [{ term: "desc" }, { category: "asc" }, { sortOrder: "asc" }],
-    select: {
-      id: true,
-      name: true, name_en: true, name_zh: true, name_ar: true,
-      honorific: true, honorific_en: true, honorific_zh: true, honorific_ar: true,
-      title: true, title_en: true, title_zh: true, title_ar: true,
-      workTitle: true, workTitle_en: true, workTitle_zh: true, workTitle_ar: true,
-      bio: true, bio_en: true, bio_zh: true, bio_ar: true,
-      photoUrl: true,
-      category: true,
-      term: true,
-    },
-  })
+  const allLeaders = await getAllActiveLeaders()
 
   const terms = [...new Set(allLeaders.map((l) => l.term))]
   const selectedTerm = params.term ?? terms[0] ?? null
@@ -73,15 +82,9 @@ export default async function LeadershipPage({
   ]
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
-      {/* Banner */}
-      <section className="bg-brand-800 py-16 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
-        <p className="mt-2 text-brand-300 text-lg">{t("subtitle")}</p>
-      </section>
-
+    <div>
       <div className="max-w-6xl mx-auto px-4 py-10">
-        <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
+        <div>
           {/* Term selector */}
           {terms.length > 1 && (
             <div className="mb-10 flex flex-wrap items-center justify-center gap-2">

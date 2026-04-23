@@ -7,139 +7,180 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 
-function formatDate(d: Date | null | string): string {
-  if (!d) return ""
-  const date = typeof d === "string" ? new Date(d) : d
-  return date.toLocaleDateString("vi-VN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
-}
-
 export async function NewsSection() {
-  const [associationNews, t, locale] = await Promise.all([
+  const [news, t, locale] = await Promise.all([
     getAssociationNews(),
     getTranslations("homepage"),
     getLocale() as Promise<Locale>,
   ])
-  const heroNews = associationNews[0] ?? null
-  const restNews = associationNews.slice(1)
+  const hero = news[0] ?? null
+  const underHero = news.slice(1, 4)
+  const sideItems = news.slice(4, 6)
 
   return (
-    <div className="min-w-0 lg:col-span-2 space-y-6">
-      {heroNews ? (
-        <NewsHero news={heroNews} featuredLabel={t("newsFeatured")} locale={locale} />
+    <section aria-label="Tin Hội">
+      {hero || underHero.length > 0 || sideItems.length > 0 ? (
+        // DOM order = mobile order: hero → side excerpts → 3 stacked.
+        // Desktop restores the original layout via explicit grid placement
+        // (side excerpts span both rows of the right column).
+        <div className="grid gap-8 lg:grid-cols-12">
+          {/* 1. Hero — mobile line 1 / desktop left col row 1 */}
+          <div className="min-w-0 lg:col-span-7 lg:col-start-1 lg:row-start-1">
+            {hero && (
+              <Hero
+                item={hero}
+                label={t("newsFeatured")}
+                locale={locale}
+              />
+            )}
+          </div>
+
+          {/* 2. Side excerpts — mobile line 2-3 / desktop right col spanning 2 rows */}
+          {sideItems.length > 0 && (
+            <div className="min-w-0 space-y-6 lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1">
+              {sideItems.map((n) => (
+                <ExcerptCard key={n.id} item={n} locale={locale} />
+              ))}
+            </div>
+          )}
+
+          {/* 3. Three stacked items — mobile line 4-6 / desktop left col row 2 */}
+          {underHero.length > 0 && (
+            <div className="min-w-0 lg:col-span-7 lg:col-start-1 lg:row-start-2">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-4">
+                {underHero.map((n) => (
+                  <StackedItem key={n.id} item={n} locale={locale} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
+        <div className="border border-neutral-200 bg-white p-12 text-center italic text-neutral-500">
           {t("newsEmpty")}
         </div>
       )}
-
-      {restNews.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {restNews.map((news) => (
-            <NewsListItem key={news.id} news={news} locale={locale} />
-          ))}
-        </div>
-      )}
-
-      <div className="text-right">
-        <Link
-          href="/tin-tuc"
-          className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-800 underline underline-offset-4"
-        >
-          {t("newsViewAll")}
-        </Link>
-      </div>
-    </div>
+    </section>
   )
 }
 
-function NewsHero({
-  news,
-  featuredLabel,
+function Hero({
+  item,
+  label,
   locale,
 }: {
-  news: HomepageNewsItem
-  featuredLabel: string
+  item: HomepageNewsItem
+  label: string
   locale: Locale
 }) {
-  const title = localize(news, "title", locale) as string
-  const excerpt = localize(news, "excerpt", locale) as string | null
+  const title = localize(item, "title", locale) as string
+  const excerpt = localize(item, "excerpt", locale) as string | null
   return (
-    <Link
-      href={newsHref(news.category, news.slug)}
-      className="group block overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm hover:shadow-md transition-all"
-    >
-      <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-brand-100">
-        {news.coverImageUrl ? (
+    <Link href={newsHref(item.category, item.slug)} className="group block">
+      <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
+        {item.coverImageUrl ? (
           <Image
-            src={news.coverImageUrl}
+            src={item.coverImageUrl}
             alt={title}
             fill
             priority
             placeholder="blur"
             blurDataURL={BRAND_BLUR_DATA_URL}
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 1024px) 100vw, 66vw"
+            sizes="(max-width: 1024px) 100vw, 55vw"
+            className="object-cover"
           />
         ) : (
           <AgarwoodPlaceholder className="h-full w-full" size="xl" shape="square" />
         )}
-        {news.isPinned && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow">
-            {featuredLabel}
+        {item.isPinned && (
+          <span className="absolute left-0 top-3 bg-brand-700 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            {label}
           </span>
         )}
       </div>
-      <div className="p-5 sm:p-6">
-        <h3 className="text-xl sm:text-2xl font-bold text-brand-900 group-hover:text-brand-700 line-clamp-2">
-          {title}
-        </h3>
-        {excerpt && (
-          <p className="mt-2 text-sm sm:text-base text-brand-600 line-clamp-2">
-            {excerpt}
-          </p>
-        )}
-        <time className="mt-3 block text-xs text-brand-500">
-          {formatDate(news.publishedAt)}
-        </time>
-      </div>
+      <h3 className="mt-4 text-2xl font-bold leading-tight text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline lg:text-[28px]">
+        {title}
+      </h3>
+      {excerpt && (
+        <p className="mt-2 line-clamp-3 text-[15px] leading-relaxed text-neutral-700">
+          {excerpt}
+        </p>
+      )}
     </Link>
   )
 }
 
-function NewsListItem({ news, locale }: { news: HomepageNewsItem; locale: Locale }) {
-  const title = localize(news, "title", locale) as string
+function ExcerptCard({
+  item,
+  locale,
+}: {
+  item: HomepageNewsItem
+  locale: Locale
+}) {
+  const title = localize(item, "title", locale) as string
+  const excerpt = localize(item, "excerpt", locale) as string | null
   return (
-    <Link
-      href={newsHref(news.category, news.slug)}
-      className="group flex gap-3 p-3 rounded-lg border border-brand-200 bg-white hover:border-brand-300 hover:shadow-sm transition-all"
-    >
-      {news.coverImageUrl ? (
-        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded">
+    <Link href={newsHref(item.category, item.slug)} className="group block">
+      <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
+        {item.coverImageUrl ? (
           <Image
-            src={news.coverImageUrl}
+            src={item.coverImageUrl}
+            alt={title}
+            fill
+            placeholder="blur"
+            blurDataURL={BRAND_BLUR_DATA_URL}
+            sizes="(max-width: 1024px) 100vw, 40vw"
+            className="object-cover"
+          />
+        ) : (
+          <AgarwoodPlaceholder className="h-full w-full" size="lg" shape="square" />
+        )}
+      </div>
+      <h3 className="mt-3 text-lg font-bold leading-tight text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline">
+        {title}
+      </h3>
+      {excerpt && (
+        <p className="mt-1.5 line-clamp-2 text-[14px] leading-relaxed text-neutral-700">
+          {excerpt}
+        </p>
+      )}
+    </Link>
+  )
+}
+
+function StackedItem({
+  item,
+  locale,
+}: {
+  item: HomepageNewsItem
+  locale: Locale
+}) {
+  const title = localize(item, "title", locale) as string
+  return (
+    <Link href={newsHref(item.category, item.slug)} className="group block">
+      {item.coverImageUrl ? (
+        <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
+          <Image
+            src={item.coverImageUrl}
             alt=""
             fill
             placeholder="blur"
             blurDataURL={BRAND_BLUR_DATA_URL}
+            sizes="(max-width: 1024px) 90vw, 20vw"
             className="object-cover"
-            sizes="96px"
           />
         </div>
       ) : (
-        <AgarwoodPlaceholder className="h-20 w-24" size="sm" shape="rounded" tone="light" />
+        <AgarwoodPlaceholder
+          className="aspect-video w-full"
+          size="sm"
+          shape="square"
+          tone="light"
+        />
       )}
-      <div className="min-w-0 flex-1">
-        <h4 className="line-clamp-2 text-sm font-semibold text-brand-900 group-hover:text-brand-700">
-          {title}
-        </h4>
-        <time className="mt-1 block text-xs text-brand-500">
-          {formatDate(news.publishedAt)}
-        </time>
-      </div>
+      <h4 className="mt-2 text-[14px] font-bold leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline">
+        {title}
+      </h4>
     </Link>
   )
 }

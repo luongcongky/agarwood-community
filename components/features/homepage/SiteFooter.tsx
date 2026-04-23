@@ -29,11 +29,11 @@ const getLeadership = unstable_cache(
       },
       take: 10,
     }),
-  ["v2_footer_leadership"],
+  ["site_footer_leadership"],
   { revalidate: 600, tags: ["footer", "leaders"] },
 )
 
-export async function V2Footer() {
+export async function SiteFooter() {
   const [leaders, t, locale] = await Promise.all([
     getLeadership(),
     getTranslations("footer"),

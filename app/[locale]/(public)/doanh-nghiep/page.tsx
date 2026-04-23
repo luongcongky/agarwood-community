@@ -1,9 +1,11 @@
 import Image from "next/image"
 import Link from "next/link"
+import { unstable_cache } from "next/cache"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
+import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 export async function generateMetadata() {
   const t = await getTranslations("companies")
@@ -17,10 +19,12 @@ function displayWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
 }
 
-/** Strip HTML tags + decode entities cơ bản để hiển thị preview plain text trong card.
- *  Description được lưu dưới dạng HTML (rich text editor), không render trực tiếp ở card. */
-function stripHtml(html: string): string {
-  return html
+/** Strip HTML tags + decode entities cơ bản + truncate. Description lưu dạng
+ *  HTML rich-text; ở card chỉ cần 2 dòng plain preview. Truncate server-side
+ *  tránh ship full HTML (có thể vài KB/card × 30+ card = trăm KB) xuống DOM. */
+const DESC_PREVIEW_MAX = 180
+function stripHtmlPreview(html: string): string {
+  const plain = html
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
@@ -30,7 +34,34 @@ function stripHtml(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, " ")
     .trim()
+  if (plain.length <= DESC_PREVIEW_MAX) return plain
+  return plain.slice(0, DESC_PREVIEW_MAX).replace(/\s+\S*$/, "") + "…"
 }
+
+const COMPANY_CARD_SELECT = {
+  id: true,
+  name: true, name_en: true, name_zh: true, name_ar: true,
+  slug: true,
+  logoUrl: true,
+  description: true, description_en: true, description_zh: true, description_ar: true,
+  address: true, address_en: true, address_zh: true, address_ar: true,
+  phone: true,
+  website: true,
+  isVerified: true,
+} as const
+
+/** Default list (no search) cached 5 min — hit DB 1 lần/5ph thay vì mỗi
+ *  request. revalidateTag("companies") khi admin CRUD company. */
+const getDefaultCompanies = unstable_cache(
+  () =>
+    prisma.company.findMany({
+      where: { isPublished: true },
+      orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+      select: COMPANY_CARD_SELECT,
+    }),
+  ["doanh-nghiep_list_default"],
+  { revalidate: 300, tags: ["companies"] },
+)
 
 export default async function MembersPage({
   searchParams,
@@ -45,40 +76,23 @@ export default async function MembersPage({
   const params = await searchParams
   const q = params.q ?? ""
 
-  const companies = await prisma.company.findMany({
-    where: {
-      isPublished: true,
-      ...(q && {
-        OR: [
-          { name: { contains: q, mode: "insensitive" as const } },
-          { description: { contains: q, mode: "insensitive" as const } },
-        ],
-      }),
-    },
-    orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      name: true, name_en: true, name_zh: true, name_ar: true,
-      slug: true,
-      logoUrl: true,
-      description: true, description_en: true, description_zh: true, description_ar: true,
-      address: true, address_en: true, address_zh: true, address_ar: true,
-      phone: true,
-      website: true,
-      isVerified: true,
-    },
-  })
+  // Default list đi qua cache 5 phút; search path bypass cache (keyword động).
+  const companies = q
+    ? await prisma.company.findMany({
+        where: {
+          isPublished: true,
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { description: { contains: q, mode: "insensitive" as const } },
+          ],
+        },
+        orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+        select: COMPANY_CARD_SELECT,
+      })
+    : await getDefaultCompanies()
 
   return (
     <div>
-      {/* Page Banner */}
-      <section className="bg-brand-800 py-16 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
-        <p className="mt-2 text-brand-300 text-lg">
-          {t("pageSubtitle")}
-        </p>
-      </section>
-
       <div className="max-w-7xl mx-auto px-4 py-10">
         {/* Search */}
         <form method="GET" action="/doanh-nghiep" className="mb-8 flex gap-2 max-w-lg mx-auto">
@@ -134,6 +148,8 @@ export default async function MembersPage({
                         fill
                         sizes="64px"
                         className="rounded-full object-cover"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
                       />
                     </div>
                   ) : (
@@ -155,10 +171,11 @@ export default async function MembersPage({
                   </div>
                 </div>
 
-                {/* Description — strip HTML để preview plain text trong card */}
+                {/* Description — strip HTML + truncate ~180 ký tự trên server;
+                    DOM chỉ ship preview ngắn thay vì full rich-text HTML. */}
                 {l(company, "description") && (
                   <p className="text-muted-foreground text-sm line-clamp-2">
-                    {stripHtml(l(company, "description"))}
+                    {stripHtmlPreview(l(company, "description"))}
                   </p>
                 )}
 

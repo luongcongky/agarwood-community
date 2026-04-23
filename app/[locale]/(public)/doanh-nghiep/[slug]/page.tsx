@@ -89,8 +89,8 @@ export default async function CompanyProfilePage({ params }: Props) {
   ])
 
   return (
-    <div className="bg-brand-50/60 min-h-screen">
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* White card wrapping all company content */}
       <div className="bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden">
       {/* Cover image — no overflow-hidden so the logo can half-overlap into

@@ -2,14 +2,14 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 
 /**
- * Header format chuẩn VTV-style cho các section trên /v2:
+ * Header format chuẩn VTV-style cho các section trên trang chủ:
  *  - Đường kẻ ngang mờ neutral-200 ở trên (phân cách với section trước)
  *  - Title in đậm chữ hoa ~20px
  *  - Thanh nâu ngắn 3px ngay dưới title (chỉ bằng độ rộng chữ)
  *  - Tabs/nav liên quan nằm baseline cùng hàng với title, cỡ nhỏ hơn
  *  - Content (children) render bên dưới header
  */
-export function SectionV2({
+export function Section({
   title,
   titleHref,
   rightNav,

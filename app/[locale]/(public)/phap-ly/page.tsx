@@ -1,11 +1,50 @@
 import Link from "next/link"
-import type { Metadata } from "next"
+import { unstable_cache } from "next/cache"
 import { DocumentCategory } from "@prisma/client"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { cn } from "@/lib/utils"
+
+/** Legal documents đổi khá chậm (admin upload), cache 30 phút.
+ *  Một cache entry mỗi category (DIEU_LE / QUY_CHE / GIAY_PHEP) + 1 entry cho
+ *  counts tổng. */
+const getLegalDocsByCategory = unstable_cache(
+  async (category: DocumentCategory) =>
+    prisma.document.findMany({
+      where: { category, isPublic: true },
+      orderBy: [{ sortOrder: "asc" }, { issuedDate: "desc" }],
+      select: {
+        id: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        description: true, description_en: true, description_zh: true, description_ar: true,
+        documentNumber: true,
+        issuedDate: true,
+        issuer: true, issuer_en: true, issuer_zh: true, issuer_ar: true,
+        driveFileId: true,
+        driveViewUrl: true,
+        driveDownloadUrl: true,
+        fileName: true,
+        fileSize: true,
+      },
+    }),
+  ["legal_docs_by_category"],
+  { revalidate: 1800, tags: ["documents", "legal"] },
+)
+
+const getLegalCounts = unstable_cache(
+  async () => {
+    const [dieuLe, quyChe, giayPhep] = await Promise.all([
+      prisma.document.count({ where: { category: DocumentCategory.DIEU_LE, isPublic: true } }),
+      prisma.document.count({ where: { category: DocumentCategory.QUY_CHE, isPublic: true } }),
+      prisma.document.count({ where: { category: DocumentCategory.GIAY_PHEP, isPublic: true } }),
+    ])
+    return { dieuLe, quyChe, giayPhep }
+  },
+  ["legal_docs_counts"],
+  { revalidate: 1800, tags: ["documents", "legal"] },
+)
 
 export async function generateMetadata() {
   const t = await getTranslations("legalDocs")
@@ -28,9 +67,12 @@ function fmtBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function fmtDate(d: Date | null): string {
+// Date từ `unstable_cache` bị JSON-serialize thành string khi hit cache;
+// accept cả Date lẫn string rồi normalize.
+function fmtDate(d: Date | string | null): string {
   if (!d) return "—"
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+  const date = d instanceof Date ? d : new Date(d)
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
 
 export default async function PhapLyPage({
@@ -50,51 +92,20 @@ export default async function PhapLyPage({
     "giay-phep": DocumentCategory.GIAY_PHEP,
   }
 
-  // Fetch counts for all tabs + documents for active tab
-  const [dieuLeCount, quyCheCount, giayPhepCount, documents] = await Promise.all([
-    prisma.document.count({ where: { category: DocumentCategory.DIEU_LE, isPublic: true } }),
-    prisma.document.count({ where: { category: DocumentCategory.QUY_CHE, isPublic: true } }),
-    prisma.document.count({ where: { category: DocumentCategory.GIAY_PHEP, isPublic: true } }),
-    prisma.document.findMany({
-      where: {
-        category: categoryMap[activeTab],
-        isPublic: true,
-      },
-      orderBy: [{ sortOrder: "asc" }, { issuedDate: "desc" }],
-      select: {
-        id: true,
-        title: true, title_en: true, title_zh: true, title_ar: true,
-        description: true, description_en: true, description_zh: true, description_ar: true,
-        documentNumber: true,
-        issuedDate: true,
-        issuer: true, issuer_en: true, issuer_zh: true, issuer_ar: true,
-        driveFileId: true,
-        driveViewUrl: true,
-        driveDownloadUrl: true,
-        fileName: true,
-        fileSize: true,
-      },
-    }),
+  // Fetch counts (cached) + documents for active tab (cached per-category).
+  const [{ dieuLe, quyChe, giayPhep }, documents] = await Promise.all([
+    getLegalCounts(),
+    getLegalDocsByCategory(categoryMap[activeTab]),
   ])
 
   const counts: Record<Tab, number> = {
-    "dieu-le": dieuLeCount,
-    "quy-che": quyCheCount,
-    "giay-phep": giayPhepCount,
+    "dieu-le": dieuLe,
+    "quy-che": quyChe,
+    "giay-phep": giayPhep,
   }
 
   return (
-    <div className="min-h-screen bg-brand-50">
-      {/* ── Page Banner ──────────────────────────────────────────────────── */}
-      <section className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          {tl("pageTitle")}
-        </h1>
-        <p className="mt-2 text-brand-300 text-base max-w-2xl mx-auto">
-          {tl("pageSubtitle")}
-        </p>
-      </section>
-
+    <div>
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-brand-200 sticky top-16 z-10">
         <div className="mx-auto max-w-5xl px-4">

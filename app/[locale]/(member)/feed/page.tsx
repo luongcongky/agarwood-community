@@ -1,9 +1,30 @@
 import { Suspense } from "react"
+import { unstable_cache } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTierThresholds } from "@/lib/tier"
 import { FeedClient } from "./FeedClient"
 import { SidebarBanners, SidebarBannersSkeleton } from "./SidebarBanners"
+
+/** Top contributors list — đồng nhất cho mọi viewer, cache 10 phút. */
+const getTopContributors = unstable_cache(
+  () =>
+    prisma.user.findMany({
+      where: { role: "VIP", isActive: true },
+      orderBy: { contributionTotal: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        contributionTotal: true,
+        accountType: true,
+        company: { select: { name: true } },
+      },
+    }),
+  ["feed_top_contributors"],
+  { revalidate: 600, tags: ["feed", "users"] },
+)
 
 export const revalidate = 60 // 1 min — feed updates are not real-time critical
 
@@ -22,9 +43,12 @@ export default async function FeedPage() {
   //    owner thay (voi banner do + ly do). Hien cho public se trai tinh than
   //    moderation (bai xau khong nen lo ra cho moi nguoi).
   //  - PENDING → CHI owner thay (banner vang "Cho duyet")
+  // Initial render khớp với default filter client = NEWS. Đổi filter trên UI
+  // trigger client refetch qua /api/posts?category=PRODUCT.
   const initialPosts = await prisma.post.findMany({
     where: userId
       ? {
+          category: "NEWS",
           OR: [
             { status: "PUBLISHED" },
             { status: "LOCKED", moderationNote: null },
@@ -33,6 +57,7 @@ export default async function FeedPage() {
           ],
         }
       : {
+          category: "NEWS",
           OR: [
             { status: "PUBLISHED" },
             { status: "LOCKED", moderationNote: null },
@@ -100,7 +125,8 @@ export default async function FeedPage() {
     lockedAt: p.lockedAt?.toISOString() ?? null,
   }))
 
-  // Sidebar data
+  // Sidebar data — membershipInfo per-user (không cache được); topContributors
+  // dùng cache 10 phút chung cho mọi viewer.
   const [membershipInfo, topContributors] = await Promise.all([
     userId
       ? prisma.user.findUnique({
@@ -108,19 +134,7 @@ export default async function FeedPage() {
           select: { membershipExpires: true, contributionTotal: true, displayPriority: true, accountType: true, company: { select: { name: true, slug: true } } },
         })
       : null,
-    prisma.user.findMany({
-      where: { role: "VIP", isActive: true },
-      orderBy: { contributionTotal: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        contributionTotal: true,
-        accountType: true,
-        company: { select: { name: true } },
-      },
-    }),
+    getTopContributors(),
   ])
 
   const [bizTier, indTier] = await Promise.all([

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
-import { SectionV2 } from "./SectionV2"
+import { Section } from "./Section"
 
 function colorFromName(name: string): string {
   let hash = 0
@@ -48,11 +48,11 @@ const getFeaturedCompanies = unstable_cache(
         logoUrl: true,
       },
     }),
-  ["homepage_featured_companies_v2"],
+  ["homepage_featured_companies"],
   { revalidate: 300, tags: ["homepage", "companies"] },
 )
 
-export async function FeaturedCompaniesV2() {
+export async function FeaturedCompanies() {
   const [companies, t, locale] = await Promise.all([
     getFeaturedCompanies(),
     getTranslations("homepage"),
@@ -68,7 +68,7 @@ export async function FeaturedCompaniesV2() {
   const items = [...localized, ...localized]
 
   return (
-    <SectionV2 title={t("featuredCompaniesTitle")} titleHref="/doanh-nghiep">
+    <Section title={t("featuredCompaniesTitle")} titleHref="/doanh-nghiep">
       <div
         className="group relative overflow-hidden"
         style={{
@@ -78,7 +78,7 @@ export async function FeaturedCompaniesV2() {
             "linear-gradient(to right, transparent, black 3%, black 97%, transparent)",
         }}
       >
-        <div className="flex w-max animate-[homepage-featured-companies-v2-marquee_70s_linear_infinite] gap-4 group-hover:paused">
+        <div className="flex w-max animate-[homepage-featured-companies-marquee_70s_linear_infinite] gap-4 group-hover:paused">
           {items.map((c, idx) => {
             const initials = getInitials(c.localName)
             return (
@@ -117,11 +117,11 @@ export async function FeaturedCompaniesV2() {
       </div>
 
       <style>{`
-        @keyframes homepage-featured-companies-v2-marquee {
+        @keyframes homepage-featured-companies-marquee {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
       `}</style>
-    </SectionV2>
+    </Section>
   )
 }

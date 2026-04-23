@@ -6,17 +6,17 @@ import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
-import { SectionV2 } from "./SectionV2"
+import { Section } from "./Section"
 
 /**
- * V2 Sản phẩm tiêu biểu — infinite marquee, flat / flush VTV-style.
- * Khác CertifiedProductsCarousel (v1):
+ * Sản phẩm tiêu biểu — infinite marquee, flat / flush VTV-style.
+ * Đặc trưng:
  *  - Ảnh vuông aspect-square, flush không rounded + không border
  *  - Hover chỉ đổi màu + gạch chân title (không scale ảnh)
  *  - Badge "Chứng nhận" dạng block chữ nhật nâu (không pill amber)
  *  - Header gọn trên cùng 1 line với link "/san-pham-doanh-nghiep"
  */
-export async function CertifiedProductsV2() {
+export async function CertifiedProducts() {
   const [products, t, locale] = await Promise.all([
     getFeaturedProductsForHomepage(),
     getTranslations("homepage"),
@@ -29,7 +29,7 @@ export async function CertifiedProductsV2() {
   const items = [...products, ...products]
 
   return (
-    <SectionV2
+    <Section
       title={t("certProductsTitle")}
       titleHref="/san-pham-doanh-nghiep"
     >
@@ -101,6 +101,6 @@ export async function CertifiedProductsV2() {
           to   { transform: translateX(-50%); }
         }
       `}</style>
-    </SectionV2>
+    </Section>
   )
 }

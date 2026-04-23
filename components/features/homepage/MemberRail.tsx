@@ -25,7 +25,7 @@ function plainTitle(post: HomepagePost, n = 80): string {
     .slice(0, n)
 }
 
-export async function MemberRailV2() {
+export async function MemberRail() {
   // Fetch top posts + pool + translations song song (trước đây serial: top
   // xong mới fetch rotating). Filter + shuffle rotating trong JS sau khi cả
   // 3 promise resolve → -300ms latency per render.

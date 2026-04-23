@@ -28,6 +28,12 @@ interface UserMenuProps {
   mode?: NavMode
   /** Hội viên VIP còn hiệu lực — false → dropdown chỉ có item Gia hạn */
   membershipActive?: boolean
+  /** Layout style của trigger:
+   *  - "dark" (default): dùng trong Navbar nâu đậm — avatar nhỏ, text cream
+   *  - "light": dùng trong SiteHeader masthead trắng — avatar to bằng logo
+   *    Hội (56–64px), tên user hiển thị TRƯỚC avatar với style match H1 masthead
+   *    (text-brand-900 font-black uppercase tracking-tight). */
+  variant?: "dark" | "light"
 }
 
 const roleLabel: Record<Role, string> = {
@@ -44,7 +50,7 @@ const roleBadgeClass: Record<Role, string> = {
   INFINITE: "bg-primary text-primary-foreground",
 }
 
-export function UserMenu({ name, email, image, role, mode = "public", membershipActive = true }: UserMenuProps) {
+export function UserMenu({ name, email, image, role, mode = "public", membershipActive = true, variant = "dark" }: UserMenuProps) {
   const router = useRouter()
   const initials = name?.trim()
     ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
@@ -59,18 +65,37 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
   // ADMIN chuyên dụng
   const isPureAdmin = role === "ADMIN"
 
+  const isLight = variant === "light"
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <Avatar className="h-8 w-8 border-2 border-brand-400">
-          <AvatarImage src={image ?? undefined} alt={name ?? ""} />
-          <AvatarFallback className="bg-brand-700 text-brand-100 text-xs font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <span className="hidden md:block text-sm font-medium text-brand-100 max-w-[120px] truncate">
-          {name}
-        </span>
+      <DropdownMenuTrigger className="flex items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        {isLight ? (
+          <>
+            {/* Tên TRƯỚC avatar, màu match H1 "HỘI TRẦM HƯƠNG VIỆT NAM" */}
+            <span className="hidden sm:inline-block max-w-[180px] truncate text-right text-sm font-black uppercase tracking-tight text-brand-900 sm:text-base lg:text-[17px]">
+              {name}
+            </span>
+            <Avatar className="h-10 w-10 border-2 border-brand-700 lg:h-11 lg:w-11">
+              <AvatarImage src={image ?? undefined} alt={name ?? ""} />
+              <AvatarFallback className="bg-brand-700 text-brand-100 text-sm font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </>
+        ) : (
+          <>
+            <Avatar className="h-8 w-8 border-2 border-brand-400">
+              <AvatarImage src={image ?? undefined} alt={name ?? ""} />
+              <AvatarFallback className="bg-brand-700 text-brand-100 text-xs font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden md:block text-sm font-medium text-brand-100 max-w-[120px] truncate">
+              {name}
+            </span>
+          </>
+        )}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-56">

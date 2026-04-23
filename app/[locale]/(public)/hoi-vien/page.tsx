@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { unstable_cache } from "next/cache"
 import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { calcTier } from "@/lib/tier"
@@ -8,6 +9,60 @@ import { MemberCardFront } from "@/components/features/member-card/MemberCardFro
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
 import { generateMemberCardId, tierFromRole } from "@/lib/memberCard"
 import { getMemberQrDataUrl } from "@/lib/memberQrCache"
+
+const VIP_MEMBER_SELECT = {
+  id: true,
+  name: true,
+  avatarUrl: true,
+  phone: true,
+  role: true,
+  accountType: true,
+  contributionTotal: true,
+  memberCategory: true,
+  membershipExpires: true,
+  createdAt: true,
+  company: {
+    select: {
+      name: true,
+      slug: true,
+      logoUrl: true,
+      address: true,
+      isVerified: true,
+      representativePosition: true,
+    },
+  },
+} as const
+
+/** VIP/INFINITE members default list — cache 10 phút (biến thể search bypass). */
+const getDefaultVipMembers = unstable_cache(
+  () =>
+    prisma.user.findMany({
+      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
+      orderBy: [
+        { contributionTotal: "desc" },
+        { displayPriority: "desc" },
+        { createdAt: "asc" },
+      ],
+      select: VIP_MEMBER_SELECT,
+    }),
+  ["hoi-vien_default_list"],
+  { revalidate: 600, tags: ["members", "users"] },
+)
+
+/** SiteConfig association contact info — cache 10 phút. */
+const getAssociationConfigs = unstable_cache(
+  () =>
+    prisma.siteConfig.findMany({
+      where: {
+        key: {
+          in: ["association_email", "association_phone", "association_website"],
+        },
+      },
+    }),
+  ["association_contact_configs"],
+  { revalidate: 600, tags: ["siteConfig"] },
+)
+
 export async function generateMetadata() {
   const t = await getTranslations("members")
   return { title: t("metaTitle"), alternates: { canonical: "/hoi-vien" } }
@@ -40,66 +95,51 @@ export default async function VipMembersPage({
 
   const [members, businessThresholds, individualThresholds, configs] =
     await Promise.all([
-      prisma.user.findMany({
-        where: {
-          role: { in: ["VIP", "INFINITE"] },
-          isActive: true,
-          ...(q && {
-            OR: [
-              { name: { contains: q, mode: "insensitive" as const } },
-              {
-                company: {
-                  name: { contains: q, mode: "insensitive" as const },
+      q
+        ? prisma.user.findMany({
+            where: {
+              role: { in: ["VIP", "INFINITE"] },
+              isActive: true,
+              OR: [
+                { name: { contains: q, mode: "insensitive" as const } },
+                {
+                  company: {
+                    name: { contains: q, mode: "insensitive" as const },
+                  },
                 },
-              },
-            ],
-          }),
-        },
-        orderBy: [
-          { contributionTotal: "desc" },
-          { displayPriority: "desc" },
-          { createdAt: "asc" },
-        ],
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          phone: true,
-          role: true,
-          accountType: true,
-          contributionTotal: true,
-          memberCategory: true,
-          membershipExpires: true,
-          createdAt: true,
-          company: {
-            select: {
-              name: true,
-              slug: true,
-              logoUrl: true,
-              address: true,
-              isVerified: true,
-              representativePosition: true,
+              ],
             },
-          },
-        },
-      }),
+            orderBy: [
+              { contributionTotal: "desc" },
+              { displayPriority: "desc" },
+              { createdAt: "asc" },
+            ],
+            select: VIP_MEMBER_SELECT,
+          })
+        : getDefaultVipMembers(),
       getTierThresholds("BUSINESS"),
       getTierThresholds("INDIVIDUAL"),
-      prisma.siteConfig.findMany({
-        where: {
-          key: {
-            in: ["association_email", "association_phone", "association_website"],
-          },
-        },
-      }),
+      getAssociationConfigs(),
     ])
 
   const cfg = Object.fromEntries(configs.map((c) => [c.key, c.value]))
 
+  // Normalize Date fields — khi cache hit, Prisma Date bị JSON-serialize thành
+  // string. Date constructor chấp nhận cả 2, nên convert về Date để pass
+  // xuống generateMemberCardId + MemberCardFront (expect Date).
+  const normalizedMembers = members.map((m) => ({
+    ...m,
+    createdAt: m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt),
+    membershipExpires:
+      m.membershipExpires instanceof Date || m.membershipExpires === null
+        ? m.membershipExpires
+        : new Date(m.membershipExpires),
+  }))
+
   // QR cache: mỗi QR deterministic theo memberId, unstable_cache giữ 24h →
   // chỉ tốn CPU một lần, các lần sau (kể cả page ISR revalidation) dùng lại.
   const cardsData = await Promise.all(
-    members.map(async (member) => {
+    normalizedMembers.map(async (member) => {
       const thresholds =
         member.accountType === "INDIVIDUAL" ? individualThresholds : businessThresholds
       const tierInfo = calcTier(
@@ -115,19 +155,9 @@ export default async function VipMembersPage({
   )
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
-      {/* Page Banner */}
-      <section className="bg-brand-800 py-16 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">
-          {t("pageTitle")}
-        </h1>
-        <p className="mt-2 text-brand-300 text-lg">
-          {t("pageSubtitle", { count: members.length })}
-        </p>
-      </section>
-
+    <div>
       <div className="max-w-7xl mx-auto px-4 py-10">
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
+      <div>
         {/* Search */}
         <form
           method="GET"

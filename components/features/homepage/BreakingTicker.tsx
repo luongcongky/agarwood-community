@@ -94,7 +94,7 @@ function fmtDate(d: Date, locale: Locale): string {
   })
 }
 
-export async function BreakingTickerV2() {
+export async function BreakingTicker() {
   // eslint-disable-next-line react-hooks/purity -- server component fresh per request
   const bucketMinutes = Math.floor(Date.now() / 60_000)
   const [locale, t, pinnedNews, recentDocs] = await Promise.all([

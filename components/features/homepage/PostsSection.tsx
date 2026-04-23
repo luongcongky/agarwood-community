@@ -7,8 +7,8 @@ import { getLocale, getTranslations } from "next-intl/server"
 import type { Locale } from "@/i18n/config"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
-import { ThumbnailCardV2 } from "./ThumbnailCardV2"
-import { SectionV2 } from "./SectionV2"
+import { ThumbnailCard } from "./ThumbnailCard"
+import { Section } from "./Section"
 
 const BCP47: Record<Locale, string> = {
   vi: "vi-VN",
@@ -61,7 +61,7 @@ function timeAgo(date: Date | string | null, locale: Locale): string {
   })
 }
 
-export async function PostsSectionV2({
+export async function PostsSection({
   category,
   title,
   emptyText,
@@ -85,11 +85,11 @@ export async function PostsSectionV2({
 
   if (posts.length === 0) {
     return (
-      <SectionV2 title={title} titleHref="/feed">
+      <Section title={title} titleHref="/feed">
         <div className="border border-brand-200 bg-white p-12 text-center italic text-brand-500">
           {emptyText}
         </div>
-      </SectionV2>
+      </Section>
     )
   }
 
@@ -102,10 +102,10 @@ export async function PostsSectionV2({
   }
 
   return (
-    <SectionV2 title={title} titleHref="/feed">
+    <Section title={title} titleHref="/feed">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {posts.map((p) => (
-          <ThumbnailCardV2
+          <ThumbnailCard
             key={p.id}
             href={`/feed?post=${p.id}`}
             coverUrl={getCover(p)}
@@ -114,7 +114,7 @@ export async function PostsSectionV2({
           />
         ))}
       </div>
-    </SectionV2>
+    </Section>
   )
 }
 
@@ -131,7 +131,7 @@ function FeatureListLayout({
   const list = rest.slice(0, 4)
 
   return (
-    <SectionV2 title={title} titleHref="/feed">
+    <Section title={title} titleHref="/feed">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0">
           {feat1 && <FeaturedCard post={feat1} locale={locale} />}
@@ -145,7 +145,7 @@ function FeatureListLayout({
           ))}
         </div>
       </div>
-    </SectionV2>
+    </Section>
   )
 }
 
@@ -162,7 +162,7 @@ function HeroListLayout({
   const list = rest.slice(0, 4)
 
   return (
-    <SectionV2 title={title} titleHref="/feed">
+    <Section title={title} titleHref="/feed">
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0">
           {main && <HeroCard post={main} locale={locale} />}
@@ -173,7 +173,7 @@ function HeroListLayout({
           ))}
         </div>
       </div>
-    </SectionV2>
+    </Section>
   )
 }
 

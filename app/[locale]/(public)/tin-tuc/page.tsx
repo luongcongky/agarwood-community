@@ -1,8 +1,8 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { cn } from "@/lib/utils"
 import { cloudinaryResize } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
@@ -10,8 +10,39 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
+import { Section } from "@/components/features/homepage/Section"
+import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
+import { SidebarList } from "@/components/features/article/SidebarList"
+import { LatestNewsList } from "./LatestNewsList"
 
-/** Sidebar "Tin nổi bật" giống nhau trên mọi paginated page → cache chung 10 phút. */
+const NEWS_LIST_SELECT = {
+  id: true,
+  title: true, title_en: true, title_zh: true, title_ar: true,
+  slug: true,
+  excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+  coverImageUrl: true,
+  isPinned: true,
+  publishedAt: true,
+} as const
+
+/** Main list query cho default (no search). Cache 5 phút tag "news"
+ *  → revalidate khi có bài mới. Huge win so với hit DB mỗi request. */
+const getDefaultNewsList = unstable_cache(
+  async (take: number) =>
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+      },
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+      take,
+      select: NEWS_LIST_SELECT,
+    }),
+  ["tin-tuc_list_default"],
+  { revalidate: 300, tags: ["news", "tin-tuc"] },
+)
+
+/** Sidebar "Tin nổi bật" — cache 10 phút, shape khớp SidebarList (thumb). */
 const getSidebarFeaturedNews = unstable_cache(
   async () =>
     prisma.news.findMany({
@@ -21,12 +52,54 @@ const getSidebarFeaturedNews = unstable_cache(
       select: {
         id: true,
         title: true, title_en: true, title_zh: true, title_ar: true,
-        slug: true, publishedAt: true, isPinned: true,
+        slug: true, coverImageUrl: true, publishedAt: true, isPinned: true,
       },
     }),
-  ["tin-tuc_sidebar_featured"],
+  ["tin-tuc_sidebar_featured_v2"],
   { revalidate: 600, tags: ["news", "tin-tuc"] },
 )
+
+/** Server component streaming sidebar featured list — wrap trong Suspense ở
+ *  page.tsx để không block main article render. */
+async function SidebarFeaturedBlock({
+  title,
+  locale,
+}: {
+  title: string
+  locale: Locale
+}) {
+  const items = await getSidebarFeaturedNews()
+  return (
+    <SidebarList
+      title={title}
+      items={items}
+      locale={locale}
+      itemHrefPrefix="/tin-tuc"
+    />
+  )
+}
+
+/** Skeleton hiển thị trong lúc chờ stream. Match chiều cao ~6 items để
+ *  tránh layout shift khi data xuống. */
+function SidebarFeaturedSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="mb-4 h-[20px] w-24 border-b-[3px] border-brand-700 bg-neutral-200" />
+      <div className="space-y-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex gap-3">
+            <div className="aspect-16/10 w-[92px] shrink-0 bg-neutral-100" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-full bg-neutral-100" />
+              <div className="h-3 w-3/4 bg-neutral-100" />
+              <div className="h-2 w-16 bg-neutral-100" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export async function generateMetadata() {
   const t = await getTranslations("news")
@@ -39,39 +112,22 @@ export async function generateMetadata() {
 
 export const revalidate = 3600
 
-const PAGE_SIZE = 20
+/** Số item load mỗi batch (initial server-render + mỗi lần lazy load). */
+const LIST_PAGE_SIZE = 10
+/** Số hero items (hero + sub-hero) hiển thị đầu trang khi không search. */
+const HERO_COUNT = 4
 
-function buildUrl(p: number, q: string) {
-  const params = new URLSearchParams()
-  if (p > 1) params.set("page", String(p))
-  if (q) params.set("q", q)
-  const qs = params.toString()
-  return `/tin-tuc${qs ? `?${qs}` : ""}`
-}
-
-/** Smart pagination: luôn hiển thị trang đầu, cuối, và window ±2 xung quanh trang hiện tại */
-function paginationRange(current: number, total: number): (number | "...")[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const pages: (number | "...")[] = []
-  const addPage = (n: number) => { if (!pages.includes(n)) pages.push(n) }
-  addPage(1)
-  if (current > 4) pages.push("...")
-  for (let i = Math.max(2, current - 2); i <= Math.min(total - 1, current + 2); i++) addPage(i)
-  if (current < total - 3) pages.push("...")
-  addPage(total)
-  return pages
-}
-
-function formatDate(d: Date | null) {
+// `d` có thể là Date (từ Prisma) hoặc string (từ unstable_cache đã serialize JSON).
+function formatDate(d: Date | string | null) {
   if (!d) return ""
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+  const date = d instanceof Date ? d : new Date(d)
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
 }
-
 
 export default async function NewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>
+  searchParams: Promise<{ q?: string }>
 }) {
   const [locale, t] = await Promise.all([
     getLocale() as Promise<Locale>,
@@ -80,7 +136,6 @@ export default async function NewsPage({
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
 
   const params = await searchParams
-  const page = Math.max(1, Number(params.page ?? 1))
   const q = params.q ?? ""
   const isSearch = q.length > 0
 
@@ -95,35 +150,27 @@ export default async function NewsPage({
     }),
   }
 
-  // On page 1 without search: fetch featured (pinned) separately for hero
-  const [total, newsList, featuredNews] = await Promise.all([
-    prisma.news.count({ where }),
-    prisma.news.findMany({
-      where,
-      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      select: {
-        id: true,
-        title: true, title_en: true, title_zh: true, title_ar: true,
-        slug: true,
-        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
-        coverImageUrl: true,
-        isPinned: true,
-        publishedAt: true,
-      },
-    }),
-    // Sidebar "Tin nổi bật" — cache 10 min (same across all paginated pages)
-    getSidebarFeaturedNews(),
-  ])
+  // Khi không search: fetch HERO_COUNT (hero + 3 sub-hero) + LIST_PAGE_SIZE + 1
+  // (+1 để đoán hasMore). Khi search: chỉ fetch LIST_PAGE_SIZE + 1.
+  // Default path đi qua cache (huge perf win); search path bypass cache vì q
+  // là keyword động, cache miss đa phần.
+  const initialTake = isSearch ? LIST_PAGE_SIZE + 1 : HERO_COUNT + LIST_PAGE_SIZE + 1
+  const newsList = isSearch
+    ? await prisma.news.findMany({
+        where,
+        orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+        take: initialTake,
+        select: NEWS_LIST_SELECT,
+      })
+    : await getDefaultNewsList(initialTake)
 
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-
-  // On page 1 without search: first item is the hero, rest go to the list
-  const isFirstPage = page === 1 && !isSearch
-  const heroItem = isFirstPage && newsList[0] ? newsList[0] : null
-  const subHeroItems = isFirstPage ? newsList.slice(1, 5) : []
-  const listItems = isFirstPage ? newsList.slice(5) : newsList
+  const showHero = !isSearch
+  const heroItem = showHero && newsList[0] ? newsList[0] : null
+  const subHeroItems = showHero ? newsList.slice(1, HERO_COUNT) : []
+  // List stream = phần còn lại; slice bỏ +1 item "hasMore probe".
+  const heroConsumed = showHero ? HERO_COUNT : 0
+  const initialListItems = newsList.slice(heroConsumed, heroConsumed + LIST_PAGE_SIZE)
+  const initialHasMore = newsList.length > heroConsumed + LIST_PAGE_SIZE
 
   const listingJsonLd = {
     "@context": "https://schema.org",
@@ -136,9 +183,9 @@ export default async function NewsPage({
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: newsList.length,
-      itemListElement: newsList.map((item, idx) => ({
+      itemListElement: newsList.slice(0, heroConsumed + LIST_PAGE_SIZE).map((item, idx) => ({
         "@type": "ListItem",
-        position: (page - 1) * PAGE_SIZE + idx + 1,
+        position: idx + 1,
         url: localizedUrl(`/tin-tuc/${item.slug}`, locale),
         name: localize(item, "title", locale) as string,
       })),
@@ -146,348 +193,169 @@ export default async function NewsPage({
   }
 
   return (
-    <div className="min-h-screen bg-brand-50/60">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listingJsonLd) }} />
 
-      {/* ── Page Banner ─────────────────────────────────────────────────────── */}
-      <div className="bg-brand-800 py-14 px-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl text-brand-100">{t("pageTitle")}</h1>
-        <p className="mt-2 text-brand-300 text-base">
-          {t("pageSubtitle")}
-        </p>
-      </div>
-
-      {/* ── Search bar ───────────────────────────────────────────────────────── */}
-      <div className="border-b border-brand-200 bg-brand-50">
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <form method="GET" action="/tin-tuc" className="flex gap-2 max-w-lg">
-            <input type="hidden" name="page" value="1" />
-            <input
-              type="text"
-              name="q"
-              defaultValue={q}
-              placeholder={t("searchPlaceholder")}
-              className="flex-1 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
-            />
-            <button
-              type="submit"
-              className="rounded-md bg-brand-800 text-brand-100 px-4 py-2 text-sm font-medium hover:bg-brand-900 transition-colors"
-            >
-              {t("searchBtn")}
-            </button>
-            {isSearch && (
-              <Link
-                href="/tin-tuc"
-                className="rounded-md border border-brand-300 text-brand-700 px-3 py-2 text-sm hover:bg-brand-100 transition-colors"
-              >
-                ✕
-              </Link>
-            )}
-          </form>
-          {isSearch && (
-            <p className="mt-2 text-xs text-brand-500">
-              {t("searchResults", { count: total })} &ldquo;{q}&rdquo;
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
-
-        {/* ── HERO (chỉ trang 1, không search) ────────────────────────────── */}
-        {heroItem && (
-          <div className="mb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border border-brand-200 rounded-xl overflow-hidden shadow-sm">
-
-              {/* Hero article — chiếm 2/3: ảnh trên + text dưới tách biệt */}
-              <Link
-                href={`/tin-tuc/${heroItem.slug}`}
-                className="group lg:col-span-2 flex flex-col"
-              >
-                {/* Ảnh bìa — hero is the LCP element on /tin-tuc page 1,
-                    so it gets `priority` to skip lazy-loading. */}
-                <div className="relative h-52 sm:h-64 lg:h-[300px] bg-brand-800 overflow-hidden">
-                  {heroItem.coverImageUrl ? (
-                    <Image
-                      src={cloudinaryResize(heroItem.coverImageUrl, 1280)}
-                      alt={l(heroItem, "title")}
-                      fill
-                      priority
-                      sizes="(max-width: 1024px) 100vw, 66vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      placeholder="blur"
-                      blurDataURL={BLUR_DATA_URL}
-                    />
-                  ) : (
-                    <AgarwoodPlaceholder className="w-full h-full" size="xl" shape="square" tone="dark" />
-                  )}
-                  {heroItem.isPinned && (
-                    <span className="absolute top-3 left-3 bg-brand-400 text-brand-900 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow">
-                      {t("featured")}
-                    </span>
-                  )}
-                </div>
-                {/* Text area — nền solid, nằm ngoài ảnh */}
-                <div className="bg-white p-5 sm:p-6 flex-1">
-                  <h2 className="text-brand-900 text-lg sm:text-xl lg:text-2xl font-bold leading-snug group-hover:text-brand-700 transition-colors line-clamp-3">
-                    {l(heroItem, "title")}
-                  </h2>
-                  {l(heroItem, "excerpt") && (
-                    <p className="mt-2 text-brand-600 text-sm line-clamp-2">
-                      {l(heroItem, "excerpt")}
-                    </p>
-                  )}
-                  <p className="mt-3 text-brand-400 text-xs">
-                    {formatDate(heroItem.publishedAt)}
-                  </p>
-                </div>
-              </Link>
-
-              {/* Sub-hero — 4 bài dọc bên phải */}
-              {subHeroItems.length > 0 && (
-                <div className="flex flex-col divide-y divide-brand-100 border-l border-brand-200 bg-white">
-                  {subHeroItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/tin-tuc/${item.slug}`}
-                      className="group flex gap-3 p-4 hover:bg-brand-50 transition-colors flex-1"
-                    >
-                      <div className="relative w-20 h-16 shrink-0 rounded overflow-hidden bg-brand-100">
-                        {item.coverImageUrl ? (
-                          <Image
-                            src={cloudinaryResize(item.coverImageUrl, 160)}
-                            alt={l(item, "title")}
-                            fill
-                            sizes="80px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <AgarwoodPlaceholder className="w-full h-full" size="sm" shape="square" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold text-brand-900 leading-snug group-hover:text-brand-700 line-clamp-3 transition-colors">
-                          {l(item, "title")}
-                        </h3>
-                        <p className="mt-1.5 text-xs text-brand-400">
-                          {formatDate(item.publishedAt)}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── MAIN LAYOUT: danh sách + sidebar ──────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* ── Danh sách bài (2/3) ─────────────────────────────────────────── */}
-          <div className="lg:col-span-2">
-
-            {/* Section heading */}
-            <div className="flex items-center gap-3 mb-5 pb-3 border-b-2 border-brand-800">
-              <h2 className="font-bold text-brand-900 text-lg">
-                {isSearch ? t("sectionSearch") : page === 1 ? t("sectionLatest") : t("sectionPage", { page })}
-              </h2>
-              {!isSearch && (
-                <span className="text-xs text-brand-500">{t("totalArticles", { count: total })}</span>
-              )}
-            </div>
-
-            {listItems.length === 0 && !heroItem ? (
-              <div className="py-20 text-center">
-                <p className="text-brand-500 text-lg font-medium">{t("emptySearch")}</p>
+      {/* Grid 2-col ≥ lg. DOM order: Hero → Aside → Latest — match thứ tự mobile
+          mà user yêu cầu (hero, tin nổi bật, tin mới nhất). Desktop dùng grid
+          explicit positioning (col-start + row-start) để đẩy aside sang phải
+          span 2 row, hero + latest chồng nhau cột trái. */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-x-10">
+        {/* ─── 1. Hero + sub-hero ───────────────────────────────────────── */}
+        <div className="min-w-0 lg:col-span-9 lg:col-start-1 lg:row-start-1">
+          <Section
+            title={t("pageTitle")}
+            titleHref="/tin-tuc"
+            rightNav={
+              <form method="GET" action="/tin-tuc" className="flex items-center gap-2">
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={q}
+                  placeholder={t("searchPlaceholder")}
+                  className="w-40 border border-neutral-300 bg-white px-2.5 py-1 text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:border-brand-700 focus:outline-none sm:w-56"
+                />
+                <button
+                  type="submit"
+                  className="border border-brand-700 bg-brand-700 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-brand-800"
+                >
+                  {t("searchBtn")}
+                </button>
                 {isSearch && (
-                  <Link href="/tin-tuc" className="mt-3 inline-block text-sm text-brand-700 underline">
-                    {t("emptyViewAll")}
+                  <Link
+                    href="/tin-tuc"
+                    className="text-[11px] uppercase tracking-wide text-neutral-500 hover:text-brand-700 hover:underline"
+                  >
+                    ✕
                   </Link>
                 )}
-              </div>
-            ) : (
-              <div className="divide-y divide-brand-100">
-                {listItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/tin-tuc/${item.slug}`}
-                    className="group flex gap-4 py-5 hover:bg-brand-50 -mx-2 px-2 rounded-lg transition-colors"
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative w-28 h-20 sm:w-36 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-brand-100">
-                      {item.coverImageUrl ? (
-                        <Image
-                          src={cloudinaryResize(item.coverImageUrl, 288)}
-                          alt={l(item, "title")}
-                          fill
-                          sizes="(max-width: 640px) 112px, 144px"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" />
-                      )}
-                    </div>
-
-                    {/* Text */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {item.isPinned && (
-                          <span className="text-xs font-bold text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
-                            {t("pinned")}
-                          </span>
-                        )}
-                        <span className="text-xs text-brand-400">{formatDate(item.publishedAt)}</span>
-                      </div>
-                      <h3 className="font-semibold text-brand-900 text-sm sm:text-base leading-snug group-hover:text-brand-700 transition-colors line-clamp-2">
-                        {l(item, "title")}
-                      </h3>
-                      {l(item, "excerpt") && (
-                        <p className="mt-1 text-xs sm:text-sm text-brand-500 line-clamp-2 hidden sm:block">
-                          {l(item, "excerpt")}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {/* ── Pagination ────────────────────────────────────────────────── */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-between border-t border-brand-200 pt-6">
-                {/* Mobile: Prev / Next only */}
-                <div className="flex sm:hidden gap-2 w-full justify-between">
-                  {page > 1 ? (
-                    <Link href={buildUrl(page - 1, q)} className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50">
-                      {t("prevPage")}
-                    </Link>
-                  ) : <span />}
-                  <span className="text-sm text-brand-500 self-center">
-                    {page} / {totalPages}
-                  </span>
-                  {page < totalPages ? (
-                    <Link href={buildUrl(page + 1, q)} className="px-4 py-2 rounded-lg border border-brand-300 text-sm font-medium text-brand-700 hover:bg-brand-50">
-                      {t("nextPage")}
-                    </Link>
-                  ) : <span />}
-                </div>
-
-                {/* Desktop: full pagination */}
-                <div className="hidden sm:flex items-center gap-1 flex-wrap">
-                  {page > 1 && (
-                    <Link href={buildUrl(page - 1, q)} className="px-3 py-1.5 rounded-md border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors">
-                      {t("prevPage")}
-                    </Link>
-                  )}
-                  {paginationRange(page, totalPages).map((p, i) =>
-                    p === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-brand-400 text-sm select-none">…</span>
-                    ) : (
-                      <Link
-                        key={p}
-                        href={buildUrl(p, q)}
-                        className={cn(
-                          "w-9 h-9 flex items-center justify-center rounded-md border text-sm font-medium transition-colors",
-                          p === page
-                            ? "bg-brand-800 text-white border-brand-800"
-                            : "border-brand-200 text-brand-700 hover:bg-brand-50"
-                        )}
-                      >
-                        {p}
-                      </Link>
-                    )
-                  )}
-                  {page < totalPages && (
-                    <Link href={buildUrl(page + 1, q)} className="px-3 py-1.5 rounded-md border border-brand-200 text-sm text-brand-700 hover:bg-brand-50 transition-colors">
-                      {t("nextPage")}
-                    </Link>
-                  )}
-                </div>
-
-                <p className="hidden sm:block text-xs text-brand-400">
-                  {((page - 1) * PAGE_SIZE + 1).toLocaleString("vi-VN")}–{Math.min(page * PAGE_SIZE, total).toLocaleString("vi-VN")} / {total.toLocaleString("vi-VN")}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* ── Sidebar (1/3) ───────────────────────────────────────────────── */}
-          <aside className="lg:col-span-1 space-y-6">
-
-            {/* Tin nổi bật */}
-            <div>
-              <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                <h3 className="font-bold text-brand-900">{t("sidebarFeatured")}</h3>
-              </div>
-              <ul className="space-y-4">
-                {featuredNews.map((item, i) => (
-                  <li key={item.id}>
-                    <Link
-                      href={`/tin-tuc/${item.slug}`}
-                      className="group flex gap-3 items-start"
-                    >
-                      <span className="shrink-0 w-7 h-7 rounded-full bg-brand-800 text-white text-xs font-bold flex items-center justify-center mt-0.5">
-                        {i + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-brand-900 group-hover:text-brand-700 leading-snug line-clamp-2 transition-colors">
-                          {l(item, "title")}
-                        </p>
-                        <p className="text-xs text-brand-400 mt-1">{formatDate(item.publishedAt)}</p>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Phân trang nhanh — chỉ hiển thị khi có > 1 trang */}
-            {totalPages > 1 && (
-              <div>
-                <div className="border-b-2 border-brand-800 pb-2 mb-4">
-                  <h3 className="font-bold text-brand-900">{t("sidebarPagination")}</h3>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {Array.from({ length: Math.min(totalPages, 20) }, (_, i) => i + 1).map((p) => (
-                    <Link
-                      key={p}
-                      href={buildUrl(p, q)}
-                      className={cn(
-                        "w-9 h-9 flex items-center justify-center rounded border text-xs font-medium transition-colors",
-                        p === page
-                          ? "bg-brand-800 text-white border-brand-800"
-                          : "border-brand-200 text-brand-700 hover:bg-brand-50"
-                      )}
-                    >
-                      {p}
-                    </Link>
-                  ))}
-                  {totalPages > 20 && (
-                    <span className="text-xs text-brand-400 self-center ml-1">... {t("maxPages", { count: totalPages })}</span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Subscribe / CTA */}
-            <div className="bg-brand-800 rounded-xl p-5 text-white text-center">
-              <div className="text-3xl mb-2">🌿</div>
-              <p className="text-sm font-medium text-brand-100 leading-snug">
-                {t("ctaText")}
+              </form>
+            }
+          >
+            {isSearch && (
+              <p className="mb-6 -mt-2 text-sm text-neutral-600">
+                {t("sectionSearch")}:{" "}
+                <strong className="text-neutral-900">&ldquo;{q}&rdquo;</strong>
               </p>
-              <Link
-                href="/dang-ky"
-                className="mt-3 inline-block bg-brand-400 text-brand-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-brand-300 transition-colors"
-              >
-                {t("ctaButton")}
-              </Link>
-            </div>
-          </aside>
+            )}
 
+            {/* HERO + SUB-HERO (chỉ trang 1, không search).
+                VTV-style: hero ngang (image left + text panel right), rồi 3
+                sub-hero đứng xếp hàng dưới. */}
+            {heroItem && (
+              <div className="mb-10">
+                {/* Hero article — image left (2/3) + text panel right (1/3) */}
+                <Link
+                  href={`/tin-tuc/${heroItem.slug}`}
+                  className="group block lg:grid lg:grid-cols-3 lg:gap-0"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-neutral-100 lg:col-span-2 lg:aspect-auto">
+                    {heroItem.coverImageUrl ? (
+                      <Image
+                        src={cloudinaryResize(heroItem.coverImageUrl, 1280)}
+                        alt={l(heroItem, "title")}
+                        fill
+                        priority
+                        sizes="(max-width: 1024px) 100vw, 66vw"
+                        className="object-cover"
+                        placeholder="blur"
+                        blurDataURL={BLUR_DATA_URL}
+                      />
+                    ) : (
+                      <AgarwoodPlaceholder className="h-full w-full" size="xl" shape="square" tone="dark" />
+                    )}
+                    {heroItem.isPinned && (
+                      <span className="absolute left-3 top-3 bg-brand-700 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">
+                        {t("featured")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center bg-neutral-100 p-5 lg:p-7">
+                    <h2 className="font-serif-headline text-[20px] font-bold leading-tight text-neutral-900 group-hover:text-brand-700 lg:text-[22px]">
+                      {l(heroItem, "title")}
+                    </h2>
+                    {l(heroItem, "excerpt") && (
+                      <p className="mt-3 line-clamp-4 text-[14px] leading-relaxed text-neutral-700 lg:line-clamp-5">
+                        <span className="font-bold text-brand-700">VAWA - </span>
+                        {l(heroItem, "excerpt")}
+                      </p>
+                    )}
+                    <time className="mt-3 block text-[11px] uppercase tracking-wide text-neutral-500">
+                      {formatDate(heroItem.publishedAt)}
+                    </time>
+                  </div>
+                </Link>
+
+                {/* Sub-hero — 3 bài xếp hàng dưới, image on top + title below */}
+                {subHeroItems.length > 0 && (
+                  <div className="mt-8 grid gap-6 border-t border-neutral-200 pt-8 sm:grid-cols-3">
+                    {subHeroItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={`/tin-tuc/${item.slug}`}
+                        className="group block"
+                      >
+                        <div className="relative aspect-video w-full overflow-hidden bg-neutral-100">
+                          {item.coverImageUrl ? (
+                            <Image
+                              src={cloudinaryResize(item.coverImageUrl, 480)}
+                              alt={l(item, "title")}
+                              fill
+                              sizes="(max-width: 640px) 100vw, 33vw"
+                              className="object-cover"
+                              placeholder="blur"
+                              blurDataURL={BLUR_DATA_URL}
+                            />
+                          ) : (
+                            <AgarwoodPlaceholder className="h-full w-full" size="md" shape="square" />
+                          )}
+                        </div>
+                        <h3 className="mt-3 line-clamp-3 text-[15px] font-bold leading-snug text-neutral-900 group-hover:text-brand-700">
+                          {l(item, "title")}
+                        </h3>
+                        <time className="mt-1 block text-[11px] uppercase tracking-wide text-neutral-500">
+                          {formatDate(item.publishedAt)}
+                        </time>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </Section>
         </div>
-      </div>
+
+        {/* ─── 2. Aside (sidebar) — ngay dưới hero trên mobile; sticky cột
+             phải trải dài 2 row trên desktop. ─────────────────────────── */}
+        <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
+          </Suspense>
+          <Suspense fallback={<SidebarFeaturedSkeleton />}>
+            <SidebarFeaturedBlock title={t("sidebarFeatured")} locale={locale} />
+          </Suspense>
+        </aside>
+
+        {/* ─── 3. "Tin mới nhất" — dưới aside trên mobile; cột trái row 2
+             trên desktop. Lazy-load 10 items/batch. ──────────────────── */}
+        <div className="mt-10 min-w-0 lg:col-span-9 lg:col-start-1 lg:row-start-2 lg:mt-10">
+          {heroItem && (
+            <h2 className="mb-5 inline-block border-b-[3px] border-brand-700 pb-1 text-[13px] font-bold uppercase tracking-wider text-neutral-900">
+              {t("sectionLatest")}
+            </h2>
+          )}
+          <LatestNewsList
+            initialItems={initialListItems}
+            initialHasMore={initialHasMore}
+            locale={locale}
+            q={q || undefined}
+            offsetStart={heroConsumed}
+            pinnedLabel={t("pinned")}
+            emptyLabel={isSearch ? t("emptySearch") : t("emptyViewAll")}
+            loadingLabel="Đang tải thêm…"
+            endLabel="Đã hiển thị tất cả tin tức"
+          />
+        </div>
       </div>
     </div>
   )

@@ -134,7 +134,7 @@ export const getTopVipMemberPosts = unstable_cache(
 
 /**
  * Pool cho slot rotate — 50 bài VIP+non-VIP mới nhất, KHÔNG filter excludeIds
- * ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`) để MemberRailV2
+ * ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`) để MemberRail
  * có thể fetch pool + top song song (bỏ serialization cũ: top xong → pool).
  */
 export function getMemberPostsPool() {
@@ -258,7 +258,7 @@ const getLatestPostsByCategoryCached = unstable_cache(
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
-// ── Multimedia Section (v2): ảnh bộ sưu tập + video YouTube ──────────────────
+// ── Multimedia Section: ảnh bộ sưu tập + video YouTube ──────────────────────
 
 const MULTIMEDIA_CARD_SELECT = {
   id: true,
@@ -294,8 +294,8 @@ export const getLatestMultimedia = unstable_cache(
 
 /**
  * Filtered by type — dùng cho tabs "Hình ảnh" vs "Video" trong section
- * MULTIMEDIA trên /v2. Fetch song song cả 2 type để user switch không cần
- * round-trip server.
+ * MULTIMEDIA trên trang chủ. Fetch song song cả 2 type để user switch không
+ * cần round-trip server.
  */
 export const getMultimediaByType = unstable_cache(
   async (type: "PHOTO_COLLECTION" | "VIDEO", take = 3) => {

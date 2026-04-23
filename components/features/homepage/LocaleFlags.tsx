@@ -12,10 +12,10 @@ const localeLabels: Record<Locale, string> = {
 }
 
 /**
- * Compact locale switcher tuned for V2 light-bg utility strip — inactive
+ * Compact locale switcher tuned for light-bg utility strip — inactive
  * flags are dimmed, active gets a brown ring, hover bumps opacity.
  */
-export function LocaleFlagsV2({ current }: { current: Locale }) {
+export function LocaleFlags({ current }: { current: Locale }) {
   const pathname = usePathname() ?? "/"
   const pathnameWithoutLocale =
     pathname.replace(new RegExp(`^/(${locales.join("|")})`), "") || "/"

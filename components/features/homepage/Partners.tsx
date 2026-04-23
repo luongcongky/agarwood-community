@@ -2,7 +2,7 @@ import Image from "next/image"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getTranslations } from "next-intl/server"
-import { SectionV2 } from "./SectionV2"
+import { Section } from "./Section"
 
 function colorFromName(name: string): string {
   let hash = 0
@@ -44,11 +44,11 @@ const getActivePartners = unstable_cache(
         websiteUrl: true,
       },
     }),
-  ["homepage_active_partners_v2"],
+  ["homepage_active_partners"],
   { revalidate: 300, tags: ["homepage", "partners"] },
 )
 
-export async function PartnersV2() {
+export async function Partners() {
   const [partners, t] = await Promise.all([
     getActivePartners(),
     getTranslations("homepage"),
@@ -59,7 +59,7 @@ export async function PartnersV2() {
   const items = [...partners, ...partners]
 
   return (
-    <SectionV2 title={t("partnersTitle")}>
+    <Section title={t("partnersTitle")}>
       <div
         className="group relative overflow-hidden"
         style={{
@@ -69,7 +69,7 @@ export async function PartnersV2() {
             "linear-gradient(to right, transparent, black 3%, black 97%, transparent)",
         }}
       >
-        <div className="flex w-max animate-[homepage-partners-v2-marquee_70s_linear_infinite] gap-4 group-hover:paused">
+        <div className="flex w-max animate-[homepage-partners-marquee_70s_linear_infinite] gap-4 group-hover:paused">
           {items.map((p, idx) => {
             const initials = getInitials(p.name, p.shortName)
             const cardInner = (
@@ -121,11 +121,11 @@ export async function PartnersV2() {
       </div>
 
       <style>{`
-        @keyframes homepage-partners-v2-marquee {
+        @keyframes homepage-partners-marquee {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
       `}</style>
-    </SectionV2>
+    </Section>
   )
 }

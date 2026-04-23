@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import Link from "next/link"
-import DOMPurify from "isomorphic-dompurify"
 import Image from "next/image"
+import { ThumbsUp, MessageSquare, Link2, Check } from "lucide-react"
+import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
 import { cn } from "@/lib/utils"
 import { hasMemberAccess } from "@/lib/roles"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
@@ -72,17 +73,15 @@ type Post = {
   pendingError?: string | null
 }
 
-type FilterKey = "all" | "NEWS" | "PRODUCT" | "CERTIFIED"
+type FilterKey = "NEWS" | "PRODUCT"
 
 // FILTERS moved inside component to access translations
 
 function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
   const params = new URLSearchParams()
-  if (filter === "CERTIFIED") params.set("certified", "1")
-  else if (filter !== "all") params.set("category", filter)
+  params.set("category", filter)
   if (cursor) params.set("cursor", cursor)
-  const qs = params.toString()
-  return qs ? `/api/posts?${qs}` : "/api/posts"
+  return `/api/posts?${params.toString()}`
 }
 
 type TopContributor = {
@@ -728,11 +727,12 @@ function PostCard({
               "prose prose-sm max-w-none text-sm text-brand-800",
               !expanded && needsTruncation && "line-clamp-2",
             )}
+            /* Content từ DB đã được sanitize tại save-time (xem
+               /api/posts POST/PATCH dùng DOMPurify.sanitize). Trust content
+               trên client để tránh ship isomorphic-dompurify (~40KB gzip) +
+               CPU sanitize per-post render. */
             dangerouslySetInnerHTML={{
-              __html: rewriteCloudinaryInHtml(
-                DOMPurify.sanitize(contentForProse),
-                800,
-              ),
+              __html: rewriteCloudinaryInHtml(contentForProse, 800),
             }}
           />
           {needsTruncation && !expanded && (
@@ -764,48 +764,78 @@ function PostCard({
         />
       )}
 
-      {/* Stats + reaction bar */}
+      {/* Stats + reaction bar — 3 nút action: Like (có label), Bình luận +
+          Sao chép link (icon-only với tooltip). */}
       {!isLocked && !isGuestBlurred && (
         <div className="flex items-center justify-between pt-3 border-t border-brand-200">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {currentUserRole && currentUserRole !== "GUEST" ? (
               <button
                 onClick={() => onReact(post.id)}
                 disabled={post.isPending}
+                aria-label="Like"
+                title="Like"
                 className={cn(
-                  "flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                  "relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
                   userHasReacted ? "bg-brand-100 text-brand-700" : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
                 )}
               >
-                {userHasReacted ? "✓" : "○"} {t("useful", { count: post._count.reactions })}
+                <ThumbsUp size={16} fill={userHasReacted ? "currentColor" : "none"} />
+                {post._count.reactions > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-bold text-white tabular-nums">
+                    {post._count.reactions}
+                  </span>
+                )}
               </button>
             ) : (
-              <span className="text-sm text-brand-400">{t("useful", { count: post._count.reactions })}</span>
+              <span
+                aria-label="Like"
+                title="Like"
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-brand-400"
+              >
+                <ThumbsUp size={16} />
+                {post._count.reactions > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white tabular-nums">
+                    {post._count.reactions}
+                  </span>
+                )}
+              </span>
             )}
             {post.isPending ? (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-brand-400 rounded-lg px-3 py-1.5 opacity-40">
-                💬 {t("comments")}
+              <span
+                aria-label={t("comments")}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-brand-400 opacity-40"
+              >
+                <MessageSquare size={16} />
               </span>
             ) : (
               <Link
                 href={`/bai-viet/${post.id}`}
-                className="flex items-center gap-1.5 text-sm font-medium text-brand-400 hover:text-brand-700 rounded-lg px-3 py-1.5 hover:bg-brand-50 transition-colors"
+                aria-label={t("comments")}
+                title={t("comments")}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-brand-400 hover:bg-brand-50 hover:text-brand-700 transition-colors"
               >
-                💬 {post._count.comments > 0 ? `${post._count.comments} ` : ""}{t("comments")}
+                <MessageSquare size={16} />
+                {post._count.comments > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-bold text-white tabular-nums">
+                    {post._count.comments}
+                  </span>
+                )}
               </Link>
             )}
             <button
               type="button"
               onClick={handleCopyLink}
+              aria-label={linkCopied ? t("linkCopied") : t("copyLink")}
+              title={linkCopied ? t("linkCopied") : t("copyLink")}
               className={cn(
-                "flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors",
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
                 linkCopied
                   ? "bg-emerald-50 text-emerald-700"
                   : "text-brand-400 hover:bg-brand-50 hover:text-brand-700",
               )}
-              aria-label={t("copyLink")}
             >
-              {linkCopied ? "✓ " : "🔗 "}{linkCopied ? t("linkCopied") : t("copyLink")}
+              {linkCopied ? <Check size={16} /> : <Link2 size={16} />}
             </button>
           </div>
           <span className="text-sm text-brand-500">{post.viewCount} {t("views")}</span>
@@ -818,6 +848,7 @@ function PostCard({
 // ── Inline Post Creator ─────────────────────────────────────────────────────
 
 function InlinePostCreator({
+  mode,
   currentUserName,
   currentUserAvatarUrl,
   currentUserId,
@@ -826,6 +857,10 @@ function InlinePostCreator({
   onPostCreated,
   onPostUpdated,
 }: {
+  /** Filter đang active — quyết định layout form (NEWS: textarea đơn; PRODUCT:
+   *  form có tên/danh mục/giá/tiêu đề + mô tả). Post được tạo với category
+   *  trùng mode này. */
+  mode: FilterKey
   currentUserName: string | null
   currentUserAvatarUrl: string | null
   currentUserId: string
@@ -841,6 +876,12 @@ function InlinePostCreator({
   const [error, setError] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Product-specific fields — chỉ dùng khi mode === "PRODUCT"
+  const [productName, setProductName] = useState("")
+  const [productCategory, setProductCategory] = useState("")
+  const [priceRange, setPriceRange] = useState("")
+  const [title, setTitle] = useState("")
 
   // Auto-resize textarea
   useEffect(() => {
@@ -871,7 +912,15 @@ function InlinePostCreator({
 
   async function handleSubmit() {
     const plainText = content.trim()
-    if (plainText.length < 50) {
+
+    // Validate theo mode. PRODUCT yêu cầu tên + tiêu đề + mô tả; NEWS giữ
+    // threshold 50 ký tự của content.
+    if (mode === "PRODUCT") {
+      if (!productName.trim() || !title.trim() || plainText.length === 0) {
+        setError("Vui lòng điền đủ: Tên sản phẩm, Tiêu đề và Nội dung mô tả.")
+        return
+      }
+    } else if (plainText.length < 50) {
       setError(t("minContent", { count: plainText.length }))
       return
     }
@@ -883,17 +932,44 @@ function InlinePostCreator({
     const blobUrls = imagesSnapshot.map((img) => img.preview)
     const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
     const blobImageHtml = blobUrls.map((url) => `<img src="${url}" />`).join("")
+
+    // Build content HTML theo mode. PRODUCT prepend các field (tên/danh mục/
+    // giá/tiêu đề) dạng structured HTML để reader thấy thông tin sản phẩm
+    // ngay trong feed; NEWS giữ nguyên plain content.
+    const productHeaderHtml =
+      mode === "PRODUCT"
+        ? [
+            `<h2>${productName.trim()}</h2>`,
+            productCategory.trim()
+              ? `<p><strong>Danh mục:</strong> ${productCategory.trim()}</p>`
+              : "",
+            priceRange.trim()
+              ? `<p><strong>Khoảng giá:</strong> ${priceRange.trim()}</p>`
+              : "",
+            title.trim() ? `<h3>${title.trim()}</h3>` : "",
+          ]
+            .filter(Boolean)
+            .join("")
+        : ""
+    const postTitle = mode === "PRODUCT" ? productName.trim() : null
     const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
     // Build optimistic Post. Blob URLs render instantly — the image files
     // are already in browser memory, so there's zero wait for the user.
+    //
+    // Status phải khớp logic server (/api/posts POST): ADMIN → PUBLISHED ngay,
+    // mọi role khác → PENDING chờ admin duyệt. Trước đây hardcode PUBLISHED
+    // khiến badge "Chờ duyệt" không hiện ở optimistic UI → user tưởng bài đã
+    // công khai ngay.
+    const optimisticStatus: "PUBLISHED" | "PENDING" =
+      currentUserRole === "ADMIN" ? "PUBLISHED" : "PENDING"
     const optimisticPost: Post = {
       id: tempId,
       authorId: currentUserId,
-      title: null,
-      content: blobImageHtml + paragraphs,
+      title: postTitle,
+      content: blobImageHtml + productHeaderHtml + paragraphs,
       imageUrls: blobUrls,
-      status: "PUBLISHED",
+      status: optimisticStatus,
       isPremium: currentUserRole === "VIP" || currentUserRole === "INFINITE",
       isPromoted: false,
       authorPriority: membershipInfo?.displayPriority ?? 0,
@@ -926,6 +1002,10 @@ function InlinePostCreator({
     // after the real Cloudinary URLs are swapped in.
     setContent("")
     setImages([])
+    setProductName("")
+    setProductCategory("")
+    setPriceRange("")
+    setTitle("")
     setError(null)
 
     // ── Background: upload images → POST → swap URLs in the post ───────
@@ -944,12 +1024,16 @@ function InlinePostCreator({
         )
 
         const realImageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
-        const realContent = realImageHtml + paragraphs
+        const realContent = realImageHtml + productHeaderHtml + paragraphs
 
         const res = await fetch("/api/posts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: realContent, category: "GENERAL" }),
+          body: JSON.stringify({
+            content: realContent,
+            category: mode,
+            ...(postTitle ? { title: postTitle } : {}),
+          }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -960,8 +1044,11 @@ function InlinePostCreator({
         // Swap in server data. React remounts the PostCard because the
         // ID changes, but since it was in `pending` state (no user
         // interactions), the remount is invisible to the user.
+        // `status` cần sync từ server để badge moderation (Chờ duyệt /
+        // Bị từ chối) hiển thị đúng nếu admin thay đổi logic.
         const patch = {
           id: post.id,
+          status: post.status,
           content: realContent,
           imageUrls: uploadedUrls,
           createdAt: post.createdAt ?? optimisticPost.createdAt,
@@ -992,10 +1079,14 @@ function InlinePostCreator({
 
   const charCount = content.trim().length
 
+  const isProduct = mode === "PRODUCT"
+  const inputCls =
+    "w-full border border-brand-200 rounded-lg bg-white px-3 py-2 text-sm text-brand-800 placeholder:text-brand-400 focus:border-brand-600 focus:outline-none"
+
   return (
     <div className="bg-white rounded-xl border border-brand-200 p-4 space-y-3">
-      {/* Author + textarea row */}
-      <div className="flex gap-3">
+      {/* Author row */}
+      <div className="flex items-start gap-3">
         <div className="relative w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
           {currentUserAvatarUrl ? (
             <Image src={currentUserAvatarUrl} alt="" fill className="object-cover" sizes="40px" />
@@ -1005,14 +1096,73 @@ function InlinePostCreator({
             </span>
           )}
         </div>
-        <textarea
-        ref={textareaRef}
-        value={content}
-        onChange={(e) => { setContent(e.target.value); setError(null) }}
-        placeholder={t("placeholder")}
-          className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
-          rows={2}
-        />
+
+        {isProduct ? (
+          /* Product form — tên / danh mục / giá / tiêu đề / mô tả */
+          <div className="flex-1 min-w-0 space-y-2">
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => { setProductName(e.target.value); setError(null) }}
+              placeholder="Tên sản phẩm *"
+              className={inputCls}
+              maxLength={120}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Danh mục — combobox dùng PRODUCT_CATEGORIES chung toàn site
+                  (shared với ProductForm ở /san-pham). */}
+              <select
+                value={productCategory}
+                onChange={(e) => setProductCategory(e.target.value)}
+                className={cn(
+                  inputCls,
+                  productCategory ? "text-brand-800" : "text-brand-400",
+                )}
+              >
+                <option value="">Chọn danh mục…</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c} value={c} className="text-brand-800">
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                placeholder="Khoảng giá (vd: 500k - 1tr)"
+                className={inputCls}
+                maxLength={50}
+              />
+            </div>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setError(null) }}
+              placeholder="Tiêu đề bài đăng *"
+              className={inputCls}
+              maxLength={150}
+            />
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => { setContent(e.target.value); setError(null) }}
+              placeholder="Mô tả chi tiết sản phẩm *"
+              className="w-full resize-none border border-brand-200 rounded-lg bg-white px-3 py-2 text-sm text-brand-800 placeholder:text-brand-400 focus:border-brand-600 focus:outline-none min-h-[100px] leading-relaxed"
+              rows={4}
+            />
+          </div>
+        ) : (
+          /* NEWS mode — single textarea, auto-resize */
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => { setContent(e.target.value); setError(null) }}
+            placeholder={t("placeholder")}
+            className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
+            rows={2}
+          />
+        )}
       </div>
 
       {/* Image previews */}
@@ -1071,8 +1221,9 @@ function InlinePostCreator({
             {t("fullEditorShort")}
           </Link>
 
-          {/* Char count hint */}
-          {content.length > 0 && charCount < 50 && (
+          {/* Char count hint — chỉ cho NEWS mode (PRODUCT không có 50-char
+              threshold, validation check trống field thay). */}
+          {!isProduct && content.length > 0 && charCount < 50 && (
             <span className="text-xs text-brand-400">
               {charCount}/50
             </span>
@@ -1081,15 +1232,21 @@ function InlinePostCreator({
 
         <button
           onClick={handleSubmit}
-          disabled={charCount < 50}
+          disabled={
+            isProduct
+              ? !productName.trim() || !title.trim() || charCount === 0
+              : charCount < 50
+          }
           className={cn(
             "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
-            charCount >= 50
+            (isProduct
+              ? productName.trim() && title.trim() && charCount > 0
+              : charCount >= 50)
               ? "bg-brand-700 text-white hover:bg-brand-800"
               : "bg-brand-100 text-brand-400 cursor-not-allowed",
           )}
         >
-          {t("post")}
+          {isProduct ? "Đăng sản phẩm" : t("post")}
         </button>
       </div>
     </div>
@@ -1154,17 +1311,15 @@ export function FeedClient({
   const t = useTranslations("feed")
 
   const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: "all", label: t("filterAll") },
     { key: "NEWS", label: t("filterNews") },
     { key: "PRODUCT", label: t("filterProduct") },
-    { key: "CERTIFIED", label: t("filterCert") },
   ]
 
   const [isMounted, setIsMounted] = useState(false)
   const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [hasMore, setHasMore] = useState(initialPosts.length >= 10)
-  const [filter, setFilter] = useState<FilterKey>("all")
+  const [filter, setFilter] = useState<FilterKey>("NEWS")
 
   useEffect(() => {
     setNow(Date.now())
@@ -1348,20 +1503,9 @@ export function FeedClient({
     <div className="flex flex-col lg:flex-row gap-6">
       {/* ── Feed column ────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 space-y-4">
-        {/* Inline post creator */}
-        {canPost && currentUserId && currentUserRole && (
-          <InlinePostCreator
-            currentUserName={currentUserName}
-            currentUserAvatarUrl={currentUserAvatarUrl}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-            membershipInfo={membershipInfo}
-            onPostCreated={handlePostCreated}
-            onPostUpdated={handlePostUpdated}
-          />
-        )}
-
-        {/* Filter chips */}
+        {/* Filter chips — ĐẶT TRƯỚC editor để chọn loại nội dung muốn đăng,
+            editor sẽ đổi layout phù hợp (NEWS: textarea + ảnh; PRODUCT: form
+            sản phẩm với tên/danh mục/giá/tiêu đề/nội dung). */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
             <button
@@ -1379,6 +1523,20 @@ export function FeedClient({
             </button>
           ))}
         </div>
+
+        {/* Inline post creator — layout đổi theo filter (mode). */}
+        {canPost && currentUserId && currentUserRole && (
+          <InlinePostCreator
+            mode={filter}
+            currentUserName={currentUserName}
+            currentUserAvatarUrl={currentUserAvatarUrl}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            membershipInfo={membershipInfo}
+            onPostCreated={handlePostCreated}
+            onPostUpdated={handlePostUpdated}
+          />
+        )}
 
         {/* Posts */}
         {posts.length === 0 && !loading && (

@@ -1,20 +1,18 @@
 import { Suspense } from "react"
 import { getTranslations } from "next-intl/server"
-import { MemberNewsRail } from "@/components/features/homepage/MemberNewsRail"
-import { CertifiedProductsCarousel } from "@/components/features/homepage/CertifiedProductsCarousel"
-import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
-import { PartnersCarousel } from "@/components/features/homepage/PartnersCarousel"
 import { NewsSection } from "@/components/features/homepage/NewsSection"
-import { LatestPostsSection } from "@/components/features/homepage/LatestPostsSection"
-import { LatestResearchSection } from "@/components/features/homepage/LatestResearchSection"
-import { FeaturedCompaniesCarousel } from "@/components/features/homepage/FeaturedCompaniesCarousel"
+import { MemberRail } from "@/components/features/homepage/MemberRail"
 import { MultimediaSection } from "@/components/features/homepage/MultimediaSection"
-import { BreakingTicker } from "@/components/features/layout/BreakingTicker"
+import { CertifiedProducts } from "@/components/features/homepage/CertifiedProducts"
+import { ResearchSection } from "@/components/features/homepage/ResearchSection"
+import { PostsSection } from "@/components/features/homepage/PostsSection"
+import { FeaturedCompanies } from "@/components/features/homepage/FeaturedCompanies"
+import { Partners } from "@/components/features/homepage/Partners"
+import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
+import { BreakingTicker } from "@/components/features/homepage/BreakingTicker"
 import {
-  CarouselSkeleton,
-  LatestPostsSkeleton,
   BannerSlotSkeleton,
-  PartnersCarouselSkeleton,
+  LatestPostsSkeleton,
   NewsSectionSkeleton,
   MemberRailSkeleton,
 } from "@/components/features/homepage/skeletons"
@@ -57,92 +55,73 @@ export default async function HomePage() {
   }
 
   return (
-    // data-page="home" scopes the Option-A typography refinement pass
-    // (see .home in globals.css). Only the homepage is touched — every
-    // other public page keeps the original typography.
-    <div data-page="home">
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-4 sm:px-6 lg:px-8 lg:py-6 lg:space-y-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      {/* ── Banner TOP — stream ── */}
       <Suspense fallback={<BannerSlotSkeleton />}>
         <HomepageBannerSlot position="TOP" />
       </Suspense>
 
-      {/* ── Breaking news ticker — stream, ẩn nếu không có tin ghim/văn bản
-           trong 30 ngày. Đặt sau banner TOP theo yêu cầu. ── */}
       <Suspense fallback={null}>
         <BreakingTicker />
       </Suspense>
 
-      {/* Section 1 + 2: Tin Hội + Bản tin hội viên — stream song song. */}
-      <section className="bg-brand-50/85 backdrop-blur-[2px] py-8 lg:py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="min-w-0 lg:col-span-2">
-              <Suspense fallback={<NewsSectionSkeleton />}>
-                <NewsSection />
-              </Suspense>
-            </div>
-            <div className="min-w-0 lg:col-span-1">
-              <Suspense fallback={<MemberRailSkeleton />}>
-                <MemberNewsRail />
-              </Suspense>
-            </div>
-          </div>
+      <div className="grid gap-8 lg:grid-cols-4">
+        <div className="min-w-0 lg:col-span-3">
+          <Suspense fallback={<NewsSectionSkeleton />}>
+            <NewsSection />
+          </Suspense>
         </div>
-      </section>
+        <div className="min-w-0 lg:col-span-1">
+          <Suspense fallback={<MemberRailSkeleton />}>
+            <MemberRail />
+          </Suspense>
+        </div>
+      </div>
 
-      {/* ── Section 2b: Đa phương tiện (ảnh bộ sưu tập + video YouTube) ── */}
       <Suspense fallback={<LatestPostsSkeleton />}>
         <MultimediaSection />
       </Suspense>
 
-      {/* ── Section 3: Sản phẩm chứng nhận ── */}
-      <Suspense fallback={<CarouselSkeleton />}>
-        <CertifiedProductsCarousel />
-      </Suspense>
-
-      {/* ── Section 3b: Nghiên cứu mới nhất ── */}
       <Suspense fallback={<LatestPostsSkeleton />}>
-        <LatestResearchSection />
+        <CertifiedProducts />
       </Suspense>
 
-      {/* ── Section 4: Banner MID ── */}
       <Suspense fallback={<BannerSlotSkeleton />}>
         <HomepageBannerSlot position="MID" />
       </Suspense>
 
-      {/* ── Section 5: Tin doanh nghiệp mới nhất ── */}
       <Suspense fallback={<LatestPostsSkeleton />}>
-        <LatestPostsSection
+        <ResearchSection />
+      </Suspense>
+
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <PostsSection
           category="NEWS"
           title={t("businessNews")}
-          subtitle={t("businessNewsSubtitle")}
           emptyText={t("businessNewsEmpty")}
+          variant="feature-list"
         />
       </Suspense>
 
-      {/* ── Section 6: Tin sản phẩm mới nhất ── */}
       <Suspense fallback={<LatestPostsSkeleton />}>
-        <LatestPostsSection
+        <PostsSection
           category="PRODUCT"
           title={t("productNews")}
-          subtitle={t("productNewsSubtitle")}
           emptyText={t("productNewsEmpty")}
+          variant="hero-list"
         />
       </Suspense>
 
-      {/* ── Section 6b: Doanh nghiệp tiêu biểu — marquee tương tự Partners ── */}
-      <Suspense fallback={<PartnersCarouselSkeleton />}>
-        <FeaturedCompaniesCarousel />
+      <Suspense fallback={null}>
+        <FeaturedCompanies />
       </Suspense>
 
-      {/* ── Section 7: Đối tác ── */}
-      <Suspense fallback={<PartnersCarouselSkeleton />}>
-        <PartnersCarousel />
+      <Suspense fallback={null}>
+        <Partners />
       </Suspense>
     </div>
   )
