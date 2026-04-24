@@ -4,8 +4,9 @@
  * Covers:
  * 1. Render — hiển thị đúng các thành phần UI
  * 2. Validation — bắt lỗi khi thiếu email/password
- * 3. signIn success → redirect theo role (ADMIN → /admin, VIP → /tong-quan,
- *    GUEST / role khác → /${locale})
+ * 3. signIn success → redirect về `/${locale}` (homepage viewer mode) bất kể
+ *    role. Yêu cầu khách hàng: mọi login đều landing ở trang chủ trước,
+ *    admin/VIP tự điều hướng sau.
  * 4. signIn failure → hiển thị thông báo lỗi
  * 5. Network error → hiển thị thông báo lỗi generic
  * 6. Loading state — nút bị disabled khi đang xử lý
@@ -127,46 +128,32 @@ describe("LoginPage — Đăng nhập thành công", () => {
     mockSignIn.mockResolvedValue({ error: null })
   })
 
-  it("ADMIN → redirect đến /admin", async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: async () => ({ user: { role: "ADMIN" } }),
-    })
+  it("ADMIN → vẫn về /{locale} (yêu cầu khách hàng: không auto-nhảy vào /admin)", async () => {
     renderLogin()
     await fillAndSubmit("admin@test.com", "password")
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/admin"))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/vi"))
   })
 
-  it("VIP → redirect đến /tong-quan", async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: async () => ({ user: { role: "VIP" } }),
-    })
+  it("VIP → vẫn về /{locale} (không auto-nhảy vào /tong-quan)", async () => {
     renderLogin()
     await fillAndSubmit("vip@test.com", "password")
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tong-quan"))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/vi"))
   })
 
   it("GUEST → redirect đến /${locale} (/vi)", async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: async () => ({ user: { role: "GUEST" } }),
-    })
     renderLogin()
     await fillAndSubmit("guest@test.com", "password")
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/vi"))
   })
 
-  it("session null (không có role) → redirect đến /${locale}", async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: async () => ({}),
-    })
+  it("không fetch /api/auth/session nữa — redirect đồng nhất không phụ thuộc role", async () => {
     renderLogin()
     await fillAndSubmit("user@test.com", "password")
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/vi"))
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it("gọi signIn với đúng credentials provider", async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: async () => ({ user: { role: "VIP" } }),
-    })
     renderLogin()
     await fillAndSubmit("vip@test.com", "mypassword")
     await waitFor(() =>
@@ -176,7 +163,7 @@ describe("LoginPage — Đăng nhập thành công", () => {
         redirect: false,
       }),
     )
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/tong-quan"))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/vi"))
   })
 })
 

@@ -4,7 +4,6 @@ import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
-import { isAdmin } from "@/lib/roles"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,13 +32,10 @@ export default function LoginPage() {
       if (result?.error) {
         setError(t("invalidCredentials"))
       } else {
-        // Fetch session to get role for redirect
-        const res = await fetch("/api/auth/session")
-        const session = await res.json()
-        const role = session?.user?.role
-        if (isAdmin(role)) router.push("/admin")
-        else if (role === "VIP") router.push("/tong-quan")
-        else router.push(`/${locale}`)
+        // Khách hàng yêu cầu: mọi role login thành công đều về trang chủ
+        // viewer mode trước. Admin tự điều hướng vào /admin, VIP vào
+        // /tong-quan, từ menu sau khi vào.
+        router.push(`/${locale}`)
       }
     } catch {
       setError(t("genericError"))
@@ -50,7 +46,8 @@ export default function LoginPage() {
 
   function handleGoogleLogin() {
     setGoogleLoading(true)
-    signIn("google", { callbackUrl: "/tong-quan" })
+    // Cùng rule: Google login cũng về homepage viewer mode.
+    signIn("google", { callbackUrl: `/${locale}` })
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 
 interface Props {
   accountType?: "BUSINESS" | "INDIVIDUAL"
@@ -10,12 +10,14 @@ interface Props {
 
 export function GoogleSignUpButton({ accountType = "BUSINESS" }: Props) {
   const t = useTranslations("googleSignUp")
+  const locale = useLocale()
   const [loading, setLoading] = useState(false)
 
   function handleClick() {
     setLoading(true)
     document.cookie = `pending_account_type=${accountType}; Path=/; Max-Age=600; SameSite=Lax`
-    signIn("google", { callbackUrl: "/tong-quan" }, { prompt: "select_account" })
+    // Sau sign-up → về homepage viewer mode (đồng nhất với login flow).
+    signIn("google", { callbackUrl: `/${locale}` }, { prompt: "select_account" })
   }
 
   const typeLabel = accountType === "INDIVIDUAL" ? t("individual") : t("business")

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { canWriteNews, canPublishNews } from "@/lib/roles"
@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma"
 import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { scoreSeo } from "@/lib/seo/score"
 import { getPreviousTitles } from "@/lib/news-seo-cache"
+import { autoTranslateNewsMissing } from "@/lib/news-auto-translate"
+
+export const maxDuration = 300
 
 /**
  * Invalidate surfaces depending on News table.
@@ -56,6 +59,8 @@ export async function POST(req: Request) {
     coverImageAlt, coverImageAlt_en, coverImageAlt_zh, coverImageAlt_ar,
     focusKeyword,
     secondaryKeywords,
+    // Flag → schedule after() dịch các locale thiếu (xem PATCH route comment).
+    autoTranslateMissing,
   } = body
 
   if (!title || !slug || !/^[a-z0-9-]+$/.test(slug)) {
@@ -143,6 +148,22 @@ export async function POST(req: Request) {
   // Bài mới mà để nháp → chỉ invalidate admin list + titles cache, không
   // cần đánh cache /tin-tuc, /nghien-cuu, sitemap, feed (chưa có gì public).
   revalidateNewsSurfaces({ publicFacing: finalIsPublished })
+
+  // Auto-translate missing locales trong nền (xem PATCH route).
+  if (autoTranslateMissing === true) {
+    const snapshot = {
+      title: news.title ?? "",
+      excerpt: news.excerpt ?? "",
+      content: news.content ?? "",
+    }
+    after(async () => {
+      try {
+        await autoTranslateNewsMissing({ newsId: news.id, expectedVi: snapshot })
+      } catch (e) {
+        console.error(`[news/${news.id}] auto-translate after() failed:`, e)
+      }
+    })
+  }
 
   return NextResponse.json({ news }, { status: 201 })
 }

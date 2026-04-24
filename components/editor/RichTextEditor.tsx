@@ -140,19 +140,27 @@ export interface RichTextEditorProps {
    *  in a ref so we don't re-instantiate the editor when the parent
    *  re-renders. Throttle/debounce in the parent if needed. */
   onUpdate?: (html: string) => void
+  /** Fires when the editor loses focus. Receives the current HTML. Stored
+   *  in a ref so editor instance isn't re-created on parent re-render.
+   *  Dùng ở NewsEditor để trigger auto-translate sang EN/ZH/AR khi VI blur. */
+  onBlur?: (html: string) => void
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
   function RichTextEditor(
-    { initialContent = "", minHeight = 300, className = "", uploadFolder = "bai-viet", onUpdate },
+    { initialContent = "", minHeight = 300, className = "", uploadFolder = "bai-viet", onUpdate, onBlur },
     ref,
   ) {
-    // Hold the latest onUpdate in a ref so TipTap's onUpdate closure always
+    // Hold the latest onUpdate / onBlur in refs so TipTap's closure always
     // sees the freshest callback without re-creating the editor instance.
     const onUpdateRef = useRef(onUpdate)
     useEffect(() => {
       onUpdateRef.current = onUpdate
     }, [onUpdate])
+    const onBlurRef = useRef(onBlur)
+    useEffect(() => {
+      onBlurRef.current = onBlur
+    }, [onBlur])
 
     const editor = useEditor({
       extensions: [
@@ -198,6 +206,9 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       shouldRerenderOnTransaction: false,
       onUpdate: ({ editor }) => {
         onUpdateRef.current?.(editor.getHTML())
+      },
+      onBlur: ({ editor }) => {
+        onBlurRef.current?.(editor.getHTML())
       },
     })
 

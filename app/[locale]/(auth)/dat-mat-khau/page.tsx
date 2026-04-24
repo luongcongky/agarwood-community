@@ -102,7 +102,8 @@ function SetPasswordForm() {
       if (signInResult?.error) {
         router.push(`/${locale}/login`)
       } else {
-        router.push("/tong-quan")
+        // Login thành công → về homepage viewer mode (đồng nhất với login flow).
+        router.push(`/${locale}`)
       }
     } catch {
       setError(t("genericError"))

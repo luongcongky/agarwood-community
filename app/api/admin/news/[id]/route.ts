@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { isAdmin, canAdminWrite, canWriteNews, canPublishNews } from "@/lib/roles"
@@ -10,6 +10,11 @@ import {
   collectNewsCloudinaryIds,
   destroyCloudinaryByPublicIds,
 } from "@/lib/cloudinary-server"
+import { autoTranslateNewsMissing } from "@/lib/news-auto-translate"
+
+// Kéo lên 5 phút để `after()` auto-translate có đủ budget cho bài dài
+// (content 10k chars × 3 locale). Vercel Pro/Hobby đều cho maxDuration=300s.
+export const maxDuration = 300
 
 /** Xem ghi chú ở `app/api/admin/news/route.ts`. */
 function revalidateNewsSurfaces({ publicFacing = true }: { publicFacing?: boolean } = {}) {
@@ -72,6 +77,9 @@ export async function PATCH(
     coverImageAlt, coverImageAlt_en, coverImageAlt_zh, coverImageAlt_ar,
     focusKeyword,
     secondaryKeywords,
+    // Flag từ NewsEditor: true → sau khi save, server schedule `after()`
+    // để dịch các locale còn thiếu content dựa trên VI vừa lưu.
+    autoTranslateMissing,
   } = body
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,6 +184,25 @@ export async function PATCH(
         ),
       )
       .catch((e) => console.error(`[news/${id}] cloudinary cleanup failed:`, e))
+  }
+
+  // Auto-translate missing locales trong nền. `after()` giữ function alive
+  // tới maxDuration (300s) kể cả khi response đã trả, client đã rời trang.
+  // Hàm helper snapshot VI tại thời điểm save + optimistic concurrency check
+  // trước write — nếu user Save lại với VI khác, task cũ skip, task mới cover.
+  if (autoTranslateMissing === true) {
+    const snapshot = {
+      title: news.title ?? "",
+      excerpt: news.excerpt ?? "",
+      content: news.content ?? "",
+    }
+    after(async () => {
+      try {
+        await autoTranslateNewsMissing({ newsId: id, expectedVi: snapshot })
+      } catch (e) {
+        console.error(`[news/${id}] auto-translate after() failed:`, e)
+      }
+    })
   }
 
   return NextResponse.json({ news })

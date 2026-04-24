@@ -153,11 +153,10 @@ export const proxy = auth((req) => {
       // /cho-duyet vẫn truy cập được nếu cần (legacy users), nhưng không bị force redirect.
       if (realPathname === "/cho-duyet") return NextResponse.next()
 
-      const dest =
-        isAdmin(role) ? "/admin"
-        : role === "VIP" ? "/tong-quan"
-        : `/${locale}/feed`
-      return NextResponse.redirect(new URL(dest, req.url))
+      // Mọi role đều về homepage viewer mode khi visit auth page đã login
+      // (khách hàng yêu cầu: login xong luôn landing ở public home trước).
+      // Admin/VIP tự điều hướng vào /admin hoặc /tong-quan từ menu.
+      return NextResponse.redirect(new URL(`/${locale}`, req.url))
     }
     return passThrough()
   }

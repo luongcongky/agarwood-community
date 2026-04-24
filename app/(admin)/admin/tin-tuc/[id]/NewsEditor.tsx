@@ -91,6 +91,139 @@ export default function NewsEditorPage({
   const editorRef = useRef<RichTextEditorHandle>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Auto-translate cache (VI blur → EN/ZH/AR silent) ───────────────────
+  //
+  // Ba field (title/excerpt/content) × ba locale (en/zh/ar) = 9 slot. Mỗi
+  // slot lưu `viHash` (hash của VI source lúc dịch) + kết quả. Dedupe logic:
+  //  - Nếu blur mà VI hash trùng slot hiện có → skip (không gọi lại AI).
+  //  - Nếu có request inFlight cùng key → skip.
+  //  - Nếu state locale đã có value (user tự gõ) → skip luôn, không overwrite.
+  //
+  // Khi request xong: update cache + auto-fill nếu state locale vẫn rỗng.
+  // Server-side `after()` sẽ bắt các locale còn thiếu khi Save (xem API route).
+  type AutoLocale = "en" | "zh" | "ar"
+  type FieldKey = "title" | "excerpt" | "content"
+  type CacheSlot = { viHash: string; translated: string }
+  type TranslationCache = Record<FieldKey, Partial<Record<AutoLocale, CacheSlot>>>
+  const translationCacheRef = useRef<TranslationCache>({
+    title: {}, excerpt: {}, content: {},
+  })
+  const translationInFlightRef = useRef<Set<string>>(new Set())
+  const [translating, setTranslating] = useState<Record<AutoLocale, boolean>>({
+    en: false, zh: false, ar: false,
+  })
+
+  // Hash đơn giản (djb2) — đủ để dedupe, không cần crypto.
+  function hashString(s: string): string {
+    let h = 5381
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) + h + s.charCodeAt(i)) >>> 0
+    }
+    return h.toString(36)
+  }
+
+  // Refs để closure translation đọc state mới nhất (tránh tái-tạo handler).
+  const titleRef = useRef(title)
+  const excerptRef = useRef(excerpt)
+  const contentRef = useRef(content)
+  useEffect(() => { titleRef.current = title }, [title])
+  useEffect(() => { excerptRef.current = excerpt }, [excerpt])
+  useEffect(() => { contentRef.current = content }, [content])
+
+  /** Chạy 1 fetch dịch cho 1 field × 1 locale. Dedupe bằng in-flight set. */
+  async function translateFieldToLocale(
+    field: FieldKey,
+    locale: AutoLocale,
+    viValue: string,
+    viHash: string,
+  ) {
+    const inFlightKey = `${field}:${locale}:${viHash}`
+    if (translationInFlightRef.current.has(inFlightKey)) return
+    translationInFlightRef.current.add(inFlightKey)
+    setTranslating((prev) => ({ ...prev, [locale]: true }))
+    try {
+      const res = await fetch("/api/admin/ai/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fields: { [field]: viValue },
+          targetLocale: locale,
+        }),
+      })
+      if (!res.ok) return
+      const data = (await res.json()) as { fields?: Record<string, string> }
+      const translated = data.fields?.[field]
+      if (!translated) return
+
+      // Update cache (kể cả user đã gõ — để Save payload có sẵn).
+      translationCacheRef.current[field][locale] = { viHash, translated }
+
+      // Auto-fill: chỉ khi state locale đó CÒN trống (không overwrite user-typed).
+      const stateMap =
+        field === "title" ? titleRef.current
+        : field === "excerpt" ? excerptRef.current
+        : contentRef.current
+      const currentValue = stateMap[locale]?.trim() ?? ""
+      if (currentValue.length > 0) return // user đã gõ
+
+      if (field === "content") {
+        // Nếu đang ở tab locale này → cần cập nhật editor ref nữa (state
+        // thôi chưa đủ vì editor chạy qua ref, không re-render theo state).
+        if (activeLocaleRef.current === locale) {
+          const liveHtml = editorRef.current?.getHTML()?.trim() ?? ""
+          // Double-check: nếu editor có content non-empty (user mới gõ trong
+          // khi đang wait network), skip.
+          if (liveHtml && liveHtml !== "<p></p>") return
+          editorRef.current?.setContent(translated)
+        }
+        setContent((prev) =>
+          prev[locale]?.trim() ? prev : { ...prev, [locale]: translated },
+        )
+      } else if (field === "title") {
+        setTitle((prev) =>
+          prev[locale]?.trim() ? prev : { ...prev, [locale]: translated },
+        )
+      } else {
+        setExcerpt((prev) =>
+          prev[locale]?.trim() ? prev : { ...prev, [locale]: translated },
+        )
+      }
+    } catch (e) {
+      console.warn(`[auto-translate] ${field}/${locale} failed`, e)
+      // Silent: user có nút AI thủ công để retry khi cần.
+    } finally {
+      translationInFlightRef.current.delete(inFlightKey)
+      // Reset "translating" flag chỉ khi không còn task nào cho locale này.
+      const stillWorking = [...translationInFlightRef.current].some((k) =>
+        k.includes(`:${locale}:`),
+      )
+      if (!stillWorking) {
+        setTranslating((prev) => ({ ...prev, [locale]: false }))
+      }
+    }
+  }
+
+  /** Blur handler chung cho title/excerpt/content. Fan out 3 locale.
+   *  Call site chỉ trigger khi viValue là VI (không phải tab ngoại ngữ). */
+  function scheduleAutoTranslate(field: FieldKey, viValue: string) {
+    const trimmed = viValue?.trim() ?? ""
+    if (!trimmed) return
+    const viHash = hashString(trimmed)
+    const cacheForField = translationCacheRef.current[field]
+    const locales: AutoLocale[] = ["en", "zh", "ar"]
+    for (const locale of locales) {
+      // Skip nếu cache đã có kết quả cùng hash.
+      if (cacheForField[locale]?.viHash === viHash) continue
+      // Skip nếu user đã tự gõ vào locale đó — không overwrite.
+      const stateMap =
+        field === "title" ? titleRef.current
+        : field === "excerpt" ? excerptRef.current
+        : contentRef.current
+      if (stateMap[locale]?.trim()) continue
+      void translateFieldToLocale(field, locale, viValue, viHash)
+    }
+  }
+
   // Refs used by the throttled editor->content sync. activeLocaleRef lets
   // the stable handler always read the latest locale; editorDebounceRef
   // collapses bursts of keystrokes into one state update.
@@ -354,6 +487,10 @@ export default function NewsEditorPage({
         coverImageAlt_en: coverImageAlt.en || null,
         coverImageAlt_zh: coverImageAlt.zh || null,
         coverImageAlt_ar: coverImageAlt.ar || null,
+        // Yêu cầu server chạy after() dịch các locale content còn thiếu.
+        // Ngay cả khi user rời trang sau khi Save, translation tiếp tục
+        // server-side + lưu vào DB (xem lib/news-auto-translate.ts).
+        autoTranslateMissing: true,
       }
 
       const res = await fetch(
@@ -432,11 +569,35 @@ export default function NewsEditorPage({
                 hasContent={computeHasContent(title, excerpt, content)}
                 helperText={
                   activeLocale === "vi"
-                    ? "Bản tiếng Việt là bản gốc — bắt buộc. Dùng nút AI dịch khi chuyển sang EN / 中文 để dịch toàn bộ tiêu đề + tóm tắt + nội dung trong 1 lần."
+                    ? "Bản tiếng Việt là bản gốc — bắt buộc. Hệ thống tự dịch sang EN / 中文 / العربية khi bạn rời khỏi ô (không ghi đè nếu đã gõ thủ công)."
                     : undefined
                 }
                 onAiTranslate={handleAiTranslate}
               />
+
+              {/* Auto-translate indicator — hiện khi có request đang chạy nền.
+                  Badge mờ, không block user action. Dedupe dựa trên content
+                  hash — in/out focus nhiều lần không đổi content sẽ không fire
+                  lại request. */}
+              {(translating.en || translating.zh || translating.ar) && (
+                <div className="flex items-center gap-2 rounded-md bg-brand-50 border border-brand-200 px-3 py-1.5 text-[11px] text-brand-700">
+                  <svg className="size-3.5 animate-spin text-brand-600" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                    <path fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+                  </svg>
+                  <span>
+                    Đang tự dịch sang{" "}
+                    {[
+                      translating.en && "EN",
+                      translating.zh && "中文",
+                      translating.ar && "العربية",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    … Không ghi đè nếu bạn đã gõ thủ công.
+                  </span>
+                </div>
+              )}
 
               {/* Title — driven by active locale */}
               <div>
@@ -447,6 +608,13 @@ export default function NewsEditorPage({
                   type="text"
                   value={title[activeLocale]}
                   onChange={(e) => setTitleField(activeLocale, e.target.value)}
+                  onBlur={(e) => {
+                    // Chỉ trigger auto-translate khi user đang ở tab VI
+                    // (blur từ EN/ZH/AR là user tự sửa bản dịch — skip).
+                    if (activeLocale === "vi") {
+                      scheduleAutoTranslate("title", e.target.value)
+                    }
+                  }}
                   placeholder={activeLocale === "vi" ? "Tiêu đề bài viết" : `Tiêu đề (${activeLocale.toUpperCase()})`}
                   required={activeLocale === "vi"}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
@@ -474,6 +642,11 @@ export default function NewsEditorPage({
                   onChange={(e) =>
                     setExcerpt((prev) => ({ ...prev, [activeLocale]: e.target.value }))
                   }
+                  onBlur={(e) => {
+                    if (activeLocale === "vi") {
+                      scheduleAutoTranslate("excerpt", e.target.value)
+                    }
+                  }}
                   rows={3}
                   placeholder={activeLocale === "vi" ? "Tóm tắt nội dung" : `Tóm tắt (${activeLocale.toUpperCase()})`}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
@@ -559,6 +732,14 @@ export default function NewsEditorPage({
               initialContent={initialContent}
               uploadFolder="tin-tuc"
               onUpdate={handleEditorUpdate}
+              onBlur={(html) => {
+                // Trigger auto-translate khi VI editor mất focus. Dedupe ở
+                // `scheduleAutoTranslate` qua content-hash — in/out focus
+                // nhiều lần không đổi content → chỉ 1 API call.
+                if (activeLocaleRef.current === "vi") {
+                  scheduleAutoTranslate("content", html)
+                }
+              }}
             />
           </div>
 
@@ -683,8 +864,12 @@ export default function NewsEditorPage({
             )}
 
             {saved && (
-              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                Đã lưu thay đổi
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 space-y-1">
+                <p>Đã lưu thay đổi.</p>
+                <p className="text-xs text-green-600">
+                  Các locale chưa có bản dịch sẽ được tự dịch trong nền — bạn có
+                  thể đóng trang. Refresh lại vài phút sau để thấy bản dịch mới.
+                </p>
               </div>
             )}
 
