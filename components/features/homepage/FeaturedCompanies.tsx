@@ -90,25 +90,24 @@ export async function FeaturedCompanies() {
                 className="block"
               >
                 <div className="relative h-36 w-36 shrink-0 overflow-hidden border border-neutral-200 bg-white">
-                  <div className="absolute inset-0 flex items-center justify-center p-4">
-                    {c.logoUrl ? (
-                      <div className="relative h-full w-full">
-                        <Image
-                          src={c.logoUrl}
-                          alt={c.localName}
-                          fill
-                          className="object-contain"
-                          sizes="144px"
-                        />
-                      </div>
-                    ) : (
-                      <span
-                        className={`flex h-16 w-16 items-center justify-center text-base font-bold text-white ${colorFromName(c.localName)}`}
-                      >
-                        {initials}
-                      </span>
-                    )}
-                  </div>
+                  {c.logoUrl ? (
+                    <Image
+                      src={c.logoUrl}
+                      alt={c.localName}
+                      fill
+                      // object-cover để logo lấp full khung 144×144 (Phase 3.7
+                      // round 4 — 2026-04 customer feedback). Logo aspect lệch
+                      // sẽ bị crop nhẹ ở mép, đổi lại không có lề trắng.
+                      className="object-cover"
+                      sizes="144px"
+                    />
+                  ) : (
+                    <span
+                      className={`flex h-full w-full items-center justify-center text-2xl font-bold text-white ${colorFromName(c.localName)}`}
+                    >
+                      {initials}
+                    </span>
+                  )}
                 </div>
               </Link>
             )

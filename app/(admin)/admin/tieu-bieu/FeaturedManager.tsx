@@ -25,7 +25,7 @@ type CompanyRow = {
   isVerified: boolean
   isFeatured: boolean
   featuredOrder: number | null
-  owner: { name: string }
+  owner: { name: string; contributionTotal: number }
 }
 
 interface Props {
@@ -40,10 +40,42 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
   const [tab, setTab] = useState<Tab>("products")
   const [products, setProducts] = useState(initialProducts)
   const [companies, setCompanies] = useState(initialCompanies)
+  const [productQuery, setProductQuery] = useState("")
+  const [companyQuery, setCompanyQuery] = useState("")
   const [savingId, setSavingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
   const router = useRouter()
+
+  /** Filter SP theo tên / DN / trạng thái chứng nhận (tiếng Việt + raw enum).
+   *  Phase 3.7 round 4 (2026-04). Empty query = show all. */
+  const filteredProducts = (() => {
+    const q = productQuery.toLowerCase().trim()
+    if (!q) return products
+    return products.filter((p) => {
+      const vnCert =
+        p.certStatus === "APPROVED" ? "đã chứng nhận" : "chưa chứng nhận"
+      const haystack = [
+        p.name,
+        p.company?.name ?? "",
+        p.certStatus,
+        vnCert,
+      ]
+        .join(" ")
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  })()
+
+  /** Filter DN theo tên DN / tên người đại diện. */
+  const filteredCompanies = (() => {
+    const q = companyQuery.toLowerCase().trim()
+    if (!q) return companies
+    return companies.filter((c) => {
+      const haystack = [c.name, c.owner.name].join(" ").toLowerCase()
+      return haystack.includes(q)
+    })
+  })()
 
   async function saveProduct(id: string, patch: { isFeatured?: boolean; featuredOrder?: number | null }) {
     setSavingId(id)
@@ -123,6 +155,31 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
     saveCompany(id, { featuredOrder: n })
   }
 
+  /** Toggle xác minh DN — Phase 3.7 round 4 (2026-04). Trước đây cột
+   *  "Xác minh" chỉ là badge hiển thị, không có endpoint flip. Giờ click
+   *  vào badge sẽ toggle qua /api/admin/companies/[id]/verify. */
+  async function toggleCompanyVerify(id: string, current: boolean) {
+    setSavingId(id)
+    setErrorMsg(null)
+    setCompanies((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isVerified: !current } : c)),
+    )
+    try {
+      const res = await fetch(`/api/admin/companies/${id}/verify`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVerified: !current }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setErrorMsg(data.error ?? "Lưu thất bại")
+        startTransition(() => router.refresh())
+      }
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Tabs */}
@@ -166,24 +223,50 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
 
       {/* Products tab */}
       {tab === "products" && (
+        <div className="space-y-3">
+          {/* Search box — filter tên SP / DN / trạng thái chứng nhận.
+              Phase 3.7 round 4 (2026-04). Filter cừi client vì list đã đủ nhỏ. */}
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              value={productQuery}
+              onChange={(e) => setProductQuery(e.target.value)}
+              placeholder="Tìm theo tên SP, DN sở hữu, hoặc 'đã chứng nhận' / 'chưa chứng nhận'..."
+              className="flex-1 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+            {productQuery && (
+              <button
+                type="button"
+                onClick={() => setProductQuery("")}
+                className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-600 hover:bg-brand-100"
+              >
+                Xóa
+              </button>
+            )}
+            <span className="shrink-0 text-xs text-brand-500">
+              {filteredProducts.length}/{products.length} SP
+            </span>
+          </div>
         <div className="rounded-xl border border-brand-200 bg-white overflow-hidden">
-          {products.length === 0 ? (
+          {filteredProducts.length === 0 ? (
             <p className="p-12 text-center text-brand-500 italic">
-              Chưa có sản phẩm nào từ doanh nghiệp hội viên.
+              {productQuery
+                ? `Không tìm thấy SP nào khớp "${productQuery}".`
+                : "Chưa có sản phẩm nào từ doanh nghiệp hội viên."}
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-brand-50 text-xs uppercase text-brand-500">
                 <tr>
-                  <th className="px-4 py-3 text-left w-12">Tiêu biểu</th>
+                  <th className="px-4 py-3 text-left w-12 whitespace-nowrap">Tiêu biểu</th>
                   <th className="px-4 py-3 text-left w-20">Thứ tự</th>
                   <th className="px-4 py-3 text-left">Sản phẩm</th>
                   <th className="px-4 py-3 text-left">Doanh nghiệp</th>
-                  <th className="px-4 py-3 text-left w-28">Chứng nhận</th>
+                  <th className="px-4 py-3 text-left w-28 whitespace-nowrap">Chứng nhận</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-100">
-                {products.map((p) => {
+                {filteredProducts.map((p) => {
                   const cover = p.imageUrls[0] ?? null
                   const isSaving = savingId === p.id
                   return (
@@ -239,28 +322,53 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
             </table>
           )}
         </div>
+        </div>
       )}
 
       {/* Companies tab */}
       {tab === "companies" && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="search"
+              value={companyQuery}
+              onChange={(e) => setCompanyQuery(e.target.value)}
+              placeholder="Tìm theo tên DN hoặc tên người đại diện..."
+              className="flex-1 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+            {companyQuery && (
+              <button
+                type="button"
+                onClick={() => setCompanyQuery("")}
+                className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-600 hover:bg-brand-100"
+              >
+                Xóa
+              </button>
+            )}
+            <span className="shrink-0 text-xs text-brand-500">
+              {filteredCompanies.length}/{companies.length} DN
+            </span>
+          </div>
         <div className="rounded-xl border border-brand-200 bg-white overflow-hidden">
-          {companies.length === 0 ? (
+          {filteredCompanies.length === 0 ? (
             <p className="p-12 text-center text-brand-500 italic">
-              Chưa có doanh nghiệp hội viên nào.
+              {companyQuery
+                ? `Không tìm thấy DN nào khớp "${companyQuery}".`
+                : "Chưa có doanh nghiệp hội viên nào."}
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-brand-50 text-xs uppercase text-brand-500">
                 <tr>
-                  <th className="px-4 py-3 text-left w-12">Tiêu biểu</th>
+                  <th className="px-4 py-3 text-left w-12 whitespace-nowrap">Tiêu biểu</th>
                   <th className="px-4 py-3 text-left w-20">Thứ tự</th>
                   <th className="px-4 py-3 text-left">Doanh nghiệp</th>
-                  <th className="px-4 py-3 text-left">Chủ sở hữu</th>
+                  <th className="px-4 py-3 text-left whitespace-nowrap">Người đại diện DN</th>
                   <th className="px-4 py-3 text-left w-28">Xác minh</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-100">
-                {companies.map((c) => {
+                {filteredCompanies.map((c) => {
                   const isSaving = savingId === c.id
                   return (
                     <tr key={c.id} className={cn(c.isFeatured && "bg-amber-50/40", isSaving && "opacity-60")}>
@@ -299,14 +407,28 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-brand-600">{c.owner.name}</td>
-                      <td className="px-4 py-3">
-                        {c.isVerified ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                            ✓ Đã verify
-                          </span>
-                        ) : (
-                          <span className="text-xs text-brand-400">Chưa</span>
-                        )}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => toggleCompanyVerify(c.id, c.isVerified)}
+                          disabled={readOnly || isSaving}
+                          title={
+                            readOnly
+                              ? READ_ONLY_TOOLTIP
+                              : c.isVerified
+                                ? "Click để bỏ xác minh"
+                                : "Click để xác minh DN này"
+                          }
+                          className={cn(
+                            "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium transition-colors",
+                            c.isVerified
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                              : "bg-brand-50 text-brand-500 hover:bg-brand-100 ring-1 ring-brand-200",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
+                          )}
+                        >
+                          {c.isVerified ? "✓ Đã verify" : "Xác minh"}
+                        </button>
                       </td>
                     </tr>
                   )
@@ -314,6 +436,7 @@ export function FeaturedManager({ initialProducts, initialCompanies }: Props) {
               </tbody>
             </table>
           )}
+        </div>
         </div>
       )}
     </div>

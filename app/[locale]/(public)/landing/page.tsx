@@ -42,18 +42,21 @@ export default async function LandingPage() {
     featuredProducts,
     businessThresholds,
   ] = await Promise.all([
-    prisma.user.count({ where: { role: "VIP", isActive: true } }),
+    // Phase 3.7 round 4 (2026-04): mở rộng filter sang INFINITE — match
+    // /admin/tieu-bieu để DN/SP của hội viên INFINITE được pin tiêu biểu
+    // hiển thị đúng ở landing.
+    prisma.user.count({ where: { role: { in: ["VIP", "INFINITE"] }, isActive: true } }),
     prisma.product.count({ where: { certStatus: "APPROVED" } }),
     prisma.company.count({ where: { isPublished: true } }),
     prisma.news.count({ where: { isPublished: true, category: "RESEARCH" } }),
     prisma.company.findMany({
-      where: { isFeatured: true, isPublished: true, owner: { role: "VIP" } },
+      where: { isFeatured: true, isPublished: true, owner: { role: { in: ["VIP", "INFINITE"] } } },
       orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
       take: 10,
       select: { id: true, name: true, slug: true, logoUrl: true, isVerified: true },
     }),
     prisma.product.findMany({
-      where: { isFeatured: true, isPublished: true, owner: { role: { in: ["VIP", "ADMIN"] } } },
+      where: { isFeatured: true, isPublished: true, owner: { role: { in: ["VIP", "INFINITE", "ADMIN"] } } },
       orderBy: [{ featuredOrder: "asc" }, { createdAt: "desc" }],
       take: 20,
       select: {

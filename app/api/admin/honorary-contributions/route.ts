@@ -73,6 +73,8 @@ export async function POST(req: Request) {
       newExpiry.setMonth(newExpiry.getMonth() + months)
     }
 
+    const willBumpToVip = target.role === "GUEST" && months > 0
+
     await tx.user.update({
       where: { id: userId },
       data: {
@@ -80,8 +82,23 @@ export async function POST(req: Request) {
         displayPriority: newPriority,
         ...(months > 0 && newExpiry ? { membershipExpires: newExpiry } : {}),
         ...(target.isActive ? {} : { isActive: true }),
+        // Phase 3.7 round 4 (2026-04): bump GUEST → VIP khi admin ghi nhận
+        // honorary contribution + extend membership. Trước đây chỉ Payment
+        // confirm flow bump role → hội viên cũ được honorary credit vẫn
+        // stuck role=GUEST → không xuất hiện ở /vi/hoi-vien (filter VIP+).
+        ...(willBumpToVip && { role: "VIP" as const }),
       },
     })
+
+    // Phase 3.7 round 4 (2026-04): khi user lên VIP, auto-publish DN của họ
+    // (nếu có) để admin đỡ quên 1 bước thủ công. Idempotent — Prisma
+    // updateMany với where.isPublished:false đảm bảo không touch DN đã public.
+    if (willBumpToVip) {
+      await tx.company.updateMany({
+        where: { ownerId: userId, isPublished: false },
+        data: { isPublished: true },
+      })
+    }
 
     await tx.post.updateMany({
       where: { authorId: userId },

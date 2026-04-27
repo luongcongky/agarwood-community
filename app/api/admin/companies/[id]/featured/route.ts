@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma"
  * PATCH /api/admin/companies/[id]/featured
  * Body: { isFeatured?: boolean, featuredOrder?: number | null }
  *
- * Validate: chỉ cho phép pin doanh nghiệp có owner là VIP.
+ * Validate: chỉ cho phép pin doanh nghiệp có owner là VIP hoặc INFINITE.
  */
 export async function PATCH(
   request: Request,
@@ -34,9 +34,9 @@ export async function PATCH(
     if (!company) {
       return NextResponse.json({ error: "Doanh nghiệp không tồn tại" }, { status: 404 })
     }
-    if (company.owner.role !== "VIP") {
+    if (company.owner.role !== "VIP" && company.owner.role !== "INFINITE") {
       return NextResponse.json(
-        { error: "Chỉ có thể chọn doanh nghiệp tiêu biểu từ hội viên VIP" },
+        { error: "Chỉ có thể chọn DN tiêu biểu từ hội viên VIP / INFINITE" },
         { status: 400 },
       )
     }

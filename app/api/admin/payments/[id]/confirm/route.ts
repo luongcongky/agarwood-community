@@ -71,15 +71,26 @@ export async function POST(
 
       // 5. Update user — upgrade GUEST → VIP khi đây là lần đầu đóng phí
       //    membership. VIP/ADMIN/INFINITE giữ nguyên role.
+      const willBumpToVip = user?.role === "GUEST"
       await tx.user.update({
         where: { id: payment.userId },
         data: {
           membershipExpires: newExpiry,
           contributionTotal: newContrib,
           displayPriority: newPriority,
-          ...(user?.role === "GUEST" && { role: "VIP" }),
+          ...(willBumpToVip && { role: "VIP" as const }),
         },
       })
+
+      // 5b. Auto-publish DN của user khi lên VIP — Phase 3.7 round 4
+      // (2026-04). Tránh trường hợp admin/owner quên publish thủ công sau
+      // khi role bump. Idempotent qua updateMany + where.isPublished:false.
+      if (willBumpToVip) {
+        await tx.company.updateMany({
+          where: { ownerId: payment.userId, isPublished: false },
+          data: { isPublished: true },
+        })
+      }
 
       // 6. Update authorPriority on all user's posts
       await tx.post.updateMany({
