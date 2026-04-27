@@ -1126,8 +1126,8 @@ export default function NewsEditorPage({
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50/50 disabled:text-brand-500 disabled:cursor-not-allowed"
                 >
                   <option value="NORMAL">Bình thường (text + ảnh + video)</option>
-                  <option value="PHOTO">Tin ảnh (gallery + caption)</option>
-                  <option value="VIDEO">Tin video (URL + caption)</option>
+                  <option value="PHOTO">Tin ảnh (Multimedia)</option>
+                  <option value="VIDEO">Tin video (Multimedia)</option>
                 </select>
                 <p className="mt-1 text-[11px] text-brand-400 leading-snug">
                   {isNew
