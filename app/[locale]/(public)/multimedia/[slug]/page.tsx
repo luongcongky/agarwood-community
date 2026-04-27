@@ -7,8 +7,27 @@ import { getLocale } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { MultimediaLightbox } from "@/components/features/multimedia/MultimediaLightbox"
+import { newsToMultimedia } from "@/lib/multimedia-from-news"
 
 export const revalidate = 300
+
+const NEWS_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  title_en: true,
+  title_zh: true,
+  title_ar: true,
+  excerpt: true,
+  excerpt_en: true,
+  excerpt_zh: true,
+  excerpt_ar: true,
+  coverImageUrl: true,
+  template: true,
+  gallery: true,
+  publishedAt: true,
+  isPublished: true,
+} as const
 
 export async function generateMetadata({
   params,
@@ -16,7 +35,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const item = await prisma.multimedia.findUnique({ where: { slug } })
+  const news = await prisma.news.findUnique({ where: { slug }, select: NEWS_SELECT })
+  if (!news) return { title: "Không tìm thấy" }
+  const item = newsToMultimedia(news)
   if (!item) return { title: "Không tìm thấy" }
   return {
     title: item.title,
@@ -42,8 +63,14 @@ export default async function MultimediaDetailPage({
   const { slug } = await params
   const locale = (await getLocale()) as Locale
 
-  const item = await prisma.multimedia.findUnique({ where: { slug } })
-  if (!item || !item.isPublished) notFound()
+  // Phase 3.7 round 4 (2026-04): đọc từ News (template=PHOTO|VIDEO).
+  // Bảng Multimedia đã merge sang News qua migration script.
+  // 404 nếu News không tồn tại / chưa publish / template=NORMAL (vì /multimedia
+  // không phải route cho text article — bài đó dùng /tin-tuc/[slug]).
+  const news = await prisma.news.findUnique({ where: { slug }, select: NEWS_SELECT })
+  if (!news || !news.isPublished) notFound()
+  const item = newsToMultimedia(news)
+  if (!item) notFound()
 
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
@@ -55,7 +82,7 @@ export default async function MultimediaDetailPage({
           Trang chủ
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/tin-tuc" className="hover:text-brand-700">
+        <Link href="/multimedia" className="hover:text-brand-700">
           Multimedia
         </Link>
         <span className="mx-2">/</span>

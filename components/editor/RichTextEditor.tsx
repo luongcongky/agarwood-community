@@ -70,6 +70,32 @@ import { MediaEmbedModal } from "./MediaEmbedModal"
 // width:Xpx override).
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Strip width/height (cả attribute lẫn inline style) khỏi mọi <img> trong
+ * HTML trước khi nạp vào editor. Phase 3.7 round 4 (2026-04): đảm bảo bài
+ * cũ — vốn có thể chứa `<img style="width: 600px">` từ drag-resize trước
+ * đây — load vào editor sẽ về full-width mặc định. Drag-resize trong session
+ * vẫn hoạt động qua `updateAttributes`; chỉ bị reset ở lần load tiếp theo,
+ * khớp với yêu cầu khách "default = full-width 16:9".
+ */
+function stripImageDimensions(html: string): string {
+  if (typeof window === "undefined" || !html) return html
+  const doc = new DOMParser().parseFromString(html, "text/html")
+  doc.querySelectorAll("img").forEach((img) => {
+    img.removeAttribute("width")
+    img.removeAttribute("height")
+    const style = img.getAttribute("style") || ""
+    const cleaned = style
+      .split(";")
+      .map((s) => s.trim())
+      .filter((s) => s && !/^(width|height)\s*:/i.test(s))
+      .join("; ")
+    if (cleaned) img.setAttribute("style", cleaned)
+    else img.removeAttribute("style")
+  })
+  return doc.body.innerHTML
+}
+
 function buildFigureBlock(
   src: string,
   caption: string,
@@ -224,7 +250,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       contentLoadedRef.current = true
       if (!initialContent) return
       queueMicrotask(() => {
-        editor.commands.setContent(initialContent)
+        editor.commands.setContent(stripImageDimensions(initialContent))
       })
     }, [editor, initialContent])
 
@@ -451,7 +477,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
         getText: () => editor?.getText() ?? "",
         setContent: (html: string) => {
           queueMicrotask(() => {
-            editor?.commands.setContent(html)
+            editor?.commands.setContent(stripImageDimensions(html))
           })
         },
         focus: () => editor?.commands.focus(),
@@ -517,10 +543,12 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
             "[&_.ProseMirror_h4]:text-base [&_.ProseMirror_h4]:font-semibold [&_.ProseMirror_h4]:text-brand-800 [&_.ProseMirror_h4]:my-2",
             // Horizontal rule
             "[&_.ProseMirror_hr]:border-brand-200 [&_.ProseMirror_hr]:my-4",
-            // Figure full-width 16:9 (round 3 — match public CSS). Figure
-            // block-level + max-width 960px + img stretch 100% width. Inline
-            // style="width:..." từ drag-resize override qua specificity.
-            "[&_.ProseMirror_figure]:block [&_.ProseMirror_figure]:w-full [&_.ProseMirror_figure]:max-w-[960px] [&_.ProseMirror_figure]:mx-auto [&_.ProseMirror_figure]:my-4",
+            // Figure full-width (round 4 — 2026-04 customer feedback). Bỏ
+            // cap 960px để hình stretch hết chiều ngang container editor;
+            // trước đây cap khiến desktop editor (>960px) thấy lề trắng 2
+            // bên trong khi mobile (<960px) lại full → bất nhất. Inline
+            // style="width:..." từ drag-resize vẫn override qua specificity.
+            "[&_.ProseMirror_figure]:block [&_.ProseMirror_figure]:w-full [&_.ProseMirror_figure]:mx-auto [&_.ProseMirror_figure]:my-4",
             "[&_.ProseMirror_figure_img]:block [&_.ProseMirror_figure_img]:w-full [&_.ProseMirror_figure_img]:h-auto [&_.ProseMirror_figure_img]:my-0 [&_.ProseMirror_figure_img]:mx-auto",
             // Caption sát ảnh — block-level (không còn dùng table-caption do
             // figure đã chuyển sang display:block). mt-0.5 = ~2px gap.
@@ -647,7 +675,11 @@ function Toolbar({
   }
 
   return (
-    <div className="sticky top-0 z-20 rounded-t-xl border-b bg-brand-50/95 backdrop-blur shadow-sm">
+    // top-11 mobile (44px) / sm:top-12 desktop (48px) ≈ chiều cao CategoryBar
+    // (sticky top-0 z-40 ở SiteHeader). Mobile = li 40px + nav pt-0.5 (2px)
+    // + ul pt-0.5 (2px) ≈ 44px. Desktop = li 40px + nav sm:pt-2 (8px) = 48px.
+    // Phase 3.7 round 4 (2026-04 customer feedback).
+    <div className="sticky top-11 z-20 rounded-t-xl border-b bg-brand-50/95 backdrop-blur shadow-sm sm:top-12">
       {/* Hidden file input for image upload */}
       <input
         ref={imageInputRef}

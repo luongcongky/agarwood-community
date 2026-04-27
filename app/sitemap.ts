@@ -77,6 +77,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         // BUSINESS + PRODUCT + GENERAL + SPONSORED_PRODUCT → /tin-tuc.
         // RESEARCH → /nghien-cuu. EXTERNAL_NEWS → /tin-bao-chi.
         // AGRICULTURE → /khuyen-nong.
+        // Phase 3.7 round 4 (2026-04): chỉ NORMAL emit ở các route trên.
+        // PHOTO/VIDEO sẽ emit ở /multimedia/{slug} (query riêng bên dưới).
+        template: "NORMAL",
         category: {
           in: [
             "GENERAL",
@@ -112,10 +115,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { id: true, updatedAt: true },
       orderBy: { createdAt: "desc" },
     }),
-    // Multimedia (video + photo collection). `slug` unique + page có route
+    // Multimedia (video + photo collection) — Phase 3.7 round 4 (2026-04):
+    // đọc từ News template=PHOTO/VIDEO. `slug` unique + page có route
     // `/multimedia/[slug]` → index được.
-    prisma.multimedia.findMany({
-      where: { isPublished: true },
+    prisma.news.findMany({
+      where: { isPublished: true, template: { in: ["PHOTO", "VIDEO"] } },
       select: { slug: true, updatedAt: true },
       orderBy: { publishedAt: "desc" },
     }),

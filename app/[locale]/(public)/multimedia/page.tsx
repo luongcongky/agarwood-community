@@ -7,6 +7,7 @@ import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
+import { newsToMultimedia } from "@/lib/multimedia-from-news"
 
 export const revalidate = 300
 
@@ -49,110 +50,46 @@ export default async function MultimediaListingPage({
   const filterType = isValidType(sp.type) ? sp.type : null
   const locale = (await getLocale()) as Locale
 
-  // Phase 3 (2026-04): Multimedia tổng hợp từ 2 nguồn:
-  //  - Bảng `multimedia` legacy (vẫn giữ cho data cũ)
-  //  - News với template=PHOTO/VIDEO (admin tạo qua /admin/tin-tuc)
-  // Map News → shape giống Multimedia rồi concat + sort + take 24.
+  // Phase 3.7 round 4 (2026-04): bảng Multimedia đã merge vào News (template
+  // PHOTO/VIDEO). Đọc từ News, adapt qua newsToMultimedia() để giữ shape
+  // mà UI cũ đang dùng.
   const newsTemplateFilter =
     filterType === "PHOTO_COLLECTION"
       ? "PHOTO"
       : filterType === "VIDEO"
         ? "VIDEO"
         : null
-  const [legacyItems, newsItems] = await Promise.all([
-    prisma.multimedia.findMany({
-      where: {
-        isPublished: true,
-        ...(filterType ? { type: filterType } : {}),
-      },
-      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 24,
-      select: {
-        id: true,
-        type: true,
-        slug: true,
-        title: true,
-        title_en: true,
-        title_zh: true,
-        title_ar: true,
-        excerpt: true,
-        excerpt_en: true,
-        excerpt_zh: true,
-        excerpt_ar: true,
-        coverImageUrl: true,
-        imageUrls: true,
-        youtubeId: true,
-        publishedAt: true,
-      },
-    }),
-    prisma.news.findMany({
-      where: {
-        isPublished: true,
-        template: newsTemplateFilter
-          ? newsTemplateFilter
-          : { in: ["PHOTO", "VIDEO"] },
-      },
-      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 24,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        title_en: true,
-        title_zh: true,
-        title_ar: true,
-        excerpt: true,
-        excerpt_en: true,
-        excerpt_zh: true,
-        excerpt_ar: true,
-        coverImageUrl: true,
-        template: true,
-        gallery: true,
-        publishedAt: true,
-      },
-    }),
-  ])
-
-  // Map News → Multimedia shape. Slug prefix `tin-tuc-` để link click ra
-  // /tin-tuc/[slug] (không phải /multimedia/[slug] legacy route).
-  type GItem = { url: string; caption?: string }
-  const ytIdRe = /youtube\.com\/embed\/([\w-]{11})/
-  const newsAsMultimedia = newsItems.map((n) => {
-    const items = (Array.isArray(n.gallery) ? (n.gallery as unknown as GItem[]) : []) ?? []
-    const isVideo = n.template === "VIDEO"
-    const firstUrl = items[0]?.url ?? ""
-    const ytId = isVideo ? firstUrl.match(ytIdRe)?.[1] ?? null : null
-    return {
-      id: n.id,
-      type: isVideo ? ("VIDEO" as const) : ("PHOTO_COLLECTION" as const),
-      slug: n.slug, // News slug; href xuống dưới sẽ trỏ /tin-tuc thay vì /multimedia
-      title: n.title,
-      title_en: n.title_en,
-      title_zh: n.title_zh,
-      title_ar: n.title_ar,
-      excerpt: n.excerpt,
-      excerpt_en: n.excerpt_en,
-      excerpt_zh: n.excerpt_zh,
-      excerpt_ar: n.excerpt_ar,
-      coverImageUrl: n.coverImageUrl ?? (isVideo ? null : firstUrl || null),
-      imageUrls: isVideo ? [] : items.map((i) => i.url),
-      youtubeId: ytId,
-      publishedAt: n.publishedAt,
-      __isNews: true as const,
-    }
+  const newsRows = await prisma.news.findMany({
+    where: {
+      isPublished: true,
+      template: newsTemplateFilter
+        ? newsTemplateFilter
+        : { in: ["PHOTO", "VIDEO"] },
+    },
+    orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+    take: 24,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      title_en: true,
+      title_zh: true,
+      title_ar: true,
+      excerpt: true,
+      excerpt_en: true,
+      excerpt_zh: true,
+      excerpt_ar: true,
+      coverImageUrl: true,
+      template: true,
+      gallery: true,
+      publishedAt: true,
+    },
   })
 
-  // Merge + sort by publishedAt (desc), take 24 (legacy + news combined).
-  const items = [
-    ...legacyItems.map((it) => ({ ...it, __isNews: false as const })),
-    ...newsAsMultimedia,
-  ]
-    .sort((a, b) => {
-      const ta = a.publishedAt?.getTime() ?? 0
-      const tb = b.publishedAt?.getTime() ?? 0
-      return tb - ta
-    })
-    .slice(0, 24)
+  const items = newsRows.flatMap((n) => {
+    const mapped = newsToMultimedia(n)
+    return mapped ? [mapped] : []
+  })
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -216,7 +153,7 @@ export default async function MultimediaListingPage({
             return (
               <Link
                 key={item.id}
-                href={item.__isNews ? `/tin-tuc/${item.slug}` : `/multimedia/${item.slug}`}
+                href={`/multimedia/${item.slug}`}
                 className="group block"
               >
                 <div className="relative aspect-video w-full overflow-hidden bg-brand-100">

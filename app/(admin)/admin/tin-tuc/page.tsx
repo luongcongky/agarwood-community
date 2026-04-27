@@ -3,7 +3,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DeleteNewsButton } from "./DeleteNewsButton"
 import { NewsListToggle } from "./NewsListToggles"
-import { Prisma, NewsCategory } from "@prisma/client"
+import { Prisma, NewsCategory, NewsTemplate } from "@prisma/client"
 
 /** Label + style cho từng NewsCategory — dùng ở badge cột "Phân loại" và
  *  filter dropdown. Phase 3.3 (2026-04) mở rộng thêm BUSINESS + PRODUCT. */
@@ -70,14 +70,24 @@ type Props = {
   searchParams: Promise<{
     q?: string
     cat?: string
+    tpl?: string
     page?: string
   }>
+}
+
+/** Label cho NewsTemplate filter — Phase 3.7 round 4 (2026-04). Customer
+ *  cần tìm nhanh tin Multimedia (PHOTO/VIDEO) trong list. */
+const TEMPLATE_LABEL: Record<NewsTemplate, string> = {
+  NORMAL: "📝 Tin thường",
+  PHOTO: "📷 Tin ảnh",
+  VIDEO: "🎬 Tin video",
 }
 
 export default async function AdminNewsPage({ searchParams }: Props) {
   const params = await searchParams
   const query = params.q?.trim() || ""
   const category = params.cat || ""
+  const template = params.tpl || ""
   const page = Math.max(1, Number(params.page ?? 1))
   const PAGE_SIZE = 20
 
@@ -87,6 +97,9 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     }),
     ...(category && {
       category: category as NewsCategory,
+    }),
+    ...(template && {
+      template: template as NewsTemplate,
     }),
   }
 
@@ -101,6 +114,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         title: true,
         slug: true,
         category: true,
+        template: true,
         isPublished: true,
         isPinned: true,
         publishedAt: true,
@@ -117,6 +131,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     const p = new URLSearchParams()
     if (query) p.set("q", query)
     if (category) p.set("cat", category)
+    if (template) p.set("tpl", template)
     if (page > 1) p.set("page", String(page))
     for (const [k, v] of Object.entries(overrides)) {
       if (v) p.set(k, v); else p.delete(k)
@@ -177,6 +192,25 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             </select>
           </div>
 
+          {/* Template filter — Phase 3.7 round 4 (2026-04). Khách cần tìm
+              nhanh tin Multimedia (PHOTO + VIDEO) trong list. */}
+          <div className="w-[160px] space-y-1.5">
+            <label htmlFor="tpl" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+              Loại bài
+            </label>
+            <select
+              id="tpl"
+              name="tpl"
+              defaultValue={template}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
+            >
+              <option value="">Tất cả</option>
+              <option value="NORMAL">📝 Tin thường</option>
+              <option value="PHOTO">📷 Tin ảnh</option>
+              <option value="VIDEO">🎬 Tin video</option>
+            </select>
+          </div>
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -184,7 +218,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             >
               Lọc
             </button>
-            {(query || category) && (
+            {(query || category || template) && (
               <Link
                 href="/admin/tin-tuc"
                 className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
@@ -245,6 +279,16 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               >
                 <td className="px-4 py-3 min-w-[300px]">
                   <p className="font-semibold text-brand-900 line-clamp-1 leading-relaxed" title={news.title}>
+                    {/* Template marker — chỉ show khi PHOTO/VIDEO để khỏi
+                        làm rối list (NORMAL chiếm đa số). */}
+                    {news.template !== "NORMAL" && (
+                      <span
+                        className="mr-1.5 inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-violet-200 align-middle"
+                        title={TEMPLATE_LABEL[news.template]}
+                      >
+                        {news.template === "PHOTO" ? "📷 Ảnh" : "🎬 Video"}
+                      </span>
+                    )}
                     {news.title}
                   </p>
                   <p className="text-[10px] text-brand-400 font-mono mt-0.5 truncate max-w-[200px]">{news.slug}</p>

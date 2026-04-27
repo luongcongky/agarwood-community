@@ -201,12 +201,6 @@ enum HonoraryCategory {
   OTHER // Khác
 }
 
-// Loại multimedia hiển thị ở homepage section "MULTIMEDIA"
-enum MultimediaType {
-  PHOTO_COLLECTION // Bộ sưu tập ảnh — dùng imageUrls[]
-  VIDEO // Video YouTube — dùng youtubeId
-}
-
 // ============================================================
 // USER & AUTH
 // ============================================================
@@ -1038,46 +1032,6 @@ model News {
   // Phase 3: filter /multimedia + /tin-tuc theo template
   @@index([template, isPublished, publishedAt])
   @@map("news")
-}
-
-// ============================================================
-// MULTIMEDIA — BỘ SƯU TẬP ẢNH + VIDEO YOUTUBE
-// ============================================================
-// Dùng cho section "MULTIMEDIA" trên trang chủ /v2 và trang chi tiết
-// tương lai. type phân biệt: PHOTO_COLLECTION → imageUrls[]; VIDEO → youtubeId.
-// coverImageUrl luôn dùng làm thumbnail ngoài danh sách. Với VIDEO mà không
-// có coverImageUrl, app có thể fallback về https://img.youtube.com/vi/{id}/maxresdefault.jpg.
-
-model Multimedia {
-  id   String         @id @default(cuid())
-  type MultimediaType
-  slug String         @unique
-
-  title      String
-  title_en   String?
-  title_zh   String?
-  title_ar   String?
-  excerpt    String?
-  excerpt_en String?
-  excerpt_zh String?
-  excerpt_ar String?
-
-  coverImageUrl String?
-  imageUrls     String[] @default([]) // PHOTO_COLLECTION: full gallery
-  youtubeId     String? // VIDEO: e.g. "dQw4w9WgXcQ"
-
-  isPublished Boolean   @default(true)
-  isPinned    Boolean   @default(false)
-  publishedAt DateTime?
-  viewCount   Int       @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([type, isPublished, publishedAt])
-  @@index([isPublished, isPinned, publishedAt])
-  @@index([slug])
-  @@map("multimedia")
 }
 
 // ============================================================

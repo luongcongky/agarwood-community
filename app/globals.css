@@ -165,11 +165,15 @@
    (ContentImageEditor đã crop 16:9 sẵn). Figure block-level width 100%,
    img stretch full → tự responsive trên mobile. Inline style width="Xpx"
    từ drag-resize sẽ override (specificity inline > class selector).
-   Caption text-align center hoạt động cho cả full-width lẫn ảnh đã resize. */
+   Caption text-align center hoạt động cho cả full-width lẫn ảnh đã resize.
+
+   Round 4 (2026-04): bỏ max-width 960px — chiều rộng tối đa do article
+   container kiểm soát (ví dụ .prose-article max-w-3xl), không cần cap
+   tại figure level. Cap cũ khiến container > 960px (admin editor desktop,
+   feed editor) thấy hình bị thu lại + lề trắng 2 bên. */
 .prose :where(figure):not(:where([class~="not-prose"] *)) {
   display: block;
   width: 100%;
-  max-width: 960px;
   margin: 1.5em auto;
 }
 .prose :where(figure img):not(:where([class~="not-prose"] *)) {

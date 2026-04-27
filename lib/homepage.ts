@@ -2,6 +2,7 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { prisma } from "./prisma"
 import type { PostCategory, NewsCategory } from "@prisma/client"
+import { newsToMultimedia } from "./multimedia-from-news"
 
 /**
  * Data fetchers cho trang chủ báo chí (Phase 3).
@@ -376,10 +377,13 @@ const getMergedFeedCached = unstable_cache(
 )
 
 // ── Multimedia Section: ảnh bộ sưu tập + video YouTube ──────────────────────
+// Phase 3.7 round 4 (2026-04): bảng Multimedia đã merge vào News (template
+// PHOTO/VIDEO). Đọc từ News, adapt qua newsToMultimedia() để giữ shape data
+// mà MultimediaSection.tsx + UI cũ đang dùng.
 
-const MULTIMEDIA_CARD_SELECT = {
+const MULTIMEDIA_NEWS_SELECT = {
   id: true,
-  type: true,
+  template: true,
   slug: true,
   title: true,
   title_en: true,
@@ -390,23 +394,26 @@ const MULTIMEDIA_CARD_SELECT = {
   excerpt_zh: true,
   excerpt_ar: true,
   coverImageUrl: true,
-  imageUrls: true,
-  youtubeId: true,
+  gallery: true,
   publishedAt: true,
   isPinned: true,
 } as const
 
 export const getLatestMultimedia = unstable_cache(
   async (take = 3) => {
-    return prisma.multimedia.findMany({
-      where: { isPublished: true },
+    const rows = await prisma.news.findMany({
+      where: { isPublished: true, template: { in: ["PHOTO", "VIDEO"] } },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take,
-      select: MULTIMEDIA_CARD_SELECT,
+      select: MULTIMEDIA_NEWS_SELECT,
+    })
+    return rows.flatMap((n) => {
+      const mapped = newsToMultimedia(n)
+      return mapped ? [mapped] : []
     })
   },
   ["homepage_multimedia"],
-  { revalidate: 300, tags: ["homepage", "multimedia"] },
+  { revalidate: 300, tags: ["homepage", "multimedia", "news"] },
 )
 
 /**
@@ -416,15 +423,20 @@ export const getLatestMultimedia = unstable_cache(
  */
 export const getMultimediaByType = unstable_cache(
   async (type: "PHOTO_COLLECTION" | "VIDEO", take = 3) => {
-    return prisma.multimedia.findMany({
-      where: { isPublished: true, type },
+    const template = type === "PHOTO_COLLECTION" ? "PHOTO" : "VIDEO"
+    const rows = await prisma.news.findMany({
+      where: { isPublished: true, template },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take,
-      select: MULTIMEDIA_CARD_SELECT,
+      select: MULTIMEDIA_NEWS_SELECT,
+    })
+    return rows.flatMap((n) => {
+      const mapped = newsToMultimedia(n)
+      return mapped ? [mapped] : []
     })
   },
   ["homepage_multimedia_by_type"],
-  { revalidate: 300, tags: ["homepage", "multimedia"] },
+  { revalidate: 300, tags: ["homepage", "multimedia", "news"] },
 )
 
 // ── Type exports cho components ──────────────────────────────────────────────

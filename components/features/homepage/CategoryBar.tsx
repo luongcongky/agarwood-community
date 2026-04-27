@@ -74,17 +74,28 @@ export function CategoryBar({ loggedIn = false }: Props) {
     <nav
       aria-label={t("categoriesLabel")}
       /* `sticky top-0` — thanh pin đầu viewport khi scroll.
-         `shadow-md` + `isolation-isolate`: visual feedback rõ hơn khi stuck
-         và tạo stacking context riêng để tránh bị content overlay trên
-         một số trình duyệt mobile.
+         `isolation-isolate`: tạo stacking context riêng để tránh bị content
+         overlay trên một số trình duyệt mobile.
          `will-change: transform` hint cho GPU layer → giảm jitter iOS Safari
-         khi URL bar collapse/expand lúc scroll. */
-      className="sticky top-0 z-40 isolate bg-brand-700 text-white shadow-md will-change-transform"
+         khi URL bar collapse/expand lúc scroll.
+         `bg-white pt-0.5 sm:pt-2` (Phase 3.7 round 4 — 2026-04): outer nav
+         nền trắng khớp masthead. Mobile chừa 2px trắng (badge -top-0.5),
+         desktop chừa 8px trắng (badge sm:-top-2) — đủ để badge "Demo" trên
+         menu MXH nằm gọn trong vùng trắng nav, không bị viewport top cắt
+         khi nav đang sticky-pinned.
+         Brown strip + shadow-md được chuyển xuống inner div để effect đúng
+         với phần menu (không phải vùng trắng padding). */
+      className="sticky top-0 z-40 isolate bg-white will-change-transform pt-0.5 sm:pt-2"
     >
+      <div className="bg-brand-700 text-white shadow-md">
       <div className="mx-auto max-w-7xl px-2 sm:px-4">
         {/* overflow-x-auto on mobile để scroll ngang; lg:overflow-visible để
-            dropdown của "Giới thiệu" không bị clip trên desktop. */}
-        <ul className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] lg:overflow-visible">
+            dropdown của "Giới thiệu" không bị clip trên desktop.
+            `pt-0.5 sm:pt-0` (Phase 3.7 round 4): mobile có 2px padding-top
+            để badge Demo (-top-0.5) khớp ngay ul-top (không bị overflow-y-hidden
+            của ul cắt mất). Desktop reset về 0 vì badge ở vùng trắng nav
+            (sm:pt-2) và ul:lg:overflow-visible đã không cắt. */}
+        <ul className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] pt-0.5 sm:pt-0 lg:overflow-visible">
           {CATEGORIES.map((item) => {
             const active = isItemActive(item, pathname)
             const triggerClass = [
@@ -157,7 +168,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                     CSS badge: rõ ràng, scale chuẩn, không phụ thuộc asset. */}
                 {item.labelKey === "socialFeed" && (
                   <span
-                    className="pointer-events-none absolute right-0.5 top-0 inline-flex items-center justify-center rounded-md bg-red-600 px-1 py-px text-[8px] font-extrabold uppercase tracking-wide text-white shadow-md ring-1 ring-red-700/40 sm:right-1 sm:-top-1.5 sm:px-1.5 sm:py-0.5 sm:text-[10px] sm:tracking-wider"
+                    className="pointer-events-none absolute right-0.5 -top-0.5 inline-flex items-center justify-center rounded-md bg-red-600 px-1 py-px text-[8px] font-extrabold uppercase tracking-wide text-white shadow-md ring-1 ring-red-700/40 sm:right-1 sm:-top-2 sm:px-1.5 sm:py-0.5 sm:text-[10px] sm:tracking-wider"
                     title="Tính năng đang trong giai đoạn demo"
                   >
                     Demo
@@ -191,6 +202,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
             </>
           )}
         </ul>
+      </div>
       </div>
     </nav>
   )
