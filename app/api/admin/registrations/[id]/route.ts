@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { canAdminWrite } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import crypto from "crypto"
@@ -13,7 +13,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "member:approve")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

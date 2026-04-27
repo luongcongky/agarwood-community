@@ -1,12 +1,27 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import type { Committee } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { getMemberTier, getTierThresholds } from "@/lib/tier"
+import { COMMITTEE_LABELS, COMMITTEE_DESCRIPTIONS } from "@/lib/permissions"
 import { MemberDetailTabs } from "./MemberDetailTabs"
 import { InfiniteToggle } from "./InfiniteToggle"
+import { CommitteeAssignment } from "./CommitteeAssignment"
+import { MemberEditPanel } from "./MemberEditPanel"
+
+// Danh sách ban — đi qua Object.keys typed để khỏi hard-code ordering.
+// Nếu muốn order khác (Thường vụ → Chấp hành → …), sort riêng ở đây.
+const COMMITTEE_ORDER: Committee[] = [
+  "THUONG_VU",
+  "CHAP_HANH",
+  "KIEM_TRA",
+  "THAM_DINH",
+  "THU_KY",
+  "TRUYEN_THONG",
+]
 
 export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
@@ -21,7 +36,7 @@ export default async function MemberDetailPage({
 
   const { id } = await params
 
-  const [user, memberships, payments, honoraries, posts, certifications] = await Promise.all([
+  const [user, memberships, payments, honoraries, posts, certifications, committeeMemberships] = await Promise.all([
     prisma.user.findFirst({
       // Admin xem được cả VIP + GUEST (tài khoản cơ bản) — chỉ loại admin
       where: { id, role: { in: ["VIP", "GUEST", "INFINITE"] } },
@@ -116,6 +131,10 @@ export default async function MemberDetailPage({
         product: { select: { name: true, slug: true } },
       },
     }),
+    prisma.committeeMembership.findMany({
+      where: { userId: id },
+      select: { committee: true, position: true },
+    }),
   ])
 
   if (!user) notFound()
@@ -199,6 +218,36 @@ export default async function MemberDetailPage({
           <InfiniteToggle userId={user.id} currentRole={user.role} />
         )}
       </div>
+
+      {/* ── Edit thông tin (avatar + name + phone + bio) ───────────────── */}
+      {/* Chỉ ADMIN được dùng (canAdminWrite). INFINITE viewing thì không
+          render — server endpoint cũng reject. */}
+      {session.user.role === "ADMIN" && (
+        <MemberEditPanel
+          userId={user.id}
+          initial={{
+            name: user.name,
+            phone: user.phone,
+            bio: user.bio,
+            avatarUrl: user.avatarUrl,
+          }}
+        />
+      )}
+
+      {/* ── Phân bổ ban ─────────────────────────────────────────────────── */}
+      {/* Chỉ ADMIN được sửa (API /committees gate bằng canAdminWrite).
+          INFINITE vào trang này chỉ xem các ban, không sửa được — UI vẫn
+          render nhưng Save API reject 403. Hiện cả 2 để thống nhất view. */}
+      <CommitteeAssignment
+        userId={user.id}
+        userName={user.name}
+        currentMemberships={committeeMemberships}
+        committeeOptions={COMMITTEE_ORDER.map((key) => ({
+          key,
+          label: COMMITTEE_LABELS[key],
+          description: COMMITTEE_DESCRIPTIONS[key],
+        }))}
+      />
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
       <MemberDetailTabs

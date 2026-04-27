@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 export function PaymentActionRow({
   id,
@@ -19,6 +20,7 @@ export function PaymentActionRow({
 }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "rejected" | "rejecting">("idle")
   const [rejectReason, setRejectReason] = useState("")
   const [rejectError, setRejectError] = useState("")
@@ -28,6 +30,7 @@ export function PaymentActionRow({
     const res = await fetch(`/api/admin/payments/${id}/confirm`, { method: "POST" })
     if (res.ok) {
       setStatus("confirmed")
+      refreshPendingCounts()
       router.refresh()
     } else {
       setStatus("idle")
@@ -49,6 +52,7 @@ export function PaymentActionRow({
     })
     if (res.ok) {
       setStatus("rejected")
+      refreshPendingCounts()
       router.refresh()
     } else {
       setStatus("idle")

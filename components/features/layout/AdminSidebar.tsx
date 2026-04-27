@@ -33,12 +33,35 @@ import {
 import { cn } from "@/lib/utils"
 import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 import { NotificationBell } from "@/components/features/admin/NotificationBell"
+import {
+  useHasAdminPerm,
+} from "@/components/features/admin/AdminReadOnlyContext"
 import type { PendingWorkflowKey } from "@/app/api/admin/pending-counts/route"
 
 // ── Nav structure ──────────────────────────────────────────────────────────
 //
 // Mỗi group có `key` ổn định (dùng cho localStorage). Group có `items` rỗng
 // được render như link đơn lẻ (không có header).
+//
+// `requiredPerm`: nếu set, item chỉ hiện khi user có permission đó (hoặc
+// `admin:full` = ADMIN). Item không có `requiredPerm` = mặc định `admin:read`
+// (CHAP_HANH với `admin:read` vẫn thấy, không phân biệt ban nào).
+
+// Permission string dùng ở đây đồng bộ với `lib/permissions.ts` —
+// AdminReadOnlyContext export type tương tự (duplicate tay vì client bundle).
+type AdminPerm =
+  | "admin:read"
+  | "admin:full"
+  | "news:write"
+  | "news:publish"
+  | "post:moderate"
+  | "post:promote"
+  | "member:approve"
+  | "cert:review"
+  | "cert:approve"
+  | "payment:confirm"
+  | "document:write"
+  | "banner:approve"
 
 type NavItem = {
   label: string
@@ -47,6 +70,8 @@ type NavItem = {
   // When set, this menu item shows a red pending-count badge driven by
   // the admin notification polling context.
   pendingKey?: PendingWorkflowKey
+  /** Nếu set: chỉ hiển thị cho user có perm này (hoặc admin:full). */
+  requiredPerm?: AdminPerm
 }
 
 type NavGroup = {
@@ -66,8 +91,8 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Hội viên & Tổ chức",
     items: [
       { label: "Hội viên", href: "/admin/hoi-vien", icon: Users },
-      { label: "Đơn đăng ký", href: "/admin/hoi-vien?status=registration", icon: UserPlus, pendingKey: "newRegistration" },
-      { label: "Đơn kết nạp", href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck, pendingKey: "membershipApplication" },
+      { label: "Đơn đăng ký", href: "/admin/hoi-vien?status=registration", icon: UserPlus, pendingKey: "newRegistration", requiredPerm: "member:approve" },
+      { label: "Đơn kết nạp", href: "/admin/hoi-vien/don-ket-nap", icon: FileCheck, pendingKey: "membershipApplication", requiredPerm: "member:approve" },
       { label: "Ban lãnh đạo", href: "/admin/ban-lanh-dao", icon: Crown },
     ],
   },
@@ -75,7 +100,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     key: "products",
     label: "Sản phẩm & Chứng nhận",
     items: [
-      { label: "Chứng nhận", href: "/admin/chung-nhan", icon: BadgeCheck, pendingKey: "certification" },
+      { label: "Chứng nhận", href: "/admin/chung-nhan", icon: BadgeCheck, pendingKey: "certification", requiredPerm: "cert:approve" },
       { label: "Hội đồng thẩm định", href: "/admin/hoi-dong-tham-dinh", icon: Scale },
       { label: "Tiêu biểu", href: "/admin/tieu-bieu", icon: Star },
     ],
@@ -84,20 +109,21 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     key: "content",
     label: "Nội dung & Truyền thông",
     items: [
-      { label: "Tin tức", href: "/admin/tin-tuc", icon: Newspaper },
-      { label: "Multimedia", href: "/admin/multimedia", icon: Images },
+      { label: "Tin tức", href: "/admin/tin-tuc", icon: Newspaper, requiredPerm: "news:write" },
+      // Multimedia menu bỏ (Phase 3 2026-04) — News template=PHOTO/VIDEO
+      // tự động hiện ở /multimedia public, admin manage qua /admin/tin-tuc.
       { label: "Tài liệu", href: "/admin/tai-lieu", icon: FileText },
-      { label: "Văn bản pháp quy", href: "/admin/phap-ly", icon: Scale },
+      { label: "Văn bản pháp quy", href: "/admin/phap-ly", icon: Scale, requiredPerm: "document:write" },
       { label: "Truyền thông", href: "/admin/truyen-thong", icon: Megaphone, pendingKey: "mediaOrder" },
-      { label: "Banner QC", href: "/admin/banner", icon: ImageIcon, pendingKey: "banner" },
+      { label: "Banner QC", href: "/admin/banner", icon: ImageIcon, pendingKey: "banner", requiredPerm: "banner:approve" },
     ],
   },
   {
     key: "interaction",
     label: "Tương tác",
     items: [
-      { label: "Duyệt bài viết", href: "/admin/bai-viet/cho-duyet", icon: FileCheck, pendingKey: "post" },
-      { label: "Xin đẩy lên trang chủ", href: "/admin/bai-viet/xin-dang", icon: Star, pendingKey: "promotionRequest" },
+      { label: "Duyệt bài viết", href: "/admin/bai-viet/cho-duyet", icon: FileCheck, pendingKey: "post", requiredPerm: "post:moderate" },
+      { label: "Xin đẩy lên trang chủ", href: "/admin/bai-viet/xin-dang", icon: Star, pendingKey: "promotionRequest", requiredPerm: "post:promote" },
       { label: "Liên hệ", href: "/admin/lien-he", icon: Mail, pendingKey: "contact" },
       { label: "Báo cáo", href: "/admin/bao-cao", icon: Flag, pendingKey: "report" },
       { label: "Khảo sát", href: "/admin/khao-sat", icon: ClipboardList },
@@ -109,7 +135,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Đối tác & Tài chính",
     items: [
       { label: "Đối tác", href: "/admin/doi-tac", icon: Handshake },
-      { label: "Xác nhận CK", href: "/admin/thanh-toan", icon: BadgeCheck, pendingKey: "payment" },
+      { label: "Xác nhận CK", href: "/admin/thanh-toan", icon: BadgeCheck, pendingKey: "payment", requiredPerm: "payment:confirm" },
     ],
   },
   {
@@ -159,15 +185,53 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
 
-  // Group nào chứa route hiện tại
+  // Check mọi perm mà bất kỳ nav item nào require — các hook phải gọi unconditional.
+  const canMember = useHasAdminPerm("member:approve")
+  const canCertApprove = useHasAdminPerm("cert:approve")
+  const canNewsWrite = useHasAdminPerm("news:write")
+  const canDocWrite = useHasAdminPerm("document:write")
+  const canBannerApprove = useHasAdminPerm("banner:approve")
+  const canPostModerate = useHasAdminPerm("post:moderate")
+  const canPostPromote = useHasAdminPerm("post:promote")
+  const canPaymentConfirm = useHasAdminPerm("payment:confirm")
+
+  // Filter items theo perm. Items không có `requiredPerm` luôn show (chúng
+  // cần `admin:read` tối thiểu mà proxy đã gate rồi). Group rỗng sau filter
+  // không render luôn cả label.
+  const permMap: Record<string, boolean> = {
+    "member:approve": canMember,
+    "cert:approve": canCertApprove,
+    "news:write": canNewsWrite,
+    "document:write": canDocWrite,
+    "banner:approve": canBannerApprove,
+    "post:moderate": canPostModerate,
+    "post:promote": canPostPromote,
+    "payment:confirm": canPaymentConfirm,
+  }
+  const visibleGroups = useMemo(
+    () =>
+      ADMIN_NAV_GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (it) => !it.requiredPerm || permMap[it.requiredPerm] === true,
+        ),
+      })).filter((g) => g.items.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      canMember, canCertApprove, canNewsWrite, canDocWrite,
+      canBannerApprove, canPostModerate, canPostPromote, canPaymentConfirm,
+    ],
+  )
+
+  // Group nào chứa route hiện tại (sau filter)
   const activeGroupKey = useMemo(() => {
-    for (const g of ADMIN_NAV_GROUPS) {
+    for (const g of visibleGroups) {
       if (g.items.some((it) => pathname === it.href || pathname.startsWith(it.href + "/"))) {
         return g.key
       }
     }
     return null
-  }, [pathname])
+  }, [pathname, visibleGroups])
 
   // Hydrate sau mount: ưu tiên activeGroupKey (route hiện tại) → fallback localStorage.
   // Mỗi lần đổi route sang group khác, cũng tự mở group mới (đóng group cũ).
@@ -192,7 +256,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
 
   return (
     <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
-      {ADMIN_NAV_GROUPS.map((group) => {
+      {visibleGroups.map((group) => {
         const isStandalone = group.label === null
         // Trước hydration: chỉ mở group đứng riêng → tránh flicker SSR
         const isOpen = isStandalone || (hydrated && openKey === group.key)

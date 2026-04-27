@@ -149,20 +149,33 @@ export function NodeViewImage({
     img.style.height = height || ""
   }, [width, height, isResizing])
 
+  // Inner wrapper:
+  //  - Khi user resize (có width/height attr) → inline-block để wrapper co
+  //    về đúng kích thước user chọn, resize handles bám đúng góc ảnh.
+  //  - Khi không có width attr (default) → block để ảnh stretch full container
+  //    (match CSS public: figure img { width: 100% }). Customer round 3 fix.
+  const hasExplicitSize = !!width
+  const innerCls = hasExplicitSize ? "relative inline-block" : "relative block"
+
   return (
     <NodeViewWrapper
       ref={wrapperRef}
       className="tiptap-image-wrapper block w-full"
       style={{ textAlign: textAlign || undefined }}
     >
-      <div className="relative inline-block" data-drag-handle>
+      <div className={innerCls} data-drag-handle>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={imgRef}
           src={src}
           alt={alt ?? ""}
           title={title ?? ""}
-          className={`editor-image block rounded-md transition-shadow max-w-none! ${
+          className={`editor-image block rounded-md transition-shadow ${
+            // Khi default (no explicit size): chiếm full width container.
+            // Khi có size: max-w-none để inline style "width:Xpx" không bị
+            // tailwind max-width clamp.
+            hasExplicitSize ? "max-w-none!" : "w-full h-auto max-w-full"
+          } ${
             selected
               ? "ring-4 ring-brand-500 ring-offset-2"
               : "hover:ring-2 hover:ring-brand-300"

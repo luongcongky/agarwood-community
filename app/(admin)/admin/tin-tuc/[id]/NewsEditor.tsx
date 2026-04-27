@@ -12,10 +12,19 @@ import {
 import { slugify } from "@/lib/utils"
 import {
   useAdminCanPublishNews,
-  PUBLISH_LOCKED_TOOLTIP,
+  useAdminCurrentUser,
+  useHasAdminPerm,
 } from "@/components/features/admin/AdminReadOnlyContext"
 import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
 import { SeoEditorPanel } from "./SeoEditorPanel"
+import { UserPicker } from "@/app/(admin)/admin/ban-lanh-dao/UserPicker"
+import {
+  CompanyPicker,
+  type CompanySummary,
+  type ProductSummary,
+} from "./CompanyProductPickers"
+import { GalleryEditor, type GalleryItem, type GalleryEditorHandle } from "./GalleryEditor"
+import { ProductSidecar, type ProductSidecarHandle } from "./ProductSidecar"
 
 // Lazy-load để không kéo DOMPurify (~100KB) + 140 dòng JSX preview vào
 // chunk khởi tạo. Admin thường save rồi mới preview → load on-demand.
@@ -34,16 +43,33 @@ const CoverImageCropper = dynamic(
   { ssr: false },
 )
 
+type NewsCategoryUI =
+  | "GENERAL"
+  | "RESEARCH"
+  | "LEGAL"
+  | "BUSINESS"
+  | "PRODUCT"
+  | "EXTERNAL_NEWS"
+  | "AGRICULTURE"
+type NewsTemplateUI = "NORMAL" | "PHOTO" | "VIDEO"
+
 interface NewsData {
   title: string
   slug: string
   excerpt: string
   coverImageUrl: string
   content: string
-  category: "GENERAL" | "RESEARCH" | "LEGAL"
+  category: NewsCategoryUI
+  template: NewsTemplateUI
+  relatedCompanyId: string | null
+  relatedProductId: string | null
+  gallery: GalleryItem[] | null
   isPublished: boolean
   isPinned: boolean
   publishedAt: string
+  // Phase 3.5 (2026-04): EXTERNAL_NEWS — admin curate tin báo chí ngoài.
+  sourceName?: string | null
+  sourceUrl?: string | null
 }
 
 export default function NewsEditorPage({
@@ -57,6 +83,8 @@ export default function NewsEditorPage({
   // INFINITE được mở khóa để soạn/sửa tin tức — editor không còn bị gate
   // chung theo `readOnly` nữa. Chỉ gate riêng toggle Xuất bản (ADMIN only).
   const publishDisabled = !useAdminCanPublishNews()
+  const currentUser = useAdminCurrentUser()
+  const canPickAuthor = useHasAdminPerm("admin:full")
 
   const EMPTY_LANG: Record<Locale, string> = { vi: "", en: "", zh: "", ar: "" }
   const [title, setTitle] = useState<Record<Locale, string>>(EMPTY_LANG)
@@ -67,16 +95,55 @@ export default function NewsEditorPage({
   const [coverImageUrl, setCoverImageUrl] = useState("")
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState("")
-  const [category, setCategory] = useState<"GENERAL" | "RESEARCH" | "LEGAL">("GENERAL")
+  const [category, setCategory] = useState<NewsCategoryUI>("GENERAL")
+  const [template, setTemplate] = useState<NewsTemplateUI>("NORMAL")
+  const [relatedCompany, setRelatedCompany] = useState<CompanySummary | null>(null)
+  const [relatedProduct, setRelatedProduct] = useState<ProductSummary | null>(null)
+  const [gallery, setGallery] = useState<GalleryItem[]>([])
   const [isPublished, setIsPublished] = useState(false)
   const [isPinned, setIsPinned] = useState(false)
   const [publishedAt, setPublishedAt] = useState("")
+
+  /** Format Date thành chuỗi `YYYY-MM-DDTHH:MM` theo LOCAL timezone — đúng
+   *  format mà `<input type="datetime-local">` expect. Trước đây dùng
+   *  `.toISOString().slice(0, 16)` ra UTC nên giờ hiển thị sai múi giờ
+   *  (hoặc trống nếu DB null mà user thấy `mm/dd/yyyy --:-- --`). */
+  function toLocalDatetimeInput(input: string | Date): string {
+    const d = typeof input === "string" ? new Date(input) : input
+    if (Number.isNaN(d.getTime())) return ""
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  // Author selector — default = current user khi tạo mới; load từ news.author
+  // khi sửa. Chỉ admin:full được chọn author khác → UserPicker disable cho
+  // INFINITE/Ban Thư ký.
+  type AuthorSummary = {
+    id: string
+    name: string
+    email: string
+    avatarUrl: string | null
+    role: string
+    accountType: string
+    isActive: boolean
+    company: { name: string } | null
+  }
+  const [author, setAuthor] = useState<AuthorSummary | null>(null)
   const [initialContent, setInitialContent] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(!isNew)
   const [error, setError] = useState("")
   const [saved, setSaved] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+
+  // Phase 3.3 Q5 (2026-04): "Lời giới thiệu" cho category=PRODUCT — đoạn mở
+  // đầu admin viết riêng cho bài tin (1-2 câu). Server prepend vào News.content
+  // trước Product.description khi save. VI-only (rare cần dịch riêng intro).
+  const [newsIntro, setNewsIntro] = useState("")
+
+  // Phase 3.5 (2026-04): source attribution cho category=EXTERNAL_NEWS —
+  // admin curate tin báo chí ngoài, bắt buộc tên báo + URL bài gốc.
+  const [sourceName, setSourceName] = useState("")
+  const [sourceUrl, setSourceUrl] = useState("")
 
   // SEO state
   const [focusKeyword, setFocusKeyword] = useState("")
@@ -89,6 +156,8 @@ export default function NewsEditorPage({
   const setCoverImageAltField = (l: Locale, v: string) => setCoverImageAlt((p) => ({ ...p, [l]: v }))
 
   const editorRef = useRef<RichTextEditorHandle>(null)
+  const galleryRef = useRef<GalleryEditorHandle>(null)
+  const productSidecarRef = useRef<ProductSidecarHandle>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
   // ── Auto-translate cache (VI blur → EN/ZH/AR silent) ───────────────────
@@ -246,6 +315,21 @@ export default function NewsEditorPage({
     }
   }, [])
 
+  // Default author = current user khi tạo mới — admin có thể đổi via UserPicker.
+  useEffect(() => {
+    if (!isNew || author || !currentUser) return
+    setAuthor({
+      id: currentUser.id,
+      name: currentUser.name,
+      email: currentUser.email,
+      avatarUrl: currentUser.avatarUrl,
+      role: "",
+      accountType: "",
+      isActive: true,
+      company: null,
+    })
+  }, [isNew, author, currentUser])
+
   // Load existing news
   useEffect(() => {
     if (isNew) return
@@ -254,18 +338,68 @@ export default function NewsEditorPage({
       try {
         const res = await fetch(`/api/admin/news/${id}`)
         if (!res.ok) return
-        const { news }: { news: NewsData } = await res.json()
+        const { news, author: authorData }: { news: NewsData; author: AuthorSummary | null } = await res.json()
+        if (authorData) {
+          // Backfill optional fields nếu API không trả (UserPicker cần)
+          setAuthor({
+            ...authorData,
+            role: authorData.role ?? "",
+            accountType: authorData.accountType ?? "",
+            isActive: authorData.isActive ?? true,
+            company: authorData.company ?? null,
+          })
+        }
         setSlug(news.slug)
         setCoverImageUrl(news.coverImageUrl ?? "")
         setCoverPreview(news.coverImageUrl ?? "")
         setCategory(news.category ?? "GENERAL")
+        setTemplate(news.template ?? "NORMAL")
+        // Normalize gallery items: đảm bảo caption luôn là string (legacy
+        // data có thể thiếu field) → tránh React warning "uncontrolled to
+        // controlled" khi binding vào <input value>.
+        if (Array.isArray(news.gallery)) {
+          const raw = news.gallery as Array<Record<string, unknown>>
+          setGallery(
+            raw
+              .filter((g) => !!g && typeof g === "object")
+              .map((g) => ({
+                url: typeof g.url === "string" ? g.url : "",
+                caption: typeof g.caption === "string" ? g.caption : "",
+              }))
+              .filter((g) => g.url),
+          )
+        }
+        // Load company/product chi tiết qua API search by id (1 hit mỗi cái).
+        if (news.relatedCompanyId) {
+          fetch(`/api/admin/companies/search?q=${encodeURIComponent(news.relatedCompanyId)}&limit=1`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              const c = (d?.companies as CompanySummary[] | undefined)?.find(
+                (x) => x.id === news.relatedCompanyId,
+              )
+              if (c) setRelatedCompany(c)
+            })
+            .catch(() => {})
+        }
+        if (news.relatedProductId) {
+          fetch(`/api/admin/products/search?q=${encodeURIComponent(news.relatedProductId)}&limit=1`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              const p = (d?.products as ProductSummary[] | undefined)?.find(
+                (x) => x.id === news.relatedProductId,
+              )
+              if (p) setRelatedProduct(p)
+            })
+            .catch(() => {})
+        }
         setIsPublished(news.isPublished)
         setIsPinned(news.isPinned)
-        setPublishedAt(
-          news.publishedAt
-            ? new Date(news.publishedAt).toISOString().slice(0, 16)
-            : ""
-        )
+        setSourceName(news.sourceName ?? "")
+        setSourceUrl(news.sourceUrl ?? "")
+        // Load publishedAt theo LOCAL timezone (input datetime-local). Trước
+        // đây dùng toISOString → giờ UTC, sai múi giờ. Giờ dùng helper
+        // toLocalDatetimeInput.
+        setPublishedAt(news.publishedAt ? toLocalDatetimeInput(news.publishedAt) : "")
         setInitialContent(news.content ?? "")
         const n = news as unknown as Record<string, unknown>
         setTitle({
@@ -453,45 +587,103 @@ export default function NewsEditorPage({
       // Sync the currently-active locale's content with what's in the editor now.
       const finalContent = { ...content, [activeLocale]: activeHtml }
 
-      const body = {
-        title: title.vi,
-        title_en: title.en || null,
-        title_zh: title.zh || null,
-        title_ar: title.ar || null,
-        slug,
-        excerpt: excerpt.vi,
-        excerpt_en: excerpt.en || null,
-        excerpt_zh: excerpt.zh || null,
-        excerpt_ar: excerpt.ar || null,
-        coverImageUrl: finalCoverUrl,
-        content: finalContent.vi,
-        content_en: finalContent.en || null,
-        content_zh: finalContent.zh || null,
-        content_ar: finalContent.ar || null,
-        category,
-        isPublished,
-        isPinned,
-        publishedAt: publishedAt || null,
-        // SEO
-        focusKeyword: focusKeyword || null,
-        secondaryKeywords,
-        seoTitle: seoTitle.vi || null,
-        seoTitle_en: seoTitle.en || null,
-        seoTitle_zh: seoTitle.zh || null,
-        seoTitle_ar: seoTitle.ar || null,
-        seoDescription: seoDescription.vi || null,
-        seoDescription_en: seoDescription.en || null,
-        seoDescription_zh: seoDescription.zh || null,
-        seoDescription_ar: seoDescription.ar || null,
-        coverImageAlt: coverImageAlt.vi || null,
-        coverImageAlt_en: coverImageAlt.en || null,
-        coverImageAlt_zh: coverImageAlt.zh || null,
-        coverImageAlt_ar: coverImageAlt.ar || null,
-        // Yêu cầu server chạy after() dịch các locale content còn thiếu.
-        // Ngay cả khi user rời trang sau khi Save, translation tiếp tục
-        // server-side + lưu vào DB (xem lib/news-auto-translate.ts).
-        autoTranslateMissing: true,
+      // Gallery (template=PHOTO/VIDEO): upload các blob: URL lên Cloudinary,
+      // get items đã resolved → dùng làm payload `gallery`. Fail upload =>
+      // throw → catch ở handleSubmit hiển thị error, không save bài (tránh
+      // lưu gallery có blob URL local mà sau reload sẽ broken).
+      let finalGallery: GalleryItem[] = gallery
+      if (template !== "NORMAL" && galleryRef.current) {
+        try {
+          finalGallery = await galleryRef.current.processImages()
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Upload ảnh gallery thất bại")
+          setLoading(false)
+          return
+        }
       }
+
+      // Product sidecar (chỉ khi tạo News PRODUCT mới — Phase 3.3 Q5).
+      // Validate sớm trước khi gọi API để tránh upload thừa, error rõ ràng.
+      let productData: Awaited<ReturnType<NonNullable<typeof productSidecarRef.current>["collect"]>> | null = null
+      if (isNew && category === "PRODUCT") {
+        const validationError = productSidecarRef.current?.validate()
+        if (validationError) {
+          setError(validationError)
+          setLoading(false)
+          return
+        }
+        productData = (await productSidecarRef.current?.collect()) ?? null
+      }
+
+      // Phase 3.3 Q5: PRODUCT + isNew dùng simplified payload — chỉ gửi
+      // productData + intro. Server tự derive News.title/slug/excerpt/cover/
+      // content từ Product. I18n News cũng inherit từ Product. Tránh admin
+      // điền 2 lần (tên SP vs title bài, mô tả SP vs nội dung bài).
+      const productMode = isNew && category === "PRODUCT" && !!productData
+      const body = productMode
+        ? {
+            category,
+            template,
+            relatedCompanyId: relatedCompany?.id ?? null,
+            productData,
+            intro: newsIntro || null,
+            isPublished,
+            isPinned,
+            publishedAt: publishedAt || null,
+            ...(canPickAuthor && author ? { authorId: author.id } : {}),
+          }
+        : {
+            title: title.vi,
+            title_en: title.en || null,
+            title_zh: title.zh || null,
+            title_ar: title.ar || null,
+            slug,
+            excerpt: excerpt.vi,
+            excerpt_en: excerpt.en || null,
+            excerpt_zh: excerpt.zh || null,
+            excerpt_ar: excerpt.ar || null,
+            coverImageUrl: finalCoverUrl,
+            content: finalContent.vi,
+            content_en: finalContent.en || null,
+            content_zh: finalContent.zh || null,
+            content_ar: finalContent.ar || null,
+            category,
+            template,
+            relatedCompanyId: relatedCompany?.id ?? null,
+            // Tạo mới News PRODUCT → chỉ gửi `productData`, server tự tạo Product
+            // và set `relatedProductId`. Edit/khác category → giữ ID hiện tại.
+            relatedProductId: productData ? null : relatedProduct?.id ?? null,
+            productData,
+            gallery: template === "NORMAL" ? null : finalGallery,
+            isPublished,
+            isPinned,
+            publishedAt: publishedAt || null,
+            // Author override — chỉ admin:full được API accept; user khác bị
+            // strip ở server. Bỏ qua nếu không có (giữ author hiện tại).
+            ...(canPickAuthor && author ? { authorId: author.id } : {}),
+            // SEO
+            focusKeyword: focusKeyword || null,
+            secondaryKeywords,
+            seoTitle: seoTitle.vi || null,
+            seoTitle_en: seoTitle.en || null,
+            seoTitle_zh: seoTitle.zh || null,
+            seoTitle_ar: seoTitle.ar || null,
+            seoDescription: seoDescription.vi || null,
+            seoDescription_en: seoDescription.en || null,
+            seoDescription_zh: seoDescription.zh || null,
+            seoDescription_ar: seoDescription.ar || null,
+            coverImageAlt: coverImageAlt.vi || null,
+            coverImageAlt_en: coverImageAlt.en || null,
+            coverImageAlt_zh: coverImageAlt.zh || null,
+            coverImageAlt_ar: coverImageAlt.ar || null,
+            // Phase 3.5: source attribution cho EXTERNAL_NEWS.
+            sourceName: category === "EXTERNAL_NEWS" ? sourceName.trim() || null : null,
+            sourceUrl: category === "EXTERNAL_NEWS" ? sourceUrl.trim() || null : null,
+            // Yêu cầu server chạy after() dịch các locale content còn thiếu.
+            // Ngay cả khi user rời trang sau khi Save, translation tiếp tục
+            // server-side + lưu vào DB (xem lib/news-auto-translate.ts).
+            autoTranslateMissing: true,
+          }
 
       const res = await fetch(
         isNew ? "/api/admin/news" : `/api/admin/news/${id}`,
@@ -561,6 +753,45 @@ export default function NewsEditorPage({
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
+            {/* PRODUCT MODE — Phase 3.3 Q5 (2026-04, customer feedback)
+                ────────────────────────────────────────────────────────
+                Khi tạo mới + category=PRODUCT: ẩn toàn bộ News card + body
+                editor (title/slug/excerpt/cover/content) — server derive hết
+                từ Product. Admin chỉ điền Product fields + 1 đoạn intro
+                ngắn (optional). Tránh confusion 2 editor + 2 slug + 2
+                cover + i18n trùng lặp. */}
+            {isNew && category === "PRODUCT" ? (
+              <>
+                <ProductSidecar ref={productSidecarRef} uploadFolder="san-pham" />
+                <div className="rounded-xl border border-brand-200 bg-white p-5 shadow-sm space-y-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-brand-900">Lời giới thiệu (tuỳ chọn)</h3>
+                    <p className="mt-0.5 text-[11px] text-brand-500 leading-snug">
+                      1-2 câu mở đầu kiểu &quot;biên tập&quot; sẽ chèn lên đầu bài tin trước
+                      mô tả sản phẩm. Bỏ trống nếu chỉ cần đăng nguyên mô tả SP.
+                    </p>
+                  </div>
+                  <textarea
+                    value={newsIntro}
+                    onChange={(e) => setNewsIntro(e.target.value)}
+                    rows={3}
+                    placeholder="Ví dụ: Doanh nghiệp X vừa ra mắt dòng sản phẩm Y với công thức cải tiến..."
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
+                  />
+                  <div className="rounded-md bg-brand-50/60 border border-brand-200 px-3 py-2 text-[11px] text-brand-700 leading-relaxed">
+                    <p className="font-semibold text-brand-800 mb-1">📰 Bài tin sẽ tự động:</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>Tiêu đề = <strong>tên sản phẩm</strong></li>
+                      <li>Đường link = <code className="bg-white px-1 rounded">/tin-tuc/[slug-SP]</code></li>
+                      <li>Ảnh bìa = <strong>ảnh đại diện</strong> của SP</li>
+                      <li>Nội dung = lời giới thiệu (nếu có) + <strong>mô tả SP</strong></li>
+                      <li>Đa ngôn ngữ = lấy từ bản dịch SP (nếu có)</li>
+                    </ul>
+                  </div>
+                </div>
+              </>
+            ) : (
+            <>
             <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
               {/* Language tabs — controls title/excerpt/content together */}
               <LangTabsBar
@@ -723,24 +954,40 @@ export default function NewsEditorPage({
               )}
             </div>
 
-            {/* Rich text editor — content for the currently-active locale.
-                onUpdate is throttled inside the parent so the SEO panel sees
-                body-level criteria (H2, density, intro keyword, ...) update
-                in real time as the writer types. */}
-            <RichTextEditor
-              ref={editorRef}
-              initialContent={initialContent}
-              uploadFolder="tin-tuc"
-              onUpdate={handleEditorUpdate}
-              onBlur={(html) => {
-                // Trigger auto-translate khi VI editor mất focus. Dedupe ở
-                // `scheduleAutoTranslate` qua content-hash — in/out focus
-                // nhiều lần không đổi content → chỉ 1 API call.
-                if (activeLocaleRef.current === "vi") {
-                  scheduleAutoTranslate("content", html)
-                }
-              }}
-            />
+            {/* Body editor — đổi theo template:
+                NORMAL: RichTextEditor (text + ảnh + video chèn lẫn)
+                PHOTO/VIDEO: GalleryEditor (bulk upload + caption mỗi mục) */}
+            {template === "NORMAL" ? (
+              <RichTextEditor
+                ref={editorRef}
+                initialContent={initialContent}
+                uploadFolder="tin-tuc"
+                onUpdate={handleEditorUpdate}
+                onBlur={(html) => {
+                  // Trigger auto-translate khi VI editor mất focus. Dedupe ở
+                  // `scheduleAutoTranslate` qua content-hash — in/out focus
+                  // nhiều lần không đổi content → chỉ 1 API call.
+                  if (activeLocaleRef.current === "vi") {
+                    scheduleAutoTranslate("content", html)
+                  }
+                }}
+              />
+            ) : (
+              <div className="rounded-xl border border-brand-200 bg-white p-4">
+                <p className="mb-3 text-sm font-semibold text-brand-900">
+                  {template === "PHOTO" ? "Bộ ảnh" : "Danh sách video"}
+                </p>
+                <GalleryEditor
+                  ref={galleryRef}
+                  mode={template}
+                  items={gallery}
+                  onChange={setGallery}
+                  uploadFolder="tin-tuc"
+                />
+              </div>
+            )}
+            </>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -748,63 +995,150 @@ export default function NewsEditorPage({
             <div className="rounded-xl border bg-white p-5 shadow-sm space-y-4">
               <h2 className="text-sm font-bold text-brand-900">Cài đặt xuất bản</h2>
 
-              {/* Category */}
+              {/* Category — Phase 3 (2026-04): 5 loại + conditional fields.
+                  Sau khi tạo: KHÓA không cho đổi category — đổi loại sẽ phá
+                  vỡ ngữ nghĩa bài (vd PRODUCT đổi sang GENERAL → mất link
+                  product, slug có thể conflict, v.v.). Muốn đổi: xóa + tạo
+                  bài mới. */}
               <div>
                 <label className="block text-xs font-medium text-brand-800 mb-1">
                   Phân loại bài
                 </label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as "GENERAL" | "RESEARCH" | "LEGAL")}
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  disabled={!isNew}
+                  onChange={(e) => {
+                    const c = e.target.value as NewsCategoryUI
+                    setCategory(c)
+                    // Clear pickers khi đổi sang loại không cần
+                    if (c !== "BUSINESS" && c !== "PRODUCT") {
+                      setRelatedCompany(null)
+                      setRelatedProduct(null)
+                    }
+                    if (c !== "PRODUCT") setRelatedProduct(null)
+                  }}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50/50 disabled:text-brand-500 disabled:cursor-not-allowed"
                 >
                   <option value="GENERAL">Tin tức (/tin-tuc)</option>
                   <option value="RESEARCH">Nghiên cứu khoa học (/nghien-cuu)</option>
+                  <option value="BUSINESS">Tin doanh nghiệp</option>
+                  {/* Phase 3.5 (2026-04): PRODUCT đã ẩn khỏi flow tạo mới —
+                      khách hàng yêu cầu admin chỉ tạo SP qua /feed/tao-bai.
+                      Vẫn giữ option khi edit bài PRODUCT cũ để không break load. */}
+                  {!isNew && category === "PRODUCT" && (
+                    <option value="PRODUCT">Tin sản phẩm</option>
+                  )}
+                  <option value="EXTERNAL_NEWS">Tin báo chí ngoài (/tin-bao-chi)</option>
+                  <option value="AGRICULTURE">Tin khuyến nông (/khuyen-nong)</option>
                   <option value="LEGAL">Văn bản pháp lý (/privacy, /terms)</option>
                 </select>
                 <p className="mt-1 text-[11px] text-brand-400 leading-snug">
-                  Tin tức → /tin-tuc. Nghiên cứu khoa học → /nghien-cuu. Văn bản pháp lý chỉ hiển thị
-                  ở /privacy hoặc /terms (theo slug <code>chinh-sach-bao-mat</code>, <code>dieu-khoan-su-dung</code>).
+                  {isNew
+                    ? "Tin doanh nghiệp cần chọn DN bên dưới. Tin báo chí ngoài cần điền nguồn báo + URL bài gốc."
+                    : "Phân loại đã chốt khi tạo bài, không đổi được. Muốn đổi: xóa và tạo bài mới."}
                 </p>
               </div>
 
-              {/* Published toggle — chỉ ADMIN bật được. INFINITE thấy toggle
-                  mờ + tooltip giải thích phải chờ admin duyệt. Server cũng
-                  strip `isPublished` khỏi PATCH body nếu user không có
-                  quyền, không chỉ dựa vào UI. */}
-              <label
-                className={`flex items-center gap-3 ${publishDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-                title={publishDisabled ? PUBLISH_LOCKED_TOOLTIP : undefined}
-              >
-                <div
-                  onClick={() => {
-                    if (publishDisabled) return
-                    setIsPublished((v) => !v)
-                  }}
-                  aria-disabled={publishDisabled}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    isPublished ? "bg-green-500" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      isPublished ? "translate-x-5" : "translate-x-1"
-                    }`}
+              {/* Phase 3.5 (2026-04): EXTERNAL_NEWS bắt buộc nguồn báo + URL.
+                  Validate ở client (required) + server (API trả 400 nếu thiếu). */}
+              {category === "EXTERNAL_NEWS" && (
+                <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                  <label className="block text-xs font-medium text-brand-800">
+                    Tên báo nguồn <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={sourceName}
+                    onChange={(e) => setSourceName(e.target.value)}
+                    placeholder='Ví dụ: VnExpress, Tuổi Trẻ, Báo Nông Nghiệp'
+                    required
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                   />
+                  <label className="block text-xs font-medium text-brand-800 mt-2">
+                    URL bài gốc <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="https://vnexpress.net/..."
+                    required
+                    pattern="https?://.+"
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs font-mono focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  />
+                  <p className="text-[11px] text-brand-500 leading-snug">
+                    Trang chi tiết sẽ hiển thị attribution &quot;Theo {sourceName || "[tên báo]"}&quot;
+                    + nút &quot;Đọc bài gốc&quot;. Nội dung bài là tóm tắt/biên tập của ban biên
+                    tập hội — không copy nguyên văn để tránh bản quyền.
+                  </p>
                 </div>
-                <span className="text-sm text-brand-800">Xuất bản</span>
-                {publishDisabled && (
-                  <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-                    Chỉ Admin
-                  </span>
-                )}
-              </label>
-              {publishDisabled && (
-                <p className="-mt-2 text-[11px] leading-snug text-amber-700">
-                  Tài khoản Infinite soạn bài và lưu nháp. Admin sẽ review + bật
-                  xuất bản khi bài sẵn sàng.
-                </p>
               )}
+
+              {/* Conditional pickers — BUSINESS/PRODUCT chỉ định DN. PRODUCT
+                  cũ (đã có relatedProductId) hiển thị link tới SP đã tạo;
+                  PRODUCT mới (Phase 3.3 Q5 2026-04) tạo SP qua sidecar dưới
+                  main column → ở đây không pick SP nữa. */}
+              {(category === "BUSINESS" || category === "PRODUCT") && (
+                <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                  <label className="block text-xs font-medium text-brand-800">
+                    Doanh nghiệp <span className="text-red-600">*</span>
+                  </label>
+                  <CompanyPicker
+                    value={relatedCompany}
+                    onChange={(c) => {
+                      setRelatedCompany(c)
+                    }}
+                  />
+
+                  {category === "PRODUCT" && !isNew && relatedProduct && (
+                    <div className="mt-2 rounded-md border border-brand-200 bg-white px-3 py-2 text-xs">
+                      <p className="font-medium text-brand-800">Sản phẩm đã tạo</p>
+                      <Link
+                        href={`/san-pham/${relatedProduct.slug}`}
+                        target="_blank"
+                        className="text-brand-700 underline hover:text-brand-900"
+                      >
+                        {relatedProduct.name}
+                      </Link>
+                    </div>
+                  )}
+
+                  {category === "PRODUCT" && isNew && (
+                    <p className="mt-2 text-[11px] text-brand-500 leading-snug">
+                      Hệ thống sẽ tự tạo SP mới khi lưu bài — điền thông tin
+                      ở panel <strong>&quot;Thông tin sản phẩm mới&quot;</strong> bên trái.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Template — quyết định layout. Sau khi tạo: KHÓA không cho
+                  đổi (đổi NORMAL ↔ PHOTO/VIDEO sẽ mất content RichText hoặc
+                  gallery, không recoverable). Muốn đổi: xóa + tạo lại. */}
+              <div>
+                <label className="block text-xs font-medium text-brand-800 mb-1">
+                  Dạng bài
+                </label>
+                <select
+                  value={template}
+                  disabled={!isNew}
+                  onChange={(e) => setTemplate(e.target.value as NewsTemplateUI)}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50/50 disabled:text-brand-500 disabled:cursor-not-allowed"
+                >
+                  <option value="NORMAL">Bình thường (text + ảnh + video)</option>
+                  <option value="PHOTO">Tin ảnh (gallery + caption)</option>
+                  <option value="VIDEO">Tin video (URL + caption)</option>
+                </select>
+                <p className="mt-1 text-[11px] text-brand-400 leading-snug">
+                  {isNew
+                    ? "Tin ảnh / Tin video tự động hiển thị ở mục Multimedia tương ứng."
+                    : "Dạng bài đã chốt khi tạo, không đổi được."}
+                </p>
+              </div>
+
+              {/* Toggle "Xuất bản" đã bỏ — dùng nút "Xuất bản" ở khu hành động
+                  dưới (Save / Preview / Publish) để đổi trạng thái + lưu cùng
+                  lúc. Hoặc quick toggle pill ngay trên list /admin/tin-tuc. */}
 
               {/* Pinned toggle */}
               <label className="flex items-center gap-3 cursor-pointer">
@@ -834,6 +1168,37 @@ export default function NewsEditorPage({
                   onChange={(e) => setPublishedAt(e.target.value)}
                   className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                 />
+              </div>
+
+              {/* Author selector — chỉ admin:full được đổi (others readonly).
+                  Default = current user, có thể chọn hội viên khác để đăng hộ.
+                  API enforce permission ở server, UI chỉ là preview. */}
+              <div>
+                <label className="block text-xs font-medium text-brand-800 mb-1">
+                  Tác giả
+                </label>
+                {canPickAuthor ? (
+                  <UserPicker
+                    value={author}
+                    onChange={setAuthor}
+                    unlinkLabel="Đổi"
+                    unlinkTitle="Bỏ chọn để chọn tác giả khác"
+                    placeholder="Tìm tác giả theo tên hoặc email..."
+                    hint=""
+                  />
+                ) : author ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/40 px-3 py-2 text-sm text-brand-700">
+                    <span className="font-semibold">{author.name}</span>
+                    <span className="text-xs text-brand-500">{author.email}</span>
+                  </div>
+                ) : (
+                  <p className="text-xs italic text-brand-400">Mặc định = bạn</p>
+                )}
+                {canPickAuthor && (
+                  <p className="mt-1 text-[11px] leading-snug text-brand-400">
+                    Mặc định là bạn. Chọn hội viên khác để đăng hộ tác giả khác.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -873,25 +1238,51 @@ export default function NewsEditorPage({
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
-            >
-              {loading
-                ? "Đang lưu..."
-                : isNew
-                ? "Tạo tin tức"
-                : "Lưu thay đổi"}
-            </button>
+            {/* Action buttons — order: Lưu → Xem trước → Xuất bản (theo
+                yêu cầu khách 2026-04). Publish button chỉ hiện cho user có
+                news:publish; thay cho việc bấm toggle "Xuất bản" ở sidebar. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "Đang lưu..." : isNew ? "Tạo tin tức" : "Lưu"}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              className="w-full rounded-lg border border-brand-300 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
-            >
-              Xem trước bài viết
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowPreview(true)}
+                className="rounded-lg border border-brand-300 px-4 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+              >
+                Xem trước
+              </button>
+
+              {!publishDisabled && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  onClick={() => {
+                    setIsPublished(true)
+                    // Auto-fill ngày xuất bản = NOW (local) khi user publish
+                    // mà field còn trống → đảm bảo bài luôn có publishedAt
+                    // hợp lệ (sort theo publishedAt ở public list cần value).
+                    // Giữ nguyên giá trị cũ nếu user đã set tay.
+                    if (!publishedAt) {
+                      setPublishedAt(toLocalDatetimeInput(new Date()))
+                    }
+                  }}
+                  title={
+                    isPublished
+                      ? "Bài đã xuất bản — bấm Lưu để cập nhật"
+                      : "Bật xuất bản và lưu ngay"
+                  }
+                  className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                >
+                  {isPublished ? "✓ Đã xuất bản" : "Xuất bản"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </form>
@@ -905,6 +1296,8 @@ export default function NewsEditorPage({
           publishedAt={publishedAt}
           displayCover={displayCover}
           previewContent={editorRef.current?.getHTML() ?? ""}
+          template={template}
+          gallery={gallery}
           onClose={() => setShowPreview(false)}
         />
       )}

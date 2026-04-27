@@ -13,6 +13,10 @@ const CATEGORIES: NavItem[] = [
   { labelKey: "home", href: "/" },
   { labelKey: "news", href: "/tin-tuc" },
   { labelKey: "research", href: "/nghien-cuu" },
+  // Phase 3.5 (2026-04): 2 menu mới — tin báo chí ngoài + khuyến nông.
+  // Tin báo chí ẩn theo yêu cầu khách (giữ route + admin editor để
+  // tương lai bật lại không tốn refactor).
+  { labelKey: "agriculture", href: "/khuyen-nong" },
   { labelKey: "socialFeed", href: "/feed" },
   { labelKey: "businesses", href: "/doanh-nghiep" },
   { labelKey: "products", href: "/san-pham-chung-nhan" },
@@ -137,7 +141,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                 </ul>
               </li>
             ) : (
-              <li key={item.href}>
+              <li key={item.href} className="relative">
                 <Link
                   href={item.href}
                   className={triggerClass}
@@ -145,6 +149,20 @@ export function CategoryBar({ loggedIn = false }: Props) {
                 >
                   {t(item.labelKey)}
                 </Link>
+                {/* Phase 3.7 (2026-04): badge demo cho MXH Trầm Hương —
+                    nhắc user tính năng đang ở giai đoạn beta. Dùng CSS
+                    thuần thay vì PNG vì file demo_icon.png có pixel xung
+                    quanh bubble là white-opaque (alpha=255) — bất kỳ blend
+                    mode nào cũng phá readability của chữ DEMO trong bubble.
+                    CSS badge: rõ ràng, scale chuẩn, không phụ thuộc asset. */}
+                {item.labelKey === "socialFeed" && (
+                  <span
+                    className="pointer-events-none absolute right-0.5 top-0 inline-flex items-center justify-center rounded-md bg-red-600 px-1 py-px text-[8px] font-extrabold uppercase tracking-wide text-white shadow-md ring-1 ring-red-700/40 sm:right-1 sm:-top-1.5 sm:px-1.5 sm:py-0.5 sm:text-[10px] sm:tracking-wider"
+                    title="Tính năng đang trong giai đoạn demo"
+                  >
+                    Demo
+                  </span>
+                )}
               </li>
             )
           })}

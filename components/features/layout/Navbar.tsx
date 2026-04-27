@@ -59,12 +59,17 @@ export async function Navbar() {
   const headerLocale = headersList.get("x-locale")
   const locale: Locale = headerLocale && isValidLocale(headerLocale) ? headerLocale : defaultLocale
 
-  // Fetch accountType cho VIP users + social links + menu tree (1 round-trip)
+  // Fetch accountType + company (nếu có) cho user + social links + menu tree
+  // trong 1 round-trip. `company` non-null → UserMenu hiện item "Quản lý
+  // doanh nghiệp". Query `include` rẻ vì Company.ownerId là unique index.
   const [dbUser, socialConfigs, menuTree] = await Promise.all([
-    session?.user?.id && role === "VIP"
+    session?.user?.id
       ? prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { accountType: true },
+          select: {
+            accountType: true,
+            company: { select: { name: true, slug: true } },
+          },
         })
       : Promise.resolve(null),
     prisma.siteConfig.findMany({
@@ -107,6 +112,9 @@ export async function Navbar() {
     role === "INFINITE" || role === "ADMIN"
       ? true
       : role === "VIP" && !!expires && new Date(expires) > new Date()
+  // Đại diện doanh nghiệp = user có Company linked (Company.ownerId=userId).
+  // Không giới hạn theo accountType — admin cũng có thể linked company.
+  const userCompany = dbUser?.company ?? null
   const socialMap = Object.fromEntries(socialConfigs.map((c) => [c.key, c.value]))
   const facebookUrl = socialMap.facebook_url || null
   const youtubeUrl = socialMap.youtube_url || null
@@ -166,6 +174,7 @@ export async function Navbar() {
                   accountType={accountType}
                   mode={mode}
                   membershipActive={membershipActive}
+                  company={userCompany}
                 />
               ) : (
                 <div className="flex items-center gap-2 shrink-0">
@@ -232,6 +241,7 @@ export async function Navbar() {
                   accountType={accountType}
                   mode={mode}
                   membershipActive={membershipActive}
+                  company={userCompany}
                 />
               )}
               <NavMobile

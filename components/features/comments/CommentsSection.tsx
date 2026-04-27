@@ -35,12 +35,15 @@ function getInitials(name: string) {
 }
 
 /**
- * Reusable comments section for both Post and Product detail pages.
- * Pass either `postId` or `productId` to load/create comments.
+ * Reusable comments section for Post / Product / News detail pages.
+ * Truyền đúng 1 trong 3: `postId` | `productId` | `newsId`.
+ *
+ * Phase 3.4 (2026-04): thêm newsId target cho /tin-tuc + /nghien-cuu detail.
  */
 export function CommentsSection({
   postId,
   productId,
+  newsId,
   currentUserId,
   currentUserRole,
   currentUserName,
@@ -48,6 +51,7 @@ export function CommentsSection({
 }: {
   postId?: string
   productId?: string
+  newsId?: string
   currentUserId: string | null
   currentUserRole?: string | null
   currentUserName?: string | null
@@ -62,7 +66,11 @@ export function CommentsSection({
 
   useEffect(() => setIsMounted(true), [])
 
-  const queryKey = postId ? `postId=${postId}` : `productId=${productId}`
+  const queryKey = postId
+    ? `postId=${postId}`
+    : productId
+      ? `productId=${productId}`
+      : `newsId=${newsId}`
 
   const loadComments = useCallback(async () => {
     try {
@@ -87,6 +95,7 @@ export function CommentsSection({
           content: newComment.trim(),
           postId: postId || null,
           productId: productId || null,
+          newsId: newsId || null,
           parentId: replyTo?.id || null,
         }),
       })

@@ -20,7 +20,10 @@ export function BannerLeaderboard({ banners }: { banners: BannerItem[] }) {
   if (displayed.length === 0) return null
 
   return (
-    <div className="mx-auto flex aspect-970/90 max-w-[970px] gap-3">
+    // Phase 3.7 (2026-04): bỏ max-w 970px, để banner trải full chiều ngang
+    // container homepage (max-w-7xl + px-4 từ page wrapper) → biên trái/phải
+    // bằng container web. Aspect ratio 970:90 vẫn giữ → height tự scale.
+    <div className="flex aspect-970/90 w-full gap-3">
       {displayed.map((banner, idx) => {
         const wrapperClass = "relative flex-1 overflow-hidden bg-neutral-100"
         const media = (

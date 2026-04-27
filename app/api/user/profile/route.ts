@@ -13,6 +13,8 @@ export async function PATCH(request: Request) {
   const {
     name,
     phone,
+    bio,
+    avatarUrl,
     bankAccountName,
     bankAccountNumber,
     bankName,
@@ -23,6 +25,18 @@ export async function PATCH(request: Request) {
   const updateData: Record<string, unknown> = {}
   if (name) updateData.name = name
   if (phone !== undefined) updateData.phone = phone
+  if (bio !== undefined) updateData.bio = typeof bio === "string" ? bio.trim() || null : null
+  // Phase 3.7 (2026-04): owner đổi avatar. Accept Cloudinary URL hoặc null
+  // (xoá). Validate origin để chặn arbitrary URL injection.
+  if (avatarUrl !== undefined) {
+    if (avatarUrl === null || avatarUrl === "") {
+      updateData.avatarUrl = null
+    } else if (typeof avatarUrl === "string" && /^https:\/\/res\.cloudinary\.com\//.test(avatarUrl)) {
+      updateData.avatarUrl = avatarUrl
+    } else {
+      return NextResponse.json({ error: "URL avatar không hợp lệ" }, { status: 400 })
+    }
+  }
   if (bankAccountName !== undefined) updateData.bankAccountName = bankAccountName
   if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber
   if (bankName !== undefined) updateData.bankName = bankName

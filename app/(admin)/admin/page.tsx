@@ -3,6 +3,7 @@ import { getTierThresholds } from "@/lib/tier"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DashboardChartsLoader } from "./DashboardChartsLoader"
+import { ActionQueueBadges } from "./ActionQueueBadges"
 
 export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
@@ -17,9 +18,6 @@ function timeAgo(d: Date) {
 
 export default async function AdminDashboardPage() {
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const yearStart = new Date(now.getFullYear(), 0, 1)
-  const thirtyDays = new Date(now.getTime() + 30 * 86400000)
   const sevenDays = new Date(now.getTime() - 7 * 86400000)
   const twentyFourHours = new Date(now.getTime() - 24 * 3600000)
   const fortyEightHours = new Date(now.getTime() - 48 * 3600000)
@@ -27,56 +25,29 @@ export default async function AdminDashboardPage() {
   twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1)
 
   const [
-    activeVIP, maxSlotCfg, monthRevenue, yearRevenue,
-    certApproved, certNewThisMonth, mediaActive, mediaProcessing,
-    totalPosts, pendingReports,
-    expiringMembers, pendingPayments24h, longPendingCerts,
+    // SLA breach counts — drive RED alert panel
+    pendingPayments24h, longPendingCerts,
     unhandledReports48h, membershipExpiresToday,
-    expiringMembersWeek, pendingCertsWeek, newMediaUnconfirmed48h,
-    pendingVIPActivation, newActivatedVIP, certApprovedRecent, mediaCompleted,
-    monthlyPayments, newVIPUsers, tierCounts,
+    // YELLOW — soon-to-be-urgent
+    expiringMembersWeek, newMediaUnconfirmed48h, pendingVIPActivation,
+    // Charts data
+    monthlyPayments, tierCounts,
+    // Activity feed
     recentPayments, recentCerts, recentMedia, recentUsers,
   ] = await Promise.all([
-    // KPI 1: Active VIP
-    prisma.user.count({ where: { role: "VIP", isActive: true, membershipExpires: { gt: now } } }),
-    prisma.siteConfig.findUnique({ where: { key: "max_vip_accounts" } }),
-    // KPI 2: Monthly revenue
-    prisma.payment.aggregate({ where: { status: "SUCCESS", createdAt: { gte: monthStart } }, _sum: { amount: true } }),
-    // KPI 3: Yearly revenue
-    prisma.payment.aggregate({ where: { status: "SUCCESS", createdAt: { gte: yearStart } }, _sum: { amount: true } }),
-    // KPI 4: Certified products
-    prisma.product.count({ where: { certStatus: "APPROVED" } }),
-    prisma.certification.count({ where: { status: "APPROVED", approvedAt: { gte: monthStart } } }),
-    // KPI 5: Media orders active
-    prisma.mediaOrder.count({ where: { status: { notIn: ["COMPLETED", "CANCELLED"] } } }),
-    prisma.mediaOrder.count({ where: { status: "IN_PROGRESS" } }),
-    // KPI 6: Posts
-    prisma.post.count({ where: { status: "PUBLISHED" } }),
-    // KPI 7: Reports
-    prisma.report.count({ where: { status: "PENDING" } }),
-    // KPI 8: Expiring memberships
-    prisma.user.count({ where: { role: "VIP", membershipExpires: { gt: now, lte: thirtyDays } } }),
-
-    // Alerts — RED (urgent)
+    // RED: SLA breach
     prisma.payment.count({ where: { status: "PENDING", createdAt: { lt: twentyFourHours } } }),
     prisma.certification.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] }, createdAt: { lt: sevenDays } } }),
     prisma.report.count({ where: { status: "PENDING", createdAt: { lt: fortyEightHours } } }),
     prisma.user.count({ where: { role: "VIP", membershipExpires: { gte: new Date(now.toDateString()), lt: new Date(new Date(now).setDate(now.getDate() + 1)) } } }),
 
-    // Alerts — YELLOW (this week)
+    // YELLOW: soon-urgent
     prisma.user.count({ where: { role: "VIP", membershipExpires: { gt: now, lte: new Date(now.getTime() + 7 * 86400000) } } }),
-    prisma.certification.count({ where: { status: "PENDING", createdAt: { lt: sevenDays } } }),
     prisma.mediaOrder.count({ where: { status: "NEW", createdAt: { lt: fortyEightHours } } }),
     prisma.user.count({ where: { role: "VIP", isActive: false, membershipExpires: null } }),
 
-    // Alerts — GRAY (info)
-    prisma.user.findMany({ where: { role: "VIP", isActive: true, createdAt: { gte: sevenDays } }, select: { name: true }, take: 3 }),
-    prisma.certification.findMany({ where: { status: "APPROVED", approvedAt: { gte: sevenDays } }, select: { product: { select: { name: true } } }, take: 3 }),
-    prisma.mediaOrder.findMany({ where: { status: "COMPLETED", completedAt: { gte: sevenDays } }, select: { id: true }, take: 3 }),
-
-    // Charts
+    // Charts — 12 months revenue by type + tier snapshot
     prisma.payment.findMany({ where: { status: "SUCCESS", createdAt: { gte: twelveMonthsAgo } }, select: { amount: true, type: true, createdAt: true } }),
-    prisma.user.findMany({ where: { role: "VIP", createdAt: { gte: twelveMonthsAgo } }, select: { createdAt: true } }),
     prisma.user.groupBy({ by: ["role"], where: { role: "VIP" }, _count: true }),
 
     // Activity feed
@@ -86,11 +57,7 @@ export default async function AdminDashboardPage() {
     prisma.user.findMany({ where: { role: "VIP", isActive: true }, orderBy: { createdAt: "desc" }, take: 5, select: { name: true, createdAt: true } }),
   ])
 
-  const maxSlot = Number(maxSlotCfg?.value ?? 100)
-  const monthRevenueTotal = monthRevenue._sum.amount ?? 0
-  const yearRevenueTotal = yearRevenue._sum.amount ?? 0
-
-  // Tier distribution for PieChart — use DB-side count (no JS filtering)
+  // Tier distribution for PieChart — DB-side count (no JS filter)
   const [bizT, indT] = await Promise.all([getTierThresholds("BUSINESS"), getTierThresholds("INDIVIDUAL")])
   const [bizGold, bizSilver, indGold, indSilver] = await Promise.all([
     prisma.user.count({ where: { role: "VIP", accountType: "BUSINESS", contributionTotal: { gte: bizT.gold } } }),
@@ -122,7 +89,6 @@ export default async function AdminDashboardPage() {
     membership: Math.round((revByMonth[i]?.membership ?? 0) / 1_000_000),
     cert: Math.round((revByMonth[i]?.cert ?? 0) / 1_000_000),
   }))
-
   // Activity feed — merge 4 sources
   type Activity = { icon: string; text: string; time: Date; href?: string }
   const activities: Activity[] = []
@@ -143,38 +109,34 @@ export default async function AdminDashboardPage() {
   activities.sort((a, b) => b.time.getTime() - a.time.getTime())
   const topActivities = activities.slice(0, 10)
 
-  // Build alert arrays
-  type Alert = { text: string; href: string; level: "red" | "yellow" | "gray" }
+  // SLA breach alerts — chỉ hiện những gì CẦN chú ý, không dùng dashboard làm
+  // bảng thông tin. RED = quá SLA → vào thẳng queue. YELLOW = sắp tới SLA.
+  type Alert = { text: string; href: string; level: "red" | "yellow" }
   const alerts: Alert[] = []
 
-  // RED alerts
   if (pendingPayments24h > 0) alerts.push({ text: `${pendingPayments24h} payment CK chờ xác nhận quá 24h`, href: "/admin/thanh-toan", level: "red" })
   if (unhandledReports48h > 0) alerts.push({ text: `${unhandledReports48h} báo cáo vi phạm chưa xử lý quá 48h`, href: "/admin/bao-cao", level: "red" })
   if (longPendingCerts > 0) alerts.push({ text: `${longPendingCerts} đơn chứng nhận chờ duyệt quá 7 ngày`, href: "/admin/chung-nhan", level: "red" })
   if (membershipExpiresToday > 0) alerts.push({ text: `${membershipExpiresToday} hội viên membership hết hạn hôm nay`, href: "/admin/hoi-vien?status=expiring", level: "red" })
 
-  // YELLOW alerts
   if (expiringMembersWeek > 0) alerts.push({ text: `${expiringMembersWeek} membership sắp hết hạn trong 7 ngày`, href: "/admin/hoi-vien?status=expiring", level: "yellow" })
   if (newMediaUnconfirmed48h > 0) alerts.push({ text: `${newMediaUnconfirmed48h} đơn truyền thông NEW chưa confirm quá 48h`, href: "/admin/truyen-thong?status=NEW", level: "yellow" })
   if (pendingVIPActivation > 0) alerts.push({ text: `${pendingVIPActivation} tài khoản hội viên chờ kích hoạt`, href: "/admin/hoi-vien?status=pending", level: "yellow" })
 
-  // GRAY alerts
-  if (newActivatedVIP.length > 0) alerts.push({ text: `${newActivatedVIP.length} hội viên mới được kích hoạt tuần này`, href: "/admin/hoi-vien", level: "gray" })
-  if (certApprovedRecent.length > 0) alerts.push({ text: `${certApprovedRecent.length} SP vừa được chứng nhận tuần này`, href: "/admin/chung-nhan", level: "gray" })
-  const totalVIP = totalVIPCount
-  alerts.push({ text: `Slot hội viên: ${totalVIP}/${maxSlot}`, href: "/admin/hoi-vien", level: "gray" })
-
-  const alertColors = { red: "border-red-300 bg-red-50 text-red-800", yellow: "border-yellow-300 bg-yellow-50 text-yellow-800", gray: "border-gray-300 bg-gray-50 text-gray-700" }
-  const alertLabels = { red: "Cần xử lý ngay", yellow: "Cần chú ý", gray: "Thông tin" }
+  const alertColors = {
+    red: "border-red-300 bg-red-50 text-red-800",
+    yellow: "border-yellow-300 bg-yellow-50 text-yellow-800",
+  }
+  const alertLabels = { red: "Quá hạn — xử lý ngay", yellow: "Sắp quá hạn — cần chú ý" }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-brand-900">Tổng quan</h1>
 
-      {/* ── Alert Panel ────────────────────────────────────────────────── */}
+      {/* ── SLA breach panel (RED/YELLOW) ─────────────────────────────── */}
       {alerts.length > 0 && (
         <div className="space-y-2">
-          {(["red", "yellow", "gray"] as const).map((level) => {
+          {(["red", "yellow"] as const).map((level) => {
             const items = alerts.filter((a) => a.level === level)
             if (items.length === 0) return null
             return (
@@ -192,17 +154,8 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* ── KPI Cards ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPI label="Hội viên Active" value={`${activeVIP}`} sub={`/${maxSlot} slot`} href="/admin/hoi-vien" />
-        <KPI label="Doanh thu tháng" value={formatVND(monthRevenueTotal)} highlight href="/admin/thanh-toan" />
-        <KPI label="SP Chứng nhận" value={`${certApproved}`} sub={certNewThisMonth > 0 ? `+${certNewThisMonth} tháng này` : undefined} href="/admin/chung-nhan" />
-        <KPI label="Đơn Truyền thông" value={`${mediaActive}`} sub={`${mediaProcessing} đang xử lý`} href="/admin/truyen-thong" />
-        <KPI label="Bài viết Feed" value={`${totalPosts}`} />
-        <KPI label="Báo cáo vi phạm" value={`${pendingReports}`} alert={pendingReports > 0} href="/admin/bao-cao" />
-        <KPI label="Doanh thu năm" value={formatVND(yearRevenueTotal)} />
-        <KPI label="Sắp hết hạn" value={`${expiringMembers}`} sub="trong 30 ngày" alert={expiringMembers > 0} href="/admin/hoi-vien?status=expiring" />
-      </div>
+      {/* ── Action queue badges (live từ PendingCountsContext) ────────── */}
+      <ActionQueueBadges />
 
       {/* ── Charts ─────────────────────────────────────────────────────── */}
       <DashboardChartsLoader revenueData={revenueData} tierData={tierData} />
@@ -226,21 +179,4 @@ export default async function AdminDashboardPage() {
       </div>
     </div>
   )
-}
-
-function KPI({ label, value, sub, highlight, alert, href }: {
-  label: string; value: string; sub?: string; highlight?: boolean; alert?: boolean; href?: string
-}) {
-  const content = (
-    <div className={cn(
-      "rounded-xl border p-4 shadow-sm transition-colors",
-      alert ? "border-red-300 bg-red-50" : "border-brand-200 bg-white",
-      href && "hover:bg-brand-50 cursor-pointer",
-    )}>
-      <p className="text-xs font-medium text-brand-400 uppercase tracking-wide">{label}</p>
-      <p className={cn("mt-1.5 text-3xl font-bold", alert ? "text-red-700" : highlight ? "text-green-700" : "text-brand-900")}>{value}</p>
-      {sub && <p className="text-sm text-brand-500 mt-0.5">{sub}</p>}
-    </div>
-  )
-  return href ? <Link href={href}>{content}</Link> : content
 }

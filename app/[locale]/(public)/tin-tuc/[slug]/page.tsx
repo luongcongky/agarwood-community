@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
-import { addAnchorIdsToH2, extractTocFromHtml } from "@/lib/seo/toc"
+import { addAnchorIdsToH2 } from "@/lib/seo/toc"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { Section } from "@/components/features/homepage/Section"
@@ -19,6 +19,9 @@ import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBanne
 import { SidebarList } from "@/components/features/article/SidebarList"
 import { CopyLinkButton } from "./CopyLinkButton"
 import { ArticleToolbar } from "./ArticleToolbar"
+import { TIN_TUC_PUBLIC_CATEGORIES } from "../categories"
+import { auth } from "@/lib/auth"
+import { CommentsSection } from "@/components/features/comments/CommentsSection"
 
 export const revalidate = 1800
 
@@ -28,7 +31,7 @@ type Props = { params: Promise<{ locale: Locale; slug: string }> }
  *  Explicit select thay vì findFirst không select (over-fetch). */
 const getNewsBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
-    where: { slug, isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
+    where: { slug, isPublished: true, category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
     select: {
       id: true,
       slug: true,
@@ -45,6 +48,9 @@ const getNewsBySlug = cache(async (slug: string) =>
       originalAuthor: true,
       focusKeyword: true,
       secondaryKeywords: true,
+      // Phase 3.3: template + gallery cho tin ảnh / tin video.
+      template: true,
+      gallery: true,
     },
   }),
 )
@@ -93,6 +99,7 @@ export default async function NewsDetailPage({ params }: Props) {
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const tc = await getTranslations("common")
   const { slug } = await params
+  const session = await auth()
 
   const news = await getNewsBySlug(slug)
 
@@ -101,7 +108,7 @@ export default async function NewsDetailPage({ params }: Props) {
     const normalizedSlug = slugify(slug)
     if (normalizedSlug !== slug) {
       const redirectedNews = await prisma.news.findFirst({
-        where: { slug: normalizedSlug, isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
+        where: { slug: normalizedSlug, isPublished: true, category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
       })
       if (redirectedNews) {
         redirect(`/tin-tuc/${normalizedSlug}`)
@@ -146,7 +153,7 @@ export default async function NewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
         ...(news.focusKeyword
           ? {
@@ -179,7 +186,7 @@ export default async function NewsDetailPage({ params }: Props) {
       where: {
         isPublished: true,
         isPinned: true,
-        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
       },
       orderBy: { publishedAt: "desc" },
@@ -189,7 +196,7 @@ export default async function NewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
       },
       orderBy: { publishedAt: "desc" },
@@ -208,7 +215,7 @@ export default async function NewsDetailPage({ params }: Props) {
     const fill = await prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
         id: { notIn: related.map((r) => r.id) },
       },
@@ -239,7 +246,6 @@ export default async function NewsDetailPage({ params }: Props) {
   const sanitizedContent = sanitizeArticleHtml(l(news, "content") ?? "")
   const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
   const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
-  const toc = extractTocFromHtml(sanitizedContent)
 
   const articleUrl = localizedUrl(`/tin-tuc/${slug}`, locale)
   // SEO override → article title/excerpt fallback (mirrors generateMetadata).
@@ -392,36 +398,75 @@ export default async function NewsDetailPage({ params }: Props) {
             </figure>
           )}
 
-          {/* Table of Contents — giữ inline trong body, kiểu VTV không có TOC
-              nhưng với bài dài của hội mình vẫn giúp reader navigate. */}
-          {toc.length >= 2 && (
-            <nav className="mb-6 border-l-[3px] border-brand-700 bg-neutral-50 py-3 pl-5 pr-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">
-                {t("tocTitle")}
-              </p>
-              <ol className="space-y-1 text-sm">
-                {toc.map((entry, i) => (
-                  <li key={entry.id} className="flex items-baseline gap-2">
-                    <span className="shrink-0 tabular-nums text-neutral-400">{i + 1}.</span>
-                    <a
-                      href={`#${entry.id}`}
-                      className="line-clamp-1 text-neutral-800 hover:text-brand-700 hover:underline"
-                    >
-                      {entry.text}
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
+          {/* TOC removed (2026-04 customer feedback) — anchor IDs vẫn được
+              inject vào H2 để link share #section vẫn hoạt động, nhưng không
+              render block "Mục lục" nữa. */}
+
+          {/* Article body — editorial prose cho template=NORMAL.
+              Tin ảnh / Tin video (template=PHOTO/VIDEO) render gallery riêng
+              ở dưới — không có RichTextEditor content. */}
+          {news.template === "NORMAL" && (
+            <div
+              data-article-body
+              className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-neutral-900 prose-p:text-neutral-800 prose-p:leading-[1.8] prose-a:text-brand-700 prose-a:no-underline hover:prose-a:underline prose-strong:text-neutral-900 prose-img:mx-auto prose-figcaption:text-center prose-figcaption:italic prose-figcaption:text-[13px] prose-figcaption:text-neutral-600"
+              dangerouslySetInnerHTML={{ __html: contentWithAnchors }}
+            />
           )}
 
-          {/* Article body — editorial prose. `data-article-body` là hook cho
-              ArticleToolbar zoom chỉnh inline fontSize. */}
-          <div
-            data-article-body
-            className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-neutral-900 prose-p:text-neutral-800 prose-p:leading-[1.8] prose-a:text-brand-700 prose-a:no-underline hover:prose-a:underline prose-strong:text-neutral-900 prose-img:mx-auto prose-figcaption:text-center prose-figcaption:italic prose-figcaption:text-[13px] prose-figcaption:text-neutral-600"
-            dangerouslySetInnerHTML={{ __html: contentWithAnchors }}
-          />
+          {/* Tin ảnh — gallery 1 cột, mỗi ảnh full width + caption ở dưới.
+              Phase 3.3 (2026-04). */}
+          {news.template === "PHOTO" && Array.isArray(news.gallery) && (
+            <div data-article-body className="space-y-6">
+              {(news.gallery as Array<{ url: string; caption?: string }>).map(
+                (item, i) =>
+                  item.url ? (
+                    <figure key={`${item.url}-${i}`} className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.url}
+                        alt={item.caption ?? ""}
+                        loading={i === 0 ? "eager" : "lazy"}
+                        className="w-full h-auto rounded-lg"
+                      />
+                      {item.caption && (
+                        <figcaption className="text-center text-[13px] italic text-neutral-600 leading-snug">
+                          {item.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ) : null,
+              )}
+            </div>
+          )}
+
+          {/* Tin video — gallery 1 cột, mỗi video iframe responsive 16:9 +
+              caption. Phase 3.3 (2026-04). */}
+          {news.template === "VIDEO" && Array.isArray(news.gallery) && (
+            <div data-article-body className="space-y-8">
+              {(news.gallery as Array<{ url: string; caption?: string }>).map(
+                (item, i) =>
+                  item.url ? (
+                    <figure key={`${item.url}-${i}`} className="space-y-2">
+                      <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
+                        <iframe
+                          src={item.url}
+                          className="absolute inset-0 h-full w-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          loading={i === 0 ? "eager" : "lazy"}
+                          title={item.caption || `Video ${i + 1}`}
+                        />
+                      </div>
+                      {item.caption && (
+                        <figcaption className="text-center text-[13px] italic text-neutral-600 leading-snug">
+                          {item.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ) : null,
+              )}
+            </div>
+          )}
 
           {/* Tags — nếu article có focusKeyword / secondaryKeywords.
               TODO: chuyển "Từ khoá" sang key i18n khi translations bổ sung. */}
@@ -529,6 +574,17 @@ export default async function NewsDetailPage({ params }: Props) {
             compact
           />
         </aside>
+      </div>
+
+      {/* Comments — full-width dưới article + sidebar. Phase 3.4 (2026-04). */}
+      <div className="mt-10 lg:max-w-[calc(75%-1.25rem)]">
+        <CommentsSection
+          newsId={news.id}
+          currentUserId={session?.user?.id ?? null}
+          currentUserRole={session?.user?.role}
+          currentUserName={session?.user?.name}
+          currentUserAvatar={session?.user?.image}
+        />
       </div>
 
       {/* Related — full-width grid ở cuối, dùng Section header chuẩn */}

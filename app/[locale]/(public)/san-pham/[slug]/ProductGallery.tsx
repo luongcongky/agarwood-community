@@ -24,7 +24,9 @@ export function ProductGallery({ imageUrls, productName }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Main image */}
+      {/* Main image — priority cho initial render (ảnh LCP candidate
+          của product detail page). Khi user click thumbnail khác, ảnh mới
+          load bình thường, priority không còn tác dụng. */}
       <div className="aspect-square w-full rounded-xl overflow-hidden bg-brand-100 border border-brand-200 relative">
         <Image
           src={imageUrls[selectedIndex]}
@@ -32,6 +34,7 @@ export function ProductGallery({ imageUrls, productName }: Props) {
           fill
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 50vw"
+          priority={selectedIndex === 0}
         />
       </div>
 

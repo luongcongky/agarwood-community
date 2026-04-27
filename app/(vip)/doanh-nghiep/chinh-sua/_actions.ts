@@ -1,6 +1,7 @@
 "use server"
 
 import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -25,18 +26,38 @@ const companySchema = z.object({
   coverImageUrl: z.string().optional().or(z.literal("")),
 })
 
-export async function updateCompany(formData: Record<string, unknown>) {
+export async function updateCompany(
+  formData: Record<string, unknown>,
+  /** Phase 3.7 (2026-04): explicit companyId — admin override flow. Bỏ
+   *  trống → fallback ownerId (legacy owner self-edit). */
+  companyId?: string,
+) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Chua dang nhap" }
 
   const parsed = companySchema.safeParse(formData)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const company = await prisma.company.findUnique({
-    where: { ownerId: session.user.id },
-    select: { id: true, slug: true },
-  })
-  if (!company) return { error: "Khong tim thay doanh nghiep" }
+  // Lookup theo companyId nếu có (admin override) hoặc ownerId (owner default).
+  // Validate quyền: phải là chủ DN HOẶC admin role.
+  let company: { id: string; slug: string; ownerId: string } | null = null
+  if (companyId) {
+    company = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { id: true, slug: true, ownerId: true },
+    })
+    if (!company) return { error: "Khong tim thay doanh nghiep" }
+    const isOwner = company.ownerId === session.user.id
+    if (!isOwner && !isAdmin(session.user.role)) {
+      return { error: "Khong co quyen chinh sua doanh nghiep nay" }
+    }
+  } else {
+    company = await prisma.company.findUnique({
+      where: { ownerId: session.user.id },
+      select: { id: true, slug: true, ownerId: true },
+    })
+    if (!company) return { error: "Khong tim thay doanh nghiep" }
+  }
 
   // Check slug uniqueness (exclude self)
   if (parsed.data.slug !== company.slug) {

@@ -53,6 +53,27 @@ export default async function AdminCertificationsPage({
   let rows: CertRow[] = []
   let total = 0
 
+  // Kick off stuckCerts query ngay đầu — nó không phụ thuộc statusFilter,
+  // nên chạy song song với main query để giảm TTFB (~40% thời gian DB round-trip).
+  // Đơn tồn đọng: UNDER_REVIEW > STUCK_DAYS ngày, vẫn còn vote PENDING.
+  // User yêu cầu "không có deadline vote — admin monitoring và báo cáo cho hội".
+  const stuckThreshold = new Date(Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000)
+  const stuckCertsPromise = prisma.certification.findMany({
+    where: {
+      status: "UNDER_REVIEW",
+      updatedAt: { lt: stuckThreshold },
+      reviews: { some: { vote: "PENDING" } },
+    },
+    orderBy: { updatedAt: "asc" },
+    take: 10,
+    select: {
+      id: true,
+      updatedAt: true,
+      product: { select: { name: true } },
+      _count: { select: { reviews: { where: { vote: "PENDING" } } } },
+    },
+  })
+
   // Tab "Đã duyệt" reads from Product directly because seeded/legacy products
   // carry certStatus=APPROVED without ever going through the Certification
   // workflow. This keeps the admin list in sync with the viewer's
@@ -126,24 +147,8 @@ export default async function AdminCertificationsPage({
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  // Đơn tồn đọng: UNDER_REVIEW > STUCK_DAYS ngày, vẫn còn vote PENDING.
-  // User yêu cầu "không có deadline vote — admin monitoring và báo cáo cho hội".
-  const stuckThreshold = new Date(Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000)
-  const stuckCerts = await prisma.certification.findMany({
-    where: {
-      status: "UNDER_REVIEW",
-      updatedAt: { lt: stuckThreshold },
-      reviews: { some: { vote: "PENDING" } },
-    },
-    orderBy: { updatedAt: "asc" },
-    take: 10,
-    select: {
-      id: true,
-      updatedAt: true,
-      product: { select: { name: true } },
-      _count: { select: { reviews: { where: { vote: "PENDING" } } } },
-    },
-  })
+  // await Promise đã kick off ở đầu — đến đây nó gần chắc đã xong.
+  const stuckCerts = await stuckCertsPromise
 
   const statusTabs = [
     { label: "Tất cả", value: "" },

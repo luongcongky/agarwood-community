@@ -32,9 +32,30 @@ export async function PATCH(
     }
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { isCouncilMember: enable },
+  // Dual-write trong transaction: giữ `User.isCouncilMember` (legacy, UI cũ
+  // đọc) + đồng bộ CommitteeMembership(THAM_DINH) (hệ thống mới dùng cho
+  // permission `cert:review`). Khi drop `isCouncilMember` ở sprint sau chỉ
+  // cần xoá 1 câu update.
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { isCouncilMember: enable },
+    })
+    if (enable) {
+      await tx.committeeMembership.upsert({
+        where: { userId_committee: { userId, committee: "THAM_DINH" } },
+        create: {
+          userId,
+          committee: "THAM_DINH",
+          assignedBy: session.user.id,
+        },
+        update: {},
+      })
+    } else {
+      await tx.committeeMembership.deleteMany({
+        where: { userId, committee: "THAM_DINH" },
+      })
+    }
   })
 
   return NextResponse.json({ success: true, isCouncilMember: enable })

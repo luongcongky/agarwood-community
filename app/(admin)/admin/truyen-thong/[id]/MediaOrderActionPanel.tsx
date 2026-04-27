@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { MediaOrderStatus } from "@prisma/client"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 const STATUS_LABELS: Record<MediaOrderStatus, string> = {
   NEW: "Mới",
@@ -42,6 +43,7 @@ export function MediaOrderActionPanel({
 }: MediaOrderActionPanelProps) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [status, setStatus] = useState<MediaOrderStatus>(initialStatus)
   const [assignedTo, setAssignedTo] = useState(initialAssignedTo ?? "")
   const [quotedPrice, setQuotedPrice] = useState(
@@ -82,6 +84,9 @@ export function MediaOrderActionPanel({
         return
       }
       setSaved(true)
+      // MediaOrder pending counted khi status=NEW → NEW transition nào khác cũng
+      // đổi count; refresh để sidebar/bell sync ngay.
+      refreshPendingCounts()
       router.refresh()
     } catch {
       setError("Có lỗi xảy ra. Vui lòng thử lại.")

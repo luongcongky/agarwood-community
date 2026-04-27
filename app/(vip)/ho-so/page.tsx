@@ -110,6 +110,7 @@ export default async function ProfilePage() {
           name: user.name,
           email: user.email,
           phone: user.phone,
+          avatarUrl: user.avatarUrl,
           bio: user.bio,
           bio_en: user.bio_en,
           bio_zh: user.bio_zh,

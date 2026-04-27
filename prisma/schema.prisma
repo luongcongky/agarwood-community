@@ -53,7 +53,22 @@ enum NewsCategory {
   GENERAL // Tin tức ngành — hiển thị ở /tin-tuc
   RESEARCH // Nghiên cứu khoa học, báo cáo học thuật — hiển thị ở /nghien-cuu
   LEGAL // Văn bản pháp lý — /privacy, /terms hoặc /phap-ly
-  SPONSORED_PRODUCT // Bài sản phẩm trả phí — hiển thị chung với GENERAL
+  SPONSORED_PRODUCT // Bài sản phẩm trả phí — legacy, giữ cho data cũ
+  // Phase 3 (2026-04): tin riêng cho doanh nghiệp/sản phẩm. Khác với
+  // SPONSORED_PRODUCT (legacy) — categories mới link rõ tới Company/Product.
+  BUSINESS // Tin doanh nghiệp — link tới Company qua relatedCompanyId
+  PRODUCT // Tin sản phẩm — link tới Product (+ Company) qua relatedProductId
+  // Phase 3.5 (2026-04): admin curate tin báo chí ngoài + tin khuyến nông.
+  EXTERNAL_NEWS // Tin báo chí ngoài (curated) — hiển thị ở /tin-bao-chi, có sourceName + sourceUrl
+  AGRICULTURE // Tin khuyến nông — hiển thị ở /khuyen-nong
+}
+
+/// Template hiển thị bài tin — quyết định cách render content + cách bài
+/// xuất hiện ở /multimedia. Chỉ áp với News (không liên quan Post feed).
+enum NewsTemplate {
+  NORMAL // Bài bình thường — text + ảnh + video chèn lẫn (RichTextEditor)
+  PHOTO // Tin ảnh — bulk gallery, mỗi ảnh có caption. Cũng hiện ở /multimedia
+  VIDEO // Tin video — bulk URL YouTube, mỗi video có caption. /multimedia
 }
 
 /// Phân loại đối tác / cơ quan đoàn thể liên kết — dùng cho marquee trang chủ.
@@ -91,6 +106,19 @@ enum PromotionRequestStatus {
   APPROVED // admin duyệt → bài được đẩy lên trang chủ (isPromoted=true)
   REJECTED // admin từ chối (kèm lý do ở reviewNote)
   CANCELLED // owner tự rút trước khi admin xử lý
+}
+
+/// Các ban/ủy ban nội bộ Hội — mỗi VIP có thể thuộc nhiều ban, mỗi ban
+/// map sang 1 tập Permission trong `lib/permissions.ts`. Thêm ban mới:
+/// (1) thêm value vào enum này, (2) thêm entry COMMITTEE_PERMS trong
+/// permissions.ts, (3) migration ALTER TYPE ADD VALUE.
+enum Committee {
+  THUONG_VU // Ban Thường vụ — duyệt hội viên, quyết định quan trọng
+  CHAP_HANH // Ban Chấp hành — truy cập đọc admin
+  KIEM_TRA // Ban Kiểm tra — xác nhận thanh toán, giám sát
+  THAM_DINH // Ban Thẩm định — review chứng nhận (thay isCouncilMember)
+  THU_KY // Ban Thư ký — đăng tin tức, duyệt feed, văn bản pháp lý
+  TRUYEN_THONG // Ban Truyền thông — tin tức (có publish), promote bài
 }
 
 enum ReportStatus {
@@ -227,6 +255,9 @@ model User {
   leaderPositions              Leader[]
   company                      Company?
   products                     Product[]               @relation("ProductOwner")
+  productRevisions             ProductRevision[]       @relation("ProductRevisionEditor")
+  // Phase 3.6 (2026-04): audit history Post (admin + owner edits).
+  postRevisions                PostRevision[]          @relation("PostRevisionEditor")
   posts                        Post[]
   reports                      Report[]                @relation("ReporterRelation")
   certifications               Certification[]
@@ -247,6 +278,8 @@ model User {
   councilReviews               CertificationReview[]
   promotionRequestsMade        PostPromotionRequest[]  @relation("PromotionRequester")
   promotionRequestsReviewed    PostPromotionRequest[]  @relation("PromotionReviewer")
+  committeeMemberships         CommitteeMembership[]   @relation("CommitteeMember")
+  committeeAssignmentsMade     CommitteeMembership[]   @relation("CommitteeAssignedBy")
 
   @@index([role])
   @@index([accountType])
@@ -494,11 +527,12 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner          User            @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  company        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  post           Post?           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  owner          User              @relation("ProductOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  company        Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  post           Post?             @relation(fields: [postId], references: [id], onDelete: Cascade)
   certifications Certification[]
   comments       Comment[]
+  revisions      ProductRevision[]
 
   @@index([ownerId])
   @@index([companyId])
@@ -507,6 +541,91 @@ model Product {
   @@index([isFeatured, featuredOrder])
   @@index([ownerPriority])
   @@map("products")
+}
+
+/// Lịch sử chỉnh sửa Product. Snapshot full mỗi lần edit — v0 tại create,
+/// vN tại mỗi lần update (owner hoặc admin). Dùng cho audit + diff UI.
+/// Retention: cap 50 row/product (inline prune); có thể thêm time-based
+/// sweep sau (vd >180d) qua cron.
+/**
+ * Phase 3.6 (2026-04): audit history cho Post.
+ * Pattern song song với ProductRevision — snapshot mỗi lần admin/owner save,
+ * track ai sửa + field nào đổi để render diff. Owner có thể so sánh giữa bản
+ * cuối của admin vs bản cuối của mình. Schema rất gọn: Post chỉ có 3 field
+ * editable (title, content, imageUrls).
+ */
+model PostRevision {
+  id      String @id @default(cuid())
+  postId  String
+  version Int // auto-increment per post
+
+  // Snapshot các field editable (mirror Post)
+  title     String?
+  content   String   @db.Text
+  imageUrls String[]
+
+  // Audit meta
+  /// ID user đã sửa (owner hoặc admin)
+  editedBy      String
+  /// "OWNER" | "ADMIN" — phân biệt owner self-edit vs admin moderation edit
+  editedRole    String
+  editedAt      DateTime @default(now())
+  /// Lý do — bắt buộc khi admin edit, optional khi owner edit
+  reason        String?
+  /// Tên field đã đổi so với revision trước (vd ["content", "title"])
+  changedFields String[]
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  editor User @relation("PostRevisionEditor", fields: [editedBy], references: [id])
+
+  @@unique([postId, version])
+  @@index([postId, editedAt])
+  @@index([postId, editedRole, version])
+  @@map("post_revisions")
+}
+
+model ProductRevision {
+  id        String @id @default(cuid())
+  productId String
+  version   Int // auto-increment per product
+
+  // Snapshot các field có thể sửa (mirror Product) — dùng để diff
+  name           String
+  name_en        String?
+  name_zh        String?
+  name_ar        String?
+  slug           String
+  description    String?  @db.Text
+  description_en String?  @db.Text
+  description_zh String?  @db.Text
+  description_ar String?  @db.Text
+  category       String?
+  category_en    String?
+  category_zh    String?
+  category_ar    String?
+  priceRange     String?
+  imageUrls      String[]
+  isPublished    Boolean
+
+  // Audit meta
+  /// ID user đã sửa (owner hoặc admin/TRUYEN_THONG)
+  editedBy      String
+  /// "OWNER" | "ADMIN" | "TRUYEN_THONG" — giúp UI hiển thị vai trò mà
+  /// không phải join bảng permission mỗi lần
+  editedRole    String
+  editedAt      DateTime @default(now())
+  /// Lý do chỉnh sửa — bắt buộc khi admin edit (không phải owner)
+  reason        String?
+  /// Tên field đã đổi so với revision trước — phục vụ quick preview
+  /// (vd "name, imageUrls"). Null ở v0.
+  changedFields String[]
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  editor  User    @relation("ProductRevisionEditor", fields: [editedBy], references: [id])
+
+  @@unique([productId, version])
+  @@index([productId, editedAt])
+  @@map("product_revisions")
 }
 
 // ============================================================
@@ -626,6 +745,8 @@ model Post {
   tags              PostTag[]
   comments          Comment[]
   promotionRequests PostPromotionRequest[]
+  // Phase 3.6 (2026-04): audit history các lần edit (admin + owner).
+  revisions         PostRevision[]
 
   @@index([authorId])
   @@index([status])
@@ -700,6 +821,39 @@ model PostPromotionRequest {
 }
 
 // ============================================================
+// COMMITTEE MEMBERSHIP — phân bổ hội viên vào các ban Hội
+// ============================================================
+//
+// Mỗi row = 1 user đang thuộc 1 ban cụ thể. 1 user có thể thuộc nhiều ban
+// (nhiều row). Quyền hạn tương ứng của từng ban định nghĩa ở
+// `lib/permissions.ts` → mapping `COMMITTEE_PERMS`.
+//
+// Field `position` để chứa vai trò nội bộ trong ban ("Trưởng ban",
+// "Phó trưởng ban", "Thành viên"…) — admin nhập tay, không enum để
+// tương thích với các danh xưng không đều. KHÔNG dùng để quyết định
+// quyền hạn (quyền = hàm của committee type, không phải position).
+//
+// Migrate từ `User.isCouncilMember` cũ: true → 1 row
+// (committee=THAM_DINH, position=null). Field cũ giữ lại 1 sprint để
+// hỗ trợ rollback, sau đó drop.
+model CommitteeMembership {
+  id         String    @id @default(cuid())
+  userId     String
+  committee  Committee
+  position   String? // "Trưởng ban", "Phó trưởng ban", "Thành viên"
+  assignedAt DateTime  @default(now())
+  assignedBy String? // adminId gán
+
+  user           User  @relation("CommitteeMember", fields: [userId], references: [id], onDelete: Cascade)
+  assignedByUser User? @relation("CommitteeAssignedBy", fields: [assignedBy], references: [id])
+
+  @@unique([userId, committee]) // mỗi user × committee = 1 row
+  @@index([committee])
+  @@index([userId])
+  @@map("committee_memberships")
+}
+
+// ============================================================
 // COMMENTS — polymorphic (Post + Product)
 // ============================================================
 
@@ -708,9 +862,11 @@ model Comment {
   authorId String
   content  String @db.Text
 
-  // Polymorphic target — exactly one of postId/productId must be set
+  // Polymorphic target — exactly one of postId/productId/newsId must be set.
+  // Phase 3.4 (2026-04): thêm newsId cho /tin-tuc + /nghien-cuu detail page.
   postId    String?
   productId String?
+  newsId    String?
 
   // Reply — flat with mention (parentId = comment being replied to)
   parentId String?
@@ -724,12 +880,14 @@ model Comment {
   author  User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   post    Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
   product Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  news    News?         @relation(fields: [newsId], references: [id], onDelete: Cascade)
   parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies Comment[]     @relation("CommentReplies")
   likes   CommentLike[]
 
   @@index([postId, createdAt])
   @@index([productId, createdAt])
+  @@index([newsId, createdAt])
   @@index([authorId])
   @@index([parentId])
   @@map("comments")
@@ -819,13 +977,30 @@ model News {
   content_ar    String?      @db.Text
   coverImageUrl String?
   category      NewsCategory @default(GENERAL)
+  template      NewsTemplate @default(NORMAL)
   isPublished   Boolean      @default(false)
   isPinned      Boolean      @default(false)
   publishedAt   DateTime?
   authorId      String // adminId
 
-  // Import metadata — dùng khi crawl từ website cũ
-  sourceUrl      String? // URL gốc trên trang cũ (step 2 crawl sẽ dùng)
+  // Phase 3 (2026-04) — links cho category BUSINESS/PRODUCT.
+  // BUSINESS: chỉ relatedCompanyId. PRODUCT: cả relatedCompanyId +
+  // relatedProductId. Validation enforce ở API; schema để optional cho
+  // các category khác có thể bỏ trống.
+  relatedCompanyId String?
+  relatedProductId String?
+
+  // Phase 3 — gallery cho template=PHOTO (array {url, caption}) hoặc
+  // template=VIDEO (array {url, caption} với url là YouTube). NULL khi
+  // template=NORMAL (RichTextEditor đã embed inline).
+  // JSON shape: [{ "url": string, "caption": string }]
+  gallery Json?
+
+  // Import metadata — dùng khi crawl từ website cũ.
+  // Phase 3.5 (2026-04): cũng dùng cho category=EXTERNAL_NEWS (admin curate
+  // tin báo chí ngoài) — sourceName + sourceUrl bắt buộc cho EXTERNAL.
+  sourceUrl      String? // URL gốc (crawl import hoặc EXTERNAL_NEWS source)
+  sourceName     String? // Tên báo nguồn (vd "VnExpress", "Tuổi Trẻ") — chỉ dùng cho EXTERNAL_NEWS
   originalAuthor String? // Tên tác giả gốc (vd "Admin", "BBT") — hiển thị khi có, không thay authorId
 
   // SEO — per-locale overrides for <title>, meta description, image alt.
@@ -853,10 +1028,15 @@ model News {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Phase 3.4 (2026-04): bình luận trên trang detail.
+  comments Comment[]
+
   @@index([category, isPublished, publishedAt])
   @@index([isPublished, isPinned, publishedAt]) // homepage news carousel: WHERE isPublished ORDER BY isPinned, publishedAt
   @@index([slug])
   @@index([seoScore])
+  // Phase 3: filter /multimedia + /tin-tuc theo template
+  @@index([template, isPublished, publishedAt])
   @@map("news")
 }
 

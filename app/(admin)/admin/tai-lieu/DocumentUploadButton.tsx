@@ -108,8 +108,8 @@ export function DocumentUploadButton() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-brand-800 mb-1">File tài liệu * (PDF, DOC, DOCX — tối đa 20MB)</label>
-                <input type="file" name="file" required accept=".pdf,.doc,.docx" className="text-sm text-brand-600" />
+                <label className="block text-sm font-medium text-brand-800 mb-1">File tài liệu * (PDF, DOC, DOCX, JPG, PNG, WebP — tối đa 20MB)</label>
+                <input type="file" name="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" className="text-sm text-brand-600" />
               </div>
 
               <div className="flex items-center gap-2">

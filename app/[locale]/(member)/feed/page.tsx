@@ -28,9 +28,19 @@ const getTopContributors = unstable_cache(
 
 export const revalidate = 60 // 1 min — feed updates are not real-time critical
 
-export default async function FeedPage() {
+type FeedFilter = "NEWS" | "PRODUCT"
+
+export default async function FeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>
+}) {
   const session = await auth()
   const userId = session?.user?.id
+  // Homepage link qua `/feed?category=NEWS|PRODUCT` để mở đúng tab từ đầu.
+  // Bất kỳ giá trị khác → fallback NEWS (khớp default filter client cũ).
+  const { category: rawCategory } = await searchParams
+  const initialFilter: FeedFilter = rawCategory === "PRODUCT" ? "PRODUCT" : "NEWS"
 
   // Initial 10 posts — promoted first, then by authorPriority + createdAt.
   // Smaller initial page = faster TTFB; cursor pagination loads 10 more on scroll.
@@ -43,12 +53,12 @@ export default async function FeedPage() {
   //    owner thay (voi banner do + ly do). Hien cho public se trai tinh than
   //    moderation (bai xau khong nen lo ra cho moi nguoi).
   //  - PENDING → CHI owner thay (banner vang "Cho duyet")
-  // Initial render khớp với default filter client = NEWS. Đổi filter trên UI
-  // trigger client refetch qua /api/posts?category=PRODUCT.
+  // Initial render khớp với filter = initialFilter (default NEWS, hoặc
+  // PRODUCT nếu vào từ section "Sản phẩm hội viên" trên trang chủ).
   const initialPosts = await prisma.post.findMany({
     where: userId
       ? {
-          category: "NEWS",
+          category: initialFilter,
           OR: [
             { status: "PUBLISHED" },
             { status: "LOCKED", moderationNote: null },
@@ -57,7 +67,7 @@ export default async function FeedPage() {
           ],
         }
       : {
-          category: "NEWS",
+          category: initialFilter,
           OR: [
             { status: "PUBLISHED" },
             { status: "LOCKED", moderationNote: null },
@@ -158,6 +168,7 @@ export default async function FeedPage() {
   return (
     <FeedClient
       initialPosts={posts}
+      initialFilter={initialFilter}
       currentUserId={userId ?? null}
       currentUserRole={session?.user?.role ?? null}
       currentUserName={session?.user?.name ?? null}

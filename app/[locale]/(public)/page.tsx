@@ -99,8 +99,12 @@ export default async function HomePage() {
       </Suspense>
 
       <Suspense fallback={<LatestPostsSkeleton />}>
+        {/* Q0=C (Phase 3.3 2026-04): gộp Post.NEWS + News.BUSINESS — bài
+            user-feed về tin doanh nghiệp + tin admin BUSINESS chung 1 list,
+            sort theo date desc. */}
         <PostsSection
           category="NEWS"
+          newsCategory="BUSINESS"
           title={t("businessNews")}
           emptyText={t("businessNewsEmpty")}
           variant="feature-list"
@@ -108,8 +112,11 @@ export default async function HomePage() {
       </Suspense>
 
       <Suspense fallback={<LatestPostsSkeleton />}>
+        {/* Q0=C: gộp Post.PRODUCT + News.PRODUCT — admin tin sản phẩm vào
+            chung list với bài user khoe sản phẩm. */}
         <PostsSection
           category="PRODUCT"
+          newsCategory="PRODUCT"
           title={t("productNews")}
           emptyText={t("productNewsEmpty")}
           variant="hero-list"

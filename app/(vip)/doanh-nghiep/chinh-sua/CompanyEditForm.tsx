@@ -39,7 +39,16 @@ function slugify(str: string) {
     .replace(/^-|-$/g, "")
 }
 
-export function CompanyEditForm({ company }: { company: Company }) {
+export function CompanyEditForm({
+  company,
+  companyId,
+}: {
+  company: Company
+  /** Phase 3.7 (2026-04): explicit companyId — admin edit override flow.
+   *  Action validate caller có quyền với companyId này (admin hoặc owner).
+   *  Bỏ trống → action dùng ownerId fallback (legacy owner self-edit). */
+  companyId?: string
+}) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -174,7 +183,7 @@ export function CompanyEditForm({ company }: { company: Company }) {
         website,
         logoUrl,
         coverImageUrl,
-      })
+      }, companyId)
       if (result.error) {
         setMsg({ type: "error", text: result.error })
       } else {

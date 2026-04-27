@@ -1357,3 +1357,198 @@ goi Date API.
   string | null` tolerant).
 - Revalidate khi admin CRUD: `revalidateTag("news")` / `revalidateTag("research")`
   / `revalidateTag("tin-tuc")`.
+
+---
+
+## ADR-035: News categories + templates + Multimedia union (Phase 3.3, 2026-04)
+
+### Context
+Khach hang yeu cau editor /admin/tin-tuc ho tro:
+1. **5 loai bai** thay vi 3 — them BUSINESS (tin doanh nghiep) va PRODUCT
+   (tin san pham), moi cai phai link toi entity tuong ung.
+2. **3 dang template** — NORMAL (text/anh/video chen lan), PHOTO (gallery anh
+   + caption), VIDEO (gallery URL YouTube + caption).
+3. PHOTO/VIDEO **tu dong xuat hien** o trang `/multimedia` public — bo step
+   "tao Multimedia rieng" (vi vay menu /admin/multimedia bi xoa).
+
+### Decision
+
+#### Schema
+1. `NewsCategory` enum them 2 gia tri: `BUSINESS`, `PRODUCT`.
+2. `NewsTemplate` enum moi: `NORMAL` / `PHOTO` / `VIDEO` (default `NORMAL`).
+3. `News` them cot:
+   - `template NewsTemplate` (default NORMAL)
+   - `relatedCompanyId String?` — FK tham chieu `Company.id` (BUSINESS/PRODUCT)
+   - `relatedProductId String?` — FK tham chieu `Product.id` (PRODUCT only)
+   - `gallery Json?` — array `{ url, caption }` cho PHOTO/VIDEO
+4. Index moi `(template, isPublished, publishedAt)` cho /multimedia union query.
+
+**Tai sao khong dung relation chinh thuc** (`@relation` Prisma)?
+- Backward compat: news cu khong co `relatedCompanyId` / `relatedProductId`.
+- Tránh cascade delete unintended (xoa Company khong nen wipe news lien quan).
+- Validation lam o API layer thay vi DB constraint — giu schema flexible.
+
+#### API
+- POST /api/admin/news + PATCH /{id}: validate `template` + required field
+  theo category. Strip clear `relatedCompanyId/relatedProductId` khi doi
+  category sang loai khac de tranh stale link.
+- 2 endpoint moi:
+  - `GET /api/admin/companies/search?q=&limit=` — debounced search cho
+    CompanyPicker (match theo `name/slug/id` exact).
+  - `GET /api/admin/products/search?q=&companyId=&limit=` — filter theo
+    `companyId` cho ProductPicker.
+
+#### UI (NewsEditor)
+- Conditional rendering theo `category`:
+  - BUSINESS → CompanyPicker (banner amber lam ro yeu cau).
+  - PRODUCT → CompanyPicker + ProductPicker (filter theo company da chon).
+  - Doi DN → reset Product (tránh lệch DN/SP).
+- Conditional rendering theo `template`:
+  - NORMAL → giu RichTextEditor.
+  - PHOTO/VIDEO → thay bang `GalleryEditor` (bulk upload + caption +
+    sortable arrow). Khong show RichTextEditor.
+
+#### Multimedia public union
+Trang `/multimedia` query 2 nguon song song roi merge:
+1. Bang `multimedia` legacy — giu cho data cu, khong tao moi.
+2. `News` voi `template ∈ {PHOTO, VIDEO}` + `isPublished = true`.
+
+Map News → Multimedia shape:
+- News PHOTO -> `type=PHOTO_COLLECTION`, `imageUrls = gallery[].url`,
+  `coverImageUrl = gallery[0].url`.
+- News VIDEO -> `type=VIDEO`, `youtubeId = parse từ gallery[0].url`.
+
+Click News item → `/tin-tuc/[slug]` (xem nguyen bai). Legacy item →
+`/multimedia/[slug]` (route cu giu nguyen).
+
+Sort merge by `publishedAt DESC`, take 24.
+
+#### Admin sidebar
+- Bo menu "Multimedia" (Phase 3.3) — admin chi quan ly News, multimedia
+  output tu dong qua union query.
+
+### Trade-offs
+- **Pro**: Single workflow cho admin (1 form thay vi 2). News la single source
+  of truth. Backward compat 100% (legacy multimedia van hien thi).
+- **Con**:
+  - Code duplicate: News PHOTO/VIDEO + legacy Multimedia entries co the trung
+    lap noi dung neu admin sao chep. Acceptable vi legacy se phase out theo
+    thoi gian.
+  - `gallery JSONB` thay vi separate table -> khong index duoc tung gallery
+    item. Acceptable vi gallery thuong < 30 items, query luc nao cung load
+    nguyen JSON cho UI.
+  - relatedCompanyId/relatedProductId khong co FK constraint -> co the bi
+    orphan (Company bi xoa). API + admin UI tin chi se fail soft, hien text
+    "[Doanh nghiep da bi xoa]" trong tuong lai (TBD).
+
+### Files
+- Schema: `prisma/schema.prisma` (NewsCategory, NewsTemplate, News fields)
+- Migration: `prisma/migrations/20260426000000_news_categories_template_links/`
+- API: `app/api/admin/news/route.ts` + `[id]/route.ts` + 2 search endpoint
+- UI: `app/(admin)/admin/tin-tuc/[id]/NewsEditor.tsx` +
+      `CompanyProductPickers.tsx` + `GalleryEditor.tsx`
+- Public: `app/[locale]/(public)/multimedia/page.tsx`
+- Sidebar: `components/features/layout/AdminSidebar.tsx` (xoa entry)
+
+### Migration plan voi data cu
+- News hien tai: `template = NORMAL` mac dinh, gallery = null. Khong can
+  backfill.
+- Bang `multimedia` legacy: giu nguyen, khong drop. /multimedia query
+  union 2 nguon. Kha nang tuong lai: viet script migrate Multimedia →
+  News (template=PHOTO/VIDEO) roi drop bang.
+
+---
+
+## ADR-036: News routing finalization (Phase 3.3 follow-up, 2026-04)
+
+### Context
+Sau ADR-035 (5 categories + 3 templates), can quyet 5 cau hoi routing/UX:
+- **Q0** Trang chu — section "Tin DN" + "Tin SP" hien dang chi pull tu Post
+  (feed VIP). Admin News BUSINESS/PRODUCT khong len trang chu → mat
+  visibility cho noi dung toa soan.
+- **Q1** /tin-tuc list — co nen hien News template=PHOTO/VIDEO khong?
+- **Q2** /multimedia route — giu hay rename?
+- **Q3** Vi tri cac section moi tren trang chu.
+- **Q4** Trang chi tiet doanh nghiep — co nen them tab tin tuc lien quan?
+
+### Decision
+
+#### Q0=C — MERGED feed: Post + News chung 1 section
+- `lib/homepage.ts` them `getMergedFeed(postCategory, newsCategory, take)`
+  fetch song song 2 nguon, merge sort theo date DESC, slice take.
+- Mapping mac dinh tren homepage:
+  - `Post.NEWS  ∪ News.BUSINESS` → "Tin doanh nghiep moi nhat" (variant feature-list, take=6)
+  - `Post.PRODUCT ∪ News.PRODUCT` → "Tin san pham moi nhat" (variant hero-list, take=5)
+- Unified shape `MergedFeedItem` mang `source: "post" | "news"` + href
+  da rewrite san (`/bai-viet/{id}` hoac `/tin-tuc/{slug}`).
+- News field `*_en/_zh/_ar` van duoc giu trong shape de localize render
+  thoi; Post chi co title goc → `localize()` fallback ve title.
+
+**Tai sao C (merged) thay vi A (giu nguyen) hoac B (rieng 2 section)?**
+- A = mat visibility cho admin News.
+- B = double surface lam scroll dai, lap label.
+- C = mot list, sort thoi gian, user thay tin moi nhat tu ca 2 nguon.
+  Trade-off: title click "see all" chi pop ve /feed?category — admin News
+  khong co trang "see all" rieng cho category. Acceptable vi user click
+  card → ve dung /tin-tuc/{slug}.
+
+#### Q1=B — /tin-tuc filter template=NORMAL
+- 4 query trong /tin-tuc public (page list + sidebar + actions loadMore +
+  detail) deu them `template: "NORMAL"`. PHOTO/VIDEO push sang /multimedia
+  (su dung union query da co tu ADR-035).
+- Hardcoded constant `TIN_TUC_PUBLIC_TEMPLATE = "NORMAL"` trong
+  `app/[locale]/(public)/tin-tuc/categories.ts` lam single source of truth.
+- Detail page `/tin-tuc/{slug}` van render duoc neu user paste URL truc
+  tiep cho bai PHOTO/VIDEO (backward compat) — chi list bi an thoi.
+
+**Tai sao B (filter NORMAL) thay vi A (hien tat ca)?**
+- A = lap noi dung voi /multimedia (PHOTO/VIDEO hien 2 cho).
+- B = phan tach ro: /tin-tuc cho text-heavy article, /multimedia cho
+  visual content. Editor luu y khi chon template biet bai se di dau.
+
+#### Q2 — Giu /multimedia (khong rename)
+- Bookmarks + sitemap entries cu khong bi break.
+- Label "Đa phương tiện" trong i18n giu nguyen.
+
+#### Q3 — Vi tri section khong doi
+- "Tin DN moi nhat" + "Tin SP moi nhat" giu nguyen vi tri cu (sau
+  CertifiedProducts + ResearchSection). Chi data fetcher doi.
+
+#### Q4 — Single tab "Tin tuc ve DN" tren company detail
+- Trang `/doanh-nghiep/{slug}` them tab thu 4 (giua Gallery va Info).
+- Query: `News.findMany({ relatedCompanyId: company.id, template: NORMAL,
+  isPublished: true })`. Gop ca BUSINESS + PRODUCT cung 1 tab — khong
+  split 2 tab vi user khong de phan biet va so item thuong it.
+- i18n keys: `companyTabs.tabNews` + `companyTabs.noNews`.
+
+### Trade-offs
+- **Pro**: Editor co single workflow — chon category, viet bai → bai tu
+  dong xuat hien dung surface (homepage merge + /tin-tuc list + company
+  tab). Khong can manual cross-link.
+- **Con**:
+  - `getMergedFeed` overfetch 2x take per nguon → DB load nhe hon truoc
+    (1.5x query cost). Acceptable vi cache 300s.
+  - "See all" tu titleHref van di /feed (Post-only). Future: tao
+    `/tin-tuc?category=BUSINESS` filter de admin News co landing page.
+  - Company tab gop BUSINESS + PRODUCT — neu 1 DN co nhieu PRODUCT news
+    co the lan at BUSINESS news. Order theo isPinned + publishedAt nen
+    admin co the pin de uu tien.
+
+### Files
+- `lib/homepage.ts` — them `getMergedFeed` + type `MergedFeedItem`, xoa
+  `getLatestPostsByCategory` cu (replaced).
+- `components/features/homepage/PostsSection.tsx` — refactor signature
+  (them `newsCategory` prop), inner components consume `MergedFeedItem`.
+- `app/[locale]/(public)/page.tsx` — pass `newsCategory` cho 2 PostsSection.
+- `app/api/cron/warm-homepage/route.ts` — warm `getMergedFeed` thay vi
+  `getLatestPostsByCategory`.
+- `app/[locale]/(public)/tin-tuc/categories.ts` — them
+  `TIN_TUC_PUBLIC_TEMPLATE = "NORMAL"`.
+- `app/[locale]/(public)/tin-tuc/page.tsx` + `actions.ts` — filter
+  `template = NORMAL` o ca 3 query.
+- `app/[locale]/(public)/doanh-nghiep/[slug]/page.tsx` — fetch
+  newsItems song song.
+- `app/[locale]/(public)/doanh-nghiep/[slug]/CompanyTabs.tsx` — them
+  tab `news` voi list rendering.
+- `messages/{vi,en,zh,ar}.json` — them `companyTabs.tabNews` +
+  `companyTabs.noNews`.

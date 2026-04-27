@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { canAdminWrite } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
 
-// PATCH — Admin duyệt hoặc từ chối đơn kết nạp
+// PATCH — Admin/Ban Thường vụ duyệt hoặc từ chối đơn kết nạp
 // Body: { action: "APPROVE" | "REJECT", rejectReason?: string, finalCategory?: MemberCategory }
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "member:approve")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

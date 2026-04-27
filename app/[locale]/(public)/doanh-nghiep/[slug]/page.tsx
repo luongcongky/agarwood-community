@@ -80,11 +80,31 @@ export default async function CompanyProfilePage({ params }: Props) {
   const isAdmin = currentUserRole === "ADMIN"
   const canEdit = isOwner || isAdmin
 
-  // VIP tier + posts count — độc lập nhau, cùng phụ thuộc company.ownerId
-  const [tier, postCount] = await Promise.all([
+  // VIP tier + posts count + tin tức về DN — fetch song song.
+  // Q4 (Phase 3.3 2026-04): single tab "Tin tức về DN" gộp cả BUSINESS +
+  // PRODUCT (theo quyết định customer). Filter relatedCompanyId match
+  // company.id, isPublished, template=NORMAL (PHOTO/VIDEO push /multimedia).
+  const [tier, postCount, newsItems] = await Promise.all([
     getMemberTier(company.owner.contributionTotal, "BUSINESS"),
     prisma.post.count({
       where: { authorId: company.ownerId, status: "PUBLISHED" },
+    }),
+    prisma.news.findMany({
+      where: {
+        isPublished: true,
+        template: "NORMAL",
+        relatedCompanyId: company.id,
+      },
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+      take: 20,
+      select: {
+        id: true,
+        slug: true,
+        title: true, title_en: true, title_zh: true, title_ar: true,
+        excerpt: true, excerpt_en: true, excerpt_zh: true, excerpt_ar: true,
+        coverImageUrl: true,
+        publishedAt: true,
+      },
     }),
   ])
 
@@ -115,11 +135,13 @@ export default async function CompanyProfilePage({ params }: Props) {
           </div>
         </div>
 
-        {/* Edit button */}
+        {/* Edit button — admin pass ?slug để load đúng DN này (admin không
+            có DN riêng nên fallback ownerId không work). Owner cũng dùng
+            được link có slug — chính DN của họ. Phase 3.7 (2026-04). */}
         {canEdit && (
           <div className="absolute top-4 right-4">
             <Link
-              href="/doanh-nghiep/chinh-sua"
+              href={`/doanh-nghiep/chinh-sua?slug=${company.slug}`}
               className="bg-white/90 text-brand-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-white transition-colors"
             >
               Chỉnh sửa
@@ -169,6 +191,7 @@ export default async function CompanyProfilePage({ params }: Props) {
           description={l(company, "description")}
           products={company.products.map((p) => ({ ...p, imageUrls: p.imageUrls as string[] }))}
           galleryImages={company.galleryImages}
+          newsItems={newsItems}
           companyName={l(company, "name")}
           companySlug={company.slug}
           foundedYear={company.foundedYear}

@@ -2,7 +2,63 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DeleteNewsButton } from "./DeleteNewsButton"
+import { NewsListToggle } from "./NewsListToggles"
 import { Prisma, NewsCategory } from "@prisma/client"
+
+/** Label + style cho từng NewsCategory — dùng ở badge cột "Phân loại" và
+ *  filter dropdown. Phase 3.3 (2026-04) mở rộng thêm BUSINESS + PRODUCT. */
+const CATEGORY_BADGE: Record<NewsCategory, { label: string; cls: string }> = {
+  GENERAL: {
+    label: "📰 Tin tức",
+    cls: "bg-blue-50 text-blue-700 border border-blue-100",
+  },
+  RESEARCH: {
+    label: "📚 Nghiên cứu",
+    cls: "bg-indigo-50 text-indigo-700 border border-indigo-100",
+  },
+  BUSINESS: {
+    label: "🏢 Doanh nghiệp",
+    cls: "bg-purple-50 text-purple-700 border border-purple-100",
+  },
+  PRODUCT: {
+    label: "📦 Sản phẩm",
+    cls: "bg-teal-50 text-teal-700 border border-teal-100",
+  },
+  LEGAL: {
+    label: "⚖️ Pháp lý",
+    cls: "bg-amber-50 text-amber-700 border border-amber-100",
+  },
+  SPONSORED_PRODUCT: {
+    label: "💰 Bài SP (legacy)",
+    cls: "bg-emerald-50 text-emerald-700 border border-emerald-100",
+  },
+  // Phase 3.5 (2026-04)
+  EXTERNAL_NEWS: {
+    label: "📰 Tin báo chí",
+    cls: "bg-sky-50 text-sky-700 border border-sky-100",
+  },
+  AGRICULTURE: {
+    label: "🌾 Khuyến nông",
+    cls: "bg-lime-50 text-lime-700 border border-lime-100",
+  },
+}
+
+/** Map category + slug → URL public tương ứng. Trả null nếu category không
+ *  có public route (vd LEGAL với slug khác 2 slug đặc biệt). LEGAL có 2 slug
+ *  mapping thẳng tới /privacy + /terms (xem lib/legal-pages.ts). */
+function publicPathFor(category: NewsCategory, slug: string): string | null {
+  if (category === "LEGAL") {
+    if (slug === "chinh-sach-bao-mat") return "/vi/privacy"
+    if (slug === "dieu-khoan-su-dung") return "/vi/terms"
+    return null
+  }
+  if (category === "RESEARCH") return `/vi/nghien-cuu/${slug}`
+  // Phase 3.5 (2026-04)
+  if (category === "EXTERNAL_NEWS") return `/vi/tin-bao-chi/${slug}`
+  if (category === "AGRICULTURE") return `/vi/khuyen-nong/${slug}`
+  // GENERAL, BUSINESS, PRODUCT, SPONSORED_PRODUCT → /tin-tuc
+  return `/vi/tin-tuc/${slug}`
+}
 
 // Admin list không cần real-time — mỗi POST/PATCH/DELETE news đã gọi
 // `revalidatePath("/admin/tin-tuc")` nên sau khi admin tạo/sửa/xóa quay về
@@ -111,6 +167,13 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <option value="">Tất cả</option>
               <option value="GENERAL">📰 Tin tức</option>
               <option value="RESEARCH">📚 Nghiên cứu</option>
+              <option value="BUSINESS">🏢 Doanh nghiệp</option>
+              <option value="PRODUCT">📦 Sản phẩm</option>
+              {/* Phase 3.5 (2026-04) */}
+              <option value="EXTERNAL_NEWS">📰 Tin báo chí</option>
+              <option value="AGRICULTURE">🌾 Khuyến nông</option>
+              <option value="LEGAL">⚖️ Pháp lý</option>
+              <option value="SPONSORED_PRODUCT">💰 Bài SP (legacy)</option>
             </select>
           </div>
 
@@ -146,7 +209,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap">
                 Trạng thái
               </th>
-              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap">
                 Ghim
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
@@ -155,7 +218,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[100px] whitespace-nowrap">
                 Ngày đăng
               </th>
-              <th className="px-4 py-3 text-right font-semibold text-brand-800 w-[180px] whitespace-nowrap">
+              <th className="px-4 py-3 text-right font-semibold text-brand-800 w-[230px] whitespace-nowrap">
                 Thao tác
               </th>
             </tr>
@@ -190,42 +253,26 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-tight whitespace-nowrap",
-                      news.category === "RESEARCH"
-                        ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                        : news.category === "LEGAL"
-                          ? "bg-amber-50 text-amber-700 border border-amber-100"
-                          : news.category === "SPONSORED_PRODUCT"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                            : "bg-blue-50 text-blue-700 border border-blue-100",
+                      CATEGORY_BADGE[news.category]?.cls ??
+                        "bg-blue-50 text-blue-700 border border-blue-100",
                     )}
                   >
-                    {news.category === "RESEARCH"
-                      ? "📚 Nghiên cứu"
-                      : news.category === "LEGAL"
-                        ? "⚖️ Pháp lý"
-                        : news.category === "SPONSORED_PRODUCT"
-                          ? "💰 Bài SP"
-                          : "📰 Tin tức"}
+                    {CATEGORY_BADGE[news.category]?.label ?? "📰 Tin tức"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap",
-                      news.isPublished
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                        : "bg-gray-50 text-gray-500 border border-gray-200"
-                    )}
-                  >
-                    {news.isPublished ? "Đã xuất bản" : "Nháp"}
-                  </span>
+                  <NewsListToggle
+                    newsId={news.id}
+                    field="isPublished"
+                    value={news.isPublished}
+                  />
                 </td>
-                <td className="px-4 py-3 text-center">
-                  {news.isPinned ? (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand-100 text-brand-700">
-                      📌
-                    </span>
-                  ) : "-"}
+                <td className="px-4 py-3">
+                  <NewsListToggle
+                    newsId={news.id}
+                    field="isPinned"
+                    value={news.isPinned}
+                  />
                 </td>
                 <td className="px-4 py-3">
                   {news.seoScore == null ? (
@@ -253,6 +300,36 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                    {/* Xem — link tới public page tương ứng category. Disable
+                        nếu chưa xuất bản (public route trả 404). */}
+                    {(() => {
+                      const publicHref = publicPathFor(news.category, news.slug)
+                      if (!news.isPublished || !publicHref) {
+                        return (
+                          <span
+                            className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-400 cursor-not-allowed"
+                            title={
+                              !news.isPublished
+                                ? "Bài chưa xuất bản — không có URL công khai"
+                                : "Loại bài này không có trang công khai"
+                            }
+                          >
+                            Xem
+                          </span>
+                        )
+                      }
+                      return (
+                        <a
+                          href={publicHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-50 hover:border-brand-300 transition-all shadow-sm"
+                          title="Xem trên trang công khai (mở tab mới)"
+                        >
+                          Xem ↗
+                        </a>
+                      )
+                    })()}
                     <Link
                       href={`/admin/tin-tuc/${news.id}`}
                       className="rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-bold text-brand-700 hover:bg-brand-50 hover:border-brand-300 transition-all shadow-sm"

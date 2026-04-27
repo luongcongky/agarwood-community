@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 interface Item {
   id: string
@@ -25,6 +26,7 @@ const STATUSES = ["PENDING", "CONTACTED", "DONE", "CANCELLED"]
 export function ConsultationRow({ item }: { item: Item }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [updating, setUpdating] = useState(false)
 
   async function update(status: string) {
@@ -35,7 +37,10 @@ export function ConsultationRow({ item }: { item: Item }) {
       body: JSON.stringify({ status }),
     })
     setUpdating(false)
-    if (res.ok) router.refresh()
+    if (res.ok) {
+      refreshPendingCounts()
+      router.refresh()
+    }
   }
 
   return (

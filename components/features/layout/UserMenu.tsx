@@ -1,8 +1,9 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useLocale } from "next-intl"
 import { signOut } from "next-auth/react"
-import { LogOut, FileCheck, LayoutDashboard, Globe, RefreshCw, ShieldCheck } from "lucide-react"
+import { LogOut, FileCheck, LayoutDashboard, Globe, RefreshCw, ShieldCheck, Building2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -28,6 +29,11 @@ interface UserMenuProps {
   mode?: NavMode
   /** Hội viên VIP còn hiệu lực — false → dropdown chỉ có item Gia hạn */
   membershipActive?: boolean
+  /** Nếu user là đại diện doanh nghiệp (có Company record với ownerId=user.id),
+   *  truyền `{ name, slug }` để dropdown hiện item "Quản lý doanh nghiệp" trỏ
+   *  vào trang public profile `/{locale}/doanh-nghiep/{slug}`. Null/undefined
+   *  → không hiện item. */
+  company?: { name: string; slug: string } | null
   /** Layout style của trigger:
    *  - "dark" (default): dùng trong Navbar nâu đậm — avatar nhỏ, text cream
    *  - "light": dùng trong SiteHeader masthead trắng — avatar to bằng logo
@@ -50,8 +56,9 @@ const roleBadgeClass: Record<Role, string> = {
   INFINITE: "bg-primary text-primary-foreground",
 }
 
-export function UserMenu({ name, email, image, role, mode = "public", membershipActive = true, variant = "dark" }: UserMenuProps) {
+export function UserMenu({ name, email, image, role, mode = "public", membershipActive = true, company, variant = "dark" }: UserMenuProps) {
   const router = useRouter()
+  const locale = useLocale()
   const initials = name?.trim()
     ? name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(-2).join("").toUpperCase()
     : "?"
@@ -152,6 +159,27 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
               </DropdownMenuItem>
             )}
           </>
+        )}
+
+        {/* Đại diện doanh nghiệp → link tới trang public profile của DN.
+            Chỉ hiện khi user có Company (ownerId=user.id). Item này hiện ở
+            mọi mode (public / vip-admin / admin) để đại diện luôn truy cập
+            nhanh được. Ẩn với VIP hết hạn vì proxy sẽ redirect /gia-han.
+            Locale prefix đi qua `useLocale()` — tránh 1 redirect vòng của
+            proxy khi push path không prefix. */}
+        {company && !isInactiveVip && role !== "GUEST" && (
+          <DropdownMenuItem
+            onClick={() => router.push(`/${locale}/doanh-nghiep/${company.slug}`)}
+            className="font-semibold text-brand-700 focus:text-brand-800"
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            <span className="flex-1 truncate">
+              Quản lý doanh nghiệp
+              <span className="block text-[11px] font-normal text-muted-foreground truncate">
+                {company.name}
+              </span>
+            </span>
+          </DropdownMenuItem>
         )}
 
         {/* Khi đang ở bên trong khu vực quản lý/quản trị → cho đường ra trang công khai.

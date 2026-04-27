@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cloudinaryResize } from "@/lib/cloudinary"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 type ModerationItemProps = {
   post: {
@@ -23,6 +24,7 @@ type ModerationItemProps = {
 
 export function ModerationItem({ post }: ModerationItemProps) {
   const router = useRouter()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [processing, setProcessing] = useState<"approve" | "reject" | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,6 +42,7 @@ export function ModerationItem({ post }: ModerationItemProps) {
         const j = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(j.error ?? "Duyệt thất bại")
       }
+      refreshPendingCounts()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi")
@@ -69,6 +72,7 @@ export function ModerationItem({ post }: ModerationItemProps) {
         const j = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(j.error ?? "Từ chối thất bại")
       }
+      refreshPendingCounts()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi")
@@ -157,6 +161,17 @@ export function ModerationItem({ post }: ModerationItemProps) {
           className="rounded border border-brand-300 px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50"
         >
           Xem chi tiết ↗
+        </a>
+        {/* Phase 3.6 (2026-04): admin sửa nội dung trước khi duyệt. Reuse
+            PostEditor flow — `?edit=<id>` mở bài hiện tại, admin lưu sẽ ghi
+            PostRevision với editedRole=ADMIN, status giữ nguyên PENDING.
+            Sau khi sửa xong admin quay lại đây bấm Duyệt. */}
+        <a
+          href={`/feed/tao-bai?edit=${post.id}&adminMode=1&returnTo=/admin/bai-viet/cho-duyet`}
+          className="rounded border border-amber-300 bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+          title="Sửa bài trước khi duyệt — thay đổi sẽ được log vào lịch sử"
+        >
+          ✎ Sửa
         </a>
         <button
           type="button"

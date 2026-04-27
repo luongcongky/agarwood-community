@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { VIETNAM_BANKS } from "@/lib/constants/banks"
@@ -16,6 +17,7 @@ type UserProfile = {
   name: string
   email: string
   phone: string | null
+  avatarUrl: string | null
   bio: string | null
   bio_en: string | null
   bio_zh: string | null
@@ -127,6 +129,11 @@ export function ProfileTabs({
   // ── Personal info state ──────────────────────────────────────────────
   const [name, setName] = useState(user.name)
   const [phone, setPhone] = useState(user.phone ?? "")
+  // Phase 3.7 (2026-04): owner đổi avatar — upload tách khỏi form submit
+  // để feedback ngay (không phải bấm "Lưu" rồi mới apply).
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "")
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [bio, setBio] = useState(user.bio ?? "")
   const [bioEn, setBioEn] = useState(user.bio_en ?? "")
   const [bioZh, setBioZh] = useState(user.bio_zh ?? "")
@@ -156,6 +163,60 @@ export function ProfileTabs({
   const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   // ── Handlers ─────────────────────────────────────────────────────────
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setPersonalMsg({ type: "error", text: "Ảnh quá lớn (tối đa 5MB)." })
+      return
+    }
+    setAvatarUploading(true)
+    setPersonalMsg(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("folder", "users")
+      const upRes = await fetch("/api/upload", { method: "POST", body: fd })
+      if (!upRes.ok) throw new Error("upload-failed")
+      const upData = await upRes.json()
+      const newUrl = upData.secure_url ?? upData.url
+      const patchRes = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: newUrl }),
+      })
+      if (!patchRes.ok) throw new Error("patch-failed")
+      setAvatarUrl(newUrl)
+      setPersonalMsg({ type: "success", text: "Đã cập nhật ảnh đại diện." })
+      router.refresh()
+    } catch {
+      setPersonalMsg({ type: "error", text: "Tải ảnh thất bại. Vui lòng thử lại." })
+    } finally {
+      setAvatarUploading(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ""
+    }
+  }
+
+  async function handleAvatarRemove() {
+    if (!confirm("Xoá ảnh đại diện?")) return
+    setAvatarUploading(true)
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: null }),
+      })
+      if (!res.ok) throw new Error("delete-failed")
+      setAvatarUrl("")
+      setPersonalMsg({ type: "success", text: "Đã xoá ảnh đại diện." })
+      router.refresh()
+    } catch {
+      setPersonalMsg({ type: "error", text: "Không xoá được ảnh." })
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
 
   async function handlePersonalSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -283,6 +344,47 @@ export function ProfileTabs({
         {/* ── Tab 1: Thông tin cá nhân ──────────────────────────────────── */}
         {activeTab === "personal" && (
           <form onSubmit={handlePersonalSubmit} className="space-y-5">
+            {/* Avatar — Phase 3.7 (2026-04): upload tách khỏi submit để
+                feedback ngay. */}
+            <Field label="Ảnh đại diện">
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 rounded-full bg-brand-100 border border-brand-200 overflow-hidden shrink-0 flex items-center justify-center">
+                  {avatarUrl ? (
+                    <Image src={avatarUrl} alt="" fill className="object-cover" sizes="80px" />
+                  ) : (
+                    <span className="text-2xl font-bold text-brand-700">
+                      {name?.[0]?.toUpperCase() ?? "?"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    disabled={avatarUploading}
+                    className="text-xs text-brand-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-800 hover:file:bg-brand-200 disabled:opacity-50"
+                  />
+                  <div className="flex items-center gap-3 text-[11px]">
+                    {avatarUploading && (
+                      <span className="text-brand-500 italic">Đang tải lên...</span>
+                    )}
+                    {avatarUrl && !avatarUploading && (
+                      <button
+                        type="button"
+                        onClick={handleAvatarRemove}
+                        className="text-red-600 hover:text-red-800 underline"
+                      >
+                        Xoá ảnh
+                      </button>
+                    )}
+                    <span className="text-brand-400">Tối đa 5MB. JPG/PNG/WebP.</span>
+                  </div>
+                </div>
+              </div>
+            </Field>
+
             <Field label="Email" hint="Email không thể thay đổi. Liên hệ ban quản trị nếu cần.">
               <input type="email" value={user.email} disabled className={cn(inputClass, "bg-brand-50 cursor-not-allowed")} />
             </Field>

@@ -1,5 +1,5 @@
 import type { DefaultSession } from "next-auth"
-import type { Role } from "@prisma/client"
+import type { Role, Committee } from "@prisma/client"
 
 declare module "next-auth" {
   interface Session {
@@ -8,6 +8,9 @@ declare module "next-auth" {
       role: Role
       /** ISO date string — kept as string so JWT serialises cleanly */
       membershipExpires: string | null
+      /** Danh sách ban user đang thuộc. Embed vào JWT để proxy (Edge) gate
+       *  /admin routes khi VIP có committee. Refresh cùng JWT TTL 60s. */
+      committees: Committee[]
     } & DefaultSession["user"]
   }
 
@@ -22,5 +25,6 @@ declare module "@auth/core/jwt" {
   interface JWT {
     role?: Role
     membershipExpires?: string | null
+    committees?: Committee[]
   }
 }

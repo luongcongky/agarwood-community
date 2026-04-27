@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 export function MemberActionCell({
   memberId,
@@ -18,6 +19,7 @@ export function MemberActionCell({
 }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [loading, setLoading] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [showReject, setShowReject] = useState(false)
@@ -42,6 +44,7 @@ export function MemberActionCell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "approve" }),
       })
+      refreshPendingCounts()
       router.refresh()
     } catch { alert("Có lỗi xảy ra") }
     finally { setLoading(false) }
@@ -56,6 +59,7 @@ export function MemberActionCell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "reject", reason: rejectReason }),
       })
+      refreshPendingCounts()
       router.refresh()
     } catch { alert("Có lỗi xảy ra") }
     finally { setLoading(false) }

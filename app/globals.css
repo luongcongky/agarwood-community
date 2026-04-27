@@ -9,7 +9,6 @@
 /* ── Brand token aliases (dùng trong Tailwind utilities) ─────────────────── */
 @theme inline {
   --font-sans: var(--font-body);
-  --font-heading: var(--font-heading);
   --font-mono: var(--font-geist-mono);
 
   --color-background: var(--background);
@@ -162,31 +161,85 @@
    ra <figure><img/><figcaption/></figure>; cần style consistent cho cả
    editor view và public article page.
 
-   Dùng display:table để figure co về đúng width của ảnh; figcaption với
-   caption-side:bottom render dưới ảnh + auto constrain width = table width
-   → caption luôn canh giữa SO VỚI ẢNH (không phải so với editor/editor).
-   Override prose default img margin vì prose add margin-top/bottom ~2em. */
+   Round 3 (2026-04 customer feedback): mặc định ảnh full-width 16:9
+   (ContentImageEditor đã crop 16:9 sẵn). Figure block-level width 100%,
+   img stretch full → tự responsive trên mobile. Inline style width="Xpx"
+   từ drag-resize sẽ override (specificity inline > class selector).
+   Caption text-align center hoạt động cho cả full-width lẫn ảnh đã resize. */
 .prose :where(figure):not(:where([class~="not-prose"] *)) {
-  display: table;
+  display: block;
+  width: 100%;
+  max-width: 960px;
   margin: 1.5em auto;
 }
 .prose :where(figure img):not(:where([class~="not-prose"] *)) {
-  display: table-cell;
-  margin: 0;
-  vertical-align: top;
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
 }
 .prose :where(figcaption):not(:where([class~="not-prose"] *)) {
-  display: table-caption;
-  caption-side: bottom;
-  padding-top: 0.4em;
+  display: block;
+  /* Caption sát ảnh — chỉ dựa vào line-height nhỏ của caption text.
+     Round 2-3 (2026-04): khách feedback nhiều lần về khoảng cách. */
+  margin-top: 0.15em;
+  padding-top: 0;
   text-align: center;
   font-size: 0.875em;
   font-style: italic;
   color: #6b7280;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 .prose :where(a):not(:where([class~="not-prose"] *)):hover {
   color: var(--brand-800, #6e4420);
+}
+
+/* Callout (note box) — vùng "ghi chú quan trọng" tone tan/be (giống
+   reference znews). Render ở mọi surface dùng .prose: admin editor preview,
+   NewsPreviewModal, /tin-tuc/[slug], /nghien-cuu/[slug].
+
+   Markup: <aside class="editor-callout">...block content...</aside>
+   Schema: chứa được heading + paragraph + list (xem extensions/Callout.ts).
+
+   Dùng `:where(.editor-callout)` để 0 specificity → child styles override
+   được. `:not(...)` chain match pattern Tailwind Typography để escape
+   element gắn `not-prose`. */
+.prose :where(aside.editor-callout):not(:where([class~="not-prose"] *)) {
+  display: block;
+  border: 1px solid #fcd34d;     /* amber-300 */
+  background-color: #fffbeb;      /* amber-50 */
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1.5em 0;
+}
+/* Reset font size cho text bên trong (prose-lg có thể bơm lên 1.125rem). */
+.prose :where(aside.editor-callout p):not(:where([class~="not-prose"] *)) {
+  font-size: 0.95em;
+  line-height: 1.65;
+  color: #374151;                 /* gray-700 */
+  margin: 0.5em 0;
+}
+.prose :where(aside.editor-callout p:first-child):not(:where([class~="not-prose"] *)) {
+  margin-top: 0;
+}
+.prose :where(aside.editor-callout p:last-child):not(:where([class~="not-prose"] *)) {
+  margin-bottom: 0;
+}
+.prose :where(aside.editor-callout h2):not(:where([class~="not-prose"] *)) {
+  font-size: 1.0625em;
+  font-weight: 700;
+  margin: 0.5em 0;
+  color: #111827;                 /* gray-900 */
+}
+.prose :where(aside.editor-callout h3):not(:where([class~="not-prose"] *)) {
+  font-size: 0.95em;
+  font-weight: 700;
+  margin: 0.4em 0;
+  color: #111827;
+}
+.prose :where(aside.editor-callout h2:first-child):not(:where([class~="not-prose"] *)),
+.prose :where(aside.editor-callout h3:first-child):not(:where([class~="not-prose"] *)) {
+  margin-top: 0;
 }
 
 /* Media embed — YouTube iframe + direct audio. Rendered by RichTextEditor's
@@ -224,6 +277,23 @@
 .prose :where(.media-embed-audio audio):not(:where([class~="not-prose"] *)) {
   width: 100%;
   display: block;
+}
+/* Wrapper khi media-embed có caption — wraps embed + p.media-embed-caption.
+   Tách block riêng (không dùng <figure>) để không vướng prose figure rule. */
+.prose :where(.media-embed-with-caption):not(:where([class~="not-prose"] *)) {
+  margin: 1.5em auto;
+  max-width: 960px;
+}
+.prose :where(.media-embed-with-caption .media-embed):not(:where([class~="not-prose"] *)) {
+  margin: 0 auto;
+}
+.prose :where(.media-embed-caption):not(:where([class~="not-prose"] *)) {
+  margin: 0.4em 0 0 0;
+  text-align: center;
+  font-size: 0.875em;
+  font-style: italic;
+  color: #6b7280;
+  line-height: 1.4;
 }
 .prose :where(h1, h2, h3, h4):not(:where([class~="not-prose"] *)) {
   color: var(--brand-900, #3d2817);
@@ -336,8 +406,15 @@
   to   { transform: translateX(-50%); }
 }
 .ticker-track {
-  animation: ticker-scroll 60s linear infinite;
+  /* Mobile: 30s — viewport hẹp nên 1 item chiếm ~5s ở duration 60s, cảm
+     giác chậm. 30s × ~360px viewport ≈ 2.5s/item → đọc kịp nhưng không lê.
+     Tablet/desktop: 60s vì nhiều item visible cùng lúc, tăng tốc thì lướt
+     không đọc kịp. */
+  animation: ticker-scroll 30s linear infinite;
   will-change: transform;
+}
+@media (min-width: 640px) {
+  .ticker-track { animation-duration: 60s; }
 }
 .ticker-wrapper:hover .ticker-track,
 .ticker-wrapper:focus-within .ticker-track {

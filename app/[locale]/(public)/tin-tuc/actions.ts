@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
+import { TIN_TUC_PUBLIC_CATEGORIES, TIN_TUC_PUBLIC_TEMPLATE } from "./categories"
 
 export type NewsListItem = {
   id: string
@@ -48,7 +49,8 @@ export async function loadMoreNews(params: {
 }): Promise<LoadMoreResult> {
   const where = {
     isPublished: true,
-    category: { in: ["GENERAL" as const, "SPONSORED_PRODUCT" as const] },
+    category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+    template: TIN_TUC_PUBLIC_TEMPLATE, // Q1=B: chỉ NORMAL; PHOTO/VIDEO → /multimedia
     ...(params.q && {
       OR: [
         { title: { contains: params.q, mode: "insensitive" as const } },

@@ -6,6 +6,7 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 import { LangTabsBar, computeHasContent, type Locale } from "@/components/ui/lang-tabs-bar"
+import { UserPicker } from "./UserPicker"
 
 const LANG_FIELDS = ["name", "title", "workTitle", "bio"] as const
 type LangFieldName = (typeof LANG_FIELDS)[number]
@@ -15,6 +16,17 @@ function langKey(name: LangFieldName, locale: Locale): keyof FormData {
 }
 
 type LeaderCategory = "BTV" | "BCH" | "BKT" | "HDTD"
+
+type LinkedUser = {
+  id: string
+  name: string
+  email: string
+  avatarUrl: string | null
+  role: string
+  accountType: string
+  isActive: boolean
+  company: { name: string } | null
+}
 
 type Leader = {
   id: string
@@ -28,6 +40,8 @@ type Leader = {
   term: string
   sortOrder: number
   isActive: boolean
+  userId: string | null
+  user: LinkedUser | null
 }
 
 type FormData = {
@@ -52,6 +66,7 @@ type FormData = {
   photoUrl: string
   term: string
   sortOrder: number
+  userId: string | null
 }
 
 const EMPTY_FORM: FormData = {
@@ -76,6 +91,7 @@ const EMPTY_FORM: FormData = {
   photoUrl: "",
   term: "",
   sortOrder: 0,
+  userId: null,
 }
 
 const CATEGORY_LABELS: Record<LeaderCategory, string> = {
@@ -107,8 +123,27 @@ export function LeaderManager({
   const [filterCat, setFilterCat] = useState<LeaderCategory | "ALL">("ALL")
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
+  // Tách linkedUser khỏi `form` vì UserPicker cần full object (avatar, email…)
+  // còn form.userId chỉ là string id để POST body. 2 state luôn được sync
+  // qua handleLinkedUserChange.
+  const [linkedUser, setLinkedUser] = useState<LinkedUser | null>(null)
   const [activeLocale, setActiveLocale] = useState<Locale>("vi")
   const [saving, setSaving] = useState(false)
+
+  function handleLinkedUserChange(user: LinkedUser | null) {
+    setLinkedUser(user)
+    setForm((prev) => {
+      if (!user) return { ...prev, userId: null }
+      // Auto-fill name từ user nếu form.name đang trống — tiện cho flow
+      // tạo mới. Không overwrite nếu admin đã gõ tên khác.
+      const autoFillName = !prev.name.trim()
+      return {
+        ...prev,
+        userId: user.id,
+        ...(autoFillName && { name: user.name }),
+      }
+    })
+  }
 
   function langValues(name: LangFieldName): { vi: string; en: string; zh: string; ar: string } {
     return {
@@ -158,6 +193,7 @@ export function LeaderManager({
   function startCreate() {
     setEditing("new")
     setForm({ ...EMPTY_FORM, term: selectedTerm })
+    setLinkedUser(null)
   }
 
   function startEdit(leader: Leader) {
@@ -184,12 +220,15 @@ export function LeaderManager({
       photoUrl: leader.photoUrl ?? "",
       term: leader.term,
       sortOrder: leader.sortOrder,
+      userId: leader.userId,
     })
+    setLinkedUser(leader.user)
   }
 
   function cancel() {
     setEditing(null)
     setForm(EMPTY_FORM)
+    setLinkedUser(null)
   }
 
   async function save() {
@@ -272,6 +311,19 @@ export function LeaderManager({
               : undefined
           }
         />
+
+        {/* Link hội viên — ưu tiên đặt trên cùng vì đây là quan hệ quan trọng
+            nhất. Link rồi thì system tự match Leader ↔ CommitteeMembership. */}
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Link hội viên (tuỳ chọn)
+          </label>
+          <UserPicker
+            value={linkedUser}
+            onChange={handleLinkedUserChange}
+            disabled={readOnly}
+          />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-4">
           <div>
@@ -548,6 +600,25 @@ export function LeaderManager({
                     >
                       {CATEGORY_LABELS[leader.category]}
                     </span>
+                    {leader.userId ? (
+                      <span
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-sky-50 border border-sky-200 px-2 py-0.5 text-[11px] font-medium text-sky-700"
+                        title={
+                          leader.user
+                            ? `Linked với ${leader.user.name} <${leader.user.email}>`
+                            : "Đã link hội viên"
+                        }
+                      >
+                        🔗 {leader.user?.name ?? "Linked"}
+                      </span>
+                    ) : (
+                      <span
+                        className="shrink-0 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-700"
+                        title="Chưa link hội viên — Leader này sẽ không hiện badge 'Có profile' ở tab Theo ban"
+                      >
+                        ⚠ Chưa link
+                      </span>
+                    )}
                     {!leader.isActive && (
                       <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                         Ẩn

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { isAdmin } from "@/lib/roles"
 
@@ -11,6 +13,7 @@ type UserProfile = {
   name: string
   email: string
   phone: string | null
+  bio?: string | null
   avatarUrl: string | null
   bankAccountName: string | null
   bankAccountNumber: string | null
@@ -108,11 +111,72 @@ function Alert({ type, message }: { type: "success" | "error"; message: string }
 // ─── Main Form Component ─────────────────────────────────────────────────────
 
 export function ProfileForm({ user }: { user: UserProfile }) {
+  const router = useRouter()
   // Personal info state
   const [name, setName] = useState(user.name)
   const [phone, setPhone] = useState(user.phone ?? "")
+  const [bio, setBio] = useState(user.bio ?? "")
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "")
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [personalLoading, setPersonalLoading] = useState(false)
   const [personalMsg, setPersonalMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Phase 3.7 (2026-04): owner đổi avatar — upload Cloudinary rồi PATCH ngay
+  // (tách khỏi form chính để feedback nhanh, không phải submit cả form).
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setPersonalMsg({ type: "error", text: "Ảnh quá lớn (tối đa 5MB)." })
+      return
+    }
+    setAvatarUploading(true)
+    setPersonalMsg(null)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("folder", "users")
+      const upRes = await fetch("/api/upload", { method: "POST", body: fd })
+      if (!upRes.ok) throw new Error("upload-failed")
+      const upData = await upRes.json()
+      const newUrl = upData.secure_url ?? upData.url
+      const patchRes = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: newUrl }),
+      })
+      if (!patchRes.ok) throw new Error("patch-failed")
+      setAvatarUrl(newUrl)
+      setPersonalMsg({ type: "success", text: "Đã cập nhật ảnh đại diện." })
+      router.refresh()
+    } catch {
+      setPersonalMsg({ type: "error", text: "Tải ảnh thất bại. Vui lòng thử lại." })
+    } finally {
+      setAvatarUploading(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ""
+    }
+  }
+
+  async function handleAvatarRemove() {
+    if (!confirm("Xoá ảnh đại diện?")) return
+    setAvatarUploading(true)
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: null }),
+      })
+      if (!res.ok) throw new Error("delete-failed")
+      setAvatarUrl("")
+      setPersonalMsg({ type: "success", text: "Đã xoá ảnh đại diện." })
+      router.refresh()
+    } catch {
+      setPersonalMsg({ type: "error", text: "Không xoá được ảnh." })
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
 
   // Bank info state
   const [bankAccountName, setBankAccountName] = useState(user.bankAccountName ?? "")
@@ -144,9 +208,10 @@ export function ProfileForm({ user }: { user: UserProfile }) {
     setPersonalLoading(true)
     setPersonalMsg(null)
     try {
-      const res = await patchProfile({ name, phone })
+      const res = await patchProfile({ name, phone, bio })
       if (res.ok) {
         setPersonalMsg({ type: "success", text: "Đã cập nhật thông tin cá nhân." })
+        router.refresh()
       } else {
         const d = await res.json()
         setPersonalMsg({ type: "error", text: d.error ?? "Đã xảy ra lỗi." })
@@ -273,6 +338,47 @@ export function ProfileForm({ user }: { user: UserProfile }) {
       {/* ── Personal info form ──────────────────────────────────────────── */}
       <SectionCard title="Thông tin cá nhân">
         <form onSubmit={handlePersonalSubmit} className="space-y-4">
+          {/* Avatar — upload tách khỏi submit để feedback ngay (không phải
+              save cả form). Phase 3.7 (2026-04). */}
+          <Field label="Ảnh đại diện">
+            <div className="flex items-center gap-4">
+              <div className="relative w-20 h-20 rounded-full bg-brand-100 border border-brand-200 overflow-hidden shrink-0 flex items-center justify-center">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt="" fill className="object-cover" sizes="80px" />
+                ) : (
+                  <span className="text-2xl font-bold text-brand-700">
+                    {name?.[0]?.toUpperCase() ?? "?"}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  disabled={avatarUploading}
+                  className="text-xs text-brand-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-800 hover:file:bg-brand-200 disabled:opacity-50"
+                />
+                <div className="flex items-center gap-2 text-[11px]">
+                  {avatarUploading && (
+                    <span className="text-brand-500 italic">Đang tải lên...</span>
+                  )}
+                  {avatarUrl && !avatarUploading && (
+                    <button
+                      type="button"
+                      onClick={handleAvatarRemove}
+                      className="text-red-600 hover:text-red-800 underline"
+                    >
+                      Xoá ảnh
+                    </button>
+                  )}
+                  <span className="text-brand-400">Tối đa 5MB. JPG/PNG/WebP.</span>
+                </div>
+              </div>
+            </div>
+          </Field>
+
           <Field label="Họ và tên" required>
             <input
               type="text"
@@ -291,6 +397,19 @@ export function ProfileForm({ user }: { user: UserProfile }) {
               placeholder="0912 345 678"
               className={inputClass}
             />
+          </Field>
+          <Field label="Giới thiệu (tiểu sử)">
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={4}
+              maxLength={2000}
+              placeholder="Giới thiệu ngắn về bản thân, kinh nghiệm trong ngành trầm hương..."
+              className={cn(inputClass, "resize-y")}
+            />
+            <p className="mt-1 text-[11px] text-brand-400">
+              {bio.length}/2000 ký tự — hiển thị trên trang chi tiết hội viên.
+            </p>
           </Field>
           {personalMsg && <Alert type={personalMsg.type} message={personalMsg.text} />}
           <div className="flex justify-end">

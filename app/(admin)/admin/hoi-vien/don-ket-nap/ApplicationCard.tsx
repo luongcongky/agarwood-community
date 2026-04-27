@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 type ApplicationData = {
   id: string
@@ -56,6 +57,7 @@ export function ApplicationCard({
 }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<"none" | "approve" | "reject">("none")
   const [rejectReason, setRejectReason] = useState("")
@@ -89,6 +91,7 @@ export function ApplicationCard({
         setError(data.error ?? "Xử lý thất bại")
         return
       }
+      refreshPendingCounts()
       router.refresh()
     } catch {
       setError("Không thể kết nối")

@@ -1,9 +1,10 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Clock } from "lucide-react"
-import type { PostCategory } from "@prisma/client"
-import { getLatestPostsByCategory, type HomepagePost } from "@/lib/homepage"
+import type { PostCategory, NewsCategory } from "@prisma/client"
+import { getMergedFeed, type MergedFeedItem } from "@/lib/homepage"
 import { getLocale, getTranslations } from "next-intl/server"
+import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
@@ -15,21 +16,6 @@ const BCP47: Record<Locale, string> = {
   en: "en-GB",
   zh: "zh-CN",
   ar: "ar",
-}
-
-function getCover(post: HomepagePost): string | null {
-  if (post.imageUrls && post.imageUrls.length > 0) return post.imageUrls[0]
-  const m = post.content.match(/https:\/\/res\.cloudinary\.com\/[^"'\s)]+/)
-  return m ? m[0] : null
-}
-
-function cardTitle(post: HomepagePost, n = 80): string {
-  if (post.title) return post.title
-  return post.content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, n)
 }
 
 function fmtDate(d: Date | string | null): string {
@@ -61,13 +47,22 @@ function timeAgo(date: Date | string | null, locale: Locale): string {
   })
 }
 
+function localizedTitle(item: MergedFeedItem, locale: Locale): string {
+  return (localize(item, "title", locale) as string) || ""
+}
+
 export async function PostsSection({
   category,
+  newsCategory,
   title,
   emptyText,
   variant = "grid",
 }: {
+  /** Post category — bài user feed (NEWS / PRODUCT). */
   category: PostCategory
+  /** News category gộp chung — admin tin BUSINESS hoặc PRODUCT đi cùng
+   *  Post tương ứng. Q0=C decision (Phase 3.3 2026-04). */
+  newsCategory: NewsCategory
   title: string
   emptyText: string
   /** "grid" = 4-col thumbnail wall (default).
@@ -77,15 +72,23 @@ export async function PostsSection({
 }) {
   const take =
     variant === "feature-list" ? 6 : variant === "hero-list" ? 5 : 8
-  const [posts] = await Promise.all([
-    getLatestPostsByCategory(category, take),
+  const [items] = await Promise.all([
+    getMergedFeed(category, newsCategory, take),
     getTranslations("homepage"),
   ])
   const locale = (await getLocale()) as Locale
+  // Title click: feed Posts là phần lớn nội dung user-generated → /feed?category
+  // mở đúng tab. Admin News rải rác vào trong list nhưng không có "see all"
+  // page chung — user click từng card route riêng. Trade-off: see-all chỉ
+  // hiển thị Post nguồn, nhưng đa số bài là Post nên acceptable.
+  const titleHref =
+    category === "NEWS" || category === "PRODUCT"
+      ? `/feed?category=${category}`
+      : "/feed"
 
-  if (posts.length === 0) {
+  if (items.length === 0) {
     return (
-      <Section title={title} titleHref="/feed">
+      <Section title={title} titleHref={titleHref}>
         <div className="border border-brand-200 bg-white p-12 text-center italic text-brand-500">
           {emptyText}
         </div>
@@ -94,23 +97,23 @@ export async function PostsSection({
   }
 
   if (variant === "feature-list") {
-    return <FeatureListLayout posts={posts} title={title} locale={locale} />
+    return <FeatureListLayout items={items} title={title} locale={locale} titleHref={titleHref} />
   }
 
   if (variant === "hero-list") {
-    return <HeroListLayout posts={posts} title={title} locale={locale} />
+    return <HeroListLayout items={items} title={title} locale={locale} titleHref={titleHref} />
   }
 
   return (
-    <Section title={title} titleHref="/feed">
+    <Section title={title} titleHref={titleHref}>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {posts.map((p) => (
+        {items.map((it) => (
           <ThumbnailCard
-            key={p.id}
-            href={`/bai-viet/${p.id}`}
-            coverUrl={getCover(p)}
-            title={cardTitle(p)}
-            meta={fmtDate(p.createdAt)}
+            key={it.id}
+            href={it.href}
+            coverUrl={it.coverUrl}
+            title={localizedTitle(it, locale)}
+            meta={fmtDate(it.date)}
           />
         ))}
       </div>
@@ -119,29 +122,34 @@ export async function PostsSection({
 }
 
 function FeatureListLayout({
-  posts,
+  items,
   title,
   locale,
+  titleHref,
 }: {
-  posts: HomepagePost[]
+  items: MergedFeedItem[]
   title: string
   locale: Locale
+  titleHref: string
 }) {
-  const [feat1, feat2, ...rest] = posts
+  const [feat1, feat2, ...rest] = items
   const list = rest.slice(0, 4)
 
   return (
-    <Section title={title} titleHref="/feed">
+    <Section title={title} titleHref={titleHref}>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0">
-          {feat1 && <FeaturedCard post={feat1} locale={locale} />}
+          {/* Card đầu nhận priority — đây là LCP candidate khi NewsSection
+              hero đã load xong (audit 2026-04: LCP element = ảnh tin tức
+              của section "Tin hội viên" = feat1). */}
+          {feat1 && <FeaturedCard item={feat1} locale={locale} priority />}
         </div>
         <div className="min-w-0">
-          {feat2 && <FeaturedCard post={feat2} locale={locale} />}
+          {feat2 && <FeaturedCard item={feat2} locale={locale} />}
         </div>
         <div className="min-w-0 space-y-5">
-          {list.map((p) => (
-            <ListItem key={p.id} post={p} locale={locale} />
+          {list.map((it) => (
+            <ListItem key={it.id} item={it} locale={locale} />
           ))}
         </div>
       </div>
@@ -150,26 +158,31 @@ function FeatureListLayout({
 }
 
 function HeroListLayout({
-  posts,
+  items,
   title,
   locale,
+  titleHref,
 }: {
-  posts: HomepagePost[]
+  items: MergedFeedItem[]
   title: string
   locale: Locale
+  titleHref: string
 }) {
-  const [main, ...rest] = posts
+  const [main, ...rest] = items
   const list = rest.slice(0, 4)
 
   return (
-    <Section title={title} titleHref="/feed">
+    <Section title={title} titleHref={titleHref}>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0">
-          {main && <HeroCard post={main} locale={locale} />}
+          {/* Hero đầu của hero-list layout = LCP candidate khi section này
+              ở mid-fold. Section bên dưới (Sản phẩm) thường có hero lớn
+              hơn → thêm priority để ưu tiên fetch khi user scroll. */}
+          {main && <HeroCard item={main} locale={locale} priority />}
         </div>
         <div className="min-w-0 space-y-4">
-          {list.map((p) => (
-            <SideThumbItem key={p.id} post={p} locale={locale} />
+          {list.map((it) => (
+            <SideThumbItem key={it.id} item={it} locale={locale} />
           ))}
         </div>
       </div>
@@ -178,26 +191,31 @@ function HeroListLayout({
 }
 
 function HeroCard({
-  post,
+  item,
   locale,
+  priority = false,
 }: {
-  post: HomepagePost
+  item: MergedFeedItem
   locale: Locale
+  /** Truyền `true` cho hero card đầu tiên trong trang → Next.js sẽ
+   *  `fetchPriority="high"` + skip lazy-load. Một page chỉ nên có 1 ảnh
+   *  priority — đó phải là LCP candidate lớn nhất above-the-fold. */
+  priority?: boolean
 }) {
-  const cover = getCover(post)
-  const title = cardTitle(post)
+  const title = localizedTitle(item, locale)
   return (
-    <Link href={`/bai-viet/${post.id}`} className="group block">
+    <Link href={item.href} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
-        {cover ? (
+        {item.coverUrl ? (
           <Image
-            src={cover}
+            src={item.coverUrl}
             alt={title}
             fill
             placeholder="blur"
             blurDataURL={BRAND_BLUR_DATA_URL}
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
+            priority={priority}
           />
         ) : (
           <AgarwoodPlaceholder className="h-full w-full" size="xl" shape="square" />
@@ -207,23 +225,22 @@ function HeroCard({
         {title}
       </h3>
       <div className="mt-2">
-        <TimeMeta date={post.createdAt} locale={locale} />
+        <TimeMeta date={item.date} locale={locale} />
       </div>
     </Link>
   )
 }
 
 function SideThumbItem({
-  post,
+  item,
   locale,
 }: {
-  post: HomepagePost
+  item: MergedFeedItem
   locale: Locale
 }) {
-  const cover = getCover(post)
-  const title = cardTitle(post)
+  const title = localizedTitle(item, locale)
   return (
-    <Link href={`/bai-viet/${post.id}`} className="group flex gap-3">
+    <Link href={item.href} className="group flex gap-3">
       <div className="min-w-0 flex-1">
         <h3
           style={{ fontWeight: 400 }}
@@ -232,13 +249,13 @@ function SideThumbItem({
           {title}
         </h3>
         <div className="mt-1.5">
-          <TimeMeta date={post.createdAt} locale={locale} />
+          <TimeMeta date={item.date} locale={locale} />
         </div>
       </div>
       <div className="relative h-20 w-28 shrink-0 overflow-hidden bg-brand-100">
-        {cover ? (
+        {item.coverUrl ? (
           <Image
-            src={cover}
+            src={item.coverUrl}
             alt=""
             fill
             placeholder="blur"
@@ -260,26 +277,28 @@ function SideThumbItem({
 }
 
 function FeaturedCard({
-  post,
+  item,
   locale,
+  priority = false,
 }: {
-  post: HomepagePost
+  item: MergedFeedItem
   locale: Locale
+  priority?: boolean
 }) {
-  const cover = getCover(post)
-  const title = cardTitle(post)
+  const title = localizedTitle(item, locale)
   return (
-    <Link href={`/bai-viet/${post.id}`} className="group block">
+    <Link href={item.href} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
-        {cover ? (
+        {item.coverUrl ? (
           <Image
-            src={cover}
+            src={item.coverUrl}
             alt={title}
             fill
             placeholder="blur"
             blurDataURL={BRAND_BLUR_DATA_URL}
             sizes="(max-width: 1024px) 50vw, 28vw"
             className="object-cover"
+            priority={priority}
           />
         ) : (
           <AgarwoodPlaceholder className="h-full w-full" size="lg" shape="square" />
@@ -289,22 +308,22 @@ function FeaturedCard({
         {title}
       </h3>
       <div className="mt-2">
-        <TimeMeta date={post.createdAt} locale={locale} />
+        <TimeMeta date={item.date} locale={locale} />
       </div>
     </Link>
   )
 }
 
 function ListItem({
-  post,
+  item,
   locale,
 }: {
-  post: HomepagePost
+  item: MergedFeedItem
   locale: Locale
 }) {
-  const title = cardTitle(post)
+  const title = localizedTitle(item, locale)
   return (
-    <Link href={`/bai-viet/${post.id}`} className="group block">
+    <Link href={item.href} className="group block">
       <h3
         style={{ fontWeight: 400 }}
         className="text-[15px] leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline"
@@ -312,7 +331,7 @@ function ListItem({
         {title}
       </h3>
       <div className="mt-1.5">
-        <TimeMeta date={post.createdAt} locale={locale} />
+        <TimeMeta date={item.date} locale={locale} />
       </div>
     </Link>
   )

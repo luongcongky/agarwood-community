@@ -105,6 +105,11 @@ const ALLOWED_MIME_TYPES = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  // Hình ảnh — chấp nhận để lưu trữ ảnh scan, ảnh chữ ký, sơ đồ,... bên
+  // cạnh văn bản. WebP ưu tiên về size nhưng JPG/PNG vẫn được cho tương thích.
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ]
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
@@ -131,7 +136,7 @@ export async function uploadToDrive(
 ): Promise<UploadResult> {
   // Validate
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-    throw new Error("Chỉ chấp nhận file PDF, DOC, DOCX")
+    throw new Error("Chỉ chấp nhận file PDF, DOC, DOCX, JPG, PNG, WebP")
   }
   if (file.length > MAX_FILE_SIZE) {
     throw new Error("File tối đa 20MB")

@@ -1,7 +1,8 @@
 import { NextResponse, after } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
-import { isAdmin, canAdminWrite, canWriteNews, canPublishNews } from "@/lib/roles"
+import { canAdminWrite } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { scoreSeo } from "@/lib/seo/score"
@@ -34,7 +35,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user || !isAdmin(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  // GET để editor load bài — cần news:write (Ban Thư ký soạn/sửa) hoặc
+  // admin:read. `admin:full` tự động match cả 2 qua `hasPermission`.
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "news:write") && !hasPermission(perms, "admin:read")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
@@ -45,7 +52,16 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  return NextResponse.json({ news })
+  // Fetch author info kèm response để editor preset selector. authorId
+  // không có FK relation trong schema (legacy) → query rời tay.
+  const author = news.authorId
+    ? await prisma.user.findUnique({
+        where: { id: news.authorId },
+        select: { id: true, name: true, email: true, avatarUrl: true },
+      })
+    : null
+
+  return NextResponse.json({ news, author })
 }
 
 export async function PATCH(
@@ -53,12 +69,16 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user || !canWriteNews(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "news:write")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
-  // INFINITE write được content nhưng không flip được `isPublished`.
-  // Strip field khỏi patch body → trường cũ giữ nguyên, client tự tái hiện UI.
-  const canPublish = canPublishNews(session.user.role)
+  // `isPublished` chỉ ai có news:publish mới flip được. Không có → strip
+  // khỏi patch body bên dưới (trường cũ giữ nguyên).
+  const canPublish = hasPermission(perms, "news:publish")
 
   const { id } = await params
   const body = await req.json()
@@ -106,11 +126,71 @@ export async function PATCH(
           ? "LEGAL"
           : category === "SPONSORED_PRODUCT"
             ? "SPONSORED_PRODUCT"
-            : "GENERAL"
+            : category === "BUSINESS"
+              ? "BUSINESS"
+              : category === "PRODUCT"
+                ? "PRODUCT"
+                : category === "EXTERNAL_NEWS"
+                  ? "EXTERNAL_NEWS"
+                  : category === "AGRICULTURE"
+                    ? "AGRICULTURE"
+                    : "GENERAL"
+  if (body.template !== undefined) {
+    data.template =
+      body.template === "PHOTO"
+        ? "PHOTO"
+        : body.template === "VIDEO"
+          ? "VIDEO"
+          : "NORMAL"
+  }
+  if ("relatedCompanyId" in body) {
+    data.relatedCompanyId = body.relatedCompanyId || null
+  }
+  if ("relatedProductId" in body) {
+    data.relatedProductId = body.relatedProductId || null
+  }
+  // Phase 3.5: EXTERNAL_NEWS attribution. Pass-through nullable.
+  if ("sourceName" in body) {
+    data.sourceName = typeof body.sourceName === "string" && body.sourceName.trim()
+      ? body.sourceName.trim()
+      : null
+  }
+  if ("sourceUrl" in body) {
+    data.sourceUrl = typeof body.sourceUrl === "string" && body.sourceUrl.trim()
+      ? body.sourceUrl.trim()
+      : null
+  }
+  if ("gallery" in body) {
+    data.gallery = Array.isArray(body.gallery)
+      ? body.gallery
+          .filter((g: { url?: unknown }) => g && typeof g.url === "string")
+          .map((g: { url: string; caption?: unknown }) => ({
+            url: g.url,
+            caption: typeof g.caption === "string" ? g.caption : "",
+          }))
+      : null
+  }
   if (isPublished !== undefined && canPublish) data.isPublished = isPublished
   if (isPinned !== undefined) data.isPinned = isPinned
   if (publishedAt !== undefined)
     data.publishedAt = publishedAt ? new Date(publishedAt) : null
+  // Author change: chỉ admin:full mới được. Validate user tồn tại.
+  if ("authorId" in body && typeof body.authorId === "string" && body.authorId) {
+    if (!hasPermission(perms, "admin:full")) {
+      return NextResponse.json(
+        { error: "Chỉ Admin mới được đổi tác giả" },
+        { status: 403 },
+      )
+    }
+    const exists = await prisma.user.findUnique({
+      where: { id: body.authorId },
+      select: { id: true },
+    })
+    if (!exists) {
+      return NextResponse.json({ error: "Tác giả không tồn tại" }, { status: 400 })
+    }
+    data.authorId = body.authorId
+  }
 
   // SEO field passthrough — only set when key present in body so we don't
   // accidentally null out fields the editor didn't send.

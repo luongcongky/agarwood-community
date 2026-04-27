@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import DOMPurify from "isomorphic-dompurify"
+import { writePostRevision } from "@/lib/post-revision"
 
 export async function GET(
   _req: Request,
@@ -45,29 +46,51 @@ export async function PATCH(
   })
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const isAdminEdit = isAdmin(session.user.role) && post.authorId !== session.user.id
   if (post.authorId !== session.user.id && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { title, content } = await req.json()
+  const { title, content, reason } = await req.json() as {
+    title?: string
+    content?: string
+    /** Phase 3.6: bắt buộc khi admin edit — giải thích lý do để owner hiểu. */
+    reason?: string
+  }
   if (!content || content.trim().length < 50) {
     return NextResponse.json({ error: "Nội dung quá ngắn (tối thiểu 50 ký tự)" }, { status: 400 })
+  }
+  if (isAdminEdit && (!reason || reason.trim().length < 10)) {
+    return NextResponse.json(
+      { error: "Admin chỉnh sửa cần ghi rõ lý do (tối thiểu 10 ký tự) để owner hiểu thay đổi." },
+      { status: 400 },
+    )
   }
 
   const sanitizedContent = DOMPurify.sanitize(content)
 
-  // Author edit → quay lại PENDING để admin duyệt lại phần edit.
-  // Admin edit → giữ nguyên status hiện tại (preserve moderation state).
-  const isAdminEdit = isAdmin(session.user.role)
-  await prisma.post.update({
-    where: { id },
-    data: {
-      title: title || null,
-      content: sanitizedContent,
-      ...(isAdminEdit
-        ? {}
-        : { status: "PENDING", moderationNote: null, moderatedAt: null, moderatedBy: null }),
-    },
+  // Phase 3.6 (2026-04): atomic update + revision write. Author edit →
+  // quay lại PENDING để admin duyệt lại phần edit. Admin edit → giữ nguyên
+  // status (preserve moderation state). Mỗi lần save tạo PostRevision row
+  // để build audit history.
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.post.update({
+      where: { id },
+      data: {
+        title: title || null,
+        content: sanitizedContent,
+        ...(isAdminEdit
+          ? {}
+          : { status: "PENDING", moderationNote: null, moderatedAt: null, moderatedBy: null }),
+      },
+    })
+    await writePostRevision({
+      post: updated,
+      editedBy: session.user.id,
+      editedRole: isAdminEdit ? "ADMIN" : "OWNER",
+      reason: isAdminEdit ? reason!.trim() : (reason?.trim() || null),
+      tx,
+    })
   })
 
   return NextResponse.json({ success: true })

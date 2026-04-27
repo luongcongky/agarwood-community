@@ -52,20 +52,23 @@ import {
   Heading2,
   Heading3,
   Heading4,
+  StickyNote,
 } from "lucide-react"
 import { NodeViewImage } from "./NodeViewImage"
 import { Figure, Figcaption } from "./extensions/Figure"
 import { MediaEmbed, type MediaType } from "./extensions/MediaEmbed"
+import { Callout } from "./extensions/Callout"
 import { ContentImageEditor } from "./ContentImageEditor"
 import { MediaEmbedModal } from "./MediaEmbedModal"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helper: build ProseMirror JSON block cho <figure>[image][figcaption].
 // Figcaption luôn render trong output để edit-flow tìm lại được caption.
-// Default display width 500px — ảnh full-res vẫn upload (≤1000px) nhưng
-// hiển thị co lại 500px; user có thể kéo handle để resize nếu muốn lớn hơn.
+// Phase 3.3 (2026-04): KHÔNG set default width nữa — ảnh stretch full
+// container width via CSS `figure img { width: 100% }`. Khách hàng yêu cầu
+// default = full 16:9. User vẫn có thể drag handle để thu nhỏ (set inline
+// width:Xpx override).
 // ────────────────────────────────────────────────────────────────────────────
-const DEFAULT_CONTENT_IMAGE_WIDTH = "500px"
 
 function buildFigureBlock(
   src: string,
@@ -80,7 +83,9 @@ function buildFigureBlock(
     content: [
       {
         type: "image",
-        attrs: { src, width: DEFAULT_CONTENT_IMAGE_WIDTH },
+        // width: null → CSS default w-full applies; user resize sẽ set
+        // inline width:Xpx override.
+        attrs: { src, width: null, height: null },
       },
       figcaption,
     ],
@@ -177,6 +182,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
         Figure,
         Figcaption,
         MediaEmbed,
+        Callout,
         TextAlign.configure({
           types: ["heading", "paragraph", "image"],
           alignments: ["left", "center", "right", "justify"],
@@ -241,12 +247,12 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
     const [showMediaModal, setShowMediaModal] = useState(false)
 
     const handleMediaEmbedInsert = useCallback(
-      ({ src, type }: { src: string; type: MediaType }) => {
+      ({ src, type, caption }: { src: string; type: MediaType; caption: string }) => {
         if (!editor) return
         editor
           .chain()
           .focus()
-          .insertContent({ type: "mediaEmbed", attrs: { src, type } })
+          .insertContent({ type: "mediaEmbed", attrs: { src, type, caption } })
           .run()
         setShowMediaModal(false)
       },
@@ -423,6 +429,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           isBulletList: editor.isActive("bulletList"),
           isOrderedList: editor.isActive("orderedList"),
           isBlockquote: editor.isActive("blockquote"),
+          isCallout: editor.isActive("callout"),
           isLink: editor.isActive("link"),
           isImage: editor.isActive("image"),
           isTable: editor.isActive("table"),
@@ -502,18 +509,22 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
             "[&_.ProseMirror_li_p]:my-0",
             // Blockquote
             "[&_.ProseMirror_blockquote]:border-l-4 [&_.ProseMirror_blockquote]:border-brand-300 [&_.ProseMirror_blockquote]:pl-4 [&_.ProseMirror_blockquote]:my-3 [&_.ProseMirror_blockquote]:text-brand-600 [&_.ProseMirror_blockquote]:italic",
+            // Callout — styles ở `app/globals.css` qua `.prose :where(aside.editor-callout)`
+            // áp dụng cho mọi surface (admin editor / preview modal / public render).
             // Headings
             "[&_.ProseMirror_h2]:text-xl [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:text-brand-900 [&_.ProseMirror_h2]:my-3",
             "[&_.ProseMirror_h3]:text-lg [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_h3]:text-brand-900 [&_.ProseMirror_h3]:my-2",
             "[&_.ProseMirror_h4]:text-base [&_.ProseMirror_h4]:font-semibold [&_.ProseMirror_h4]:text-brand-800 [&_.ProseMirror_h4]:my-2",
             // Horizontal rule
             "[&_.ProseMirror_hr]:border-brand-200 [&_.ProseMirror_hr]:my-4",
-            // Figure + figcaption — dùng display:table để figure co về bằng
-            // width của ảnh, figcaption canh giữa SO VỚI ẢNH (không phải với
-            // editor). Caption-side:bottom đẩy figcaption xuống dưới.
-            "[&_.ProseMirror_figure]:table [&_.ProseMirror_figure]:mx-auto [&_.ProseMirror_figure]:my-4",
-            "[&_.ProseMirror_figure_img]:table-cell [&_.ProseMirror_figure_img]:my-0 [&_.ProseMirror_figure_img]:align-top",
-            "[&_.ProseMirror_figcaption]:table-caption [&_.ProseMirror_figcaption]:caption-bottom [&_.ProseMirror_figcaption]:pt-1 [&_.ProseMirror_figcaption]:text-[13px] [&_.ProseMirror_figcaption]:italic [&_.ProseMirror_figcaption]:text-neutral-600 [&_.ProseMirror_figcaption]:leading-snug [&_.ProseMirror_figcaption]:text-center [&_.ProseMirror_figcaption]:min-h-[1.2em]",
+            // Figure full-width 16:9 (round 3 — match public CSS). Figure
+            // block-level + max-width 960px + img stretch 100% width. Inline
+            // style="width:..." từ drag-resize override qua specificity.
+            "[&_.ProseMirror_figure]:block [&_.ProseMirror_figure]:w-full [&_.ProseMirror_figure]:max-w-[960px] [&_.ProseMirror_figure]:mx-auto [&_.ProseMirror_figure]:my-4",
+            "[&_.ProseMirror_figure_img]:block [&_.ProseMirror_figure_img]:w-full [&_.ProseMirror_figure_img]:h-auto [&_.ProseMirror_figure_img]:my-0 [&_.ProseMirror_figure_img]:mx-auto",
+            // Caption sát ảnh — block-level (không còn dùng table-caption do
+            // figure đã chuyển sang display:block). mt-0.5 = ~2px gap.
+            "[&_.ProseMirror_figcaption]:block [&_.ProseMirror_figcaption]:mt-0.5 [&_.ProseMirror_figcaption]:text-[13px] [&_.ProseMirror_figcaption]:italic [&_.ProseMirror_figcaption]:text-neutral-600 [&_.ProseMirror_figcaption]:leading-tight [&_.ProseMirror_figcaption]:text-center",
             "[&_.ProseMirror_figcaption:empty::before]:content-['Nhập_chú_thích_ảnh…'] [&_.ProseMirror_figcaption:empty::before]:text-neutral-400",
           ].join(" ")}
           style={{ minHeight: minHeightValue }}
@@ -538,6 +549,7 @@ type EditorState = {
   isBulletList: boolean
   isOrderedList: boolean
   isBlockquote: boolean
+  isCallout: boolean
   isLink: boolean
   isImage: boolean
   isTable: boolean
@@ -768,6 +780,13 @@ function Toolbar({
           title="Trích dẫn"
         >
           <Quote size={ICON_SIZE} />
+        </TbBtn>
+        <TbBtn
+          onClick={() => run(() => editor!.chain().focus().toggleCallout().run())}
+          active={state?.isCallout}
+          title="Ghi chú / tóm tắt (callout box)"
+        >
+          <StickyNote size={ICON_SIZE} />
         </TbBtn>
 
         <Sep />

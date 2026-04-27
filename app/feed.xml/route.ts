@@ -30,7 +30,9 @@ export async function GET() {
   const items = await prisma.news.findMany({
     where: {
       isPublished: true,
-      category: { in: ["GENERAL", "RESEARCH"] },
+      // Phase 3.5 (2026-04): include AGRICULTURE in RSS. EXTERNAL_NEWS bỏ
+      // qua vì link gốc đã ở source — tránh duplicate trong feed reader.
+      category: { in: ["GENERAL", "RESEARCH", "AGRICULTURE"] },
     },
     orderBy: [{ publishedAt: "desc" }],
     take: 20,
@@ -59,7 +61,13 @@ export async function GET() {
 
   const itemsXml = items
     .map((n) => {
-      const path = `/${n.category === "RESEARCH" ? "nghien-cuu" : "tin-tuc"}/${n.slug}`
+      const prefix =
+        n.category === "RESEARCH"
+          ? "nghien-cuu"
+          : n.category === "AGRICULTURE"
+            ? "khuyen-nong"
+            : "tin-tuc"
+      const path = `/${prefix}/${n.slug}`
       const url = localizedUrl(path, "vi")
       const pubDate = rfc822(n.publishedAt ?? n.updatedAt ?? now)
       const author = n.originalAuthor
@@ -69,7 +77,11 @@ export async function GET() {
         ? `<enclosure url="${xmlEscape(n.coverImageUrl)}" type="image/jpeg" length="0" />`
         : ""
       const category =
-        n.category === "RESEARCH" ? "Nghiên cứu" : "Tin tức"
+        n.category === "RESEARCH"
+          ? "Nghiên cứu"
+          : n.category === "AGRICULTURE"
+            ? "Khuyến nông"
+            : "Tin tức"
       return [
         "    <item>",
         `      <title><![CDATA[${n.title}]]></title>`,

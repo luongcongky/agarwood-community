@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { isAdmin } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { getPreviousTitles } from "@/lib/news-seo-cache"
 import { scoreSeo, type SeoInput } from "@/lib/seo/score"
 
@@ -10,7 +10,12 @@ import { scoreSeo, type SeoInput } from "@/lib/seo/score"
  *  separately when the article is saved (see app/api/admin/news/route.ts). */
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user || !isAdmin(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  // SEO live scoring — ai write được news thì score được. Admin đọc cũng OK.
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "news:write") && !hasPermission(perms, "admin:read")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

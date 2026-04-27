@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
-import { canAdminWrite } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 
 /**
@@ -25,7 +25,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "post:promote")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

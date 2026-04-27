@@ -20,9 +20,18 @@ export default async function EditProductPage({
     select: {
       id: true,
       name: true,
+      name_en: true,
+      name_zh: true,
+      name_ar: true,
       slug: true,
       description: true,
+      description_en: true,
+      description_zh: true,
+      description_ar: true,
       category: true,
+      category_en: true,
+      category_zh: true,
+      category_ar: true,
       priceRange: true,
       imageUrls: true,
       isPublished: true,
@@ -54,8 +63,19 @@ export default async function EditProductPage({
           priceRange: product.priceRange,
           imageUrls: product.imageUrls as string[],
           isPublished: product.isPublished,
+          // @ts-expect-error — extra i18n fields ProductForm reads via record cast
+          name_en: product.name_en,
+          name_zh: product.name_zh,
+          name_ar: product.name_ar,
+          description_en: product.description_en,
+          description_zh: product.description_zh,
+          description_ar: product.description_ar,
+          category_en: product.category_en,
+          category_zh: product.category_zh,
+          category_ar: product.category_ar,
         }}
         companySlug={product.company?.slug}
+        historyHref={`/san-pham/${slug}/lich-su`}
       />
     </div>
   )

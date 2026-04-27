@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getProductQuotaUsage } from "@/lib/product-quota"
+import { writeProductRevision } from "@/lib/product-revision"
 
 const productSchema = z.object({
   name: z.string().min(2, "Ten san pham toi thieu 2 ky tu"),
@@ -51,25 +52,34 @@ export async function createProduct(formData: Record<string, unknown>) {
     select: { displayPriority: true },
   })
 
-  const product = await prisma.product.create({
-    data: {
-      ownerId: session.user.id,
-      companyId: company?.id ?? null,
-      name: parsed.data.name,
-      name_en: parsed.data.name_en || null,
-      name_zh: parsed.data.name_zh || null,
-      slug: parsed.data.slug,
-      description: parsed.data.description || null,
-      description_en: parsed.data.description_en || null,
-      description_zh: parsed.data.description_zh || null,
-      category: parsed.data.category || null,
-      category_en: parsed.data.category_en || null,
-      category_zh: parsed.data.category_zh || null,
-      priceRange: parsed.data.priceRange || null,
-      imageUrls: parsed.data.imageUrls ?? [],
-      isPublished: parsed.data.isPublished ?? true,
-      ownerPriority: user?.displayPriority ?? 0,
-    },
+  const product = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
+      data: {
+        ownerId: session.user.id,
+        companyId: company?.id ?? null,
+        name: parsed.data.name,
+        name_en: parsed.data.name_en || null,
+        name_zh: parsed.data.name_zh || null,
+        slug: parsed.data.slug,
+        description: parsed.data.description || null,
+        description_en: parsed.data.description_en || null,
+        description_zh: parsed.data.description_zh || null,
+        category: parsed.data.category || null,
+        category_en: parsed.data.category_en || null,
+        category_zh: parsed.data.category_zh || null,
+        priceRange: parsed.data.priceRange || null,
+        imageUrls: parsed.data.imageUrls ?? [],
+        isPublished: parsed.data.isPublished ?? true,
+        ownerPriority: user?.displayPriority ?? 0,
+      },
+    })
+    await writeProductRevision({
+      product: created,
+      editedBy: session.user.id,
+      editedRole: "OWNER",
+      tx,
+    })
+    return created
   })
 
   revalidatePath("/san-pham-doanh-nghiep")
@@ -101,23 +111,31 @@ export async function updateProduct(productId: string, formData: Record<string, 
     if (slugExists) return { error: "Slug da duoc su dung" }
   }
 
-  await prisma.product.update({
-    where: { id: productId },
-    data: {
-      name: parsed.data.name,
-      name_en: parsed.data.name_en || null,
-      name_zh: parsed.data.name_zh || null,
-      slug: parsed.data.slug,
-      description: parsed.data.description || null,
-      description_en: parsed.data.description_en || null,
-      description_zh: parsed.data.description_zh || null,
-      category: parsed.data.category || null,
-      category_en: parsed.data.category_en || null,
-      category_zh: parsed.data.category_zh || null,
-      priceRange: parsed.data.priceRange || null,
-      imageUrls: parsed.data.imageUrls ?? [],
-      isPublished: parsed.data.isPublished ?? true,
-    },
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.product.update({
+      where: { id: productId },
+      data: {
+        name: parsed.data.name,
+        name_en: parsed.data.name_en || null,
+        name_zh: parsed.data.name_zh || null,
+        slug: parsed.data.slug,
+        description: parsed.data.description || null,
+        description_en: parsed.data.description_en || null,
+        description_zh: parsed.data.description_zh || null,
+        category: parsed.data.category || null,
+        category_en: parsed.data.category_en || null,
+        category_zh: parsed.data.category_zh || null,
+        priceRange: parsed.data.priceRange || null,
+        imageUrls: parsed.data.imageUrls ?? [],
+        isPublished: parsed.data.isPublished ?? true,
+      },
+    })
+    await writeProductRevision({
+      product: updated,
+      editedBy: session.user.id,
+      editedRole: "OWNER",
+      tx,
+    })
   })
 
   revalidatePath("/san-pham/" + parsed.data.slug)

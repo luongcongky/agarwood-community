@@ -63,6 +63,9 @@ export function sanitizeArticleHtml(html: string): string {
       "preload",
       "data-media-embed",
       "data-media-embed-type",
+      // Caption text được lưu vào data-caption trên wrapper media-embed +
+      // render thành <p class="media-embed-caption"> sibling.
+      "data-caption",
       "title",
     ],
   })

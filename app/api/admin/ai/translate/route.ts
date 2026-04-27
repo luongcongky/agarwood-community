@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { canWriteNews } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { generateJSON, AllModelsFailedError } from "@/lib/gemini-models"
 
 const LOCALE_NAMES: Record<string, string> = {
@@ -33,11 +33,15 @@ const MAX_TOTAL_CHARS = 120_000
 
 export async function POST(req: Request) {
   const session = await auth()
-  // Dùng `canWriteNews` thay vì `canAdminWrite` để INFINITE soạn news có thể
-  // gọi AI dịch. Các admin surface khác (LeaderManager, SettingsForm,
-  // SurveyEditor) vẫn gate UI bằng `readOnly` cho INFINITE nên họ không
-  // chạm được tới endpoint này từ đó.
-  if (!session?.user || !canWriteNews(session.user.role)) {
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  // Gate bằng `news:write` — ADMIN (admin:full), Infinite (news:write role
+  // perm), Ban Thư ký + Truyền thông (news:write committee perm) đều pass.
+  // Các admin surface khác cũng gọi endpoint này (LeaderManager, SettingsForm,
+  // SurveyEditor) — chúng gate UI riêng, không quan tâm tới check ở đây.
+  const perms = await getUserPermissions(session.user.id)
+  if (!hasPermission(perms, "news:write")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

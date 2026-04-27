@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { auth } from "@/lib/auth"
 import { isAdmin } from "@/lib/roles"
+import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -100,6 +101,11 @@ export default async function ProductDetailPage({ params }: Props) {
   // Role-based CTA logic
   const isOwner = session?.user?.id === product.owner.id
   const viewerIsAdmin = isAdmin(session?.user?.role)
+  // canProductWrite bao gồm ADMIN và committee TRUYEN_THONG — họ đi qua
+  // admin edit route (audit trail). Owner self-edit đi qua owner route.
+  const canProductWrite = session?.user?.id
+    ? hasPermission(await getUserPermissions(session.user.id), "product:write")
+    : false
   const hasCompany = !!product.company
 
   const productJsonLd = {
@@ -256,6 +262,12 @@ export default async function ProductDetailPage({ params }: Props) {
                   >
                     Chỉnh sửa sản phẩm
                   </Link>
+                  <Link
+                    href={`/san-pham/${slug}/lich-su`}
+                    className="rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
+                  >
+                    Lịch sử chỉnh sửa
+                  </Link>
                   {product.certStatus === "DRAFT" && (
                     <Link
                       href="/chung-nhan/nop-don"
@@ -266,13 +278,24 @@ export default async function ProductDetailPage({ params }: Props) {
                   )}
                 </>
               )}
-              {viewerIsAdmin && (
-                <Link
-                  href={`/san-pham/${slug}/sua`}
-                  className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
-                >
-                  Chỉnh sửa
-                </Link>
+              {/* Admin hoặc committee TRUYEN_THONG — đi qua admin edit
+                  route để thao tác được ghi vào audit trail với
+                  editedRole phù hợp. */}
+              {!isOwner && canProductWrite && (
+                <>
+                  <Link
+                    href={`/admin/san-pham/${slug}/sua`}
+                    className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
+                  >
+                    Chỉnh sửa (Admin)
+                  </Link>
+                  <Link
+                    href={`/san-pham/${slug}/lich-su`}
+                    className="rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
+                  >
+                    Lịch sử chỉnh sửa
+                  </Link>
+                </>
               )}
               {!isOwner && !viewerIsAdmin && hasCompany && (
                 <Link

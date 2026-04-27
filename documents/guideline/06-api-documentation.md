@@ -661,16 +661,55 @@ Xoa van ban (ca Drive + DB). Yeu cau: ADMIN. Best-effort Drive delete.
 
 ---
 
-## 8. News category (admin)
+## 8. News category + template (admin) — Phase 3.3 (2026-04)
 
 ### POST /api/admin/news + PATCH /api/admin/news/{id}
-Field `category` co 3 gia tri:
+
+**Field `category`** — 5 gia tri (Phase 3.3 them 2 moi):
 
 ```json
-{ "category": "GENERAL" }    // → hien thi /tin-tuc
-{ "category": "RESEARCH" }   // → hien thi /nghien-cuu
-{ "category": "LEGAL" }      // → render o /privacy hoac /terms theo slug co dinh
+{ "category": "GENERAL" }    // → /tin-tuc
+{ "category": "RESEARCH" }   // → /nghien-cuu
+{ "category": "BUSINESS" }   // → tin doanh nghiep, yeu cau relatedCompanyId
+{ "category": "PRODUCT" }    // → tin san pham, yeu cau relatedCompanyId + relatedProductId
+{ "category": "LEGAL" }      // → /privacy hoac /terms (slug co dinh)
 ```
+
+Server validate (return 400 neu thieu):
+- `BUSINESS` -> `relatedCompanyId` bat buoc
+- `PRODUCT` -> `relatedCompanyId` + `relatedProductId` bat buoc
+- `relatedCompanyId` / `relatedProductId` se bi clear ve null cho cac category
+  khac (vd doi tu PRODUCT -> GENERAL → 2 field xoa)
+
+**Field `template`** — 3 gia tri (moi):
+
+```json
+{ "template": "NORMAL" }   // RichTextEditor: text + anh + video chen lan
+{ "template": "PHOTO" }    // Gallery anh + caption -> auto vao /multimedia
+{ "template": "VIDEO" }    // Gallery URL YouTube + caption -> auto vao /multimedia
+```
+
+**Field `gallery`** (chi voi PHOTO/VIDEO) — JSON array:
+
+```json
+{
+  "gallery": [
+    { "url": "https://res.cloudinary.com/.../tin-tuc/04-2026/abc.jpg", "caption": "Toan canh hoi thao" },
+    { "url": "https://www.youtube.com/embed/abc1234567X", "caption": "Phong van Chu tich" }
+  ]
+}
+```
+Server validate: PHOTO/VIDEO yeu cau `gallery.length >= 1`.
+
+**Field `authorId`** (Phase 3.3) — chi `admin:full` duoc override:
+
+```json
+{ "authorId": "<userId-of-different-author>" }
+```
+- Mac dinh = `session.user.id`
+- User khong co `admin:full` ma gui authorId khac → server 403
+- User dich phai ton tai trong DB (validate findUnique) → 400 neu khong
+- Dung khi admin dang ho tac gia khac (vd Chu tich gui qua email)
 
 **Quy uoc slug cho LEGAL:**
 - `chinh-sach-bao-mat` → trang `/privacy`
@@ -679,6 +718,40 @@ Field `category` co 3 gia tri:
 Trang fetch noi dung qua `lib/legal-pages.ts` (`unstable_cache` revalidate 600s, tag
 `legal:<key>`). Admin sua noi dung qua `/admin/tin-tuc/[id]` chon category=LEGAL —
 trang public tu cap nhat sau 10 phut.
+
+### GET /api/admin/news/{id}
+
+Tra ve `{ news, author }` — `author` la `{ id, name, email, avatarUrl }` hoac
+null. NewsEditor preset Author selector tu day. (Phase 3.3 them response field
+`author`; truoc do chi tra `news`).
+
+### GET /api/admin/companies/search?q=&limit= (moi)
+
+Tim doanh nghiep theo `name` / `slug` / `id` (exact). Dung cho CompanyPicker
+trong NewsEditor. Permission: `news:write` hoac `admin:read`.
+
+```json
+GET /api/admin/companies/search?q=Hoang%20Tram&limit=10
+{
+  "companies": [
+    { "id": "...", "name": "Trang Trai Tram Huong Hoang Tram", "slug": "hoang-tram", "logoUrl": "..." }
+  ]
+}
+```
+
+### GET /api/admin/products/search?q=&companyId=&limit= (moi)
+
+Tim san pham theo `name` / `slug` / `id`, optional filter `companyId`. Dung cho
+ProductPicker. Permission: `news:write` hoac `admin:read`.
+
+```json
+GET /api/admin/products/search?companyId=cmnv...&q=tinh%20dau
+{
+  "products": [
+    { "id": "...", "name": "Tinh Dau Tram Huong", "slug": "tinh-dau-tram", "imageUrls": [...], "priceRange": "1tr - 3tr", "certStatus": "APPROVED", "company": { "id": "...", "name": "..." } }
+  ]
+}
+```
 
 ---
 

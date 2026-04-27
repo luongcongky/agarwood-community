@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from "@tiptap/core"
+import type { DOMOutputSpec } from "@tiptap/pm/model"
 import { ReactNodeViewRenderer } from "@tiptap/react"
 import { NodeViewMediaEmbed } from "../NodeViewMediaEmbed"
 
@@ -63,6 +64,10 @@ export const MediaEmbed = Node.create({
       /** Width dưới dạng CSS value ("480px", "75%", …). Null = full max-width
        *  container (720px cap via CSS). Chiều cao derive từ aspect-ratio CSS. */
       width: { default: null },
+      /** Caption hiển thị dưới video/audio. Empty string = không hiện caption.
+       *  Lưu vào HTML output qua data-caption attr (legacy posts không có) +
+       *  render thành <p class="media-embed-caption"> sibling. */
+      caption: { default: "" },
     }
   },
 
@@ -77,6 +82,7 @@ export const MediaEmbed = Node.create({
             src: iframe?.getAttribute("src") ?? null,
             type: "youtube",
             width: root.style.width || null,
+            caption: root.getAttribute("data-caption") || "",
           }
         },
       },
@@ -89,6 +95,7 @@ export const MediaEmbed = Node.create({
             src: audio?.getAttribute("src") ?? null,
             type: "audio",
             width: root.style.width || null,
+            caption: root.getAttribute("data-caption") || "",
           }
         },
       },
@@ -114,46 +121,49 @@ export const MediaEmbed = Node.create({
     const src = node.attrs.src as string
     const type = node.attrs.type as MediaType
     const width = node.attrs.width as string | null
+    const caption = (node.attrs.caption as string) || ""
     const style = width ? `width: ${width}` : undefined
-    if (type === "youtube") {
-      return [
-        "div",
-        mergeAttributes({
-          class: "media-embed media-embed-youtube",
-          "data-media-embed-type": "youtube",
-          ...(style ? { style } : {}),
-        }),
-        [
-          "iframe",
-          {
-            src,
-            "data-media-embed": "youtube",
-            allow:
-              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
-            allowfullscreen: "",
-            frameborder: "0",
-            loading: "lazy",
-          },
-        ],
-      ]
+    // Build inner element (iframe hoặc audio container)
+    const innerAttrs: Record<string, string> = {
+      class: type === "youtube" ? "media-embed media-embed-youtube" : "media-embed media-embed-audio",
+      "data-media-embed-type": type,
     }
-    // audio — không hỗ trợ resize (control bar auto-fit), bỏ qua width attr
+    if (style) innerAttrs.style = style
+    if (caption) innerAttrs["data-caption"] = caption
+    const innerChild: DOMOutputSpec =
+      type === "youtube"
+        ? [
+            "iframe",
+            {
+              src,
+              "data-media-embed": "youtube",
+              allow:
+                "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+              allowfullscreen: "",
+              frameborder: "0",
+              loading: "lazy",
+            },
+          ]
+        : [
+            "audio",
+            {
+              src,
+              "data-media-embed": "audio",
+              controls: "",
+              preload: "metadata",
+            },
+          ]
+    const inner: DOMOutputSpec = ["div", mergeAttributes(innerAttrs), innerChild]
+    if (!caption) return inner
+    // Có caption → wrap trong div.media-embed-with-caption + p caption sibling.
+    // Tách wrapper riêng (không dùng <figure>) để không collide CSS rule
+    // .prose figure đã apply cho image figure (display:table breaks layout).
     return [
       "div",
-      mergeAttributes({
-        class: "media-embed media-embed-audio",
-        "data-media-embed-type": "audio",
-      }),
-      [
-        "audio",
-        {
-          src,
-          "data-media-embed": "audio",
-          controls: "",
-          preload: "metadata",
-        },
-      ],
-    ]
+      { class: "media-embed-with-caption" },
+      inner,
+      ["p", { class: "media-embed-caption" }, caption],
+    ] as DOMOutputSpec
   },
 
   addNodeView() {

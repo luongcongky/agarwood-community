@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 interface Item {
   id: string
@@ -22,6 +23,7 @@ const STATUSES = ["NEW", "HANDLED", "ARCHIVED"]
 export function ContactRow({ item }: { item: Item }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [updating, setUpdating] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -33,7 +35,10 @@ export function ContactRow({ item }: { item: Item }) {
       body: JSON.stringify({ status: next.status ?? item.status, ...next }),
     })
     setUpdating(false)
-    if (res.ok) router.refresh()
+    if (res.ok) {
+      refreshPendingCounts()
+      router.refresh()
+    }
   }
 
   return (

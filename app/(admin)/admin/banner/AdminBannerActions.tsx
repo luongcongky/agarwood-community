@@ -3,10 +3,12 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 export function AdminBannerActions({ bannerId, status }: { bannerId: string; status: string }) {
   const router = useRouter()
   const readOnly = useAdminReadOnly()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [working, setWorking] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [reason, setReason] = useState("")
@@ -27,6 +29,7 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
         setError(data.error ?? "Có lỗi xảy ra")
         return
       }
+      refreshPendingCounts()
       router.refresh()
     } finally {
       setWorking(false)
@@ -53,6 +56,7 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
       }
       setShowRejectModal(false)
       setReason("")
+      refreshPendingCounts()
       router.refresh()
     } finally {
       setWorking(false)
@@ -64,7 +68,10 @@ export function AdminBannerActions({ bannerId, status }: { bannerId: string; sta
     setWorking(true)
     try {
       const res = await fetch(`/api/admin/banner/${bannerId}`, { method: "DELETE" })
-      if (res.ok) router.refresh()
+      if (res.ok) {
+        refreshPendingCounts()
+        router.refresh()
+      }
     } finally {
       setWorking(false)
     }

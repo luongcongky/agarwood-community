@@ -1,7 +1,7 @@
 import "server-only"
 import { unstable_cache } from "next/cache"
 import { prisma } from "./prisma"
-import type { PostCategory } from "@prisma/client"
+import type { PostCategory, NewsCategory } from "@prisma/client"
 
 /**
  * Data fetchers cho trang chủ báo chí (Phase 3).
@@ -55,9 +55,11 @@ const NEWS_CARD_SELECT = {
 
 /**
  * Href helper — route News item theo category.
- *  - GENERAL, SPONSORED_PRODUCT → /tin-tuc/[slug] (list + detail chung)
- *  - RESEARCH                    → /nghien-cuu/[slug]
- *  - LEGAL                       → /phap-ly (hub văn bản pháp quy)
+ *  - GENERAL, SPONSORED_PRODUCT, BUSINESS, PRODUCT → /tin-tuc/[slug]
+ *  - RESEARCH                                       → /nghien-cuu/[slug]
+ *  - LEGAL                                          → /phap-ly (hub)
+ *
+ * Phase 3.3 (2026-04): BUSINESS + PRODUCT thêm cùng route /tin-tuc.
  *
  * LEGAL đặc biệt: 2 slug cố định chinh-sach-bao-mat / dieu-khoan-su-dung có
  * trang riêng /privacy /terms, nhưng từ section "Tin Hội" ta đều route về
@@ -69,8 +71,15 @@ export function newsHref(category: string, slug: string): string {
       return `/nghien-cuu/${slug}`
     case "LEGAL":
       return "/phap-ly"
+    // Phase 3.5 (2026-04): 2 surface mới — tin báo chí ngoài + khuyến nông.
+    case "EXTERNAL_NEWS":
+      return `/tin-bao-chi/${slug}`
+    case "AGRICULTURE":
+      return `/khuyen-nong/${slug}`
     case "GENERAL":
     case "SPONSORED_PRODUCT":
+    case "BUSINESS":
+    case "PRODUCT":
     default:
       return `/tin-tuc/${slug}`
   }
@@ -238,32 +247,132 @@ export const getFeaturedProductsForHomepage = unstable_cache(
   { revalidate: 600, tags: ["homepage", "products"] },
 )
 
-// ── Section 5+6: Tin doanh nghiệp / Tin sản phẩm mới nhất ────────────────────
+// ── Section "Tin doanh nghiệp / Tin sản phẩm mới nhất" — MERGED ─────────────
+// Phase 3.3 (2026-04, Q0=C decision): mỗi section gộp cả Post (feed VIP) +
+// News (admin đăng) cho đồng category, sort theo date desc, take N. Trước đây
+// chỉ pull từ Post → admin News kg lên homepage. Giờ unified shape, click
+// route đúng nguồn (/bai-viet vs /tin-tuc).
 
-export function getLatestPostsByCategory(category: PostCategory, take: number = 6) {
-  return getLatestPostsByCategoryCached(category, take)
+export type MergedFeedItem = {
+  /** Unique key dùng cho React: prefix theo nguồn để Post.id và News.id
+   *  không collide trong cùng list. */
+  id: string
+  /** Full path đã rewrite — Post → /bai-viet/{id}, News → /tin-tuc/{slug}. */
+  href: string
+  /** Source tag — useful cho analytics + có thể debug. */
+  source: "post" | "news"
+  title: string
+  title_en: string | null
+  title_zh: string | null
+  title_ar: string | null
+  coverUrl: string | null
+  /** Date dùng để sort + render. Post = createdAt, News = publishedAt. */
+  date: Date | string | null
+  excerpt: string | null
+  excerpt_en: string | null
+  excerpt_zh: string | null
+  excerpt_ar: string | null
 }
 
-const getLatestPostsByCategoryCached = unstable_cache(
-  async (category: PostCategory, take: number) => {
-    return prisma.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        // VIP mặc định; admin promote override (xem getTopVipMemberPosts).
-        OR: [{ isPremium: true }, { isPromoted: true }],
-        category,
-      },
-      orderBy: [
-        { isPromoted: "desc" }, // bài admin đẩy đứng top section
-        { authorPriority: "desc" },
-        { createdAt: "desc" },
-      ],
-      take,
-      select: POST_CARD_SELECT,
-    })
+/** Strip HTML tags + collapse whitespace — fallback khi Post không có title. */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+/** Best-effort: extract Cloudinary URL đầu trong content khi imageUrls rỗng. */
+function extractFirstImage(content: string): string | null {
+  const m = content.match(/https:\/\/res\.cloudinary\.com\/[^"'\s)]+/)
+  return m ? m[0] : null
+}
+
+export function getMergedFeed(
+  postCategory: PostCategory,
+  newsCategory: NewsCategory,
+  take = 6,
+) {
+  return getMergedFeedCached(postCategory, newsCategory, take)
+}
+
+const getMergedFeedCached = unstable_cache(
+  async (
+    postCategory: PostCategory,
+    newsCategory: NewsCategory,
+    take: number,
+  ): Promise<MergedFeedItem[]> => {
+    // Overfetch (take * 2) mỗi nguồn — sau khi merge + sort, slice về take.
+    // Cần overfetch vì 1 nguồn có thể "thắng" hết slot khi date của nguồn
+    // kia tụt dốc (vd Post đăng ầm ầm, News thưa thớt).
+    const [posts, news] = await Promise.all([
+      prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          // VIP mặc định; admin promote override.
+          OR: [{ isPremium: true }, { isPromoted: true }],
+          category: postCategory,
+        },
+        orderBy: [
+          { isPromoted: "desc" },
+          { authorPriority: "desc" },
+          { createdAt: "desc" },
+        ],
+        take: take * 2,
+        select: POST_CARD_SELECT,
+      }),
+      prisma.news.findMany({
+        where: {
+          isPublished: true,
+          template: "NORMAL", // Q1=B: PHOTO/VIDEO đẩy /multimedia
+          category: newsCategory,
+        },
+        orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
+        take: take * 2,
+        select: NEWS_CARD_SELECT,
+      }),
+    ])
+
+    const postItems: MergedFeedItem[] = posts.map((p) => ({
+      id: `post-${p.id}`,
+      href: `/bai-viet/${p.id}`,
+      source: "post",
+      title: p.title || stripHtml(p.content).slice(0, 80),
+      // Post chưa có dịch i18n — localize() sẽ fallback về title.
+      title_en: null,
+      title_zh: null,
+      title_ar: null,
+      coverUrl: p.imageUrls?.[0] || extractFirstImage(p.content),
+      date: p.createdAt,
+      excerpt: stripHtml(p.content).slice(0, 200) || null,
+      excerpt_en: null,
+      excerpt_zh: null,
+      excerpt_ar: null,
+    }))
+
+    const newsItems: MergedFeedItem[] = news.map((n) => ({
+      id: `news-${n.id}`,
+      href: newsHref(n.category, n.slug),
+      source: "news",
+      title: n.title,
+      title_en: n.title_en,
+      title_zh: n.title_zh,
+      title_ar: n.title_ar,
+      coverUrl: n.coverImageUrl,
+      date: n.publishedAt,
+      excerpt: n.excerpt,
+      excerpt_en: n.excerpt_en,
+      excerpt_zh: n.excerpt_zh,
+      excerpt_ar: n.excerpt_ar,
+    }))
+
+    return [...postItems, ...newsItems]
+      .sort((a, b) => {
+        const da = a.date ? new Date(a.date).getTime() : 0
+        const db = b.date ? new Date(b.date).getTime() : 0
+        return db - da
+      })
+      .slice(0, take)
   },
-  ["homepage_latest_by_category"],
-  { revalidate: 300, tags: ["homepage", "posts"] },
+  ["homepage_merged_feed"],
+  { revalidate: 300, tags: ["homepage", "posts", "news"] },
 )
 
 // ── Multimedia Section: ảnh bộ sưu tập + video YouTube ──────────────────────

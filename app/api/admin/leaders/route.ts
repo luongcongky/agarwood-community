@@ -11,13 +11,28 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
-  const { name, name_en, name_zh, honorific, honorific_en, honorific_zh, title, title_en, title_zh, category, workTitle, workTitle_en, workTitle_zh, bio, bio_en, bio_zh, photoUrl, term, sortOrder } = body
+  const { name, name_en, name_zh, honorific, honorific_en, honorific_zh, title, title_en, title_zh, category, workTitle, workTitle_en, workTitle_zh, bio, bio_en, bio_zh, photoUrl, term, sortOrder, userId } = body
 
   if (!name || !title || !term) {
     return NextResponse.json(
       { error: "name, title, term are required" },
       { status: 400 },
     )
+  }
+
+  // Validate userId (optional): phải là User tồn tại, không phải ADMIN
+  // (admin-as-leader không có nghĩa — Leader là public display).
+  if (userId) {
+    if (typeof userId !== "string") {
+      return NextResponse.json({ error: "userId phải là string" }, { status: 400 })
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    })
+    if (!user) {
+      return NextResponse.json({ error: "Không tìm thấy user" }, { status: 400 })
+    }
   }
 
   const leader = await prisma.leader.create({
@@ -42,6 +57,7 @@ export async function POST(req: Request) {
       term,
       sortOrder: sortOrder ?? 0,
       isActive: true,
+      userId: userId || null,
     },
   })
 

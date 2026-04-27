@@ -303,35 +303,125 @@ Tuong tu, voi 5 cot: Tieu bieu / Thu tu / Doanh nghiep / Chu so huu / Xac minh.
 
 ## 7. Quan ly tin tuc
 
-### Dang tin tuc moi
-1. Truy cap: `/admin/tin-tuc`
-2. Click "+ Tao tin tuc"
-3. Dien: tieu de, slug (tu dong tao tu tieu de), tom tat, noi dung (rich text)
-4. **Chon phan loai** (sidebar "Cai dat xuat ban"):
-   - **📰 Tin tuc** (`GENERAL`) → hien thi tren `/tin-tuc`
-   - **📚 Nghien cuu khoa hoc** (`RESEARCH`) → hien thi tren `/nghien-cuu`
-5. Upload anh bia (tuy chon)
-6. Chon: Xuat ban ngay hoac Luu nhap
-7. Ghim tin quan trong len dau trang
+### Danh sach tin tuc — `/admin/tin-tuc`
 
-### Editor TipTap — tinh nang moi (Phase 3.2)
+**Quick toggle truc tiep tren bang** (Phase 3.3 — 2026-04):
+- **Cot "Trang thai"**: pill `Da xuat ban` (xanh) / `Nhap` (xam) → CLICK de
+  toggle nhanh. Optimistic UI flip ngay, rollback neu API loi.
+  - Chi user co `news:publish` (ADMIN, Ban Truyen thong) duoc bam. INFINITE
+    thay disabled + tooltip giai thich.
+- **Cot "Ghim"**: badge 📌 (highlight) hoac xam → click de toggle ghim.
+  Bat ky user co `news:write` deu bam duoc.
+
+Khong can vao trang chi tiet de bat/tat publish hoac ghim — tang toc thao tac
+khi quan ly nhieu bai.
+
+### Dang tin tuc moi
+
+1. Truy cap: `/admin/tin-tuc` -> click "+ Tao tin tuc moi"
+2. Dien: tieu de, slug (tu dong tao tu tieu de), tom tat, noi dung
+3. **Chon phan loai** (sidebar "Cai dat xuat ban") — Phase 3.3 mo rong
+   thanh **5 loai**:
+
+| Loai | Enum | Hien thi | Yeu cau dac biet |
+|------|------|----------|------------------|
+| 📰 Tin tuc | `GENERAL` | `/tin-tuc` | — |
+| 📚 Nghien cuu khoa hoc | `RESEARCH` | `/nghien-cuu` | — |
+| 🏢 Tin doanh nghiep | `BUSINESS` | (lang TBD) | Phai chon Doanh nghiep lien quan |
+| 📦 Tin san pham | `PRODUCT` | (lang TBD) | Chon Doanh nghiep + San pham cu the |
+| ⚖️ Van ban phap ly | `LEGAL` | `/privacy`, `/terms` | Slug co dinh `chinh-sach-bao-mat`, `dieu-khoan-su-dung` |
+
+**Khi chon BUSINESS hoac PRODUCT**: panel amber hien picker tim doanh nghiep
+theo ten/slug. PRODUCT them ProductPicker filter theo doanh nghiep da chon.
+API enforce required field — luu se loi neu chua chon.
+
+4. **Chon dang bai (template)** — Phase 3.3 them 3 dang:
+
+| Dang | Enum | Editor | Phan dau ra |
+|------|------|--------|-------------|
+| Binh thuong | `NORMAL` | RichTextEditor (text + anh + video chen lan) | Hien o trang chi tiet news |
+| Tin anh | `PHOTO` | GalleryEditor (bulk upload + caption moi anh) | **Tu dong xuat hien o /multimedia (tab Hinh anh)** |
+| Tin video | `VIDEO` | GalleryEditor (bulk URL YouTube + caption) | **Tu dong xuat hien o /multimedia (tab Video)** |
+
+PHOTO/VIDEO yeu cau it nhat 1 muc gallery; co the keo tha (↑/↓) sap xep
+thu tu, sua caption truc tiep tren tung muc.
+
+5. **Tac gia** (sidebar) — Phase 3.3:
+   - Mac dinh = tai khoan dang dang nhap
+   - Chi ADMIN duoc chon tac gia khac (UserPicker tim hoi vien). Dung khi
+     dang ho tac gia khong co tai khoan (vd Chu tich gui qua email)
+   - User khong co quyen chi thay readonly hien ten
+6. Upload anh bia (tuy chon — auto-crop 16:9)
+7. **3 nut hanh dong** (Phase 3.3 — order moi): **Luu → Xem truoc → Xuat ban**
+   - "Luu" = lưu voi trang thai isPublished hien tai
+   - "Xem truoc" = mo modal preview giong public page
+   - "Xuat ban" = set isPublished=true + luu (chi user co news:publish)
+
+### Editor TipTap — tinh nang moi
 
 **Toolbar co dinh (sticky)**: Khi scroll bai dai, toolbar luon hien o top.
 
 **Text alignment**: 4 button ⇤ ⇔ ⇥ ☰ — canh trai/giua/phai/deu cho paragraph va heading.
 
-**Image actions**:
-1. **Click vao anh** → thay vien cam va 3 drag handles (phai, duoi, goc duoi-phai)
-2. **Drag handle** de resize:
-   - Handle phai: chi doi chieu ngang
-   - Handle duoi: chi doi chieu doc
-   - Handle goc: resize ca 2, giu ti le
-3. **Toolbar contextual** khi anh duoc chon:
-   - 🔗 **URL** — thay doi URL anh
-   - 📝 **Alt** — edit alt text (SEO + accessibility)
-   - 🗑 **Xoa anh**
-   - ↺ **Reset size** — ve kich thuoc goc
-4. **Canh anh** (⇤ ⇔ ⇥): chi thay hieu qua khi anh hep hon editor content area — neu anh full width, text-align khong co khong gian de dich chuyen
+**Image insert (Phase 3.3 cap nhat):**
+1. Bam icon Anh tren toolbar -> mo popup ContentImageEditor
+   - Tab "Cat anh 16:9" (mac dinh): pan + zoom de chon vung 16:9
+   - Tab "Resize giu ti le": uniform scale, output ≤ 1000px canh dai
+   - Field caption phia duoi anh (tuy chon)
+   - **Nut X goc tren-phai** de dong popup nhanh
+2. Sau khi chen:
+   - Anh mac dinh **hien full width 16:9** (Phase 3.3 — match thumbnail viewer)
+     - Mobile/desktop responsive tu dong
+     - Neu muon thu nho: chon anh -> drag handle phai/duoi/goc → set inline
+       width:Xpx (override default 100%)
+3. **Caption sat anh** (Phase 3.3 — round 3 tinh chinh): khoang cach giua
+   anh va dong chu thich da rut gon toi da theo phan hoi khach hang
+
+**Video / audio insert (Phase 3.3 cap nhat):**
+1. Bam icon Media -> popup MediaEmbedModal
+2. Dan URL YouTube (youtu.be / youtube.com / shorts) hoac audio direct
+   (.mp3/.m4a/.ogg/.wav)
+3. **Field caption** (moi Phase 3.3) — chu thich hien duoi video/audio
+4. Nut X goc tren-phai dong nhanh
+5. Sau khi chen, click vao node de show input caption inline (sua tai cho)
+
+### Bo loc danh sach
+Bo loc tren danh sach `/admin/tin-tuc`:
+- Tat ca (default)
+- 📰 Tin tuc (GENERAL)
+- 📚 Nghien cuu (RESEARCH)
+- 🏢 Tin doanh nghiep (BUSINESS) — **moi**
+- 📦 Tin san pham (PRODUCT) — **moi**
+- ⚖️ Van ban phap ly (LEGAL)
+
+### Multimedia da bi go khoi sidebar admin
+
+**Phase 3.3 (2026-04)**: Menu "Multimedia" trong sidebar admin **da bi xoa**
+vi News voi template=PHOTO/VIDEO **tu dong** xuat hien o trang public
+`/multimedia`. Admin chi can quan ly News, khong can multi-step them mot
+record Multimedia rieng.
+
+Trang public `/multimedia` query union:
+- Bang `multimedia` legacy (du lieu cu — giu de backward compat)
+- News voi `template ∈ {PHOTO, VIDEO}` va `isPublished = true`
+
+Click vao item News se mo `/tin-tuc/[slug]` (xem nguyen bai), item legacy mo
+`/multimedia/[slug]` (route cu).
+
+### Chinh sua / Xoa tin tuc
+- Click "Chinh sua" tren tin can sua
+- Doi noi dung + phan loai -> Luu
+- Click "Xoa" de xoa vinh vien (can than, khong the khoi phuc)
+
+### Cac thay doi cong khai khac (Phase 3.3)
+
+- **Bo "Muc luc" (TOC)** o trang chi tiet bai cong khai (`/tin-tuc/[slug]` va
+  `/nghien-cuu/[slug]`). Anchor IDs van duoc inject vao H2 → link share
+  `#section-name` van hoat dong.
+- **Fix YouTube khong hien o "Xem truoc"**: PreviewModal truoc day dung
+  `DOMPurify.sanitize()` mac dinh → strip iframe. Da fix, dung
+  `sanitizeArticleHtml` (whitelist iframe + figcaption) → preview giong
+  public page 1:1.
 
 ### Import tu trang cu (chi chay 1 lan)
 
@@ -344,17 +434,6 @@ npx tsx scripts/crawl-research-content.ts --category=GENERAL
 npx tsx scripts/crawl-research-content.ts --category=RESEARCH
 ```
 Script crawl tu dong download images + upload Cloudinary + sanitize HTML.
-
-### Chinh sua / Xoa tin tuc
-- Click "Chinh sua" tren tin can sua
-- Doi noi dung + phan loai -> Luu
-- Click "Xoa" de xoa vinh vien (can than, khong the khoi phuc)
-
-### Filter theo phan loai
-Bo loc tren danh sach `/admin/tin-tuc`:
-- Tat ca (default)
-- 📰 Tin tuc (GENERAL)
-- 📚 Nghien cuu (RESEARCH)
 
 ---
 

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getMonthlyQuota, startOfMonth, startOfNextMonth } from "@/lib/quota"
 import { getMonthlyProductQuota } from "@/lib/product-quota"
+import { writeProductRevision } from "@/lib/product-revision"
 import DOMPurify from "isomorphic-dompurify"
 import type { PostCategory } from "@prisma/client"
 
@@ -190,6 +191,10 @@ export async function POST(request: Request) {
       slug?: string
       category?: string
       priceRange?: string
+      /** Phase 3.5 (2026-04): admin đăng SP hộ DN — chỉ định DN cụ thể.
+       *  Server validate role + chuyển ownerId sang chủ DN. Non-admin gửi
+       *  field này sẽ bị ignore (override bằng auto company lookup). */
+      companyId?: string
     }
   }
 
@@ -243,8 +248,18 @@ export async function POST(request: Request) {
     wantsProduct
       ? prisma.product.findUnique({ where: { slug: productSlug }, select: { id: true } })
       : Promise.resolve(null),
+    // Phase 3.5: admin override → query DN theo id thay vì auto-match
+    // userId. Validate role inline; non-admin gửi companyId sẽ bị ignore.
     wantsProduct
-      ? prisma.company.findUnique({ where: { ownerId: userId }, select: { id: true } })
+      ? (product?.companyId && (session.user.role === "ADMIN" || session.user.role === "INFINITE")
+          ? prisma.company.findUnique({
+              where: { id: product.companyId },
+              select: { id: true, ownerId: true },
+            })
+          : prisma.company.findUnique({
+              where: { ownerId: userId },
+              select: { id: true, ownerId: true },
+            }))
       : Promise.resolve(null),
   ])
 
@@ -320,26 +335,52 @@ export async function POST(request: Request) {
   const productImages = extractImageUrls(sanitizedContent)
   const productDescription = htmlToPlainText(sanitizedContent)
 
+  // Phase 3.5 (2026-04): admin override → effective owner = chủ DN, không
+  // phải session.user.id. Post + Product cùng attribute về chủ DN để bài
+  // hiển thị như do thành viên đại diện đăng (admin "ghosts").
+  const adminOverride = !!(
+    product?.companyId &&
+    company?.ownerId &&
+    company.ownerId !== userId &&
+    (session.user.role === "ADMIN" || session.user.role === "INFINITE")
+  )
+  let effectiveOwnerId = userId
+  let effectiveOwnerPriority = user.displayPriority
+  let effectiveOwnerRole: "ADMIN" | "INFINITE" | "VIP" | "GUEST" | string = user.role
+  if (adminOverride && company?.ownerId) {
+    const ownerInfo = await prisma.user.findUnique({
+      where: { id: company.ownerId },
+      select: { displayPriority: true, role: true },
+    })
+    if (ownerInfo) {
+      effectiveOwnerId = company.ownerId
+      effectiveOwnerPriority = ownerInfo.displayPriority
+      effectiveOwnerRole = ownerInfo.role
+    }
+  }
+
   const created = await prisma.$transaction(async (tx) => {
     const post = await tx.post.create({
       data: {
-        authorId: userId,
+        authorId: effectiveOwnerId,
         title: title || product!.name!,
         content: sanitizedContent,
         imageUrls: productImages,
         category: "PRODUCT",
+        // Admin override → vẫn giữ moderation status như flow non-admin
+        // bình thường (PENDING) để không "lén" auto-publish bài hộ DN.
         status: initialStatus,
         // INFINITE = "full quyền VIP Vàng" per schema — their posts get
-        // the premium badge alongside regular VIP. Admins don't typically
-        // post via this flow, so they're left out.
-        isPremium: session.user.role === "VIP" || session.user.role === "INFINITE",
-        authorPriority: user.displayPriority,
+        // the premium badge alongside regular VIP. Admin override → kế thừa
+        // tier của chủ DN (effectiveOwnerRole).
+        isPremium: effectiveOwnerRole === "VIP" || effectiveOwnerRole === "INFINITE",
+        authorPriority: effectiveOwnerPriority,
       },
       include: { author: { select: POST_AUTHOR_SELECT } },
     })
     const newProduct = await tx.product.create({
       data: {
-        ownerId: userId,
+        ownerId: effectiveOwnerId,
         companyId: company?.id ?? null,
         postId: post.id,
         name: product!.name!.trim(),
@@ -348,17 +389,17 @@ export async function POST(request: Request) {
         category: product!.category?.trim() || null,
         priceRange: product!.priceRange?.trim() || null,
         imageUrls: productImages,
-        ownerPriority: user.displayPriority,
+        ownerPriority: effectiveOwnerPriority,
       },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        priceRange: true,
-        category: true,
-        badgeUrl: true,
-        certStatus: true,
-      },
+    })
+    // Seed v0 audit snapshot. Nếu admin override, đánh editedRole=ADMIN +
+    // ghi reason để revision history nhận biết SP do admin tạo hộ.
+    await writeProductRevision({
+      product: newProduct,
+      editedBy: userId,
+      editedRole: adminOverride ? "ADMIN" : "OWNER",
+      reason: adminOverride ? "Admin đăng SP hộ DN qua /feed/tao-bai" : undefined,
+      tx,
     })
     return { post, product: newProduct }
   })

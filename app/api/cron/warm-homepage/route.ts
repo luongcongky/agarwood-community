@@ -5,7 +5,7 @@ import {
   getTopVipMemberPosts,
   getRotatingMemberPosts,
   getFeaturedProductsForHomepage,
-  getLatestPostsByCategory,
+  getMergedFeed,
 } from "@/lib/homepage"
 
 /**
@@ -61,8 +61,10 @@ export async function GET(request: Request) {
       getRotatingMemberPosts(top.map((p) => p.id)),
     ),
     getFeaturedProductsForHomepage(),
-    getLatestPostsByCategory("NEWS"),
-    getLatestPostsByCategory("PRODUCT"),
+    // Phase 3.3 (Q0=C): warm merged Post+News caches — same take số như
+    // PostsSection variants ("feature-list"=6, "hero-list"=5).
+    getMergedFeed("NEWS", "BUSINESS", 6),
+    getMergedFeed("PRODUCT", "PRODUCT", 5),
   ])
 
   const elapsedMs = Date.now() - start

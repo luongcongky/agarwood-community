@@ -14,6 +14,8 @@ import { Section } from "@/components/features/homepage/Section"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
 import { SidebarList } from "@/components/features/article/SidebarList"
 import { LatestNewsList } from "./LatestNewsList"
+import { NewsListItemCard } from "./NewsListItemCard"
+import { TIN_TUC_PUBLIC_CATEGORIES, TIN_TUC_PUBLIC_TEMPLATE } from "./categories"
 
 const NEWS_LIST_SELECT = {
   id: true,
@@ -32,7 +34,8 @@ const getDefaultNewsList = unstable_cache(
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: ["GENERAL", "SPONSORED_PRODUCT"] },
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+        template: TIN_TUC_PUBLIC_TEMPLATE,
       },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take,
@@ -46,7 +49,11 @@ const getDefaultNewsList = unstable_cache(
 const getSidebarFeaturedNews = unstable_cache(
   async () =>
     prisma.news.findMany({
-      where: { isPublished: true, category: { in: ["GENERAL", "SPONSORED_PRODUCT"] } },
+      where: {
+        isPublished: true,
+        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+        template: TIN_TUC_PUBLIC_TEMPLATE,
+      },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
       select: {
@@ -141,7 +148,8 @@ export default async function NewsPage({
 
   const where = {
     isPublished: true,
-    category: { in: ["GENERAL" as const, "SPONSORED_PRODUCT" as const] },
+    category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+    template: TIN_TUC_PUBLIC_TEMPLATE,
     ...(q && {
       OR: [
         { title: { contains: q, mode: "insensitive" as const } },
@@ -344,17 +352,39 @@ export default async function NewsPage({
               {t("sectionLatest")}
             </h2>
           )}
-          <LatestNewsList
-            initialItems={initialListItems}
-            initialHasMore={initialHasMore}
-            locale={locale}
-            q={q || undefined}
-            offsetStart={heroConsumed}
-            pinnedLabel={t("pinned")}
-            emptyLabel={isSearch ? t("emptySearch") : t("emptyViewAll")}
-            loadingLabel="Đang tải thêm…"
-            endLabel="Đã hiển thị tất cả tin tức"
-          />
+          {/* Server-render initial batch (10 items) trực tiếp → zero
+              hydration cost cho những item này. Chỉ LatestNewsList tail
+              mới là client island (nhẹ, không cần items prop). */}
+          {initialListItems.length === 0 ? (
+            <div className="border border-dashed border-neutral-300 py-16 text-center">
+              <p className="text-base font-medium text-neutral-600">
+                {isSearch ? t("emptySearch") : t("emptyViewAll")}
+              </p>
+            </div>
+          ) : (
+            <>
+              <ul>
+                {initialListItems.map((item, idx) => (
+                  <NewsListItemCard
+                    key={item.id}
+                    item={item}
+                    locale={locale}
+                    pinnedLabel={t("pinned")}
+                    isFirst={idx === 0}
+                  />
+                ))}
+              </ul>
+              <LatestNewsList
+                locale={locale}
+                q={q || undefined}
+                initialOffset={heroConsumed + initialListItems.length}
+                initialHasMore={initialHasMore}
+                pinnedLabel={t("pinned")}
+                loadingLabel="Đang tải thêm…"
+                endLabel="Đã hiển thị tất cả tin tức"
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

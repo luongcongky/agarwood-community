@@ -7,16 +7,28 @@
 //  - Modal là 140 dòng JSX; tách riêng giảm size của NewsEditor module
 //    → TTI nhanh hơn khi mở editor lần đầu.
 
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import type { Locale } from "@/components/ui/lang-tabs-bar"
 
+type GalleryItem = { url: string; caption: string }
+
 type NewsPreviewModalProps = {
-  category: "GENERAL" | "RESEARCH" | "LEGAL"
+  category:
+    | "GENERAL"
+    | "RESEARCH"
+    | "LEGAL"
+    | "BUSINESS"
+    | "PRODUCT"
+    | "EXTERNAL_NEWS"
+    | "AGRICULTURE"
   title: Record<Locale, string>
   activeLocale: Locale
   publishedAt: string
   displayCover: string
   previewContent: string
+  /** Phase 3.3: template + gallery cho tin ảnh / tin video. Default NORMAL. */
+  template?: "NORMAL" | "PHOTO" | "VIDEO"
+  gallery?: GalleryItem[]
   onClose: () => void
 }
 
@@ -27,6 +39,8 @@ export default function NewsPreviewModal({
   publishedAt,
   displayCover,
   previewContent,
+  template = "NORMAL",
+  gallery = [],
   onClose,
 }: NewsPreviewModalProps) {
   return (
@@ -72,7 +86,19 @@ export default function NewsPreviewModal({
             <span className="hover:text-brand-700 cursor-default">Trang chủ</span>
             <span>/</span>
             <span className="hover:text-brand-700 cursor-default">
-              {category === "RESEARCH" ? "Nghiên cứu" : category === "LEGAL" ? "Văn bản pháp lý" : "Tin tức"}
+              {category === "RESEARCH"
+                ? "Nghiên cứu"
+                : category === "LEGAL"
+                  ? "Văn bản pháp lý"
+                  : category === "BUSINESS"
+                    ? "Doanh nghiệp"
+                    : category === "PRODUCT"
+                      ? "Sản phẩm"
+                      : category === "EXTERNAL_NEWS"
+                        ? "Tin báo chí"
+                        : category === "AGRICULTURE"
+                          ? "Khuyến nông"
+                          : "Tin tức"}
             </span>
             <span>/</span>
             <span className="text-foreground font-medium line-clamp-1">
@@ -108,16 +134,85 @@ export default function NewsPreviewModal({
             )}
           </header>
 
-          {/* Article Body */}
+          {/* Article Body — render khác nhau theo template:
+              - NORMAL: sanitize + dangerouslySetInnerHTML (RichTextEditor HTML)
+              - PHOTO: gallery <figure><img><figcaption>
+              - VIDEO: gallery <iframe> YouTube responsive 16:9 + caption
+              Match 1:1 cách render ở trang public /tin-tuc/[slug]. */}
           <article className="mb-10">
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(
-                  previewContent || "<p class='text-brand-300 italic'>Chưa có nội dung...</p>"
-                ),
-              }}
-            />
+            {template === "NORMAL" && (
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeArticleHtml(
+                    previewContent ||
+                      "<p class='text-brand-300 italic'>Chưa có nội dung...</p>",
+                  ),
+                }}
+              />
+            )}
+
+            {template === "PHOTO" && (
+              <div className="space-y-6">
+                {gallery.length === 0 ? (
+                  <p className="text-brand-300 italic">
+                    Chưa có ảnh nào trong gallery.
+                  </p>
+                ) : (
+                  gallery.map((item, i) =>
+                    item.url ? (
+                      <figure key={`${item.url}-${i}`} className="space-y-2">
+                        {/* Blob URL local hay Cloudinary đều render được qua
+                            <img>. eslint-disable vì preview modal — không
+                            cần next/image optimization. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.url}
+                          alt={item.caption ?? ""}
+                          className="w-full h-auto rounded-lg"
+                        />
+                        {item.caption && (
+                          <figcaption className="text-center text-[13px] italic text-neutral-600 leading-snug">
+                            {item.caption}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ) : null,
+                  )
+                )}
+              </div>
+            )}
+
+            {template === "VIDEO" && (
+              <div className="space-y-8">
+                {gallery.length === 0 ? (
+                  <p className="text-brand-300 italic">
+                    Chưa có video nào trong gallery.
+                  </p>
+                ) : (
+                  gallery.map((item, i) =>
+                    item.url ? (
+                      <figure key={`${item.url}-${i}`} className="space-y-2">
+                        <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
+                          <iframe
+                            src={item.url}
+                            className="absolute inset-0 h-full w-full border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            title={item.caption || `Video ${i + 1}`}
+                          />
+                        </div>
+                        {item.caption && (
+                          <figcaption className="text-center text-[13px] italic text-neutral-600 leading-snug">
+                            {item.caption}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ) : null,
+                  )
+                )}
+              </div>
+            )}
           </article>
 
           {/* Share Buttons (visual only) */}

@@ -39,6 +39,8 @@ export async function PATCH(
       ...(body.term !== undefined && { term: body.term }),
       ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
+      // userId: "" → null (unlink). userId: "cuid..." → link. undefined → giữ nguyên.
+      ...("userId" in body && { userId: body.userId || null }),
     },
   })
 

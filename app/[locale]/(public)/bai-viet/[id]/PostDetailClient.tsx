@@ -76,12 +76,16 @@ export function PostDetailClient({
   currentUserRole,
   currentUserName,
   currentUserAvatar,
+  adminEditedAfterOwner = false,
 }: {
   post: PostData
   currentUserId: string | null
   currentUserRole: string | null
   currentUserName: string | null
   currentUserAvatar: string | null
+  /** Phase 3.6: hiện banner cảnh báo cho owner khi admin đã sửa bài SAU bản
+   *  cuối của owner. Click "Xem so sánh" → /bai-viet/[id]/lich-su. */
+  adminEditedAfterOwner?: boolean
 }) {
   const t = useTranslations("postDetail")
 
@@ -203,6 +207,31 @@ export function PostDetailClient({
         {t("backToCommunity")}
       </Link>
 
+      {/* Phase 3.6 (2026-04): owner notification — admin đã sửa bài. Chỉ
+          hiện cho owner (không hiện cho admin/người khác). */}
+      {adminEditedAfterOwner && currentUserId === post.author.id && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-white text-sm font-bold shrink-0">
+            ✎
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">
+              Bài viết đã được Admin chỉnh sửa
+            </p>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              Admin đã sửa nội dung bài của bạn sau bản cuối của bạn. Bạn có
+              thể so sánh và xem lý do trong lịch sử.
+            </p>
+          </div>
+          <Link
+            href={`/bai-viet/${post.id}/lich-su`}
+            className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+          >
+            Xem so sánh →
+          </Link>
+        </div>
+      )}
+
       {/* Post */}
       <article className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
         {/* Locked banner */}
@@ -290,6 +319,36 @@ export function PostDetailClient({
           </div>
           <span className="text-sm text-brand-500">{post.viewCount + 1} {t("views")}</span>
         </div>
+
+        {/* Phase 3.6 (2026-04): owner + admin actions row.
+            - Owner: edit + xem lịch sử (nếu admin đã sửa).
+            - Admin (không phải owner): edit (mở admin mode) + xem lịch sử. */}
+        {isLoggedIn && (currentUserId === post.author.id || isAdmin(currentUserRole)) && (
+          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-brand-100">
+            {currentUserId === post.author.id ? (
+              <Link
+                href={`/feed/tao-bai?edit=${post.id}`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
+              >
+                ✎ Chỉnh sửa bài
+              </Link>
+            ) : (
+              <Link
+                href={`/feed/tao-bai?edit=${post.id}&adminMode=1&returnTo=/bai-viet/${post.id}`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                title="Sửa bài hộ owner — thay đổi sẽ được log lại"
+              >
+                ✎ Admin sửa bài
+              </Link>
+            )}
+            <Link
+              href={`/bai-viet/${post.id}/lich-su`}
+              className="inline-flex items-center gap-1.5 rounded-md border border-brand-200 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50"
+            >
+              📜 Lịch sử chỉnh sửa
+            </Link>
+          </div>
+        )}
       </article>
 
       {/* Comments section */}

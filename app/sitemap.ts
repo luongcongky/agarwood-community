@@ -49,6 +49,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/ban-lanh-dao", now, "monthly", 0.7),
     entry("/tin-tuc", now, "daily", 0.9),
     entry("/nghien-cuu", now, "weekly", 0.7),
+    // Phase 3.5 (2026-04): 2 route mới
+    entry("/tin-bao-chi", now, "daily", 0.7),
+    entry("/khuyen-nong", now, "weekly", 0.7),
     entry("/hoi-vien", now, "weekly", 0.8),
     entry("/doanh-nghiep", now, "weekly", 0.8),
     entry("/san-pham-chung-nhan", now, "weekly", 0.9),
@@ -70,7 +73,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: ["GENERAL", "RESEARCH", "SPONSORED_PRODUCT"] },
+        // Phase 3.3 + 3.5 (2026-04): include all routable categories.
+        // BUSINESS + PRODUCT + GENERAL + SPONSORED_PRODUCT → /tin-tuc.
+        // RESEARCH → /nghien-cuu. EXTERNAL_NEWS → /tin-bao-chi.
+        // AGRICULTURE → /khuyen-nong.
+        category: {
+          in: [
+            "GENERAL",
+            "RESEARCH",
+            "SPONSORED_PRODUCT",
+            "BUSINESS",
+            "PRODUCT",
+            "EXTERNAL_NEWS",
+            "AGRICULTURE",
+          ],
+        },
       },
       select: { slug: true, updatedAt: true, category: true },
       orderBy: { publishedAt: "desc" },
@@ -107,11 +124,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic news articles — split by category so each row maps to the
   // correct public URL. Previously every row was emitted as /tin-tuc/{slug}
   // which 404'd for LEGAL + RESEARCH items.
+  // Phase 3.5 (2026-04): EXTERNAL_NEWS → /tin-bao-chi, AGRICULTURE → /khuyen-nong.
   const newsRoutes: MetadataRoute.Sitemap = newsItems.map((n) => {
-    // RESEARCH → /nghien-cuu, GENERAL + SPONSORED_PRODUCT → /tin-tuc.
-    // LEGAL không emit (privacy/terms đã có trong staticRoutes, /phap-ly là hub).
-    const path = `/${n.category === "RESEARCH" ? "nghien-cuu" : "tin-tuc"}/${n.slug}`
-    return entry(path, n.updatedAt, "monthly", 0.7)
+    const prefix =
+      n.category === "RESEARCH"
+        ? "nghien-cuu"
+        : n.category === "EXTERNAL_NEWS"
+          ? "tin-bao-chi"
+          : n.category === "AGRICULTURE"
+            ? "khuyen-nong"
+            : "tin-tuc"
+    return entry(`/${prefix}/${n.slug}`, n.updatedAt, "monthly", 0.7)
   })
 
   const productRoutes: MetadataRoute.Sitemap = products.map((p) =>

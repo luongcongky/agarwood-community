@@ -31,7 +31,7 @@ export async function CertifiedProducts() {
   return (
     <Section
       title={t("certProductsTitle")}
-      titleHref="/san-pham-doanh-nghiep"
+      titleHref="/san-pham-chung-nhan"
     >
       <div
         className="group relative overflow-hidden"

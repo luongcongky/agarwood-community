@@ -56,12 +56,35 @@ export default async function PostDetailPage({
   // reject) chi owner/admin truy cap duoc. LOCKED no-note (auto-lock tu
   // report) van public — hien banner "bai bi tam khoa" cho nguoi doc biet.
   const isAdminViewer = session?.user?.role === "ADMIN"
-  const isOwnerOrAdmin = post.authorId === userId || isAdminViewer
+  const isOwner = post.authorId === userId
+  const isOwnerOrAdmin = isOwner || isAdminViewer
   const isModerationHidden =
     post.status === "PENDING" ||
     (post.status === "LOCKED" && !!post.moderationNote)
   if (isModerationHidden && !isOwnerOrAdmin) {
     notFound()
+  }
+
+  // Phase 3.6 (2026-04): khi owner xem bài của mình, hiện banner nếu admin
+  // đã sửa SAU bản cuối owner (latestAdmin.editedAt > latestOwner.editedAt
+  // hoặc latestOwner null + latestAdmin tồn tại).
+  let adminEditedAfterOwner = false
+  if (isOwner) {
+    const [lastAdmin, lastOwner] = await Promise.all([
+      prisma.postRevision.findFirst({
+        where: { postId: id, editedRole: "ADMIN" },
+        orderBy: { version: "desc" },
+        select: { editedAt: true },
+      }),
+      prisma.postRevision.findFirst({
+        where: { postId: id, editedRole: "OWNER" },
+        orderBy: { version: "desc" },
+        select: { editedAt: true },
+      }),
+    ])
+    adminEditedAfterOwner = !!(
+      lastAdmin && (!lastOwner || lastAdmin.editedAt > lastOwner.editedAt)
+    )
   }
 
   // Increment view count (fire-and-forget)
@@ -79,6 +102,7 @@ export default async function PostDetailPage({
       currentUserRole={session?.user?.role ?? null}
       currentUserName={session?.user?.name ?? null}
       currentUserAvatar={session?.user?.image ?? null}
+      adminEditedAfterOwner={adminEditedAfterOwner}
     />
   )
 }

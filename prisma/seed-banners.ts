@@ -32,24 +32,38 @@ type SeedBanner = {
   targetUrl: string
 }
 
-// Ảnh chủ đề từ loremflickr — `lock` giữ kết quả ổn định giữa các lần fetch.
-const flickr = (tags: string, lock: number) =>
-  `https://loremflickr.com/1600/400/${tags}/all?lock=${lock}`
+// Banner placeholder dùng Cloudinary transform API — sinh ảnh 1600x400 với
+// background màu solid + không đè thứ tự. Cloud name lấy từ env để đồng bộ
+// với stack Cloudinary đã cấu hình. Admin sẽ upload banner thật qua
+// /admin/banner — seed này chỉ giữ demo state không rỗng cho dev/staging.
+//
+// Ưu điểm so với loremflickr:
+//  • cùng CDN với ảnh khác → browser có thể reuse TCP connection
+//  • WebP/AVIF tự động qua `f_auto`; `q_auto` tối ưu size theo nội dung
+//  • file size < 10 kB (solid color, 16:4 ratio) vs ~70 kB từ loremflickr
+//  • không phụ thuộc third-party domain không ổn định
+const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || "draqjb8n5"
+
+/** Sinh URL Cloudinary cho banner placeholder.
+ *  `sample` là asset built-in trên mọi Cloudinary cloud — overlay bị crop
+ *  + thay bằng solid color nên không thấy ảnh gốc. */
+const banner = (hex: string) =>
+  `https://res.cloudinary.com/${CLOUD}/image/upload/c_fill,w_1600,h_400,b_rgb:${hex},f_auto,q_auto/sample`
 
 const TOP_BANNERS: SeedBanner[] = [
   {
     title: "Khuyến mãi 30% Trầm Hương Khánh Hòa — Chỉ trong tháng này",
-    imageUrl: flickr("incense,wood", 111),
+    imageUrl: banner("6E4420"), // brand brown
     targetUrl: "https://hoitramhuong.vn/san-pham-doanh-nghiep",
   },
   {
     title: "Đại hội Hội Trầm Hương Việt Nam nhiệm kỳ IV — Đăng ký tham dự",
-    imageUrl: flickr("meeting,hall", 112),
+    imageUrl: banner("8B4513"), // saddle brown
     targetUrl: "https://hoitramhuong.vn/tin-tuc",
   },
   {
     title: "Chương trình chứng nhận sản phẩm Trầm Hương 2026",
-    imageUrl: flickr("medal,ceremony", 113),
+    imageUrl: banner("B8860B"), // dark goldenrod
     targetUrl: "https://hoitramhuong.vn/landing",
   },
 ]
@@ -57,27 +71,27 @@ const TOP_BANNERS: SeedBanner[] = [
 const MID_BANNERS: SeedBanner[] = [
   {
     title: "Trầm Hương Tự Nhiên — Cơ sở Hương Trầm Đạt Phát",
-    imageUrl: flickr("agarwood,forest", 201),
+    imageUrl: banner("8B6F47"),
     targetUrl: "https://hoitramhuong.vn/san-pham-doanh-nghiep",
   },
   {
     title: "Nhang Trầm Cao Cấp — Xưởng Trầm Hương Phúc Lộc",
-    imageUrl: flickr("incense,smoke", 202),
+    imageUrl: banner("A0522D"),
     targetUrl: "https://hoitramhuong.vn/san-pham-doanh-nghiep",
   },
   {
     title: "Tinh Dầu Trầm Hương Nguyên Chất — Công ty Thiên Hương",
-    imageUrl: flickr("essential-oil,perfume", 203),
+    imageUrl: banner("CD853F"),
     targetUrl: "https://hoitramhuong.vn/san-pham-doanh-nghiep",
   },
   {
     title: "Vòng Trầm Hương Thủ Công — Nghệ nhân Phan Văn Hùng",
-    imageUrl: flickr("bracelet,wood", 204),
+    imageUrl: banner("8B7355"),
     targetUrl: "https://hoitramhuong.vn/san-pham-doanh-nghiep",
   },
   {
     title: "Trầm Cảnh Phong Thủy — Hội viên Vàng ★★★ VAWA",
-    imageUrl: flickr("bonsai,temple", 205),
+    imageUrl: banner("DAA520"),
     targetUrl: "https://hoitramhuong.vn/landing",
   },
 ]

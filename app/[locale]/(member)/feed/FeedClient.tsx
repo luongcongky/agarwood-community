@@ -1,9 +1,34 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter, usePathname } from "next/navigation"
 import { ThumbsUp, MessageSquare, Link2, Check } from "lucide-react"
+
+// Lightbox chỉ mở khi user click ảnh → dynamic import giảm initial JS bundle.
+// ssr:false vì component touches document.body + keydown listener.
+const FeedLightbox = dynamic(
+  () => import("./FeedLightbox").then((m) => m.FeedLightbox),
+  { ssr: false },
+)
+
+// InlinePostCreator ~500 dòng state + upload logic, chỉ VIP/ADMIN dùng khi
+// muốn đăng bài. Dynamic import + ssr:false để defer parse cost tới sau khi
+// feed đã LCP, giảm TBT ~100-150ms trên mobile Slow 4G. Loading state là
+// 1 placeholder compact để tránh layout shift khi component load xong.
+const InlinePostCreator = dynamic(
+  () => import("./InlinePostCreator").then((m) => m.InlinePostCreator),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-white rounded-xl border border-brand-200 p-4">
+        <div className="h-12 animate-pulse rounded-lg bg-brand-50" />
+      </div>
+    ),
+  },
+)
 import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
 import { cn } from "@/lib/utils"
 import { hasMemberAccess } from "@/lib/roles"
@@ -19,7 +44,7 @@ import { useLocale, useTranslations } from "next-intl"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type PostAuthor = {
+export type PostAuthor = {
   id: string
   name: string
   avatarUrl: string | null
@@ -29,7 +54,7 @@ type PostAuthor = {
   company: { name: string; slug: string } | null
 }
 
-type ProductSidecar = {
+export type ProductSidecar = {
   id: string
   name: string
   slug: string
@@ -41,7 +66,7 @@ type ProductSidecar = {
 
 type PromotionRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
 
-type Post = {
+export type Post = {
   id: string
   authorId: string
   title: string | null
@@ -81,10 +106,10 @@ type Post = {
   pendingError?: string | null
 }
 
-type FilterKey = "NEWS" | "PRODUCT" | "MINE"
+export type FilterKey = "NEWS" | "PRODUCT" | "MINE"
 /** Filter "MINE" không có composer (không biết tạo category nào) — dùng
  *  type này để narrow prop `mode` cho InlinePostCreator. */
-type ComposerMode = Exclude<FilterKey, "MINE">
+export type ComposerMode = Exclude<FilterKey, "MINE">
 
 // FILTERS moved inside component to access translations
 
@@ -99,6 +124,17 @@ function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
   return `/api/posts?${params.toString()}`
 }
 
+/** Canonical detail URL cho 1 post.
+ *  PRODUCT category + có Product sidecar → /san-pham/{slug} (marketplace
+ *  page là canonical). Khác → /bai-viet/{id}. Phase 3.6 follow-up: yêu cầu
+ *  từ khách hàng để PRODUCT post route về SP detail thay vì /bai-viet. */
+function postUrl(post: Post): string {
+  if (post.category === "PRODUCT" && post.product?.slug) {
+    return `/san-pham/${post.product.slug}`
+  }
+  return `/bai-viet/${post.id}`
+}
+
 type TopContributor = {
   id: string
   name: string
@@ -108,7 +144,7 @@ type TopContributor = {
   company: { name: string } | null
 }
 
-type MembershipInfo = {
+export type MembershipInfo = {
   expires: string | null
   contributionTotal: number
   displayPriority: number
@@ -118,6 +154,10 @@ type MembershipInfo = {
 
 type FeedClientProps = {
   initialPosts: Post[]
+  /** Tab được chọn khi mount — match với filter đã dùng ở server-side query.
+   *  Vào thẳng /feed → "NEWS"; từ section "Sản phẩm hội viên" trang chủ
+   *  (`/feed?category=PRODUCT`) → "PRODUCT". */
+  initialFilter?: "NEWS" | "PRODUCT"
   currentUserId: string | null
   currentUserRole: string | null
   currentUserName: string | null
@@ -173,128 +213,9 @@ function stripImgTagsFromHtml(html: string): string {
   return html.replace(/<img[^>]*>/g, "")
 }
 
-// ── Lightbox ─────────────────────────────────────────────────────────────────
-
-/**
- * Full-viewport image viewer with prev/next navigation. Used when the
- * user clicks a post's thumbnail — keyboard arrows + buttons cycle
- * through that post's image set. Closes on Esc, backdrop click, or the
- * ✕ button.
- */
-function Lightbox({
-  images,
-  startIndex,
-  onClose,
-}: {
-  images: string[]
-  startIndex: number
-  onClose: () => void
-}) {
-  const [index, setIndex] = useState(startIndex)
-  const prev = useCallback(() => setIndex((i) => (i - 1 + images.length) % images.length), [images.length])
-  const next = useCallback(() => setIndex((i) => (i + 1) % images.length), [images.length])
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose()
-      else if (e.key === "ArrowLeft") prev()
-      else if (e.key === "ArrowRight") next()
-    }
-    document.addEventListener("keydown", onKey)
-    // Prevent body scroll while lightbox is open
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [onClose, prev, next])
-
-  // Preload adjacent images so pressing ← / → feels instant. Browser
-  // starts downloading next/prev as soon as the current one is shown;
-  // switching index hits the cache.
-  useEffect(() => {
-    if (images.length < 2) return
-    const nextIdx = (index + 1) % images.length
-    const prevIdx = (index - 1 + images.length) % images.length
-    const uniqueIdx = [...new Set([nextIdx, prevIdx])].filter((i) => i !== index)
-    const links = uniqueIdx.map((i) => {
-      const link = document.createElement("link")
-      link.rel = "preload"
-      link.as = "image"
-      link.href = cloudinaryResize(images[i], 1920)
-      document.head.appendChild(link)
-      return link
-    })
-    return () => { links.forEach((l) => l.remove()) }
-  }, [index, images])
-
-  const multi = images.length > 1
-
-  return (
-    <div
-      className="fixed inset-0 z-100 bg-black/90 flex items-center justify-center"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* Close button */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onClose() }}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors"
-        aria-label="Đóng"
-      >
-        ✕
-      </button>
-
-      {/* Counter */}
-      {multi && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1">
-          {index + 1} / {images.length}
-        </div>
-      )}
-
-      {/* Prev */}
-      {multi && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); prev() }}
-          className="absolute left-4 sm:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
-          aria-label="Ảnh trước"
-        >
-          ‹
-        </button>
-      )}
-
-      {/* Image */}
-      <div
-        className="relative w-full h-full max-w-[92vw] max-h-[88vh] flex items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cloudinaryResize(images[index], 1920)}
-          alt=""
-          className="max-w-full max-h-full object-contain select-none"
-          draggable={false}
-        />
-      </div>
-
-      {/* Next */}
-      {multi && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); next() }}
-          className="absolute right-4 sm:right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
-          aria-label="Ảnh sau"
-        >
-          ›
-        </button>
-      )}
-    </div>
-  )
-}
+// Lightbox component moved to FeedLightbox.tsx — lazy-loaded qua
+// next/dynamic ở đầu file. Tránh ship ~4 kB + hydration cho lightbox
+// mà đa số user không mở.
 
 // ── PostImageGrid — Facebook-style image layout ─────────────────────────────
 // 1 ảnh: full width, aspect-video.
@@ -559,7 +480,7 @@ function PostCard({
   }
 
   async function handleCopyLink() {
-    const url = `${window.location.origin}/bai-viet/${post.id}`
+    const url = `${window.location.origin}${postUrl(post)}`
     try {
       await navigator.clipboard.writeText(url)
     } catch {
@@ -759,10 +680,10 @@ function PostCard({
         </div>
       )}
 
-      {/* Title — clickable to detail */}
+      {/* Title — clickable to detail. PRODUCT → /san-pham/{slug}, else /bai-viet/{id}. */}
       {post.title && (
         <h2 className="font-semibold text-brand-900 text-base mb-2 leading-snug">
-          <Link href={`/bai-viet/${post.id}`} className="hover:text-brand-700 transition-colors">
+          <Link href={postUrl(post)} className="hover:text-brand-700 transition-colors">
             {post.title}
           </Link>
         </h2>
@@ -825,7 +746,7 @@ function PostCard({
       )}
 
       {lightboxIndex !== null && (
-        <Lightbox
+        <FeedLightbox
           images={displayImages}
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
@@ -878,7 +799,7 @@ function PostCard({
               </span>
             ) : (
               <Link
-                href={`/bai-viet/${post.id}`}
+                href={postUrl(post)}
                 aria-label={t("comments")}
                 title={t("comments")}
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg text-brand-400 hover:bg-brand-50 hover:text-brand-700 transition-colors"
@@ -913,413 +834,6 @@ function PostCard({
   )
 }
 
-// ── Inline Post Creator ─────────────────────────────────────────────────────
-
-function InlinePostCreator({
-  mode,
-  currentUserName,
-  currentUserAvatarUrl,
-  currentUserId,
-  currentUserRole,
-  membershipInfo,
-  onPostCreated,
-  onPostUpdated,
-}: {
-  /** Filter đang active — quyết định layout form (NEWS: textarea đơn; PRODUCT:
-   *  form có tên/danh mục/giá/tiêu đề + mô tả). Post được tạo với category
-   *  trùng mode này. MINE không tạo được bài → caller phải ẩn composer. */
-  mode: ComposerMode
-  currentUserName: string | null
-  currentUserAvatarUrl: string | null
-  currentUserId: string
-  currentUserRole: string
-  membershipInfo: MembershipInfo | null
-  onPostCreated: (post: Post) => void
-  onPostUpdated: (tempId: string, patch: Partial<Post>) => void
-}) {
-  const t = useTranslations("feed")
-  const locale = useLocale()
-  const [content, setContent] = useState("")
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Product-specific fields — chỉ dùng khi mode === "PRODUCT"
-  const [productName, setProductName] = useState("")
-  const [productCategory, setProductCategory] = useState("")
-  const [priceRange, setPriceRange] = useState("")
-  const [title, setTitle] = useState("")
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const ta = textareaRef.current
-    if (ta) {
-      ta.style.height = "auto"
-      ta.style.height = ta.scrollHeight + "px"
-    }
-  }, [content])
-
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const remaining = 4 - images.length
-    const toAdd = files.slice(0, remaining)
-    setImages((prev) => [
-      ...prev,
-      ...toAdd.map((file) => ({ file, preview: URL.createObjectURL(file) })),
-    ])
-    e.target.value = ""
-  }
-
-  function removeImage(index: number) {
-    setImages((prev) => {
-      URL.revokeObjectURL(prev[index].preview)
-      return prev.filter((_, i) => i !== index)
-    })
-  }
-
-  async function handleSubmit() {
-    const plainText = content.trim()
-
-    // Validate theo mode. PRODUCT yêu cầu tên + tiêu đề + mô tả; NEWS giữ
-    // threshold 50 ký tự của content.
-    if (mode === "PRODUCT") {
-      if (!productName.trim() || !title.trim() || plainText.length === 0) {
-        setError("Vui lòng điền đủ: Tên sản phẩm, Tiêu đề và Nội dung mô tả.")
-        return
-      }
-    } else if (plainText.length < 50) {
-      setError(t("minContent", { count: plainText.length }))
-      return
-    }
-
-    // Snapshot files + blob URLs before resetting the form. The background
-    // upload runs against these snapshots, so the user can start composing
-    // the next post immediately.
-    const imagesSnapshot = images
-    const blobUrls = imagesSnapshot.map((img) => img.preview)
-    const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
-    const blobImageHtml = blobUrls.map((url) => `<img src="${url}" />`).join("")
-
-    // Build content HTML theo mode. PRODUCT prepend các field (tên/danh mục/
-    // giá/tiêu đề) dạng structured HTML để reader thấy thông tin sản phẩm
-    // ngay trong feed; NEWS giữ nguyên plain content.
-    const productHeaderHtml =
-      mode === "PRODUCT"
-        ? [
-            `<h2>${productName.trim()}</h2>`,
-            productCategory.trim()
-              ? `<p><strong>Danh mục:</strong> ${productCategory.trim()}</p>`
-              : "",
-            priceRange.trim()
-              ? `<p><strong>Khoảng giá:</strong> ${priceRange.trim()}</p>`
-              : "",
-            title.trim() ? `<h3>${title.trim()}</h3>` : "",
-          ]
-            .filter(Boolean)
-            .join("")
-        : ""
-    const postTitle = mode === "PRODUCT" ? productName.trim() : null
-    const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-    // Build optimistic Post. Blob URLs render instantly — the image files
-    // are already in browser memory, so there's zero wait for the user.
-    //
-    // Status phải khớp logic server (/api/posts POST): ADMIN → PUBLISHED ngay,
-    // mọi role khác → PENDING chờ admin duyệt. Trước đây hardcode PUBLISHED
-    // khiến badge "Chờ duyệt" không hiện ở optimistic UI → user tưởng bài đã
-    // công khai ngay.
-    const optimisticStatus: "PUBLISHED" | "PENDING" =
-      currentUserRole === "ADMIN" ? "PUBLISHED" : "PENDING"
-    const optimisticPost: Post = {
-      id: tempId,
-      authorId: currentUserId,
-      title: postTitle,
-      content: blobImageHtml + productHeaderHtml + paragraphs,
-      imageUrls: blobUrls,
-      status: optimisticStatus,
-      isPremium: currentUserRole === "VIP" || currentUserRole === "INFINITE",
-      isPromoted: false,
-      authorPriority: membershipInfo?.displayPriority ?? 0,
-      viewCount: 0,
-      reportCount: 0,
-      lockedAt: null,
-      lockedBy: null,
-      lockReason: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      author: {
-        id: currentUserId,
-        name: currentUserName ?? "",
-        avatarUrl: currentUserAvatarUrl,
-        role: currentUserRole,
-        accountType: membershipInfo?.accountType ?? "BUSINESS",
-        contributionTotal: membershipInfo?.contributionTotal ?? 0,
-        company: membershipInfo?.company ?? null,
-      },
-      reactions: [],
-      _count: { reactions: 0, comments: 0 },
-      isPending: true,
-      pendingError: null,
-    }
-    onPostCreated(optimisticPost)
-
-    // Reset form immediately — user can compose next post while upload runs.
-    // NOTE: blob URLs are NOT revoked here; the optimistic post is still
-    // rendering them. They're revoked in the background handler below
-    // after the real Cloudinary URLs are swapped in.
-    setContent("")
-    setImages([])
-    setProductName("")
-    setProductCategory("")
-    setPriceRange("")
-    setTitle("")
-    setError(null)
-
-    // ── Background: upload images → POST → swap URLs in the post ───────
-    ;(async () => {
-      try {
-        const uploadedUrls = await Promise.all(
-          imagesSnapshot.map(async (img) => {
-            const formData = new FormData()
-            formData.append("file", img.file)
-            formData.append("folder", "bai-viet")
-            const res = await fetch("/api/upload", { method: "POST", body: formData })
-            if (!res.ok) throw new Error(t("uploadFailed"))
-            const data = await res.json()
-            return data.secure_url as string
-          }),
-        )
-
-        const realImageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
-        const realContent = realImageHtml + productHeaderHtml + paragraphs
-
-        const res = await fetch("/api/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: realContent,
-            category: mode,
-            ...(postTitle ? { title: postTitle } : {}),
-          }),
-        })
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data.error || t("postFailed"))
-        }
-        const { post } = await res.json()
-
-        // Swap in server data. React remounts the PostCard because the
-        // ID changes, but since it was in `pending` state (no user
-        // interactions), the remount is invisible to the user.
-        // `status` cần sync từ server để badge moderation (Chờ duyệt /
-        // Bị từ chối) hiển thị đúng nếu admin thay đổi logic.
-        const patch = {
-          id: post.id,
-          status: post.status,
-          content: realContent,
-          imageUrls: uploadedUrls,
-          createdAt: post.createdAt ?? optimisticPost.createdAt,
-          updatedAt: post.updatedAt ?? optimisticPost.updatedAt,
-          isPending: false,
-          pendingError: null,
-        }
-        onPostUpdated(tempId, patch)
-
-        // Sticky zone: lưu bài của viewer vào localStorage để lần sau vào
-        // /feed vẫn thấy ở top (TTL 2h). Khắc phục vấn đề user priority=0
-        // bị đẩy xuống dưới VIP ngay sau khi đăng.
-        saveMyRecentPost(currentUserId, { ...optimisticPost, ...patch })
-
-        // Now safe to free the blob URLs — images are served from Cloudinary.
-        blobUrls.forEach((url) => URL.revokeObjectURL(url))
-      } catch (err) {
-        // Keep blob URLs alive so the failed post still shows its images
-        // while the user decides to retry / dismiss. They'll be released
-        // when the user dismisses (handlePostDismiss).
-        onPostUpdated(tempId, {
-          isPending: false,
-          pendingError: err instanceof Error ? err.message : "Có lỗi xảy ra",
-        })
-      }
-    })()
-  }
-
-  const charCount = content.trim().length
-
-  const isProduct = mode === "PRODUCT"
-  const inputCls =
-    "w-full border border-brand-200 rounded-lg bg-white px-3 py-2 text-sm text-brand-800 placeholder:text-brand-400 focus:border-brand-600 focus:outline-none"
-
-  return (
-    <div className="bg-white rounded-xl border border-brand-200 p-4 space-y-3">
-      {/* Author row */}
-      <div className="flex items-start gap-3">
-        <div className="relative w-10 h-10 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
-          {currentUserAvatarUrl ? (
-            <Image src={currentUserAvatarUrl} alt="" fill className="object-cover" sizes="40px" />
-          ) : (
-            <span className="text-sm font-bold text-brand-700">
-              {currentUserName?.[0]?.toUpperCase() ?? "?"}
-            </span>
-          )}
-        </div>
-
-        {isProduct ? (
-          /* Product form — tên / danh mục / giá / tiêu đề / mô tả */
-          <div className="flex-1 min-w-0 space-y-2">
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => { setProductName(e.target.value); setError(null) }}
-              placeholder="Tên sản phẩm *"
-              className={inputCls}
-              maxLength={120}
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {/* Danh mục — combobox dùng PRODUCT_CATEGORIES chung toàn site
-                  (shared với ProductForm ở /san-pham). */}
-              <select
-                value={productCategory}
-                onChange={(e) => setProductCategory(e.target.value)}
-                className={cn(
-                  inputCls,
-                  productCategory ? "text-brand-800" : "text-brand-400",
-                )}
-              >
-                <option value="">Chọn danh mục…</option>
-                {PRODUCT_CATEGORIES.map((c) => (
-                  <option key={c} value={c} className="text-brand-800">
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={priceRange}
-                onChange={(e) => setPriceRange(e.target.value)}
-                placeholder="Khoảng giá (vd: 500k - 1tr)"
-                className={inputCls}
-                maxLength={50}
-              />
-            </div>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => { setTitle(e.target.value); setError(null) }}
-              placeholder="Tiêu đề bài đăng *"
-              className={inputCls}
-              maxLength={150}
-            />
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => { setContent(e.target.value); setError(null) }}
-              placeholder="Mô tả chi tiết sản phẩm *"
-              className="w-full resize-none border border-brand-200 rounded-lg bg-white px-3 py-2 text-sm text-brand-800 placeholder:text-brand-400 focus:border-brand-600 focus:outline-none min-h-[100px] leading-relaxed"
-              rows={4}
-            />
-          </div>
-        ) : (
-          /* NEWS mode — single textarea, auto-resize */
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => { setContent(e.target.value); setError(null) }}
-            placeholder={t("placeholder")}
-            className="w-full resize-none text-sm text-brand-800 placeholder:text-brand-400 focus:outline-none min-h-[60px] leading-relaxed"
-            rows={2}
-          />
-        )}
-      </div>
-
-      {/* Image previews */}
-      {images.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          {images.map((img, i) => (
-            <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-brand-200">
-              <Image src={img.preview} alt="" fill className="object-cover" sizes="80px" />
-              <button
-                onClick={() => removeImage(i)}
-                className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {error && <p className="text-xs text-red-600">{error}</p>}
-
-      {/* Footer: actions + submit */}
-      <div className="flex items-center justify-between pt-2 border-t border-brand-100">
-        <div className="flex items-center gap-2">
-          {/* Image upload button */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageSelect}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={images.length >= 4}
-            className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-40"
-            title={t("addImages")}
-          >
-            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Zm7.5-12a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-            </svg>
-            {t("images")}
-          </button>
-
-          {/* Full editor link */}
-          <Link
-            href={`/${locale}/feed/tao-bai`}
-            className="flex items-center gap-1.5 text-sm text-brand-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg px-2.5 py-1.5 transition-colors"
-            title={t("fullEditor")}
-          >
-            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-            </svg>
-            {t("fullEditorShort")}
-          </Link>
-
-          {/* Char count hint — chỉ cho NEWS mode (PRODUCT không có 50-char
-              threshold, validation check trống field thay). */}
-          {!isProduct && content.length > 0 && charCount < 50 && (
-            <span className="text-xs text-brand-400">
-              {charCount}/50
-            </span>
-          )}
-        </div>
-
-        <button
-          onClick={handleSubmit}
-          disabled={
-            isProduct
-              ? !productName.trim() || !title.trim() || charCount === 0
-              : charCount < 50
-          }
-          className={cn(
-            "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
-            (isProduct
-              ? productName.trim() && title.trim() && charCount > 0
-              : charCount >= 50)
-              ? "bg-brand-700 text-white hover:bg-brand-800"
-              : "bg-brand-100 text-brand-400 cursor-not-allowed",
-          )}
-        >
-          {isProduct ? "Đăng sản phẩm" : t("post")}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // ── Membership Card ──────────────────────────────────────────────────────────
 
@@ -1364,6 +878,7 @@ function MembershipCard({ info, now }: { info: MembershipInfo; now: number }) {
 
 export function FeedClient({
   initialPosts,
+  initialFilter = "NEWS",
   currentUserId,
   currentUserRole,
   currentUserName,
@@ -1387,11 +902,30 @@ export function FeedClient({
       : []),
   ]
 
+  const router = useRouter()
+  const pathname = usePathname()
+
   const [isMounted, setIsMounted] = useState(false)
   const [now, setNow] = useState(0)
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [hasMore, setHasMore] = useState(initialPosts.length >= 10)
-  const [filter, setFilter] = useState<FilterKey>("NEWS")
+  const [filter, setFilter] = useState<FilterKey>(initialFilter)
+
+  // Sync filter ↔ URL `?category=`. Khi user đổi tab, URL update để khi
+  // họ navigate sang /feed/tao-bai rồi back về, mode được preserve. NEWS
+  // = default (no param). Dùng `router.replace` (không scroll) để không
+  // push history entry mỗi click chip.
+  useEffect(() => {
+    if (!isMounted) return
+    const params = new URLSearchParams(window.location.search)
+    if (filter === "NEWS") {
+      params.delete("category")
+    } else {
+      params.set("category", filter)
+    }
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [filter, isMounted, pathname, router])
 
   useEffect(() => {
     setNow(Date.now())

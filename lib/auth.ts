@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
 import { prisma } from "./prisma"
 import { authConfig } from "./auth.config"
-import type { Role } from "@prisma/client"
+import type { Role, Committee } from "@prisma/client"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -186,15 +186,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * can check them without a DB round-trip (Edge-safe).
      */
     async jwt({ token, user, account }) {
+      // Helper gom query role + membership + committees — embed vào JWT để
+      // proxy (Edge) có đủ info gate /admin routes mà không cần DB query.
+      const fetchUserShape = async (userId: string) => {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            role: true,
+            membershipExpires: true,
+            committeeMemberships: { select: { committee: true } },
+          },
+        })
+        if (!dbUser) return null
+        return {
+          role: dbUser.role,
+          membershipExpires: dbUser.membershipExpires?.toISOString() ?? null,
+          committees: dbUser.committeeMemberships.map((m) => m.committee),
+        }
+      }
+
       // On first sign-in (user is present)
       if (user?.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true, membershipExpires: true },
-        })
-        if (dbUser) {
-          token.role = dbUser.role
-          token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+        const shape = await fetchUserShape(user.id)
+        if (shape) {
+          token.role = shape.role
+          token.membershipExpires = shape.membershipExpires
+          token.committees = shape.committees
           token.refreshedAt = Date.now()
         }
         return token
@@ -202,32 +219,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // For Google OAuth new users, ensure we use the DB user id
       if (account?.provider === "google" && user?.email && !user.id) {
-        const dbUser = await prisma.user.findUnique({
+        const byEmail = await prisma.user.findUnique({
           where: { email: user.email },
-          select: { id: true, role: true, membershipExpires: true },
+          select: { id: true },
         })
-        if (dbUser) {
-          token.sub = dbUser.id
-          token.role = dbUser.role
-          token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
-          token.refreshedAt = Date.now()
+        if (byEmail) {
+          token.sub = byEmail.id
+          const shape = await fetchUserShape(byEmail.id)
+          if (shape) {
+            token.role = shape.role
+            token.membershipExpires = shape.membershipExpires
+            token.committees = shape.committees
+            token.refreshedAt = Date.now()
+          }
         }
         return token
       }
 
-      // Subsequent requests — refresh role & membershipExpires từ DB tối đa 60s/lần
-      // để tránh session JWT bị stale khi admin thay đổi role hoặc xác nhận
-      // thanh toán (user không cần log out để thấy thay đổi).
+      // Subsequent requests — refresh role/membership/committees từ DB tối đa
+      // 60s/lần để tránh JWT stale khi admin gán ban / xác nhận thanh toán.
       const REFRESH_TTL_MS = 60_000
       const refreshedAt = (token.refreshedAt as number | undefined) ?? 0
       if (token.sub && Date.now() - refreshedAt > REFRESH_TTL_MS) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: { role: true, membershipExpires: true },
-        })
-        if (dbUser) {
-          token.role = dbUser.role
-          token.membershipExpires = dbUser.membershipExpires?.toISOString() ?? null
+        const shape = await fetchUserShape(token.sub)
+        if (shape) {
+          token.role = shape.role
+          token.membershipExpires = shape.membershipExpires
+          token.committees = shape.committees
           token.refreshedAt = Date.now()
         }
       }
@@ -244,6 +262,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role as Role
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(session.user as any).membershipExpires = (token.membershipExpires as string | null) ?? null
+      session.user.committees = (token.committees as Committee[] | undefined) ?? []
       return session
     },
   },

@@ -30,11 +30,18 @@ const MEMBER_PREFIXES = [
   "/chung-nhan/lich-su",
   "/thanh-toan/lich-su",
   "/tai-lieu",
+  // /ket-nap nằm ở app/(vip)/ket-nap (route group, không có [locale]) — phải
+  // mark internal để proxy KHÔNG add locale prefix; thiếu ở đây → /ket-nap
+  // bị redirect về /vi/ket-nap → 404 (file không nằm dưới [locale]).
+  "/ket-nap",
 ]
 
-/** Routes mọi user đăng nhập đều vào được (kể cả GUEST), nhưng không cho khách lạ */
+/** Routes mọi user đăng nhập đều vào được (kể cả GUEST), nhưng không cho khách lạ.
+ *  CHÚ Ý: chỉ list những route nằm NGOÀI [locale] route group. /feed/tao-bai
+ *  từng ở đây nhưng file đã chuyển vào app/[locale]/(member)/feed/tao-bai/
+ *  → proxy phải thêm locale prefix (không bypass), bỏ khỏi list. Auth check
+ *  cho /vi/feed/tao-bai do page tự lo qua auth() server-side. */
 const LOGGED_IN_PREFIXES = [
-  "/feed/tao-bai",
   "/banner/dang-ky",   // Phase 6: mọi user đăng ký banner
   "/banner/lich-su",   // Phase 6: xem lịch sử banner của mình
 ]
@@ -94,7 +101,13 @@ function isInternalRoute(pathname: string): boolean {
     matchesAny(pathname, MEMBER_PREFIXES) ||
     matchesAny(pathname, LOGGED_IN_PREFIXES) ||
     pathname.startsWith("/thanh-toan/thanh-cong") ||
-    pathname.startsWith("/api/")
+    pathname.startsWith("/api/") ||
+    // Phase 3.6 (2026-04): owner-only subpaths của 1 SP cụ thể sống ở
+    // app/(member)/san-pham/[slug]/{sua,lich-su}/ (no locale prefix).
+    // Không thể list trong MEMBER_PREFIXES vì [slug] là dynamic — dùng
+    // regex thay vì prefix matching. Khác /san-pham/{slug} (public
+    // detail) vẫn đi qua locale routing như cũ.
+    /^\/san-pham\/[^/]+\/(sua|lich-su)\/?$/.test(pathname)
   )
 }
 
@@ -124,6 +137,16 @@ export const proxy = auth((req) => {
 
   // Extract locale from URL prefix
   const localeInfo = extractLocale(pathname)
+
+  // Phase 3.6 fix: nếu URL có locale prefix nhưng strip locale ra rồi route
+  // matches internal pattern (vd /vi/san-pham/foo/lich-su → /san-pham/foo/
+  // lich-su) → redirect strip locale. Tránh 404 khi user paste URL có /vi/
+  // prefix vào URL bar hoặc code path nào đó add prefix nhầm.
+  if (localeInfo && isInternalRoute(localeInfo.rest)) {
+    const url = req.nextUrl.clone()
+    url.pathname = localeInfo.rest
+    return NextResponse.redirect(url)
+  }
   const locale: Locale = localeInfo?.locale ?? defaultLocale
   // The real pathname after stripping locale prefix (used for auth checks below)
   const realPathname: string = localeInfo?.rest ?? pathname
@@ -161,12 +184,17 @@ export const proxy = auth((req) => {
     return passThrough()
   }
 
-  // ── 2. Admin routes: chỉ ADMIN (should not reach here, but safety check) ──
+  // ── 2. Admin routes: ADMIN/INFINITE + VIP có committee ──────────────────
+  // VIP có ban (Thư ký, Truyền thông…) cần vào /admin để sử dụng quyền.
+  // Proxy chỉ kiểm tra THUỘC ban nào đó; quyền cụ thể check ở admin layout
+  // + từng route handler qua `hasPermission()` (lib/permissions.ts).
   if (matchesAny(realPathname, ADMIN_PREFIXES)) {
     if (!session) {
       return NextResponse.redirect(new URL(`/${locale}/login?callbackUrl=${realPathname}`, req.url))
     }
-    if (!isAdmin(role)) {
+    const committees = (session.user?.committees as string[] | undefined) ?? []
+    const hasAdminAccess = isAdmin(role) || committees.length > 0
+    if (!hasAdminAccess) {
       return NextResponse.redirect(new URL(`/${locale}`, req.url))
     }
     return passThrough()

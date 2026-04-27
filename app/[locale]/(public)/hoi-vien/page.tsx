@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { prisma } from "@/lib/prisma"
 import { calcTier } from "@/lib/tier"
 import { getTierThresholds } from "@/lib/tier"
+import { COMMITTEE_TO_LEADER_CATEGORY } from "@/lib/committee-leader-bridge"
 import { MemberCardFlip } from "@/components/features/member-card/MemberCardFlip"
 import { MemberCardFront } from "@/components/features/member-card/MemberCardFront"
 import { MemberCardBack } from "@/components/features/member-card/MemberCardBack"
@@ -18,6 +19,7 @@ const VIP_MEMBER_SELECT = {
   role: true,
   accountType: true,
   contributionTotal: true,
+  displayPriority: true,
   memberCategory: true,
   membershipExpires: true,
   createdAt: true,
@@ -31,12 +33,52 @@ const VIP_MEMBER_SELECT = {
       representativePosition: true,
     },
   },
+  // Phase 3.7 (2026-04): pull committee memberships để tính flag "lãnh đạo"
+  // → sort hội viên theo Ban lãnh đạo trước, contribution sau (yêu cầu khách).
+  committeeMemberships: {
+    select: { committee: true },
+  },
 } as const
 
-/** VIP/INFINITE members default list — cache 10 phút (biến thể search bypass). */
+/** Hội viên có ít nhất 1 ban thuộc Ban lãnh đạo công khai (HOI_DONG, BAN_
+ *  CHAP_HANH, BAN_THUONG_VU). Không tính ban nội bộ (THU_KY, TRUYEN_THONG)
+ *  vì đó là role tác nghiệp, không phải lãnh đạo. */
+function isLeadershipMember(
+  memberships: { committee: string }[],
+): boolean {
+  return memberships.some(
+    (m) => COMMITTEE_TO_LEADER_CATEGORY[m.committee as keyof typeof COMMITTEE_TO_LEADER_CATEGORY],
+  )
+}
+
+/** Sort theo: lãnh đạo > contribution desc > displayPriority desc > createdAt asc.
+ *  Prisma orderBy không native support derived flag từ relation, nên sort
+ *  ở JS sau khi fetch. Dataset nhỏ (<200 VIP) — chi phí nhỏ. */
+function sortMembers<T extends { contributionTotal: number; displayPriority: number; createdAt: Date | string; committeeMemberships: { committee: string }[] }>(members: T[]): T[] {
+  return [...members].sort((a, b) => {
+    const aLead = isLeadershipMember(a.committeeMemberships) ? 1 : 0
+    const bLead = isLeadershipMember(b.committeeMemberships) ? 1 : 0
+    if (aLead !== bLead) return bLead - aLead
+    if (a.contributionTotal !== b.contributionTotal) {
+      return b.contributionTotal - a.contributionTotal
+    }
+    if (a.displayPriority !== b.displayPriority) {
+      return b.displayPriority - a.displayPriority
+    }
+    const aTime = new Date(a.createdAt).getTime()
+    const bTime = new Date(b.createdAt).getTime()
+    return aTime - bTime
+  })
+}
+
+/** VIP/INFINITE members default list — cache 10 phút (biến thể search bypass).
+ *  Phase 3.7: orderBy DB-side là fallback (contribution desc); reorder cuối
+ *  cùng theo flag lãnh đạo ở JS sau khi fetch (DB không support order by
+ *  derived relation flag). Cache key + tags vẫn invalidate khi committee
+ *  membership đổi (admin thao tác qua /admin/hoi-vien). */
 const getDefaultVipMembers = unstable_cache(
-  () =>
-    prisma.user.findMany({
+  async () => {
+    const rows = await prisma.user.findMany({
       where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
       orderBy: [
         { contributionTotal: "desc" },
@@ -44,8 +86,10 @@ const getDefaultVipMembers = unstable_cache(
         { createdAt: "asc" },
       ],
       select: VIP_MEMBER_SELECT,
-    }),
-  ["hoi-vien_default_list"],
+    })
+    return sortMembers(rows)
+  },
+  ["hoi-vien_default_list_v2"],
   { revalidate: 600, tags: ["members", "users"] },
 )
 
@@ -96,26 +140,28 @@ export default async function VipMembersPage({
   const [members, businessThresholds, individualThresholds, configs] =
     await Promise.all([
       q
-        ? prisma.user.findMany({
-            where: {
-              role: { in: ["VIP", "INFINITE"] },
-              isActive: true,
-              OR: [
-                { name: { contains: q, mode: "insensitive" as const } },
-                {
-                  company: {
-                    name: { contains: q, mode: "insensitive" as const },
+        ? prisma.user
+            .findMany({
+              where: {
+                role: { in: ["VIP", "INFINITE"] },
+                isActive: true,
+                OR: [
+                  { name: { contains: q, mode: "insensitive" as const } },
+                  {
+                    company: {
+                      name: { contains: q, mode: "insensitive" as const },
+                    },
                   },
-                },
+                ],
+              },
+              orderBy: [
+                { contributionTotal: "desc" },
+                { displayPriority: "desc" },
+                { createdAt: "asc" },
               ],
-            },
-            orderBy: [
-              { contributionTotal: "desc" },
-              { displayPriority: "desc" },
-              { createdAt: "asc" },
-            ],
-            select: VIP_MEMBER_SELECT,
-          })
+              select: VIP_MEMBER_SELECT,
+            })
+            .then(sortMembers)
         : getDefaultVipMembers(),
       getTierThresholds("BUSINESS"),
       getTierThresholds("INDIVIDUAL"),

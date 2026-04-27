@@ -8,6 +8,8 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { localize } from "@/i18n/localize"
+import type { Locale } from "@/i18n/config"
 import { CompanyGallery, type GalleryImage } from "./CompanyGallery"
 
 type Product = {
@@ -21,11 +23,27 @@ type Product = {
   badgeUrl: string | null
 }
 
+export type CompanyNewsItem = {
+  id: string
+  slug: string
+  title: string
+  title_en: string | null
+  title_zh: string | null
+  title_ar: string | null
+  excerpt: string | null
+  excerpt_en: string | null
+  excerpt_zh: string | null
+  excerpt_ar: string | null
+  coverImageUrl: string | null
+  publishedAt: Date | string | null
+}
+
 type Props = {
   companyId: string
   description: string | null | undefined
   products: Product[]
   galleryImages: GalleryImage[]
+  newsItems: CompanyNewsItem[]
   companyName: string
   companySlug: string
   foundedYear?: number | null
@@ -38,13 +56,14 @@ type Props = {
   canEdit: boolean
 }
 
-type TabId = "intro" | "products" | "gallery" | "info"
+type TabId = "intro" | "products" | "gallery" | "news" | "info"
 
 export function CompanyTabs({
   companyId,
   description,
   products,
   galleryImages,
+  newsItems,
   companyName,
   companySlug,
   foundedYear,
@@ -58,6 +77,8 @@ export function CompanyTabs({
 }: Props) {
   const t = useTranslations("companyTabs")
   const locale = useLocale()
+  const l = <T extends Record<string, unknown>>(rec: T, field: string) =>
+    localize(rec, field, locale as Locale) as string
 
   const [activeTab, setActiveTab] = useState<TabId>("intro")
 
@@ -65,6 +86,7 @@ export function CompanyTabs({
     { id: "intro", label: t("tabIntro") },
     { id: "products", label: `${t("tabProducts")} (${products.length})` },
     { id: "gallery", label: `${t("tabGallery")} (${galleryImages.length})` },
+    { id: "news", label: `${t("tabNews")} (${newsItems.length})` },
     { id: "info", label: t("tabInfo") },
   ]
 
@@ -157,6 +179,61 @@ export function CompanyTabs({
             images={galleryImages}
             canEdit={canEdit}
           />
+        )}
+
+        {/* ── {t("tabNews")} — News rows liên kết DN qua relatedCompanyId.
+             Phase 3.3 (2026-04): gộp BUSINESS + PRODUCT cùng 1 tab theo
+             quyết định Q4 customer. Click → /tin-tuc/{slug}. ───────── */}
+        {activeTab === "news" && (
+          <div>
+            {newsItems.length === 0 ? (
+              <p className="text-brand-400 italic text-sm">{t("noNews")}</p>
+            ) : (
+              <ul className="divide-y divide-brand-100">
+                {newsItems.map((n) => (
+                  <li key={n.id} className="py-4 first:pt-0 last:pb-0">
+                    <Link
+                      href={`/${locale}/tin-tuc/${n.slug}`}
+                      className="group flex gap-4"
+                    >
+                      <div className="relative h-20 w-32 shrink-0 overflow-hidden rounded-lg bg-brand-100 sm:h-24 sm:w-40">
+                        {n.coverImageUrl ? (
+                          <Image
+                            src={n.coverImageUrl}
+                            alt={l(n, "title")}
+                            fill
+                            sizes="(max-width: 640px) 128px, 160px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <AgarwoodPlaceholder className="h-full w-full" size="sm" shape="square" tone="light" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-base font-semibold text-brand-900 group-hover:text-brand-700">
+                          {l(n, "title")}
+                        </h3>
+                        {l(n, "excerpt") && (
+                          <p className="mt-1 line-clamp-2 text-sm text-brand-600">
+                            {l(n, "excerpt")}
+                          </p>
+                        )}
+                        {n.publishedAt && (
+                          <time className="mt-1 block text-xs text-brand-400">
+                            {new Date(n.publishedAt).toLocaleDateString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </time>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         {/* ── {t("tabInfo")} ────────────────────────────────────────────────── */}

@@ -185,10 +185,19 @@ enum ApplicationStatus {
 }
 
 enum NewsCategory {
-  GENERAL      // tin tuc — /tin-tuc
-  RESEARCH     // nghien cuu khoa hoc — /nghien-cuu
-  LEGAL        // van ban phap ly — render o /privacy, /terms theo slug co dinh
-               // ("chinh-sach-bao-mat", "dieu-khoan-su-dung")
+  GENERAL              // tin tuc — /tin-tuc
+  RESEARCH             // nghien cuu khoa hoc — /nghien-cuu
+  LEGAL                // van ban phap ly — render o /privacy, /terms theo slug co dinh
+                       // ("chinh-sach-bao-mat", "dieu-khoan-su-dung")
+  SPONSORED_PRODUCT    // legacy — bai san pham tra phi (Phase 2)
+  BUSINESS             // tin doanh nghiep — yeu cau News.relatedCompanyId   (Phase 3.3)
+  PRODUCT              // tin san pham — yeu cau News.relatedCompanyId + relatedProductId (Phase 3.3)
+}
+
+enum NewsTemplate {    // Phase 3.3 (2026-04)
+  NORMAL               // RichTextEditor: text + anh + video chen lan
+  PHOTO                // Gallery anh — auto xuat hien o /multimedia tab Hinh anh
+  VIDEO                // Gallery URL YouTube — auto xuat hien o /multimedia tab Video
 }
 
 enum BannerPosition {
@@ -240,6 +249,16 @@ enum DocumentCategory {
 - `20260419000000_add_contact_messages` — model `ContactMessage` + enum `ContactStatus` (persist /lien-he submissions)
 - `20260419100000_add_sidebar_banner_position` — them gia tri `SIDEBAR` vao enum `BannerPosition`
 - `20260420000000_add_arabic_locale_columns` — them 24 cot `*_ar` cho 8 bang multilang (User, Company, Product, News, MenuItem, Document, Leader, Survey)
+- `20260421030000_cert_review_mode_and_fee` — `Certification.reviewMode` (ONLINE/OFFLINE) + `feeCents`
+- `20260421040000_cert_council_voting` — `CertificationReview` model (5 thanh vien hoi dong)
+- `20260423000000_add_post_promotion_request` — `PostPromotionRequest` (owner xin promote bai feed)
+- `20260424000000_add_committee_memberships` — `CommitteeMembership` model + dual-write `User.isCouncilMember`
+- `20260424100000_add_product_revisions` — `ProductRevision` (audit trail snapshot khi admin/owner sua Product)
+- `20260426000000_news_categories_template_links` (Phase 3.3 — 2026-04):
+  - `NewsCategory` them gia tri `BUSINESS` + `PRODUCT`
+  - `NewsTemplate` enum moi: `NORMAL` / `PHOTO` / `VIDEO`
+  - `News.template` (default NORMAL), `News.relatedCompanyId`, `News.relatedProductId`, `News.gallery JSONB`
+  - Index `(template, isPublished, publishedAt)` cho /multimedia union query
 
 > Cac migration nay duoc apply qua `prisma db push` (khong tao migration file rieng) — schema drift duoc dong bo truc tiep tu schema.prisma.
 
@@ -409,8 +428,8 @@ model Product {
 | 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (6 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
 | 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP (Hoi vien) |
 | 4. Banner MID (giua trang) | `HomepageBannerSlot position="MID"` | 60s | Banner ACTIVE + position=MID |
-| 5. Tin DN moi nhat | `getLatestPostsByCategory("NEWS")` | 300s | isPremium=true, category=NEWS |
-| 6. Tin SP moi nhat | `getLatestPostsByCategory("PRODUCT")` | 300s | isPremium=true, category=PRODUCT |
+| 5. Tin DN moi nhat | `getMergedFeed("NEWS","BUSINESS",6)` | 300s | Post.NEWS (isPremium/isPromoted) ∪ News.BUSINESS template=NORMAL — sort date DESC (Q0=C, ADR-036) |
+| 6. Tin SP moi nhat | `getMergedFeed("PRODUCT","PRODUCT",5)` | 300s | Post.PRODUCT ∪ News.PRODUCT template=NORMAL — sort date DESC (Q0=C, ADR-036) |
 | 7. Doi tac & Co quan lien ket | `getActivePartners` (PartnersCarousel) | 300s | Partner.isActive=true, sort sortOrder ASC |
 
 **Rotating slots algorithm** (right rail):

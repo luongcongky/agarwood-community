@@ -56,7 +56,14 @@ const getDefaultCompanies = unstable_cache(
   () =>
     prisma.company.findMany({
       where: { isPublished: true },
-      orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+      // Sort theo đóng góp của hội viên đại diện DN (giảm dần) — hội đóng
+      // góp nhiều rank cao hơn. isVerified làm tie-breaker (cùng contribution
+      // thì DN đã verify hiển thị trước). createdAt cuối cùng cho consistency.
+      orderBy: [
+        { owner: { contributionTotal: "desc" } },
+        { isVerified: "desc" },
+        { createdAt: "desc" },
+      ],
       select: COMPANY_CARD_SELECT,
     }),
   ["doanh-nghiep_list_default"],
@@ -86,7 +93,14 @@ export default async function MembersPage({
             { description: { contains: q, mode: "insensitive" as const } },
           ],
         },
-        orderBy: [{ isVerified: "desc" }, { createdAt: "desc" }],
+        // Sort theo đóng góp của hội viên đại diện DN (giảm dần) — hội đóng
+      // góp nhiều rank cao hơn. isVerified làm tie-breaker (cùng contribution
+      // thì DN đã verify hiển thị trước). createdAt cuối cùng cho consistency.
+      orderBy: [
+        { owner: { contributionTotal: "desc" } },
+        { isVerified: "desc" },
+        { createdAt: "desc" },
+      ],
         select: COMPANY_CARD_SELECT,
       })
     : await getDefaultCompanies()

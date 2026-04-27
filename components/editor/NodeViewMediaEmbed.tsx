@@ -20,6 +20,7 @@ export function NodeViewMediaEmbed({ node, selected, updateAttributes, deleteNod
   const src = node.attrs.src as string
   const type = node.attrs.type as MediaType
   const width = node.attrs.width as string | null
+  const caption = (node.attrs.caption as string) || ""
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -134,6 +135,25 @@ export function NodeViewMediaEmbed({ node, selected, updateAttributes, deleteNod
           ✕ Xóa
         </button>
       )}
+
+      {/* Caption — input khi selected (cho admin sửa nhanh), <p> tĩnh khi không
+          select. Dùng contentEditable=false để ProseMirror không nhầm là text
+          node bên trong; lưu qua updateAttributes onBlur. */}
+      <div className="mx-auto mt-1 max-w-[960px]" contentEditable={false}>
+        {selected ? (
+          <input
+            type="text"
+            defaultValue={caption}
+            onBlur={(e) => updateAttributes({ caption: e.target.value })}
+            placeholder="Nhập chú thích cho video/audio…"
+            className="w-full text-center text-[13px] italic text-neutral-600 placeholder:text-neutral-400 bg-transparent border-0 border-b border-dashed border-brand-300 focus:border-brand-600 focus:outline-none px-2 py-0.5"
+          />
+        ) : caption ? (
+          <p className="text-center text-[13px] italic text-neutral-600 leading-snug">
+            {caption}
+          </p>
+        ) : null}
+      </div>
     </NodeViewWrapper>
   )
 }

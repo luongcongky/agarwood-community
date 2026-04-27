@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
-import { addAnchorIdsToH2, extractTocFromHtml } from "@/lib/seo/toc"
+import { addAnchorIdsToH2 } from "@/lib/seo/toc"
 import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { Section } from "@/components/features/homepage/Section"
@@ -19,6 +19,8 @@ import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBanne
 import { SidebarList } from "@/components/features/article/SidebarList"
 import { CopyLinkButton } from "../../tin-tuc/[slug]/CopyLinkButton"
 import { ArticleToolbar } from "../../tin-tuc/[slug]/ArticleToolbar"
+import { auth } from "@/lib/auth"
+import { CommentsSection } from "@/components/features/comments/CommentsSection"
 
 export const revalidate = 1800
 
@@ -91,6 +93,7 @@ export default async function ResearchDetailPage({ params }: Props) {
   ])
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const { slug } = await params
+  const session = await auth()
 
   const news = await getResearchBySlug(slug)
 
@@ -208,7 +211,6 @@ export default async function ResearchDetailPage({ params }: Props) {
   const sanitizedContent = sanitizeArticleHtml(l(news, "content") ?? "")
   const optimizedContent = rewriteCloudinaryInHtml(sanitizedContent, 1024)
   const contentWithAnchors = addAnchorIdsToH2(optimizedContent)
-  const toc = extractTocFromHtml(sanitizedContent)
 
   const articleUrl = localizedUrl(`/nghien-cuu/${slug}`, locale)
   const seoTitle = (l(news, "seoTitle") as string | null) || l(news, "title")
@@ -348,27 +350,8 @@ export default async function ResearchDetailPage({ params }: Props) {
             </figure>
           )}
 
-          {/* Table of Contents — với bài nghiên cứu thường dài, giữ TOC để reader navigate. */}
-          {toc.length >= 2 && (
-            <nav className="mb-6 border-l-[3px] border-brand-700 bg-neutral-50 py-3 pl-5 pr-4">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">
-                {t("tocTitle")}
-              </p>
-              <ol className="space-y-1 text-sm">
-                {toc.map((entry, i) => (
-                  <li key={entry.id} className="flex items-baseline gap-2">
-                    <span className="shrink-0 tabular-nums text-neutral-400">{i + 1}.</span>
-                    <a
-                      href={`#${entry.id}`}
-                      className="line-clamp-1 text-neutral-800 hover:text-brand-700 hover:underline"
-                    >
-                      {entry.text}
-                    </a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
+          {/* TOC removed (2026-04 customer feedback) — anchor IDs vẫn inject
+              vào H2 để link share #section vẫn hoạt động. */}
 
           {/* Article body — `data-article-body` là hook cho zoom toolbar. */}
           <div
@@ -478,6 +461,17 @@ export default async function ResearchDetailPage({ params }: Props) {
             compact
           />
         </aside>
+      </div>
+
+      {/* Comments — full-width dưới article + sidebar. Phase 3.4 (2026-04). */}
+      <div className="mt-10 lg:max-w-[calc(75%-1.25rem)]">
+        <CommentsSection
+          newsId={news.id}
+          currentUserId={session?.user?.id ?? null}
+          currentUserRole={session?.user?.role}
+          currentUserName={session?.user?.name}
+          currentUserAvatar={session?.user?.image}
+        />
       </div>
 
       {/* Related — full-width grid cuối trang */}

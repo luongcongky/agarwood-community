@@ -5,9 +5,14 @@ import { useTranslations } from "next-intl"
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
 import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
+import {
+  CompanyPicker,
+  type CompanySummary,
+} from "@/app/(admin)/admin/tin-tuc/[id]/CompanyProductPickers"
 
 /** Slugify tiếng Việt → a-z, 0-9, dấu gạch ngang */
 function slugify(str: string): string {
@@ -47,12 +52,25 @@ async function deleteOrphanedImages(beforeUrls: string[], afterHtml: string) {
 
 // ─── Page Component ──────────────────────────────────────────────────────────
 
-export default function TaoBaiPage() {
+type OwnCompanyProp = {
+  id: string
+  name: string
+  slug: string
+  logoUrl: string | null
+} | null
+
+export default function TaoBaiPage({
+  isAdmin = false,
+  ownCompany = null,
+}: {
+  isAdmin?: boolean
+  ownCompany?: OwnCompanyProp
+}) {
   const t = useTranslations("postEditor")
 
   return (
     <Suspense fallback={<div className="max-w-3xl mx-auto py-12 text-center text-brand-400">{t("loading")}</div>}>
-      <TaoBaiContent />
+      <TaoBaiContent isAdminUserProp={isAdmin} ownCompany={ownCompany} />
     </Suspense>
   )
 }
@@ -63,7 +81,13 @@ type PostCategoryClient = "GENERAL" | "NEWS" | "PRODUCT"
 
 type QuotaInfo = { used: number; limit: number; remaining: number; resetAt: string }
 
-function TaoBaiContent() {
+function TaoBaiContent({
+  isAdminUserProp,
+  ownCompany,
+}: {
+  isAdminUserProp: boolean
+  ownCompany: OwnCompanyProp
+}) {
   const t = useTranslations("postEditor")
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -75,6 +99,12 @@ function TaoBaiContent() {
 
   const editId = searchParams.get("edit")
   const initialCategory = searchParams.get("category") as PostCategoryClient | null
+  // Phase 3.6 (2026-04): admin sửa bài của hội viên — bắt buộc nhập "lý do
+  // chỉnh sửa" để PostRevision audit log có context. `returnTo` cho phép
+  // ModerationItem nhảy ngược về cho-duyet sau khi save.
+  const adminMode = searchParams.get("adminMode") === "1" && isAdminUserProp && !!editId
+  const returnTo = searchParams.get("returnTo")
+  const [adminEditReason, setAdminEditReason] = useState("")
   const editorRef = useRef<RichTextEditorHandle>(null)
   const [title, setTitle] = useState("")
   const [category, setCategoryState] = useState<PostCategoryClient>(
@@ -101,18 +131,22 @@ function TaoBaiContent() {
   const [productSlugEdited, setProductSlugEdited] = useState(false)
   const [productCategory, setProductCategory] = useState("")
   const [productPriceRange, setProductPriceRange] = useState("")
+  // Phase 3.5 (2026-04): admin đăng SP hộ DN — phải chọn DN.
+  // Phase 3.6 follow-up: chỉ hiện admin picker khi user là admin/INFINITE
+  // VÀ KHÔNG có DN riêng (true "đăng hộ" scenario). Nếu admin/INFINITE đã
+  // có DN (vd lãnh đạo Hội đồng thời là chủ DN), ưu tiên hiển thị DN của
+  // họ — họ đăng cho DN của mình, không phải đăng hộ.
+  const isAdminUser = isAdminUserProp
+  const showAdminPicker = isAdminUser && !ownCompany
+  const [adminPickedCompany, setAdminPickedCompany] = useState<CompanySummary | null>(null)
   const [preview, setPreview] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const [importingDocx, setImportingDocx] = useState(false)
   const [editLoaded, setEditLoaded] = useState(false)
   const [originalImages, setOriginalImages] = useState<string[]>([])
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const docxInputRef = useRef<HTMLInputElement>(null)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editIdRef = useRef(editId)
   editIdRef.current = editId
@@ -221,50 +255,14 @@ function TaoBaiContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title])
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const editor = editorRef.current?.editor
-    if (!editor) return
-    setUploadingImage(true)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("folder", "bai-viet")
-      const res = await fetch("/api/upload", { method: "POST", body: formData })
-      if (!res.ok) throw new Error("Upload failed")
-      const data = await res.json()
-      const imgUrl = data.secure_url ?? data.url
-      editor.chain().focus().setImage({ src: imgUrl }).run()
-      setUploadedImages((prev) => [...prev, imgUrl])
-    } catch {
-      setError(t("uploadFailed"))
-    } finally {
-      setUploadingImage(false)
-    }
-  }, [])
-
-  const handleDocxImport = useCallback(async (file: File) => {
-    const editor = editorRef.current?.editor
-    if (!editor) return
-    setImportingDocx(true)
-    setError(null)
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-      const res = await fetch("/api/upload/docx", { method: "POST", body: formData })
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error ?? t("importFailed"))
-        return
-      }
-      const data = await res.json()
-      if (data.title && !title) setTitle(data.title)
-      editor.commands.setContent(data.html)
-    } catch {
-      setError("Import file DOCX thất bại. Vui lòng thử lại.")
-    } finally {
-      setImportingDocx(false)
-    }
-  }, [title])
+  /** Feed return URL preserving filter mode. PRODUCT → `?category=PRODUCT`,
+   *  NEWS/GENERAL → bare `/feed` (NEWS = default tab). Admin moderation
+   *  flow override qua `returnTo` query param. */
+  function feedReturnUrl(): string {
+    if (returnTo) return returnTo
+    if (category === "PRODUCT") return "/feed?category=PRODUCT"
+    return "/feed"
+  }
 
   async function handleCancel() {
     // Fire-and-forget parallel cleanup — don't block redirect
@@ -280,7 +278,7 @@ function TaoBaiContent() {
       ),
     )
     localStorage.removeItem("feed_draft")
-    router.push("/feed")
+    router.push(feedReturnUrl())
   }
 
   async function handleSubmit() {
@@ -300,6 +298,17 @@ function TaoBaiContent() {
         setError("Slug sản phẩm không hợp lệ (chỉ a-z, 0-9, dấu gạch ngang)")
         return
       }
+      // Phase 3.5: admin đăng hộ → bắt buộc chọn DN.
+      if (showAdminPicker && !adminPickedCompany) {
+        setError("Admin đăng SP hộ cần chọn doanh nghiệp.")
+        return
+      }
+    }
+    // Phase 3.6: admin sửa bài hội viên → bắt buộc lý do (validate ở server
+    // luôn, ở client chỉ là sớm hiện error).
+    if (adminMode && adminEditReason.trim().length < 10) {
+      setError("Admin chỉnh sửa cần ghi rõ lý do (tối thiểu 10 ký tự).")
+      return
     }
     setError(null)
     setSubmitting(true)
@@ -317,6 +326,8 @@ function TaoBaiContent() {
           title: title || undefined,
           content: html,
           ...(editId ? {} : { category }),
+          // Phase 3.6: admin edit lý do — server bắt buộc khi authorId !== editor.
+          ...(adminMode ? { reason: adminEditReason.trim() } : {}),
           ...(isProduct
             ? {
                 product: {
@@ -324,6 +335,12 @@ function TaoBaiContent() {
                   slug: productSlug.trim(),
                   category: productCategory || undefined,
                   priceRange: productPriceRange || undefined,
+                  // Phase 3.5: admin chỉ định DN khi đăng hộ. Server validate
+                  // role + tự switch ownerId sang chủ DN. Chỉ gửi companyId
+                  // khi true admin scenario (admin không có DN riêng).
+                  ...(showAdminPicker && adminPickedCompany
+                    ? { companyId: adminPickedCompany.id }
+                    : {}),
                 },
               }
             : {}),
@@ -344,7 +361,9 @@ function TaoBaiContent() {
         // Fire-and-forget orphan cleanup — don't block redirect on it
         void deleteOrphanedImages([...originalImages, ...uploadedImages], html)
         localStorage.removeItem("feed_draft")
-        router.push("/feed")
+        // Phase 3.6: admin sửa từ moderation page → quay lại cho-duyet (qua
+        // returnTo query). Otherwise: preserve mode tab khi quay về /feed.
+        router.push(feedReturnUrl())
       } else {
         const data = await res.json()
         setError(data.error ?? "Đã xảy ra lỗi. Vui lòng thử lại.")
@@ -361,6 +380,41 @@ function TaoBaiContent() {
   return (
     <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-4 sm:p-6 lg:p-8">
     <div className="space-y-6">
+      {/* Phase 3.6 (2026-04): admin chỉnh sửa bài hội viên — banner + textarea
+          lý do bắt buộc. Hiển thị trên cùng để admin thấy ngay context. */}
+      {adminMode && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold">
+              ✎
+            </span>
+            <h2 className="text-sm font-bold text-amber-900">
+              Chế độ Admin — chỉnh sửa bài hội viên
+            </h2>
+          </div>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            Thay đổi của bạn sẽ được ghi vào lịch sử bài viết. Owner sẽ thấy
+            phiên bản admin sửa và có thể so sánh với bản gốc của họ.
+          </p>
+          <label className="block text-xs font-semibold text-amber-900 mt-2">
+            Lý do chỉnh sửa <span className="text-red-600">*</span>{" "}
+            <span className="font-normal text-amber-700">(tối thiểu 10 ký tự)</span>
+          </label>
+          <textarea
+            value={adminEditReason}
+            onChange={(e) => setAdminEditReason(e.target.value)}
+            rows={2}
+            placeholder="Ví dụ: Sửa lỗi chính tả + bổ sung disclaimer pháp lý theo quy định Hội."
+            required
+            minLength={10}
+            className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 resize-y"
+          />
+          <p className="text-[11px] text-amber-700">
+            {adminEditReason.trim().length}/10 ký tự tối thiểu
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
@@ -430,6 +484,66 @@ function TaoBaiContent() {
             <h3 className="text-sm font-semibold text-brand-900">{t("productInfoTitle")}</h3>
             <p className="text-xs text-brand-500 mt-0.5">{t("productInfoDesc")}</p>
           </div>
+
+          {/* Phase 3.5 (2026-04): admin đăng hộ DN — bắt buộc chọn DN.
+              Member thường tự là chủ DN nên không hiện picker, server tự
+              đối chiếu `Company.ownerId = userId`. */}
+          {showAdminPicker && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+              <label className="block text-xs font-medium text-brand-800">
+                Doanh nghiệp gắn với SP <span className="text-red-600">*</span>
+                <span className="ml-2 text-[10px] font-normal italic text-amber-700">
+                  (Admin đăng hộ — chọn DN sở hữu SP)
+                </span>
+              </label>
+              <CompanyPicker
+                value={adminPickedCompany}
+                onChange={setAdminPickedCompany}
+              />
+              <p className="text-[11px] text-brand-500 leading-snug">
+                SP + bài đăng feed sẽ thuộc về chủ DN bạn chọn (admin đăng hộ
+                — không xuất hiện tên admin trên feed). Phù hợp khi DN không
+                tự thêm SP qua tài khoản đại diện.
+              </p>
+            </div>
+          )}
+
+          {/* Phase 3.6 follow-up: user (member hoặc admin/INFINITE có DN
+              riêng) — hiển thị DN của họ read-only. Server tự lookup
+              `Company.ownerId = userId`, UI chỉ show để user biết SP sẽ
+              gắn vào DN nào. */}
+          {!showAdminPicker && ownCompany && (
+            <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-md bg-white border border-brand-200 overflow-hidden shrink-0 flex items-center justify-center">
+                {ownCompany.logoUrl ? (
+                  <Image src={ownCompany.logoUrl} alt="" fill className="object-contain" sizes="40px" />
+                ) : (
+                  <span className="text-xs font-bold text-brand-700">
+                    {ownCompany.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] uppercase tracking-wider text-brand-500 font-semibold">
+                  Doanh nghiệp gắn với SP
+                </p>
+                <p className="text-sm font-semibold text-brand-900 truncate">
+                  {ownCompany.name}
+                </p>
+              </div>
+              <span className="text-[10px] text-brand-400 italic">tự động</span>
+            </div>
+          )}
+          {!showAdminPicker && !ownCompany && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+              ⚠ Tài khoản của bạn chưa gắn với doanh nghiệp nào. SP sẽ được tạo
+              không kèm DN. Để gắn DN, vào{" "}
+              <a href="/doanh-nghiep/chinh-sua" className="underline font-semibold">
+                Hồ sơ doanh nghiệp
+              </a>{" "}
+              cập nhật trước.
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">
@@ -496,64 +610,6 @@ function TaoBaiContent() {
           className="w-full text-lg font-semibold text-brand-900 placeholder:text-brand-300 bg-transparent outline-none"
         />
       </div>
-
-      {/* Extra action buttons: Cloudinary upload + DOCX import */}
-      {!preview && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingImage}
-            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-60"
-          >
-            {uploadingImage ? (
-              <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            )}
-            {t("uploadImage")}
-          </button>
-          <button
-            type="button"
-            onClick={() => docxInputRef.current?.click()}
-            disabled={importingDocx}
-            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-60"
-          >
-            {importingDocx ? (
-              <div className="size-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <span className="text-xs font-bold">DOC</span>
-            )}
-            {t("importDocx")}
-          </button>
-        </div>
-      )}
-
-      {/* Hidden file inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) handleImageUpload(file)
-          e.target.value = ""
-        }}
-      />
-      <input
-        ref={docxInputRef}
-        type="file"
-        accept=".doc,.docx"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) handleDocxImport(file)
-          e.target.value = ""
-        }}
-      />
 
       {/* Editor or preview */}
       {preview ? (

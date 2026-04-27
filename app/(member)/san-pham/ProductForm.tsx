@@ -21,6 +21,40 @@ type ProductData = {
   isPublished: boolean
 }
 
+/** Kết quả của submit action — trả về string error hoặc slug đã lưu. */
+type SubmitResult = { error?: string; conflict?: boolean; success?: boolean; slug?: string }
+
+/** Server action ký tự chung cho cả owner + admin submit. Admin mode
+ *  truyền thêm `reason` + `expectedVersion` trong `extra`. */
+export type ProductFormSubmitter = (
+  productId: string | null,
+  data: Record<string, unknown>,
+) => Promise<SubmitResult>
+
+type Mode = "owner" | "admin"
+
+export type ProductFormProps = {
+  product?: ProductData
+  companySlug?: string
+  mode?: Mode
+  /** Hiển thị banner "Đang sửa SP của X" khi admin edit — owner không cần. */
+  ownerInfo?: { name: string; email: string }
+  /** Version hiện tại của revision trong DB — dùng cho optimistic concurrency
+   *  (admin mode bắt buộc, owner mode có thể bỏ qua). */
+  currentVersion?: number
+  /** Custom submit — admin mode cần server action riêng (adminUpdateProduct).
+   *  Bỏ trống → dùng createProduct/updateProduct mặc định của owner flow. */
+  submitter?: ProductFormSubmitter
+  /** Route template đi tới sau khi lưu thành công. `{slug}` placeholder
+   *  sẽ được thay bằng slug mới. Bỏ trống → dùng default theo mode:
+   *  owner = `/san-pham/{slug}`, admin = `/admin/san-pham/{slug}/sua`.
+   *  Phải là string (không phải function) vì Next.js cấm pass function
+   *  props từ server component sang client component. */
+  successHrefTemplate?: string
+  /** "Xem lịch sử" link hiển thị bên cạnh nút Huỷ. */
+  historyHref?: string
+}
+
 const inputClass = "w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 placeholder:text-brand-300 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors"
 const selectClass = "w-full rounded-lg border border-brand-200 bg-white px-3 py-2.5 text-sm text-brand-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-colors"
 
@@ -34,12 +68,25 @@ function slugify(str: string) {
     .replace(/^-|-$/g, "")
 }
 
-export function ProductForm({ product, companySlug }: { product?: ProductData; companySlug?: string }) {
+export function ProductForm({
+  product,
+  companySlug,
+  mode = "owner",
+  ownerInfo,
+  currentVersion,
+  submitter,
+  successHrefTemplate,
+  historyHref,
+}: ProductFormProps) {
   const router = useRouter()
   const isEdit = !!product
+  const isAdmin = mode === "admin"
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
+  // Admin edit phải ghi lý do (tối thiểu 10 ký tự) — backend enforce, client
+  // hiển thị hint. Owner edit không bắt buộc.
+  const [reason, setReason] = useState("")
 
   const p = product as unknown as Record<string, unknown> | undefined
   const [name, setName] = useState(product?.name ?? "")
@@ -95,29 +142,60 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isAdmin && reason.trim().length < 10) {
+      setMsg({ type: "error", text: "Lý do chỉnh sửa tối thiểu 10 ký tự" })
+      return
+    }
     setLoading(true)
     setMsg(null)
 
     await descriptionRef.current?.processImages()
     const description = descriptionRef.current?.getHTML() ?? ""
-    const data = {
+    const data: Record<string, unknown> = {
       name, name_en: name_en || null, name_zh: name_zh || null, name_ar: name_ar || null,
       slug, description,
       description_en: description_en || null, description_zh: description_zh || null, description_ar: description_ar || null,
       category, category_en: category_en || null, category_zh: category_zh || null, category_ar: category_ar || null,
       priceRange, imageUrls, isPublished,
     }
+    if (isAdmin) {
+      data.reason = reason.trim()
+      data.expectedVersion = currentVersion ?? 0
+    }
 
     try {
-      const result = isEdit
-        ? await updateProduct(product!.id, data)
-        : await createProduct(data)
+      // Admin mode luôn phải có submitter (được gắn từ admin edit page).
+      // Owner mode dùng createProduct/updateProduct default.
+      const result: SubmitResult = submitter
+        ? await submitter(product?.id ?? null, data)
+        : isEdit
+          ? await updateProduct(product!.id, data)
+          : await createProduct(data)
 
       if (result.error) {
         setMsg({ type: "error", text: result.error })
       } else {
-        router.push(`/san-pham/${result.slug}`)
-        router.refresh()
+        const nextSlug = result.slug ?? slug
+        // Default redirect template — admin → admin edit page, owner → public detail.
+        const tpl = successHrefTemplate
+          ?? (isAdmin ? "/admin/san-pham/{slug}/sua" : "/san-pham/{slug}")
+        const target = tpl.replace("{slug}", nextSlug)
+        // Show success banner (toast-style — auto clear sau 3s). Trước đây
+        // chỉ router.push thôi, banner bị unmount ngay → admin/owner không
+        // thấy confirmation. Khi target URL trùng current path (admin self-
+        // loop sau edit), router.refresh đủ — không cần push (push cùng URL
+        // sẽ reset state, mất banner luôn).
+        setMsg({ type: "success", text: isAdmin ? "Đã cập nhật sản phẩm." : "Đã lưu thay đổi." })
+        if (isAdmin) {
+          // Reset reason field sau khi save (revision đã ghi xong)
+          setReason("")
+        }
+        if (typeof window !== "undefined" && window.location.pathname === target) {
+          router.refresh()
+        } else {
+          router.push(target)
+          router.refresh()
+        }
       }
     } catch {
       setMsg({ type: "error", text: "Có lỗi xảy ra" })
@@ -128,6 +206,22 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {isAdmin && ownerInfo && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p>
+            ⚠️ Bạn đang chỉnh sửa SP của{" "}
+            <span className="font-semibold">{ownerInfo.name}</span>{" "}
+            <span className="text-amber-700">({ownerInfo.email})</span>.
+            Thay đổi sẽ được ghi vào lịch sử kèm tên bạn + lý do chỉnh sửa.
+          </p>
+          {typeof currentVersion === "number" && (
+            <p className="mt-1 text-xs text-amber-700">
+              Phiên bản hiện tại: <strong>v{currentVersion}</strong>
+            </p>
+          )}
+        </div>
+      )}
+
       {msg && (
         <div className={cn(
           "rounded-lg border px-4 py-3 text-sm",
@@ -273,8 +367,41 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
         </div>
       </section>
 
+      {/* Admin mode: reason textarea (bắt buộc, ≥10 ký tự) */}
+      {isAdmin && (
+        <section className="bg-white rounded-xl border border-amber-300 p-6 space-y-2">
+          <h2 className="font-semibold text-amber-900">Lý do chỉnh sửa (bắt buộc)</h2>
+          <p className="text-xs text-amber-700">
+            Ghi rõ lý do — owner và các admin khác sẽ thấy dòng này trong lịch sử.
+          </p>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="Ví dụ: Chỉnh sửa ảnh chính theo yêu cầu của owner qua email ngày 24/04."
+            className={cn(inputClass, "resize-y font-normal")}
+            required
+            minLength={10}
+          />
+          <p className="text-[11px] text-amber-600">
+            {reason.trim().length}/10 ký tự tối thiểu
+          </p>
+        </section>
+      )}
+
+      {/* Submit feedback — duplicate banner ngay trên nút Save để user thấy
+          ngay sau khi click (form dài, top banner có thể off-screen). */}
+      {msg && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 text-sm",
+          msg.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-700",
+        )}>
+          {msg.type === "success" ? "✓ " : ""}{msg.text}
+        </div>
+      )}
+
       {/* Submit */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
         <button
           type="submit"
           disabled={loading}
@@ -283,11 +410,19 @@ export function ProductForm({ product, companySlug }: { product?: ProductData; c
           {loading ? "Đang lưu..." : isEdit ? "Cập nhật sản phẩm" : "Tạo sản phẩm"}
         </button>
         <Link
-          href={companySlug ? `/doanh-nghiep/${companySlug}` : "/san-pham-doanh-nghiep"}
+          href={companySlug ? `/doanh-nghiep/${companySlug}` : isAdmin ? "/admin" : "/san-pham-doanh-nghiep"}
           className="rounded-lg border border-brand-300 px-6 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
         >
           Huỷ
         </Link>
+        {historyHref && (
+          <Link
+            href={historyHref}
+            className="ml-auto text-sm text-brand-600 hover:underline"
+          >
+            Xem lịch sử chỉnh sửa →
+          </Link>
+        )}
       </div>
     </form>
   )

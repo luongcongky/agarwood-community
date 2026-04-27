@@ -99,8 +99,19 @@ export function ContentImageEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
-        <div className="border-b border-brand-200 px-6 py-4">
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
+        {/* Close button góc phải — quick close khi user lỡ mở modal. */}
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Đóng"
+          className="absolute top-3 right-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
+        >
+          <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor" aria-hidden>
+            <path fillRule="evenodd" d="M4.28 4.28a.75.75 0 011.06 0L10 8.94l4.66-4.66a.75.75 0 111.06 1.06L11.06 10l4.66 4.66a.75.75 0 11-1.06 1.06L10 11.06l-4.66 4.66a.75.75 0 11-1.06-1.06L8.94 10 4.28 5.34a.75.75 0 010-1.06z" clipRule="evenodd" />
+          </svg>
+        </button>
+        <div className="border-b border-brand-200 px-6 py-4 pr-14">
           <h3 className="text-lg font-bold text-brand-900">Chèn / chỉnh sửa ảnh</h3>
           <p className="mt-1 text-xs text-brand-500">
             Tối đa {MAX_OUTPUT_DIM}px ở cạnh dài nhất. Chú thích (nếu có) sẽ

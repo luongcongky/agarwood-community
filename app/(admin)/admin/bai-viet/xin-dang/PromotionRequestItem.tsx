@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { cloudinaryResize } from "@/lib/cloudinary"
+import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
 
 type PromotionRequestItemProps = {
   request: {
@@ -45,6 +46,7 @@ type PromotionRequestItemProps = {
  */
 export function PromotionRequestItem({ request }: PromotionRequestItemProps) {
   const router = useRouter()
+  const { refresh: refreshPendingCounts } = usePendingCounts()
   const [processing, setProcessing] = useState<"approve" | "reject" | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -73,6 +75,7 @@ export function PromotionRequestItem({ request }: PromotionRequestItemProps) {
         const j = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(j.error ?? "Duyệt thất bại")
       }
+      refreshPendingCounts()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi")
@@ -105,6 +108,7 @@ export function PromotionRequestItem({ request }: PromotionRequestItemProps) {
         const j = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(j.error ?? "Từ chối thất bại")
       }
+      refreshPendingCounts()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi")
