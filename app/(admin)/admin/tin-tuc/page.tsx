@@ -197,10 +197,14 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      {/* Filter Bar */}
+      {/* Filter Bar — Phase 3.7 round 4 (2026-04): mobile rows: Search /
+          Phân loại+Loại bài / Từ+Đến / Ghim+Lọc+Xóa. Desktop: tất cả 1 row
+          flex-wrap. Pattern dùng `sm:contents` ở wrapper grid để children
+          flatten thành flex items của form ở desktop. */}
       <div className="bg-white p-4 rounded-xl border border-brand-200 shadow-sm">
-        <form method="GET" action="/admin/tin-tuc" className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[240px] space-y-1.5">
+        <form method="GET" action="/admin/tin-tuc" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+          {/* Row 1 mobile: Search (full width). Desktop: flex-1. */}
+          <div className="space-y-1.5 sm:flex-1 sm:min-w-[240px]">
             <label htmlFor="q" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
               Tìm theo tiêu đề
             </label>
@@ -214,112 +218,122 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             />
           </div>
 
-          <div className="w-[180px] space-y-1.5">
-            <label htmlFor="cat" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-              Phân loại
-            </label>
-            <select
-              id="cat"
-              name="cat"
-              defaultValue={category}
-              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
-            >
-              <option value="">Tất cả</option>
-              <option value="GENERAL">📰 Tin tức</option>
-              <option value="RESEARCH">📚 Nghiên cứu</option>
-              <option value="BUSINESS">🏢 Doanh nghiệp</option>
-              <option value="PRODUCT">📦 Sản phẩm</option>
-              {/* Phase 3.5 (2026-04) */}
-              <option value="EXTERNAL_NEWS">📰 Tin báo chí</option>
-              <option value="AGRICULTURE">🌾 Khuyến nông</option>
-              <option value="LEGAL">⚖️ Pháp lý</option>
-              <option value="SPONSORED_PRODUCT">💰 Bài SP (legacy)</option>
-            </select>
-          </div>
-
-          {/* Template filter — Phase 3.7 round 4 (2026-04). Khách cần tìm
-              nhanh tin Multimedia (PHOTO + VIDEO) trong list. */}
-          <div className="w-[160px] space-y-1.5">
-            <label htmlFor="tpl" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-              Loại bài
-            </label>
-            <select
-              id="tpl"
-              name="tpl"
-              defaultValue={template}
-              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
-            >
-              <option value="">Tất cả</option>
-              <option value="NORMAL">📝 Tin thường</option>
-              <option value="PHOTO">📷 Tin ảnh</option>
-              <option value="VIDEO">🎬 Tin video</option>
-            </select>
-          </div>
-
-          {/* Pin filter — Phase 3.7 round 4 (2026-04). Filter bài đang được
-              ghim ở section trang chủ nào (admin curate quick view). */}
-          <div className="w-[180px] space-y-1.5">
-            <label htmlFor="pin" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-              Ghim section
-            </label>
-            <select
-              id="pin"
-              name="pin"
-              defaultValue={pin}
-              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
-            >
-              <option value="">Tất cả</option>
-              <option value="GENERAL">📌 Tin Hội</option>
-              <option value="RESEARCH">📌 Nghiên cứu KH</option>
-              <option value="BUSINESS">📌 Tin doanh nghiệp</option>
-              <option value="PRODUCT">📌 Tin sản phẩm</option>
-              <option value="AGRICULTURE">📌 Tin khuyến nông</option>
-            </select>
-          </div>
-
-          {/* Date range filter — publishedAt. Phase 3.7 round 4 (2026-04). */}
-          <div className="w-[160px] space-y-1.5">
-            <label htmlFor="from" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-              Ngày đăng từ
-            </label>
-            <input
-              type="date"
-              id="from"
-              name="from"
-              defaultValue={from}
-              max={to || undefined}
-              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-            />
-          </div>
-          <div className="w-[160px] space-y-1.5">
-            <label htmlFor="to" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-              Đến
-            </label>
-            <input
-              type="date"
-              id="to"
-              name="to"
-              defaultValue={to}
-              min={from || undefined}
-              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-brand-800 text-white rounded-lg text-sm font-medium hover:bg-brand-900 transition-colors"
-            >
-              Lọc
-            </button>
-            {(query || category || template || pin || from || to) && (
-              <Link
-                href="/admin/tin-tuc"
-                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          {/* Row 2 mobile: Phân loại + Loại bài (50/50). Desktop: contents. */}
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            <div className="space-y-1.5 sm:w-[180px]">
+              <label htmlFor="cat" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+                Phân loại
+              </label>
+              <select
+                id="cat"
+                name="cat"
+                defaultValue={category}
+                className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
               >
-                Xóa lọc
-              </Link>
-            )}
+                <option value="">Tất cả</option>
+                <option value="GENERAL">📰 Tin tức</option>
+                <option value="RESEARCH">📚 Nghiên cứu</option>
+                <option value="BUSINESS">🏢 Doanh nghiệp</option>
+                <option value="PRODUCT">📦 Sản phẩm</option>
+                {/* Phase 3.5 (2026-04) */}
+                <option value="EXTERNAL_NEWS">📰 Tin báo chí</option>
+                <option value="AGRICULTURE">🌾 Khuyến nông</option>
+                <option value="LEGAL">⚖️ Pháp lý</option>
+                <option value="SPONSORED_PRODUCT">💰 Bài SP (legacy)</option>
+              </select>
+            </div>
+
+            {/* Template filter — Phase 3.7 round 4 (2026-04). Khách cần tìm
+                nhanh tin Multimedia (PHOTO + VIDEO) trong list. */}
+            <div className="space-y-1.5 sm:w-[160px]">
+              <label htmlFor="tpl" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+                Loại bài
+              </label>
+              <select
+                id="tpl"
+                name="tpl"
+                defaultValue={template}
+                className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
+              >
+                <option value="">Tất cả</option>
+                <option value="NORMAL">📝 Tin thường</option>
+                <option value="PHOTO">📷 Tin ảnh</option>
+                <option value="VIDEO">🎬 Tin video</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3 mobile: Từ + Đến (50/50). Desktop: contents. */}
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            {/* Date range filter — publishedAt. Phase 3.7 round 4 (2026-04). */}
+            <div className="space-y-1.5 sm:w-[160px]">
+              <label htmlFor="from" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+                Ngày đăng từ
+              </label>
+              <input
+                type="date"
+                id="from"
+                name="from"
+                defaultValue={from}
+                max={to || undefined}
+                className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+              />
+            </div>
+            <div className="space-y-1.5 sm:w-[160px]">
+              <label htmlFor="to" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+                Đến
+              </label>
+              <input
+                type="date"
+                id="to"
+                name="to"
+                defaultValue={to}
+                min={from || undefined}
+                className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Row 4 mobile: Ghim section (flex-1) + Lọc + Xóa lọc. Desktop:
+              contents → Ghim + button-group là siblings của form. */}
+          <div className="flex items-end gap-2 sm:contents">
+            {/* Pin filter — Phase 3.7 round 4 (2026-04). Filter bài đang
+                được ghim ở section trang chủ nào (admin curate quick view). */}
+            <div className="flex-1 space-y-1.5 sm:w-[180px] sm:flex-initial">
+              <label htmlFor="pin" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+                Ghim section
+              </label>
+              <select
+                id="pin"
+                name="pin"
+                defaultValue={pin}
+                className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
+              >
+                <option value="">Tất cả</option>
+                <option value="GENERAL">📌 Tin Hội</option>
+                <option value="RESEARCH">📌 Nghiên cứu KH</option>
+                <option value="BUSINESS">📌 Tin doanh nghiệp</option>
+                <option value="PRODUCT">📌 Tin sản phẩm</option>
+                <option value="AGRICULTURE">📌 Tin khuyến nông</option>
+              </select>
+            </div>
+
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="submit"
+                className="px-3 py-2 bg-brand-800 text-white rounded-lg text-sm font-medium hover:bg-brand-900 transition-colors sm:px-4"
+              >
+                Lọc
+              </button>
+              {(query || category || template || pin || from || to) && (
+                <Link
+                  href="/admin/tin-tuc"
+                  className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors sm:px-4"
+                >
+                  Xóa lọc
+                </Link>
+              )}
+            </div>
           </div>
         </form>
       </div>
@@ -378,7 +392,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                   {(page - 1) * PAGE_SIZE + idx + 1}
                 </td>
                 <td className="px-4 py-3 min-w-[300px]">
-                  <p className="font-semibold text-brand-900 line-clamp-1 leading-relaxed" title={news.title}>
+                  <p className="font-semibold text-brand-900 line-clamp-4 leading-relaxed" title={news.title}>
                     {/* Template marker — chỉ show khi PHOTO/VIDEO để khỏi
                         làm rối list (NORMAL chiếm đa số). */}
                     {news.template !== "NORMAL" && (
