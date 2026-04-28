@@ -55,11 +55,14 @@ const getSidebarFeaturedNews = unstable_cache(
         template: TIN_TUC_PUBLIC_TEMPLATE,
       },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 6,
+      take: 4,
       select: {
         id: true,
         title: true, title_en: true, title_zh: true, title_ar: true,
         slug: true, coverImageUrl: true, publishedAt: true, isPinned: true,
+        // Phase 3.7 round 4 (2026-04): template + gallery để SidebarList
+        // fallback thumbnail (YouTube thumb / gallery[0]) khi cover null.
+        template: true, gallery: true,
       },
     }),
   ["tin-tuc_sidebar_featured_v2"],

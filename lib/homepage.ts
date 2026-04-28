@@ -52,6 +52,11 @@ const NEWS_CARD_SELECT = {
   publishedAt: true,
   isPinned: true,
   category: true, // để href helper route theo category
+  // Phase 3.7 round 4 (2026-04): cần template + gallery để derive thumbnail
+  // fallback (YouTube thumb cho VIDEO, gallery[0] cho PHOTO) khi card không
+  // có coverImageUrl explicit. Xem newsCoverImage() ở multimedia-from-news.ts.
+  template: true,
+  gallery: true,
 } as const
 
 /**

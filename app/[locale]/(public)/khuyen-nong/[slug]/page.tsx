@@ -120,6 +120,7 @@ export default async function AgricultureDetailPage({ params }: Props) {
     slug: true,
     coverImageUrl: true,
     publishedAt: true,
+    template: true, gallery: true, // Phase 3.7 round 4 — sidebar fallback thumb
   } as const
   const [relatedPool, author, sidebarPinned, sidebarLatest] = await Promise.all([
     prisma.news.findMany({

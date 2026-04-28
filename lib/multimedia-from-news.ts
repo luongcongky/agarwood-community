@@ -61,3 +61,32 @@ export function newsToMultimedia<
     type === "VIDEO" && gallery[0]?.url ? extractYoutubeId(gallery[0].url) : null
   return { ...news, type, imageUrls, youtubeId, gallery }
 }
+
+/** Effective cover image cho News card UI — fallback chain.
+ *  Phase 3.7 round 4 (2026-04): bài media (template=PHOTO/VIDEO) thường
+ *  KHÔNG có coverImageUrl explicit. Cần derive thumbnail từ gallery để
+ *  Hero / sub-Hero / sidebar không hiện placeholder fern.
+ *
+ *  Order:
+ *    1. coverImageUrl explicit (nếu admin upload riêng)
+ *    2. template=VIDEO + YouTube ID parse được → maxresdefault.jpg
+ *    3. template=PHOTO → gallery[0].url
+ *    4. null → caller fallback placeholder
+ */
+export function newsCoverImage(news: {
+  coverImageUrl: string | null
+  template?: "NORMAL" | "PHOTO" | "VIDEO" | null
+  gallery?: unknown
+}): string | null {
+  if (news.coverImageUrl) return news.coverImageUrl
+  if (!news.template || news.template === "NORMAL") return null
+  const items = parseGallery(news.gallery)
+  const first = items[0]
+  if (!first) return null
+  if (news.template === "VIDEO") {
+    const id = extractYoutubeId(first.url)
+    return id ? `https://img.youtube.com/vi/${id}/maxresdefault.jpg` : null
+  }
+  // PHOTO
+  return first.url
+}

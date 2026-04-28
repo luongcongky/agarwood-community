@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { MemberActionCell } from "./MemberActionCell"
+import type { Role } from "@prisma/client"
 
 export const revalidate = 0 // per-request — readOnly state phụ thuộc role
 
@@ -57,18 +58,24 @@ export default async function AdminMembersPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let where: any = { role: { in: ["VIP", "GUEST", "INFINITE"] } }
 
+  // Phase 3.7 round 4 (2026-04): mở rộng filter VIP → VIP + INFINITE.
+  // Trước đây strict role="VIP" → hội viên cấp cao nhất (INFINITE) bị ẩn
+  // hoàn toàn khỏi admin/hoi-vien, không quản lý được. Tab `registration`
+  // giữ nguyên GUEST vì là nhóm chờ duyệt riêng.
+  const VIP_LIKE = { in: ["VIP", "INFINITE"] satisfies Role[] }
+
   if (status === "active") {
-    where = { role: "VIP", isActive: true, membershipExpires: { gt: thirtyDaysLater } }
+    where = { role: VIP_LIKE, isActive: true, membershipExpires: { gt: thirtyDaysLater } }
   } else if (status === "expiring") {
-    where = { role: "VIP", isActive: true, membershipExpires: { gt: now, lte: thirtyDaysLater } }
+    where = { role: VIP_LIKE, isActive: true, membershipExpires: { gt: now, lte: thirtyDaysLater } }
   } else if (status === "expired") {
-    where = { role: "VIP", isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] }
+    where = { role: VIP_LIKE, isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] }
   } else if (status === "pending") {
-    where = { role: "VIP", isActive: false, membershipExpires: null }
+    where = { role: VIP_LIKE, isActive: false, membershipExpires: null }
   } else if (status === "registration") {
     where = { role: "GUEST", isActive: false }
   } else if (status === "disabled") {
-    where = { role: "VIP", isActive: false, membershipExpires: { not: null } }
+    where = { role: VIP_LIKE, isActive: false, membershipExpires: { not: null } }
   }
 
   if (q) {
@@ -111,12 +118,12 @@ export default async function AdminMembersPage({
       },
     }),
     prisma.user.count({ where }),
-    prisma.user.count({ where: { role: "VIP" } }),
-    prisma.user.count({ where: { role: "VIP", isActive: true, membershipExpires: { gt: thirtyDaysLater } } }),
-    prisma.user.count({ where: { role: "VIP", isActive: true, membershipExpires: { gt: now, lte: thirtyDaysLater } } }),
-    prisma.user.count({ where: { role: "VIP", isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] } }),
-    prisma.user.count({ where: { role: "VIP", isActive: false, membershipExpires: null } }),
-    prisma.user.count({ where: { role: "VIP", isActive: false, membershipExpires: { not: null } } }),
+    prisma.user.count({ where: { role: VIP_LIKE } }),
+    prisma.user.count({ where: { role: VIP_LIKE, isActive: true, membershipExpires: { gt: thirtyDaysLater } } }),
+    prisma.user.count({ where: { role: VIP_LIKE, isActive: true, membershipExpires: { gt: now, lte: thirtyDaysLater } } }),
+    prisma.user.count({ where: { role: VIP_LIKE, isActive: true, OR: [{ membershipExpires: { lte: now } }, { membershipExpires: null }] } }),
+    prisma.user.count({ where: { role: VIP_LIKE, isActive: false, membershipExpires: null } }),
+    prisma.user.count({ where: { role: VIP_LIKE, isActive: false, membershipExpires: { not: null } } }),
     prisma.user.count({ where: { role: "GUEST", isActive: false } }),
     prisma.siteConfig.findUnique({ where: { key: "max_vip_accounts" } }),
   ])

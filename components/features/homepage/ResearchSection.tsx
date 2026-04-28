@@ -7,6 +7,7 @@ import {
 } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
+import { newsCoverImage } from "@/lib/multimedia-from-news"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -119,15 +120,16 @@ function MainCard({
 }) {
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
+  const cover = newsCoverImage(item)
   return (
     <Link
       href={`/nghien-cuu/${item.slug}`}
       className="group grid gap-4 sm:grid-cols-2 sm:gap-5"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
-        {item.coverImageUrl ? (
+        {cover ? (
           <Image
-            src={item.coverImageUrl}
+            src={cover}
             alt={title}
             fill
             placeholder="blur"

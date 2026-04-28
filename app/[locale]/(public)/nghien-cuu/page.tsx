@@ -44,11 +44,14 @@ const getSidebarFeaturedResearch = unstable_cache(
     prisma.news.findMany({
       where: { isPublished: true, category: "RESEARCH" },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 6,
+      take: 4,
       select: {
         id: true,
         title: true, title_en: true, title_zh: true, title_ar: true,
         slug: true, coverImageUrl: true, publishedAt: true, isPinned: true,
+        // Phase 3.7 round 4 (2026-04): template + gallery cho SidebarList
+        // fallback thumbnail.
+        template: true, gallery: true,
       },
     }),
   ["nghien-cuu_sidebar_featured"],

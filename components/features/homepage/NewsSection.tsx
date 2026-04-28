@@ -3,6 +3,7 @@ import Image from "next/image"
 import { getAssociationNews, newsHref, type HomepageNewsItem } from "@/lib/homepage"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BRAND_BLUR_DATA_URL } from "@/lib/imageBlur"
+import { newsCoverImage } from "@/lib/multimedia-from-news"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
@@ -75,12 +76,13 @@ function Hero({
 }) {
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
+  const cover = newsCoverImage(item)
   return (
     <Link href={newsHref(item.category, item.slug)} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
-        {item.coverImageUrl ? (
+        {cover ? (
           <Image
-            src={item.coverImageUrl}
+            src={cover}
             alt={title}
             fill
             priority
@@ -119,12 +121,13 @@ function ExcerptCard({
 }) {
   const title = localize(item, "title", locale) as string
   const excerpt = localize(item, "excerpt", locale) as string | null
+  const cover = newsCoverImage(item)
   return (
     <Link href={newsHref(item.category, item.slug)} className="group block">
       <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
-        {item.coverImageUrl ? (
+        {cover ? (
           <Image
-            src={item.coverImageUrl}
+            src={cover}
             alt={title}
             fill
             placeholder="blur"
@@ -156,12 +159,13 @@ function StackedItem({
   locale: Locale
 }) {
   const title = localize(item, "title", locale) as string
+  const cover = newsCoverImage(item)
   return (
     <Link href={newsHref(item.category, item.slug)} className="group block">
-      {item.coverImageUrl ? (
+      {cover ? (
         <div className="relative aspect-video w-full overflow-hidden bg-brand-100">
           <Image
-            src={item.coverImageUrl}
+            src={cover}
             alt=""
             fill
             placeholder="blur"

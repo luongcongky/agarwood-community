@@ -6,11 +6,14 @@ import { getTierThresholds } from "@/lib/tier"
 import { FeedClient } from "./FeedClient"
 import { SidebarBanners, SidebarBannersSkeleton } from "./SidebarBanners"
 
-/** Top contributors list — đồng nhất cho mọi viewer, cache 10 phút. */
+/** Top contributors list — đồng nhất cho mọi viewer, cache 10 phút.
+ *  Phase 3.7 round 4 (2026-04): mở rộng role filter sang INFINITE — trước
+ *  đây strict "VIP" → hội viên cấp cao nhất bị ẩn khỏi sidebar feed dù
+ *  contribution thường lớn nhất. */
 const getTopContributors = unstable_cache(
   () =>
     prisma.user.findMany({
-      where: { role: "VIP", isActive: true },
+      where: { role: { in: ["VIP", "INFINITE"] }, isActive: true },
       orderBy: { contributionTotal: "desc" },
       take: 5,
       select: {

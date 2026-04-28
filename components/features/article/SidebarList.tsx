@@ -3,6 +3,7 @@ import Image from "next/image"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { cloudinaryResize } from "@/lib/cloudinary"
+import { newsCoverImage } from "@/lib/multimedia-from-news"
 
 export type SidebarListItem = {
   id: string
@@ -12,6 +13,11 @@ export type SidebarListItem = {
   title_ar?: string | null
   slug: string
   coverImageUrl: string | null
+  /** Phase 3.7 round 4 (2026-04): optional template + gallery để fallback
+   *  thumbnail từ YouTube ID (VIDEO) hoặc gallery[0] (PHOTO) khi
+   *  coverImageUrl null. */
+  template?: "NORMAL" | "PHOTO" | "VIDEO" | null
+  gallery?: unknown
   /** Date từ Prisma query trực tiếp, HOẶC string nếu data đi qua
    *  unstable_cache (JSON serialize đưa Date về ISO string). */
   publishedAt: Date | string | null
@@ -57,13 +63,20 @@ export function SidebarList({
         {title}
       </h2>
       <ul className={compact ? "space-y-3" : "space-y-4"}>
-        {items.map((item) => (
+        {items.map((item) => {
+          const cover = newsCoverImage(item)
+          return (
           <li key={item.id}>
             <Link href={`${itemHrefPrefix}/${item.slug}`} className="group flex gap-3">
-              {!compact && item.coverImageUrl && (
+              {!compact && cover && (
                 <div className="relative aspect-16/10 w-[92px] shrink-0 overflow-hidden bg-neutral-100">
                   <Image
-                    src={cloudinaryResize(item.coverImageUrl, 200)}
+                    src={
+                      // YouTube CDN không qua Cloudinary, không cần resize
+                      cover.includes("img.youtube.com")
+                        ? cover
+                        : cloudinaryResize(cover, 200)
+                    }
                     alt={l(item, "title")}
                     fill
                     className="object-cover"
@@ -90,7 +103,8 @@ export function SidebarList({
               </div>
             </Link>
           </li>
-        ))}
+          )
+        })}
       </ul>
     </section>
   )
