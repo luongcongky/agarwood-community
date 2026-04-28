@@ -22,6 +22,7 @@ import { ArticleToolbar } from "./ArticleToolbar"
 import { TIN_TUC_PUBLIC_CATEGORIES } from "../categories"
 import { auth } from "@/lib/auth"
 import { CommentsSection } from "@/components/features/comments/CommentsSection"
+import { extractYoutubeId } from "@/lib/multimedia-from-news"
 
 export const revalidate = 1800
 
@@ -445,12 +446,21 @@ export default async function NewsDetailPage({ params }: Props) {
           {news.template === "VIDEO" && Array.isArray(news.gallery) && (
             <div data-article-body className="space-y-8">
               {(news.gallery as Array<{ url: string; caption?: string }>).map(
-                (item, i) =>
-                  item.url ? (
+                (item, i) => {
+                  if (!item.url) return null
+                  // YouTube watch URL bị X-Frame-Options chặn nếu nhúng vào iframe.
+                  // Migration script (drop_multimedia) lưu watch URL → cần
+                  // convert sang embed URL trước khi render. Phase 3.7 round 4
+                  // (2026-04). URL không phải YouTube giữ nguyên.
+                  const ytId = extractYoutubeId(item.url)
+                  const src = ytId
+                    ? `https://www.youtube.com/embed/${ytId}`
+                    : item.url
+                  return (
                     <figure key={`${item.url}-${i}`} className="space-y-2">
                       <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
                         <iframe
-                          src={item.url}
+                          src={src}
                           className="absolute inset-0 h-full w-full border-0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                           allowFullScreen
@@ -464,7 +474,8 @@ export default async function NewsDetailPage({ params }: Props) {
                         </figcaption>
                       )}
                     </figure>
-                  ) : null,
+                  )
+                },
               )}
             </div>
           )}
@@ -548,6 +559,19 @@ export default async function NewsDetailPage({ params }: Props) {
               </div>
             </aside>
           )}
+
+          {/* Comments — Phase 3.4 (2026-04), Phase 3.7 round 4 (2026-04):
+              chuyển INTO article column thay vì ngoài grid để tránh gap khi
+              article ngắn (vd template=VIDEO chỉ có iframe) + sidebar dài. */}
+          <div className="mt-10">
+            <CommentsSection
+              newsId={news.id}
+              currentUserId={session?.user?.id ?? null}
+              currentUserRole={session?.user?.role}
+              currentUserName={session?.user?.name}
+              currentUserAvatar={session?.user?.image}
+            />
+          </div>
         </article>
 
         {/* Right rail — sticky trên desktop, ẩn mobile dồn xuống cuối article. */}
@@ -575,17 +599,6 @@ export default async function NewsDetailPage({ params }: Props) {
             compact
           />
         </aside>
-      </div>
-
-      {/* Comments — full-width dưới article + sidebar. Phase 3.4 (2026-04). */}
-      <div className="mt-10 lg:max-w-[calc(75%-1.25rem)]">
-        <CommentsSection
-          newsId={news.id}
-          currentUserId={session?.user?.id ?? null}
-          currentUserRole={session?.user?.role}
-          currentUserName={session?.user?.name}
-          currentUserAvatar={session?.user?.image}
-        />
       </div>
 
       {/* Related — full-width grid ở cuối, dùng Section header chuẩn */}
