@@ -3,6 +3,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { DeleteNewsButton } from "./DeleteNewsButton"
 import { NewsListToggle } from "./NewsListToggles"
+import { PinSectionChips } from "./PinSectionChips"
 import { Prisma, NewsCategory, NewsTemplate } from "@prisma/client"
 
 /** Label + style cho từng NewsCategory — dùng ở badge cột "Phân loại" và
@@ -74,6 +75,9 @@ type Props = {
     from?: string
     to?: string
     page?: string
+    /** Filter theo bài đang được ghim ở section trang chủ nào (Phase 3.7
+     *  round 4, 2026-04). Value = NewsCategory enum string. */
+    pin?: string
   }>
 }
 
@@ -104,6 +108,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
   const template = params.tpl || ""
   const from = params.from || ""
   const to = params.to || ""
+  const pin = params.pin || ""
   const page = Math.max(1, Number(params.page ?? 1))
   const PAGE_SIZE = 20
 
@@ -132,6 +137,9 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     ...(template && {
       template: template as NewsTemplate,
     }),
+    ...(pin && {
+      pinnedInCategories: { has: pin as NewsCategory },
+    }),
     ...publishedAtFilter,
   }
 
@@ -149,6 +157,9 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         template: true,
         isPublished: true,
         isPinned: true,
+        // Phase 3.7 round 4 (2026-04): per-section pin trên trang chủ —
+        // dùng cho cột "Ghim trang chủ" với 5 chip toggle.
+        pinnedInCategories: true,
         publishedAt: true,
         createdAt: true,
         seoScore: true,
@@ -166,6 +177,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     if (template) p.set("tpl", template)
     if (from) p.set("from", from)
     if (to) p.set("to", to)
+    if (pin) p.set("pin", pin)
     if (page > 1) p.set("page", String(page))
     for (const [k, v] of Object.entries(overrides)) {
       if (v) p.set(k, v); else p.delete(k)
@@ -245,6 +257,27 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             </select>
           </div>
 
+          {/* Pin filter — Phase 3.7 round 4 (2026-04). Filter bài đang được
+              ghim ở section trang chủ nào (admin curate quick view). */}
+          <div className="w-[180px] space-y-1.5">
+            <label htmlFor="pin" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+              Ghim section
+            </label>
+            <select
+              id="pin"
+              name="pin"
+              defaultValue={pin}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none"
+            >
+              <option value="">Tất cả</option>
+              <option value="GENERAL">📌 Tin Hội</option>
+              <option value="RESEARCH">📌 Nghiên cứu KH</option>
+              <option value="BUSINESS">📌 Tin doanh nghiệp</option>
+              <option value="PRODUCT">📌 Tin sản phẩm</option>
+              <option value="AGRICULTURE">📌 Tin khuyến nông</option>
+            </select>
+          </div>
+
           {/* Date range filter — publishedAt. Phase 3.7 round 4 (2026-04). */}
           <div className="w-[160px] space-y-1.5">
             <label htmlFor="from" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
@@ -280,7 +313,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             >
               Lọc
             </button>
-            {(query || category || template || from || to) && (
+            {(query || category || template || pin || from || to) && (
               <Link
                 href="/admin/tin-tuc"
                 className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
@@ -308,8 +341,11 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap">
                 Trạng thái
               </th>
-              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap">
-                Ghim
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap" title="isPinned global — bài hiện badge 'Nổi bật' ở list page sidebar">
+                Nổi bật
+              </th>
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[170px] whitespace-nowrap" title="pinnedInCategories — admin pin bài lên TOP các section trang chủ. Click chip để toggle.">
+                Ghim trang chủ
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
                 SEO
@@ -326,13 +362,13 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             {newsList.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-12 text-center"
                 >
                   <div className="text-brand-300 text-4xl mb-2">🔍</div>
                   <p className="text-brand-700 font-medium">Không tìm thấy tin tức nào</p>
                   <p className="text-xs text-brand-400 mt-1">
-                    {(query || category || template || from || to) ? "Hãy thử thay đổi từ khóa hoặc bộ lọc" : "Hệ thống chưa có dữ liệu tin tức"}
+                    {(query || category || template || pin || from || to) ? "Hãy thử thay đổi từ khóa hoặc bộ lọc" : "Hệ thống chưa có dữ liệu tin tức"}
                   </p>
                 </td>
               </tr>
@@ -384,6 +420,12 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                     newsId={news.id}
                     field="isPinned"
                     value={news.isPinned}
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <PinSectionChips
+                    newsId={news.id}
+                    pinnedInCategories={news.pinnedInCategories}
                   />
                 </td>
                 <td className="px-4 py-3">

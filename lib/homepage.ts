@@ -24,6 +24,7 @@ const POST_CARD_SELECT = {
   coverImageUrl: true,
   category: true,
   isPremium: true,
+  isPromoted: true,
   authorPriority: true,
   createdAt: true,
   viewCount: true,
@@ -33,6 +34,10 @@ const POST_CARD_SELECT = {
       name: true,
       avatarUrl: true,
       role: true,
+      // Phase 3.7 round 4 (2026-04): contributionTotal dùng cho scoring
+      // weighted random ở MemberRail rotating slot — đo độ cống hiến thực
+      // tế của tác giả thay vì authorPriority (chỉ phản ánh tier).
+      contributionTotal: true,
       company: { select: { name: true, slug: true } },
     },
   },
@@ -56,6 +61,9 @@ const NEWS_CARD_SELECT = {
   coverImageUrl: true,
   publishedAt: true,
   isPinned: true,
+  // Phase 3.7 round 4 (2026-04): admin pin per-section homepage. Cần ở
+  // select để client-side sort (pin for this section → first).
+  pinnedInCategories: true,
   category: true, // để href helper route theo category
   // Phase 3.7 round 4 (2026-04): cần template + gallery để derive thumbnail
   // fallback (YouTube thumb cho VIDEO, gallery[0] cho PHOTO) khi card không
@@ -101,12 +109,26 @@ export const getAssociationNews = unstable_cache(
     // Tất cả 4 category đổ chung vào section "Tin Hội" theo yêu cầu customer.
     // Trùng lặp với /nghien-cuu section là có chủ đích — RESEARCH quan trọng
     // xuất hiện ở cả 2 nơi. Click-through dùng newsHref() route đúng loại.
-    return prisma.news.findMany({
+    //
+    // Phase 3.7 round 4 (2026-04): admin pin per-section. GENERAL pin →
+    // bài lên top section Tin Hội. Sort: GENERAL-pin → isPinned global →
+    // publishedAt desc. Overfetch 3x cho JS re-rank (Prisma không sort
+    // được trên `array.has`).
+    const candidates = await prisma.news.findMany({
       where: { isPublished: true },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-      take: 7,
+      take: 21,
       select: NEWS_CARD_SELECT,
     })
+    return [...candidates]
+      .sort((a, b) => {
+        const aPin = a.pinnedInCategories.includes("GENERAL")
+        const bPin = b.pinnedInCategories.includes("GENERAL")
+        if (aPin !== bPin) return aPin ? -1 : 1
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1
+        return (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+      })
+      .slice(0, 7)
   },
   ["homepage_news"],
   { revalidate: 300, tags: ["homepage", "news"] },
@@ -117,27 +139,85 @@ export const getAssociationNews = unstable_cache(
 
 export const getLatestResearchNews = unstable_cache(
   async (take = 3) => {
-    return prisma.news.findMany({
-      where: { isPublished: true, category: "RESEARCH" },
+    // Phase 3.7 round 4 (2026-04): admin pin per-section. Mở rộng where với
+    // pinnedInCategories (cho phép cross-list pin) + overfetch để có pool
+    // re-rank ở JS (Prisma orderBy không support array `has` check trực tiếp).
+    const candidates = await prisma.news.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { category: "RESEARCH" },
+          { pinnedInCategories: { has: "RESEARCH" } },
+        ],
+      },
       orderBy: [{ publishedAt: "desc" }],
-      take,
+      take: take * 3,
       select: NEWS_CARD_SELECT,
     })
+    return [...candidates]
+      .sort((a, b) => {
+        const aPin = a.pinnedInCategories.includes("RESEARCH")
+        const bPin = b.pinnedInCategories.includes("RESEARCH")
+        if (aPin !== bPin) return aPin ? -1 : 1
+        return (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+      })
+      .slice(0, take)
   },
   ["homepage_research"],
+  { revalidate: 300, tags: ["homepage", "news"] },
+)
+
+// ── Section 3c: Tin khuyến nông ─────────────────────────────────────────────
+// News với category=AGRICULTURE — Phase 3.7 round 4 (2026-04). Layout 3 cột
+// (hero / 2 mid / 4 small) theo yêu cầu khách hàng — xem AgricultureSection.
+
+export const getLatestAgricultureNews = unstable_cache(
+  async (take = 7) => {
+    // Primary OR pinned-for-AGRICULTURE — pin mở rộng visibility cross-list.
+    // Secondary cross-listing không tự động lên homepage (chỉ áp /khuyen-nong
+    // list page); nhưng admin có thể pin để override.
+    const candidates = await prisma.news.findMany({
+      where: {
+        isPublished: true,
+        OR: [
+          { category: "AGRICULTURE" },
+          { pinnedInCategories: { has: "AGRICULTURE" } },
+        ],
+      },
+      orderBy: [{ publishedAt: "desc" }],
+      take: take * 3,
+      select: NEWS_CARD_SELECT,
+    })
+    return [...candidates]
+      .sort((a, b) => {
+        const aPin = a.pinnedInCategories.includes("AGRICULTURE")
+        const bPin = b.pinnedInCategories.includes("AGRICULTURE")
+        if (aPin !== bPin) return aPin ? -1 : 1
+        return (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+      })
+      .slice(0, take)
+  },
+  ["homepage_agriculture"],
   { revalidate: 300, tags: ["homepage", "news"] },
 )
 
 // ── Section 2: Bản tin hội viên (right rail) ─────────────────────────────────
 
 /**
- * Top 3 slots — bài được admin đẩy lên đứng trước, tiếp theo VIP top theo
- * authorPriority. `isPromoted` = admin đã chủ động gắn cờ (qua menu feed
- * hoặc qua việc duyệt promotion-request từ owner).
+ * Top 4 slots — order: promoted → ngày VN (by-day desc) → độ cống hiến tác
+ * giả (contributionTotal desc) → createdAt desc tie-break.
+ *
+ * Lý do day-bucket: trong cùng 1 ngày, hội viên cống hiến cao luôn trên hội
+ * viên cống hiến thấp; sang ngày khác, ngày mới hơn thắng — tránh case bài
+ * cũ của contributor cao đè bài hôm nay của contributor thấp.
+ *
+ * Phase 3.7 round 4 (2026-04): không thể day-bucket sort native ở Postgres
+ * (cần generated column hoặc raw SQL); overfetch (take 20) rồi sort JS với
+ * VN timezone tương tự `getMergedFeedCached`.
  */
 export const getTopVipMemberPosts = unstable_cache(
   async () => {
-    return prisma.post.findMany({
+    const candidates = await prisma.post.findMany({
       where: {
         status: "PUBLISHED",
         // Mặc định chỉ VIP post lên homepage. Nếu admin chủ động
@@ -145,21 +225,38 @@ export const getTopVipMemberPosts = unstable_cache(
         // thì override — bài được feature bất kể tier tác giả.
         OR: [{ isPremium: true }, { isPromoted: true }],
       },
-      orderBy: [
-        { isPromoted: "desc" },
-        { authorPriority: "desc" },
-        { createdAt: "desc" },
-      ],
-      take: 3,
+      // Pool selection: lấy 20 promoted+premium gần nhất. JS sort sau đó
+      // sẽ re-rank theo day-bucket → contribution → date.
+      orderBy: [{ isPromoted: "desc" }, { createdAt: "desc" }],
+      take: 20,
       select: POST_CARD_SELECT,
     })
+
+    const VN_TZ_OFFSET_MS = 7 * 60 * 60 * 1000
+    const startOfDayVN = (ms: number) => {
+      const vnLocal = ms + VN_TZ_OFFSET_MS
+      return Math.floor(vnLocal / 86400000) * 86400000 - VN_TZ_OFFSET_MS
+    }
+
+    return [...candidates]
+      .sort((a, b) => {
+        if (a.isPromoted !== b.isPromoted) return a.isPromoted ? -1 : 1
+        const dayA = startOfDayVN(a.createdAt.getTime())
+        const dayB = startOfDayVN(b.createdAt.getTime())
+        if (dayA !== dayB) return dayB - dayA
+        const cA = a.author.contributionTotal ?? 0
+        const cB = b.author.contributionTotal ?? 0
+        if (cA !== cB) return cB - cA
+        return b.createdAt.getTime() - a.createdAt.getTime()
+      })
+      .slice(0, 4)
   },
   ["homepage_top_vip_members"],
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
 /**
- * Pool cho slot rotate — 50 bài VIP+non-VIP mới nhất, KHÔNG filter excludeIds
+ * Pool cho slot rotate — 30 bài VIP+non-VIP mới nhất, KHÔNG filter excludeIds
  * ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`) để MemberRail
  * có thể fetch pool + top song song (bỏ serialization cũ: top xong → pool).
  */
@@ -174,7 +271,7 @@ const getMemberPostsPoolCached = unstable_cache(
     return prisma.post.findMany({
       where: { status: "PUBLISHED" },
       orderBy: [{ createdAt: "desc" }],
-      take: 50,
+      take: 30,
       select: POST_CARD_SELECT,
     })
   },
@@ -182,12 +279,22 @@ const getMemberPostsPoolCached = unstable_cache(
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
-/** Filter pool exclude top IDs + weighted random theo authorPriority.
- *  Shuffle deterministic theo bucket 5 phút để "xoay vòng" slot. */
+/** Filter pool exclude top IDs + weighted random theo contributionTotal của
+ *  tác giả. Shuffle deterministic theo bucket 5 phút để "xoay vòng" slot.
+ *
+ *  Score = (log10(contribution + 1) + 1) * (0.5 + rng())
+ *
+ *  Log10 scale vì contribution range rộng (0 → 20M+ VND) — linear sẽ làm
+ *  hội viên contrib cao luôn thắng deterministic, mất hiệu ứng xoay vòng.
+ *  Sau log10: 0 VND → 0, 1M → 6, 10M (Bạc) → 7, 20M (Vàng) → 7.3, 100M → 8.
+ *  Khoảng cách 0.3-0.4 giữa các tier × random 0.5-1.5 = vừa giữ ưu thế cho
+ *  contrib cao, vừa cho hội viên thường vẫn có cơ hội. +1 outer = baseline
+ *  cho user 0 đồng có cơ hội vào pool (score = 1 × rng thay vì 0).
+ */
 export function pickRotatingMembers(
   pool: HomepagePost[],
   excludeIds: string[],
-  count: number = 6,
+  count: number = 9,
 ): HomepagePost[] {
   const bucket = Math.floor(Date.now() / 300_000)
   const rng = mulberry32(bucket)
@@ -196,7 +303,9 @@ export function pickRotatingMembers(
     .filter((p) => !excludeSet.has(p.id))
     .map((p) => ({
       post: p,
-      score: (p.authorPriority + 1) * (0.5 + rng()),
+      score:
+        (Math.log10((p.author.contributionTotal ?? 0) + 1) + 1) *
+        (0.5 + rng()),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, count)
@@ -337,7 +446,12 @@ const getMergedFeedCached = unstable_cache(
         where: {
           isPublished: true,
           template: "NORMAL", // Q1=B: PHOTO/VIDEO đẩy /multimedia
-          category: newsCategory,
+          // Primary OR pinned-for-this-category — admin pin mở rộng visibility
+          // cross-list (vd bài primary GENERAL được pin lên Tin DN section).
+          OR: [
+            { category: newsCategory },
+            { pinnedInCategories: { has: newsCategory } },
+          ],
         },
         orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
         take: take * 4,
@@ -350,7 +464,7 @@ const getMergedFeedCached = unstable_cache(
     // section consistent với /vi/feed?category. News được treat như post
     // không có cert + priority=0 (thua cert/high-priority products cùng ngày).
     type Sortable = MergedFeedItem & {
-      _meta: { dateMs: number; cert: boolean; priority: number }
+      _meta: { dateMs: number; cert: boolean; priority: number; pinned: boolean }
     }
 
     const VN_TZ_OFFSET_MS = 7 * 60 * 60 * 1000
@@ -379,6 +493,8 @@ const getMergedFeedCached = unstable_cache(
         dateMs: p.createdAt.getTime(),
         cert: p.product?.certStatus === "APPROVED",
         priority: p.authorPriority,
+        // Post không có concept pin per-section (chỉ News có pinnedInCategories).
+        pinned: false,
       },
     }))
 
@@ -400,12 +516,17 @@ const getMergedFeedCached = unstable_cache(
         dateMs: n.publishedAt ? n.publishedAt.getTime() : 0,
         cert: false, // News không có concept cert
         priority: 0, // News không có authorPriority — thua mọi VIP post tier
+        // Phase 3.7 round 4 (2026-04): pin per-section trump day-bucket.
+        pinned: n.pinnedInCategories.includes(newsCategory),
       },
     }))
 
     const includeCertTier = postCategory === "PRODUCT"
     return [...postItems, ...newsItems]
       .sort((a, b) => {
+        // Tier 0 (Phase 3.7 round 4 2026-04): pin per-section trump tất cả.
+        // Admin ghim bài lên section trang chủ → luôn ở top kể cả ngày cũ.
+        if (a._meta.pinned !== b._meta.pinned) return a._meta.pinned ? -1 : 1
         // Tier 1: day desc (VN tz)
         const dayA = startOfDayVN(a._meta.dateMs)
         const dayB = startOfDayVN(b._meta.dateMs)

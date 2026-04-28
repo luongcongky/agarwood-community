@@ -235,6 +235,24 @@ export async function POST(req: Request) {
     ),
   ].slice(0, 3) as (typeof VALID_NEWS_CATEGORIES)[number][]
 
+  // Phase 3.7 round 4 (2026-04): admin-only pin per-section trên trang chủ.
+  // Không validate phải subset của primary+secondary — bài có thể được pin
+  // lên section nào tùy admin (vd pin RESEARCH bài primary BUSINESS để
+  // promote cross-list). Filter chỉ cho admin:full + value enum hợp lệ.
+  const isAdminFull = hasPermission(perms, "admin:full")
+  const rawPinned = Array.isArray(body.pinnedInCategories)
+    ? body.pinnedInCategories
+    : []
+  const validPinnedInCategories = isAdminFull
+    ? ([
+        ...new Set(
+          rawPinned.filter((c: unknown): c is string =>
+            typeof c === "string" && (VALID_NEWS_CATEGORIES as readonly string[]).includes(c),
+          ),
+        ),
+      ] as (typeof VALID_NEWS_CATEGORIES)[number][])
+    : []
+
   // Validate template + Phase 3 fields. PHOTO/VIDEO yêu cầu gallery có ít
   // nhất 1 entry; BUSINESS yêu cầu relatedCompanyId; PRODUCT yêu cầu cả 2.
   const validTemplate =
@@ -502,6 +520,7 @@ export async function POST(req: Request) {
         coverImageUrl: derivedCoverImageUrl ?? null,
         category: validCategory,
         secondaryCategories: validSecondaryCategories,
+        pinnedInCategories: validPinnedInCategories,
         template: validTemplate,
         relatedCompanyId: validCategory === "BUSINESS" || validCategory === "PRODUCT"
           ? (relatedCompanyId as string)

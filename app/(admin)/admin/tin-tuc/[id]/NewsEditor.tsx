@@ -62,6 +62,8 @@ interface NewsData {
   category: NewsCategoryUI
   // Phase 3.7 round 4 (2026-04): max 3 secondary categories.
   secondaryCategories?: NewsCategoryUI[]
+  // Phase 3.7 round 4 (2026-04): admin-only pin per-section trên trang chủ.
+  pinnedInCategories?: NewsCategoryUI[]
   template: NewsTemplateUI
   relatedCompanyId: string | null
   relatedProductId: string | null
@@ -101,6 +103,10 @@ export default function NewsEditorPage({
   // Phase 3.7 round 4 (2026-04): max 3 phân loại phụ — bài hiện thêm ở các
   // list page khác (vd primary=BUSINESS + secondary=RESEARCH → /tin-tuc + /nghien-cuu).
   const [secondaryCategories, setSecondaryCategories] = useState<NewsCategoryUI[]>([])
+  // Phase 3.7 round 4 (2026-04): admin-only ghim bài lên section homepage cụ
+  // thể (mở rộng visibility cross-list). Khác secondaryCategories: không
+  // ràng buộc max, không exclude primary, server cũng strip nếu non-admin.
+  const [pinnedInCategories, setPinnedInCategories] = useState<NewsCategoryUI[]>([])
   const [template, setTemplate] = useState<NewsTemplateUI>("NORMAL")
   const [relatedCompany, setRelatedCompany] = useState<CompanySummary | null>(null)
   const [relatedProduct, setRelatedProduct] = useState<ProductSummary | null>(null)
@@ -361,6 +367,11 @@ export default function NewsEditorPage({
         setSecondaryCategories(
           Array.isArray(news.secondaryCategories)
             ? (news.secondaryCategories as NewsCategoryUI[])
+            : [],
+        )
+        setPinnedInCategories(
+          Array.isArray(news.pinnedInCategories)
+            ? (news.pinnedInCategories as NewsCategoryUI[])
             : [],
         )
         setTemplate(news.template ?? "NORMAL")
@@ -634,6 +645,7 @@ export default function NewsEditorPage({
         ? {
             category,
             secondaryCategories,
+            pinnedInCategories,
             template,
             relatedCompanyId: relatedCompany?.id ?? null,
             productData,
@@ -660,6 +672,7 @@ export default function NewsEditorPage({
             content_ar: finalContent.ar || null,
             category,
             secondaryCategories,
+            pinnedInCategories,
             template,
             relatedCompanyId: relatedCompany?.id ?? null,
             // Tạo mới News PRODUCT → chỉ gửi `productData`, server tự tạo Product
@@ -1102,6 +1115,57 @@ export default function NewsEditorPage({
                   chủ chỉ filter theo phân loại chính.
                 </p>
               </div>
+
+              {/* Ghim section trang chủ — Phase 3.7 round 4 (2026-04).
+                  Admin-only: bài được tick category nào sẽ pin lên TOP section
+                  homepage tương ứng (kể cả không phải primary/secondary của
+                  bài — mở rộng visibility cross-list). UI ẩn khi non-admin. */}
+              {canPickAuthor && (
+                <div>
+                  <label className="block text-xs font-medium text-brand-800 mb-1">
+                    Ghim lên section trang chủ
+                    <span className="ml-1 text-[10px] text-brand-400 font-normal">(admin only)</span>
+                  </label>
+                  <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+                    {(
+                      [
+                        { value: "GENERAL" as const, label: "Tin tức (Tin Hội)" },
+                        { value: "RESEARCH" as const, label: "Nghiên cứu khoa học" },
+                        { value: "BUSINESS" as const, label: "Tin doanh nghiệp" },
+                        { value: "PRODUCT" as const, label: "Tin sản phẩm" },
+                        { value: "AGRICULTURE" as const, label: "Tin khuyến nông" },
+                      ] satisfies { value: NewsCategoryUI; label: string }[]
+                    ).map((opt) => {
+                      const checked = pinnedInCategories.includes(opt.value)
+                      return (
+                        <label
+                          key={opt.value}
+                          className="flex items-center gap-2 text-xs cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              setPinnedInCategories((prev) =>
+                                e.target.checked
+                                  ? [...prev, opt.value]
+                                  : prev.filter((v) => v !== opt.value),
+                              )
+                            }}
+                            className="rounded border-amber-400 accent-amber-600"
+                          />
+                          <span className="text-brand-800">📌 {opt.label}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <p className="mt-1 text-[11px] text-brand-400 leading-snug">
+                    Bài pin sẽ lên TOP các section đã chọn trên trang chủ, kể cả
+                    khi không phải primary/secondary category của bài. Sort:
+                    pinned first → mới nhất.
+                  </p>
+                </div>
+              )}
 
               {/* Phase 3.5 (2026-04): EXTERNAL_NEWS bắt buộc nguồn báo + URL.
                   Validate ở client (required) + server (API trả 400 nếu thiếu). */}

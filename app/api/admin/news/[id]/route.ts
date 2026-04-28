@@ -135,6 +135,25 @@ export async function PATCH(
                   : category === "AGRICULTURE"
                     ? "AGRICULTURE"
                     : "GENERAL"
+  // Phase 3.7 round 4 (2026-04): admin-only pin per-section trên trang chủ.
+  // Khác secondaryCategories (max 3, exclude primary), pinned không có ràng
+  // buộc phải subset primary+secondary — admin có thể pin RESEARCH cho bài
+  // BUSINESS để promote cross-list. Chỉ admin:full được set; user khác →
+  // strip khỏi patch (giữ giá trị cũ).
+  if ("pinnedInCategories" in body && hasPermission(perms, "admin:full")) {
+    const VALID_NEWS_CATEGORIES = [
+      "GENERAL", "RESEARCH", "LEGAL", "SPONSORED_PRODUCT",
+      "BUSINESS", "PRODUCT", "EXTERNAL_NEWS", "AGRICULTURE",
+    ]
+    const raw = Array.isArray(body.pinnedInCategories) ? body.pinnedInCategories : []
+    data.pinnedInCategories = [
+      ...new Set(
+        raw.filter((c: unknown): c is string =>
+          typeof c === "string" && VALID_NEWS_CATEGORIES.includes(c),
+        ),
+      ),
+    ]
+  }
   // Phase 3.7 round 4 (2026-04): secondary categories — max 3, exclude primary.
   if ("secondaryCategories" in body) {
     const VALID_NEWS_CATEGORIES = [

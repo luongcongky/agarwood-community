@@ -5,6 +5,7 @@ import { MemberRail } from "@/components/features/homepage/MemberRail"
 import { MultimediaSection } from "@/components/features/homepage/MultimediaSection"
 import { CertifiedProducts } from "@/components/features/homepage/CertifiedProducts"
 import { ResearchSection } from "@/components/features/homepage/ResearchSection"
+import { AgricultureSection } from "@/components/features/homepage/AgricultureSection"
 import { PostsSection } from "@/components/features/homepage/PostsSection"
 import { FeaturedCompanies } from "@/components/features/homepage/FeaturedCompanies"
 import { Partners } from "@/components/features/homepage/Partners"
@@ -96,6 +97,10 @@ export default async function HomePage() {
 
       <Suspense fallback={<LatestPostsSkeleton />}>
         <ResearchSection />
+      </Suspense>
+
+      <Suspense fallback={<LatestPostsSkeleton />}>
+        <AgricultureSection />
       </Suspense>
 
       <Suspense fallback={<LatestPostsSkeleton />}>

@@ -986,6 +986,12 @@ model News {
   // → bài hiện ở cả /tin-tuc + /nghien-cuu). Homepage giữ primary-only filter.
   // Validation max 3 + exclude primary ở API layer.
   secondaryCategories NewsCategory[] @default([])
+  // Phase 3.7 round 4 (2026-04): admin pin per-section trên trang chủ. Khác
+  // `isPinned` boolean global (vẫn dùng cho NewsSection "Tin Hội" + sidebar
+  // featured). pinnedInCategories=[BUSINESS,RESEARCH] → bài lên top section
+  // homepage Tin DN + Nghiên cứu, kể cả khi primary là cái khác (mở rộng
+  // visibility cross-list). Empty = không pin section nào.
+  pinnedInCategories NewsCategory[] @default([])
   template      NewsTemplate @default(NORMAL)
   isPublished   Boolean      @default(false)
   isPinned      Boolean      @default(false)

@@ -66,7 +66,7 @@ export async function MemberRail() {
 
       {rotating.length > 0 && (
         <ul className="mt-4 space-y-2.5">
-          {rotating.slice(0, 8).map((post) => (
+          {rotating.map((post) => (
             <li key={post.id}>
               <CompactItem post={post} />
             </li>
