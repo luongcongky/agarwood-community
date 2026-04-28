@@ -71,8 +71,22 @@ type Props = {
     q?: string
     cat?: string
     tpl?: string
+    from?: string
+    to?: string
     page?: string
   }>
+}
+
+/** Parse `YYYY-MM-DD` từ <input type="date"> → Date hoặc null. Tham số phụ
+ *  `endOfDay=true` set 23:59:59.999 (cho upper bound). */
+function parseDateInput(s: string | undefined, endOfDay = false): Date | null {
+  if (!s) return null
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  if (Number.isNaN(d.getTime())) return null
+  if (endOfDay) d.setHours(23, 59, 59, 999)
+  return d
 }
 
 /** Label cho NewsTemplate filter — Phase 3.7 round 4 (2026-04). Customer
@@ -88,8 +102,25 @@ export default async function AdminNewsPage({ searchParams }: Props) {
   const query = params.q?.trim() || ""
   const category = params.cat || ""
   const template = params.tpl || ""
+  const from = params.from || ""
+  const to = params.to || ""
   const page = Math.max(1, Number(params.page ?? 1))
   const PAGE_SIZE = 20
+
+  // Phase 3.7 round 4 (2026-04): filter theo Ngày đăng (publishedAt).
+  // Bài draft (publishedAt=null) không xuất hiện khi có range — đúng vì
+  // user chọn ngày đăng = chỉ quan tâm bài đã publish.
+  const fromDate = parseDateInput(from, false)
+  const toDate = parseDateInput(to, true)
+  const publishedAtFilter =
+    fromDate || toDate
+      ? {
+          publishedAt: {
+            ...(fromDate && { gte: fromDate }),
+            ...(toDate && { lte: toDate }),
+          },
+        }
+      : {}
 
   const where: Prisma.NewsWhereInput = {
     ...(query && {
@@ -101,6 +132,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     ...(template && {
       template: template as NewsTemplate,
     }),
+    ...publishedAtFilter,
   }
 
   const [newsList, total] = await Promise.all([
@@ -132,6 +164,8 @@ export default async function AdminNewsPage({ searchParams }: Props) {
     if (query) p.set("q", query)
     if (category) p.set("cat", category)
     if (template) p.set("tpl", template)
+    if (from) p.set("from", from)
+    if (to) p.set("to", to)
     if (page > 1) p.set("page", String(page))
     for (const [k, v] of Object.entries(overrides)) {
       if (v) p.set(k, v); else p.delete(k)
@@ -211,6 +245,34 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             </select>
           </div>
 
+          {/* Date range filter — publishedAt. Phase 3.7 round 4 (2026-04). */}
+          <div className="w-[160px] space-y-1.5">
+            <label htmlFor="from" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+              Ngày đăng từ
+            </label>
+            <input
+              type="date"
+              id="from"
+              name="from"
+              defaultValue={from}
+              max={to || undefined}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+            />
+          </div>
+          <div className="w-[160px] space-y-1.5">
+            <label htmlFor="to" className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
+              Đến
+            </label>
+            <input
+              type="date"
+              id="to"
+              name="to"
+              defaultValue={to}
+              min={from || undefined}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50/30 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+            />
+          </div>
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -218,7 +280,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             >
               Lọc
             </button>
-            {(query || category || template) && (
+            {(query || category || template || from || to) && (
               <Link
                 href="/admin/tin-tuc"
                 className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
@@ -234,6 +296,9 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         <table className="w-full text-sm">
           <thead className="border-b bg-brand-50">
             <tr>
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[60px] whitespace-nowrap">
+                No
+              </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 whitespace-nowrap">
                 Tiêu đề
               </th>
@@ -261,22 +326,25 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             {newsList.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-12 text-center"
                 >
                   <div className="text-brand-300 text-4xl mb-2">🔍</div>
                   <p className="text-brand-700 font-medium">Không tìm thấy tin tức nào</p>
                   <p className="text-xs text-brand-400 mt-1">
-                    {(query || category) ? "Hãy thử thay đổi từ khóa hoặc bộ lọc" : "Hệ thống chưa có dữ liệu tin tức"}
+                    {(query || category || template || from || to) ? "Hãy thử thay đổi từ khóa hoặc bộ lọc" : "Hệ thống chưa có dữ liệu tin tức"}
                   </p>
                 </td>
               </tr>
             )}
-            {newsList.map((news) => (
+            {newsList.map((news, idx) => (
               <tr
                 key={news.id}
                 className="hover:bg-brand-50/50 transition-colors"
               >
+                <td className="px-4 py-3 text-xs font-mono text-brand-500 tabular-nums">
+                  {(page - 1) * PAGE_SIZE + idx + 1}
+                </td>
                 <td className="px-4 py-3 min-w-[300px]">
                   <p className="font-semibold text-brand-900 line-clamp-1 leading-relaxed" title={news.title}>
                     {/* Template marker — chỉ show khi PHOTO/VIDEO để khỏi

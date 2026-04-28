@@ -26,15 +26,17 @@ export function rollingWindow(days: number) {
   return { now, currentStart, previousStart }
 }
 
-/** Đếm News tạo trong khoảng (createdAt, không phải publishedAt — admin
- *  quan tâm activity nội bộ). isPublished không filter để stats phản ánh
- *  cả bài draft. */
+/** Đếm News có `publishedAt` rơi vào khoảng N ngày qua. Phase 3.7 round 4
+ *  (2026-04 — round B): đổi từ `createdAt` sang `publishedAt` để stats
+ *  ngữ nghĩa "đăng mới" chính xác và khớp với /admin/tin-tuc filter
+ *  "Ngày đăng". Bài draft (publishedAt=null) tự động bị loại. Bài import
+ *  cũ (publishedAt < 30d) cũng không tính vào "đăng mới" — đúng intent. */
 export async function countNewsCreated(days: number): Promise<StatPair> {
   const { currentStart, previousStart } = rollingWindow(days)
   const [current, previous] = await Promise.all([
-    prisma.news.count({ where: { createdAt: { gte: currentStart } } }),
+    prisma.news.count({ where: { publishedAt: { gte: currentStart } } }),
     prisma.news.count({
-      where: { createdAt: { gte: previousStart, lt: currentStart } },
+      where: { publishedAt: { gte: previousStart, lt: currentStart } },
     }),
   ])
   return { current, previous, deltaPct: pctChange(current, previous) }
@@ -109,9 +111,10 @@ export async function topPostContributors(
   return aggregateAuthors(groups)
 }
 
-/** Top admin/staff đóng góp tin tức News mới trong N ngày. Tính tất cả
- *  News (kể cả draft) — admin có thể đang chuẩn bị bài cho tuần này.
- *  Phase 3.7 round 4 (2026-04). */
+/** Top admin/staff đóng góp tin tức News mới trong N ngày. Phase 3.7
+ *  round 4 (2026-04 — round B): đếm theo `publishedAt` (đã đăng), khớp
+ *  ngữ nghĩa "đăng mới" + đồng bộ với stat cards. Bài draft / bài import
+ *  publishedAt cũ không tính. */
 export async function topNewsContributors(
   days: number,
   take = 10,
@@ -119,7 +122,7 @@ export async function topNewsContributors(
   const { currentStart } = rollingWindow(days)
   const groups = await prisma.news.groupBy({
     by: ["authorId"],
-    where: { createdAt: { gte: currentStart } },
+    where: { publishedAt: { gte: currentStart } },
     _count: { _all: true },
     orderBy: { _count: { authorId: "desc" } },
     take,
@@ -130,23 +133,26 @@ export async function topNewsContributors(
 export type DailyPoint = { date: string; count: number }
 
 /** Daily count series cho sparkline. Trả mảng N điểm (sớm nhất → gần nhất),
- *  fill 0 cho ngày không có activity. Date key dạng "YYYY-MM-DD" (vi-VN
- *  format). Dùng cho cả news và post qua param `model`. */
+ *  fill 0 cho ngày không có activity. Date key dạng "YYYY-MM-DD".
+ *
+ *  Phase 3.7 round 4 (2026-04 — round B): news dùng `publishedAt` (loại
+ *  draft + import cũ), post dùng `createdAt` (Post không có publishedAt).
+ *  Mỗi nguồn có ngữ nghĩa riêng nhưng cùng phản ánh "hoạt động đăng mới". */
 export async function dailySeries(
   model: "news" | "post",
   days: number,
 ): Promise<DailyPoint[]> {
   const { currentStart, now } = rollingWindow(days)
-  // SQL fast path: groupBy DATE(createdAt). Prisma không có DATE() native,
-  // dùng raw query qua $queryRawUnsafe (an toàn — không có user input).
+  // SQL fast path. Prisma không có DATE() native nên dùng raw query qua
+  // $queryRawUnsafe (an toàn — không có user input, table + field constants).
   const table = model === "news" ? "news" : "posts"
+  const dateField = model === "news" ? "publishedAt" : "createdAt"
   const filter = model === "post" ? `AND status = 'PUBLISHED'` : ""
-  // Postgres date_trunc('day') → trả timestamp đầu ngày. Cast text yyyy-mm-dd.
   const rows = await prisma.$queryRawUnsafe<Array<{ d: string; n: bigint }>>(
-    `SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') as d,
+    `SELECT to_char(date_trunc('day', "${dateField}"), 'YYYY-MM-DD') as d,
             COUNT(*)::bigint as n
      FROM "${table}"
-     WHERE "createdAt" >= $1 ${filter}
+     WHERE "${dateField}" >= $1 ${filter}
      GROUP BY 1
      ORDER BY 1 ASC`,
     currentStart,

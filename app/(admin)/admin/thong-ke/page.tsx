@@ -42,8 +42,10 @@ export default async function AdminStatsPage() {
       <header>
         <h1 className="text-2xl font-bold text-brand-900">Thống kê hoạt động</h1>
         <p className="mt-1 text-sm text-brand-500">
-          Theo dõi nội dung mới + hội viên đóng góp tích cực. Số liệu tính theo
-          rolling window (7 / 30 ngày gần nhất, so sánh với period liền trước).
+          Theo dõi nội dung mới + hội viên đóng góp tích cực. Tin tức đếm theo
+          <strong> Ngày đăng (publishedAt)</strong> — bài draft hoặc bài import
+          có publishedAt cũ không tính. Bài feed đếm theo ngày tạo (Post không
+          có publishedAt). Rolling window 7 / 30 ngày gần nhất.
         </p>
       </header>
 
@@ -80,7 +82,7 @@ export default async function AdminStatsPage() {
       <section className="grid gap-6 lg:grid-cols-2">
         <ContributorBoard
           title="Top đóng góp Tin tức"
-          subtitle="Admin / staff đăng nhiều News (kể cả bản nháp)"
+          subtitle="Admin / staff đăng nhiều News (theo publishedAt)"
           data7={topNewsWeek}
           data30={topNewsMonth}
           unitLabel="bài"
