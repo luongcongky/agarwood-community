@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Mail,
   UserPlus,
+  BarChart3,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
@@ -84,7 +85,10 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     key: "overview",
     label: null,
-    items: [{ label: "Tổng quan", href: "/admin", icon: LayoutDashboard }],
+    items: [
+      { label: "Tổng quan", href: "/admin", icon: LayoutDashboard },
+      { label: "Thống kê", href: "/admin/thong-ke", icon: BarChart3 },
+    ],
   },
   {
     key: "members",
