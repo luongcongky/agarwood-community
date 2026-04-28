@@ -1,18 +1,24 @@
 import Image from "next/image"
 import Link from "next/link"
-import { unstable_cache } from "next/cache"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
+import { isAdmin } from "@/lib/roles"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { FeatureToggleBtn } from "./FeatureToggleBtn"
 export async function generateMetadata() {
   const t = await getTranslations("companies")
   return { title: t("metaTitle"), alternates: { canonical: "/doanh-nghiep" } }
 }
 
-export const revalidate = 3600
+// Phase 3.7 round 4 (2026-04): page-level ISR đã bỏ vì admin toggle
+// "Tiêu biểu" / "Xác minh" cần phản ánh ngay mà revalidateTag +
+// revalidatePath trong Next 16 không bust reliably. Page giờ fully dynamic
+// — 1 SELECT mỗi request, dataset nhỏ (<50 DN) nên cost không đáng kể.
+export const dynamic = "force-dynamic"
 
 /** Strip "https://" + trailing slash để hiển thị gọn */
 function displayWebsite(url: string): string {
@@ -48,37 +54,40 @@ const COMPANY_CARD_SELECT = {
   phone: true,
   website: true,
   isVerified: true,
+  // Phase 3.7 round 4 (2026-04): isFeatured để highlight card + admin
+  // toggle ngay từ list. featuredOrder để sort featured items đúng thứ tự.
+  isFeatured: true,
+  featuredOrder: true,
 } as const
 
-/** Default list (no search) cached 5 min — hit DB 1 lần/5ph thay vì mỗi
- *  request. revalidateTag("companies") khi admin CRUD company. */
-const getDefaultCompanies = unstable_cache(
-  () =>
-    prisma.company.findMany({
-      where: { isPublished: true },
-      // Sort theo đóng góp của hội viên đại diện DN (giảm dần) — hội đóng
-      // góp nhiều rank cao hơn. isVerified làm tie-breaker (cùng contribution
-      // thì DN đã verify hiển thị trước). createdAt cuối cùng cho consistency.
-      orderBy: [
-        { owner: { contributionTotal: "desc" } },
-        { isVerified: "desc" },
-        { createdAt: "desc" },
-      ],
-      select: COMPANY_CARD_SELECT,
-    }),
-  ["doanh-nghiep_list_default"],
-  { revalidate: 300, tags: ["companies"] },
-)
+/** Default list — direct prisma query (no unstable_cache).
+ *  Phase 3.7 round 4 (2026-04): bỏ unstable_cache để admin toggle reflect
+ *  immediately. Featured DN xếp đầu (featuredOrder), sau đó contribution,
+ *  isVerified, createdAt. */
+const getDefaultCompanies = () =>
+  prisma.company.findMany({
+    where: { isPublished: true },
+    orderBy: [
+      { isFeatured: "desc" },
+      { featuredOrder: "asc" },
+      { owner: { contributionTotal: "desc" } },
+      { isVerified: "desc" },
+      { createdAt: "desc" },
+    ],
+    select: COMPANY_CARD_SELECT,
+  })
 
 export default async function MembersPage({
   searchParams,
 }: {
   searchParams: Promise<{ province?: string; q?: string }>
 }) {
-  const [locale, t] = await Promise.all([
+  const [locale, t, session] = await Promise.all([
     getLocale() as Promise<Locale>,
     getTranslations("companies"),
+    auth(),
   ])
+  const isAdminUser = isAdmin(session?.user?.role)
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
   const params = await searchParams
   const q = params.q ?? ""
@@ -93,14 +102,13 @@ export default async function MembersPage({
             { description: { contains: q, mode: "insensitive" as const } },
           ],
         },
-        // Sort theo đóng góp của hội viên đại diện DN (giảm dần) — hội đóng
-      // góp nhiều rank cao hơn. isVerified làm tie-breaker (cùng contribution
-      // thì DN đã verify hiển thị trước). createdAt cuối cùng cho consistency.
-      orderBy: [
-        { owner: { contributionTotal: "desc" } },
-        { isVerified: "desc" },
-        { createdAt: "desc" },
-      ],
+        orderBy: [
+          { isFeatured: "desc" },
+          { featuredOrder: "asc" },
+          { owner: { contributionTotal: "desc" } },
+          { isVerified: "desc" },
+          { createdAt: "desc" },
+        ],
         select: COMPANY_CARD_SELECT,
       })
     : await getDefaultCompanies()
@@ -150,8 +158,18 @@ export default async function MembersPage({
             {companies.map((company) => (
               <div
                 key={company.id}
-                className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
+                className={
+                  company.isFeatured
+                    ? "relative flex flex-col gap-3 rounded-xl border-2 border-amber-400 bg-linear-to-br from-amber-50/60 to-white p-5 shadow-md ring-1 ring-amber-200/50 transition-shadow hover:shadow-lg"
+                    : "bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3"
+                }
               >
+                {/* Featured ribbon — góc trên phải. Phase 3.7 round 4 (2026-04). */}
+                {company.isFeatured && (
+                  <span className="pointer-events-none absolute -top-2 right-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow ring-2 ring-white">
+                    ★ Tiêu biểu
+                  </span>
+                )}
                 {/* Logo + Name Row */}
                 <div className="flex items-center gap-3">
                   {company.logoUrl ? (
@@ -227,16 +245,26 @@ export default async function MembersPage({
                   >
                     {t("viewDetails")}
                   </Link>
-                  {company.website && (
-                    <a
-                      href={company.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
-                    >
-                      {t("visitWebsite")}
-                    </a>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {company.website && (
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-brand-300 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+                      >
+                        {t("visitWebsite")}
+                      </a>
+                    )}
+                    {/* Admin only — toggle tiêu biểu ngay từ list. Phase 3.7
+                        round 4 (2026-04). Endpoint validate VIP|INFINITE owner. */}
+                    {isAdminUser && (
+                      <FeatureToggleBtn
+                        companyId={company.id}
+                        initialFeatured={company.isFeatured}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

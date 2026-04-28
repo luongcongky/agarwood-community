@@ -16,6 +16,7 @@ import { SidebarList } from "@/components/features/article/SidebarList"
 import { LatestNewsList } from "./LatestNewsList"
 import { NewsListItemCard } from "./NewsListItemCard"
 import { TIN_TUC_PUBLIC_CATEGORIES, TIN_TUC_PUBLIC_TEMPLATE } from "./categories"
+import { mergeByDateDesc } from "../_lib/post-news-merge"
 
 const NEWS_LIST_SELECT = {
   id: true,
@@ -34,7 +35,10 @@ const getDefaultNewsList = unstable_cache(
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
         template: TIN_TUC_PUBLIC_TEMPLATE,
       },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
@@ -51,7 +55,10 @@ const getSidebarFeaturedNews = unstable_cache(
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
         template: TIN_TUC_PUBLIC_TEMPLATE,
       },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
@@ -151,14 +158,26 @@ export default async function NewsPage({
 
   const where = {
     isPublished: true,
-    category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
     template: TIN_TUC_PUBLIC_TEMPLATE,
-    ...(q && {
-      OR: [
-        { title: { contains: q, mode: "insensitive" as const } },
-        { excerpt: { contains: q, mode: "insensitive" as const } },
-      ],
-    }),
+    AND: [
+      // Phase 3.7 round 4 (2026-04): primary OR secondary category match.
+      {
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
+      },
+      ...(q
+        ? [
+            {
+              OR: [
+                { title: { contains: q, mode: "insensitive" as const } },
+                { excerpt: { contains: q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   }
 
   // Khi không search: fetch HERO_COUNT (hero + 3 sub-hero) + LIST_PAGE_SIZE + 1
@@ -175,12 +194,39 @@ export default async function NewsPage({
       })
     : await getDefaultNewsList(initialTake)
 
+  // Phase 3.7 round 4 (2026-04): Post curated bởi admin (newsCategories
+  // chứa 1 trong TIN_TUC_PUBLIC_CATEGORIES) — bài feed chỉnh chu được tag
+  // làm tư liệu cho mục Tin tức. Skip khi search (search chỉ áp News).
+  const memberPosts = isSearch
+    ? []
+    : await prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          newsCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          imageUrls: true,
+          coverImageUrl: true,
+          createdAt: true,
+          author: { select: { name: true, avatarUrl: true } },
+        },
+      })
+
   const showHero = !isSearch
   const heroItem = showHero && newsList[0] ? newsList[0] : null
   const subHeroItems = showHero ? newsList.slice(1, HERO_COUNT) : []
   // List stream = phần còn lại; slice bỏ +1 item "hasMore probe".
   const heroConsumed = showHero ? HERO_COUNT : 0
-  const initialListItems = newsList.slice(heroConsumed, heroConsumed + LIST_PAGE_SIZE)
+  // Phase 3.7 round 4 (2026-04): merge Posts vào latest list theo date desc
+  // (hero/sub-hero giữ News-only — editorial layout). Load-more vẫn fetch
+  // News-only theo skip = heroConsumed + LIST_PAGE_SIZE → consistent.
+  const newsForLatest = newsList.slice(heroConsumed, heroConsumed + LIST_PAGE_SIZE)
+  const initialListItems = mergeByDateDesc(newsForLatest, memberPosts)
   const initialHasMore = newsList.length > heroConsumed + LIST_PAGE_SIZE
 
   const listingJsonLd = {
@@ -380,7 +426,7 @@ export default async function NewsPage({
               <LatestNewsList
                 locale={locale}
                 q={q || undefined}
-                initialOffset={heroConsumed + initialListItems.length}
+                initialOffset={heroConsumed + newsForLatest.length}
                 initialHasMore={initialHasMore}
                 pinnedLabel={t("pinned")}
                 loadingLabel="Đang tải thêm…"

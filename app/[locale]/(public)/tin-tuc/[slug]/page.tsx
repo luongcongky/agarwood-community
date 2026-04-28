@@ -32,7 +32,14 @@ type Props = { params: Promise<{ locale: Locale; slug: string }> }
  *  Explicit select thay vì findFirst không select (over-fetch). */
 const getNewsBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
-    where: { slug, isPublished: true, category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+    where: {
+      slug,
+      isPublished: true,
+      OR: [
+        { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+      ],
+    },
     select: {
       id: true,
       slug: true,
@@ -109,7 +116,14 @@ export default async function NewsDetailPage({ params }: Props) {
     const normalizedSlug = slugify(slug)
     if (normalizedSlug !== slug) {
       const redirectedNews = await prisma.news.findFirst({
-        where: { slug: normalizedSlug, isPublished: true, category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        where: {
+          slug: normalizedSlug,
+          isPublished: true,
+          OR: [
+            { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+            { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          ],
+        },
       })
       if (redirectedNews) {
         redirect(`/tin-tuc/${normalizedSlug}`)
@@ -155,16 +169,25 @@ export default async function NewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
-        ...(news.focusKeyword
-          ? {
-              OR: [
-                { focusKeyword: news.focusKeyword },
-                { secondaryKeywords: { has: news.focusKeyword } },
-              ],
-            }
-          : {}),
+        AND: [
+          {
+            OR: [
+              { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+              { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+            ],
+          },
+          ...(news.focusKeyword
+            ? [
+                {
+                  OR: [
+                    { focusKeyword: news.focusKeyword },
+                    { secondaryKeywords: { has: news.focusKeyword } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3,
@@ -188,8 +211,11 @@ export default async function NewsDetailPage({ params }: Props) {
       where: {
         isPublished: true,
         isPinned: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 5,
@@ -198,8 +224,11 @@ export default async function NewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 6,
@@ -217,9 +246,12 @@ export default async function NewsDetailPage({ params }: Props) {
     const fill = await prisma.news.findMany({
       where: {
         isPublished: true,
-        category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
         slug: { not: slug },
         id: { notIn: related.map((r) => r.id) },
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3 - related.length,

@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getTierThresholds } from "@/lib/tier"
+import { getSortedFeedPostIds } from "@/lib/feed-sort"
 import { FeedClient } from "./FeedClient"
 import { SidebarBanners, SidebarBannersSkeleton } from "./SidebarBanners"
 
@@ -31,7 +32,7 @@ const getTopContributors = unstable_cache(
 
 export const revalidate = 60 // 1 min — feed updates are not real-time critical
 
-type FeedFilter = "NEWS" | "PRODUCT"
+type FeedFilter = "NEWS" | "PRODUCT" | "MINE" | "PINNED"
 
 export default async function FeedPage({
   searchParams,
@@ -40,10 +41,15 @@ export default async function FeedPage({
 }) {
   const session = await auth()
   const userId = session?.user?.id
-  // Homepage link qua `/feed?category=NEWS|PRODUCT` để mở đúng tab từ đầu.
-  // Bất kỳ giá trị khác → fallback NEWS (khớp default filter client cũ).
+  const isAdminUser = session?.user?.role === "ADMIN"
+  // Homepage link qua `/feed?category=NEWS|PRODUCT|MINE|PINNED`. MINE chỉ
+  // cho user đã login. PINNED chỉ cho admin. Phase 3.7 round 4 (2026-04).
   const { category: rawCategory } = await searchParams
-  const initialFilter: FeedFilter = rawCategory === "PRODUCT" ? "PRODUCT" : "NEWS"
+  const initialFilter: FeedFilter =
+    rawCategory === "PRODUCT" ? "PRODUCT"
+    : rawCategory === "MINE" && userId ? "MINE"
+    : rawCategory === "PINNED" && isAdminUser ? "PINNED"
+    : "NEWS"
 
   // Initial 10 posts — promoted first, then by authorPriority + createdAt.
   // Smaller initial page = faster TTFB; cursor pagination loads 10 more on scroll.
@@ -58,84 +64,121 @@ export default async function FeedPage({
   //  - PENDING → CHI owner thay (banner vang "Cho duyet")
   // Initial render khớp với filter = initialFilter (default NEWS, hoặc
   // PRODUCT nếu vào từ section "Sản phẩm hội viên" trên trang chủ).
-  const initialPosts = await prisma.post.findMany({
-    where: userId
-      ? {
+  // Phase 3.7 round 4 (2026-04): PRODUCT + NEWS dùng thuật toán sort đặc
+  // biệt (by-day VN → [cert PRODUCT only] → priority → createdAt). Helper
+  // getSortedFeedPostIds trả ID list, sau đó hydrate qua findMany + reorder.
+  const feedSortedIds =
+    initialFilter === "PRODUCT" || initialFilter === "NEWS"
+      ? await getSortedFeedPostIds({
           category: initialFilter,
-          OR: [
-            { status: "PUBLISHED" },
-            { status: "LOCKED", moderationNote: null },
-            { status: "PENDING", authorId: userId },
-            { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
-          ],
-        }
-      : {
-          category: initialFilter,
-          OR: [
-            { status: "PUBLISHED" },
-            { status: "LOCKED", moderationNote: null },
-          ],
-        },
-    orderBy: [
-      { isPromoted: "desc" },
-      { authorPriority: "desc" },
-      { createdAt: "desc" },
-    ],
-    take: 10,
-    select: {
-      id: true,
-      authorId: true,
-      title: true,
-      content: true,
-      imageUrls: true,
-      status: true,
-      category: true,
-      isPremium: true,
-      isPromoted: true,
-      authorPriority: true,
-      viewCount: true,
-      reportCount: true,
-      lockedBy: true,
-      lockReason: true,
-      moderationNote: true,
-      createdAt: true,
-      updatedAt: true,
-      lockedAt: true,
-      author: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          role: true,
-          accountType: true,
-          contributionTotal: true,
-          company: { select: { name: true, slug: true } },
-        },
+          userId: userId ?? null,
+          take: 10,
+        })
+      : null
+
+  const POST_INITIAL_SELECT = {
+    id: true,
+    authorId: true,
+    title: true,
+    content: true,
+    imageUrls: true,
+    status: true,
+    category: true,
+    isPremium: true,
+    isPromoted: true,
+    newsCategories: true,
+    authorPriority: true,
+    viewCount: true,
+    reportCount: true,
+    lockedBy: true,
+    lockReason: true,
+    moderationNote: true,
+    createdAt: true,
+    updatedAt: true,
+    lockedAt: true,
+    author: {
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        accountType: true,
+        contributionTotal: true,
+        company: { select: { name: true, slug: true } },
       },
-      product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          priceRange: true,
-          category: true,
-          badgeUrl: true,
-          certStatus: true,
-        },
-      },
-      reactions: {
-        where: { userId: userId ?? "none" },
-        select: { type: true },
-      },
-      // Latest promotion request — cùng logic như /api/posts route.
-      promotionRequests: {
-        take: 1,
-        orderBy: { createdAt: "desc" },
-        select: { status: true, reviewNote: true },
-      },
-      _count: { select: { reactions: true, comments: { where: { deletedAt: null } } } },
     },
-  })
+    product: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        priceRange: true,
+        category: true,
+        badgeUrl: true,
+        certStatus: true,
+      },
+    },
+    reactions: {
+      where: { userId: userId ?? "none" },
+      select: { type: true },
+    },
+    promotionRequests: {
+      take: 1,
+      orderBy: { createdAt: "desc" as const },
+      select: { status: true, reviewNote: true },
+    },
+    _count: { select: { reactions: true, comments: { where: { deletedAt: null } } } },
+  } as const
+
+  let initialPosts: Awaited<ReturnType<typeof prisma.post.findMany<{ select: typeof POST_INITIAL_SELECT }>>>
+  if (feedSortedIds) {
+    if (feedSortedIds.length === 0) {
+      initialPosts = []
+    } else {
+      const rows = await prisma.post.findMany({
+        where: { id: { in: feedSortedIds } },
+        select: POST_INITIAL_SELECT,
+      })
+      const idxMap = new Map(feedSortedIds.map((id, i) => [id, i]))
+      rows.sort((a, b) => (idxMap.get(a.id) ?? 0) - (idxMap.get(b.id) ?? 0))
+      initialPosts = rows
+    }
+  } else {
+    initialPosts = await prisma.post.findMany({
+      where:
+        initialFilter === "PINNED"
+          ? { isPromoted: true, status: "PUBLISHED" }
+          : initialFilter === "MINE"
+            ? { authorId: userId!, status: { not: "DELETED" } }
+            : userId
+              ? {
+                  category: initialFilter,
+                  OR: [
+                    { status: "PUBLISHED" },
+                    { status: "LOCKED", moderationNote: null },
+                    { status: "PENDING", authorId: userId },
+                    { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+                  ],
+                }
+              : {
+                  category: initialFilter,
+                  OR: [
+                    { status: "PUBLISHED" },
+                    { status: "LOCKED", moderationNote: null },
+                  ],
+                },
+      orderBy:
+        initialFilter === "MINE" || initialFilter === "PINNED"
+          ? [{ createdAt: "desc" }]
+          : [
+              { isPromoted: "desc" },
+              { authorPriority: "desc" },
+              { createdAt: "desc" },
+            ],
+      take: 10,
+      select: POST_INITIAL_SELECT,
+    })
+  }
 
   const posts = initialPosts.map((p) => {
     const { promotionRequests, ...rest } = p

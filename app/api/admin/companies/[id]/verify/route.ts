@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { revalidateTag } from "next/cache"
+import { revalidateTag, revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
@@ -41,6 +41,8 @@ export async function PATCH(
 
   revalidateTag("companies", "max")
   revalidateTag("homepage", "max")
+  revalidatePath("/[locale]/doanh-nghiep", "page")
+  revalidatePath("/[locale]/landing", "page")
 
   return NextResponse.json(updated)
 }

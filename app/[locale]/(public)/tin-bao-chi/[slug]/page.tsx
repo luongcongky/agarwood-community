@@ -29,7 +29,14 @@ type Props = { params: Promise<{ locale: Locale; slug: string }> }
 /** React.cache dedupe giữa generateMetadata và main page — 1 query/request. */
 const getExternalNewsBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
-    where: { slug, isPublished: true, category: "EXTERNAL_NEWS" },
+    where: {
+      slug,
+      isPublished: true,
+      OR: [
+        { category: "EXTERNAL_NEWS" },
+        { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+      ],
+    },
     select: {
       id: true,
       slug: true,
@@ -105,7 +112,14 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
     const normalizedSlug = slugify(slug)
     if (normalizedSlug !== slug) {
       const redirectedNews = await prisma.news.findFirst({
-        where: { slug: normalizedSlug, isPublished: true, category: "EXTERNAL_NEWS" },
+        where: {
+          slug: normalizedSlug,
+          isPublished: true,
+          OR: [
+            { category: "EXTERNAL_NEWS" },
+            { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+          ],
+        },
       })
       if (redirectedNews) {
         redirect(`/tin-bao-chi/${normalizedSlug}`)
@@ -129,16 +143,25 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "EXTERNAL_NEWS",
         slug: { not: slug },
-        ...(news.focusKeyword
-          ? {
-              OR: [
-                { focusKeyword: news.focusKeyword },
-                { secondaryKeywords: { has: news.focusKeyword } },
-              ],
-            }
-          : {}),
+        AND: [
+          {
+            OR: [
+              { category: "EXTERNAL_NEWS" },
+              { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+            ],
+          },
+          ...(news.focusKeyword
+            ? [
+                {
+                  OR: [
+                    { focusKeyword: news.focusKeyword },
+                    { secondaryKeywords: { has: news.focusKeyword } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3,
@@ -162,8 +185,11 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
       where: {
         isPublished: true,
         isPinned: true,
-        category: "EXTERNAL_NEWS",
         slug: { not: slug },
+        OR: [
+          { category: "EXTERNAL_NEWS" },
+          { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 5,
@@ -172,8 +198,11 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "EXTERNAL_NEWS",
         slug: { not: slug },
+        OR: [
+          { category: "EXTERNAL_NEWS" },
+          { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 6,
@@ -190,9 +219,12 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
     const fill = await prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "EXTERNAL_NEWS",
         slug: { not: slug },
         id: { notIn: related.map((r) => r.id) },
+        OR: [
+          { category: "EXTERNAL_NEWS" },
+          { secondaryCategories: { has: "EXTERNAL_NEWS" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3 - related.length,

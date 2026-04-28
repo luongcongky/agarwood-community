@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { revalidateTag } from "next/cache"
+import { revalidateTag, revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
@@ -59,6 +59,11 @@ export async function PATCH(
 
   revalidateTag("homepage", "max")
   revalidateTag("companies", "max")
+  // Phase 3.7 round 4 (2026-04): page-level ISR (revalidate=3600) không bị
+  // bust bởi revalidateTag → admin toggle xong vẫn phải F5 mới thấy.
+  // revalidatePath với type="page" force re-render route cho mọi locale.
+  revalidatePath("/[locale]/doanh-nghiep", "page")
+  revalidatePath("/[locale]/landing", "page")
 
   return NextResponse.json(updated)
 }

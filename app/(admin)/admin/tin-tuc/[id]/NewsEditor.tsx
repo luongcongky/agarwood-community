@@ -9,7 +9,7 @@ import {
   type RichTextEditorHandle,
 } from "@/components/editor/RichTextEditor"
 
-import { slugify } from "@/lib/utils"
+import { slugify, cn } from "@/lib/utils"
 import {
   useAdminCanPublishNews,
   useAdminCurrentUser,
@@ -60,6 +60,8 @@ interface NewsData {
   coverImageUrl: string
   content: string
   category: NewsCategoryUI
+  // Phase 3.7 round 4 (2026-04): max 3 secondary categories.
+  secondaryCategories?: NewsCategoryUI[]
   template: NewsTemplateUI
   relatedCompanyId: string | null
   relatedProductId: string | null
@@ -96,6 +98,9 @@ export default function NewsEditorPage({
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState("")
   const [category, setCategory] = useState<NewsCategoryUI>("GENERAL")
+  // Phase 3.7 round 4 (2026-04): max 3 phân loại phụ — bài hiện thêm ở các
+  // list page khác (vd primary=BUSINESS + secondary=RESEARCH → /tin-tuc + /nghien-cuu).
+  const [secondaryCategories, setSecondaryCategories] = useState<NewsCategoryUI[]>([])
   const [template, setTemplate] = useState<NewsTemplateUI>("NORMAL")
   const [relatedCompany, setRelatedCompany] = useState<CompanySummary | null>(null)
   const [relatedProduct, setRelatedProduct] = useState<ProductSummary | null>(null)
@@ -353,6 +358,11 @@ export default function NewsEditorPage({
         setCoverImageUrl(news.coverImageUrl ?? "")
         setCoverPreview(news.coverImageUrl ?? "")
         setCategory(news.category ?? "GENERAL")
+        setSecondaryCategories(
+          Array.isArray(news.secondaryCategories)
+            ? (news.secondaryCategories as NewsCategoryUI[])
+            : [],
+        )
         setTemplate(news.template ?? "NORMAL")
         // Normalize gallery items: đảm bảo caption luôn là string (legacy
         // data có thể thiếu field) → tránh React warning "uncontrolled to
@@ -623,6 +633,7 @@ export default function NewsEditorPage({
       const body = productMode
         ? {
             category,
+            secondaryCategories,
             template,
             relatedCompanyId: relatedCompany?.id ?? null,
             productData,
@@ -648,6 +659,7 @@ export default function NewsEditorPage({
             content_zh: finalContent.zh || null,
             content_ar: finalContent.ar || null,
             category,
+            secondaryCategories,
             template,
             relatedCompanyId: relatedCompany?.id ?? null,
             // Tạo mới News PRODUCT → chỉ gửi `productData`, server tự tạo Product
@@ -996,17 +1008,17 @@ export default function NewsEditorPage({
               <h2 className="text-sm font-bold text-brand-900">Cài đặt xuất bản</h2>
 
               {/* Category — Phase 3 (2026-04): 5 loại + conditional fields.
-                  Sau khi tạo: KHÓA không cho đổi category — đổi loại sẽ phá
-                  vỡ ngữ nghĩa bài (vd PRODUCT đổi sang GENERAL → mất link
-                  product, slug có thể conflict, v.v.). Muốn đổi: xóa + tạo
-                  bài mới. */}
+                  Phase 3.7 round 4 (2026-04): customer cho đổi sau khi tạo
+                  (vd post nhầm GENERAL → BUSINESS). Đổi xong cần điền field
+                  required cho loại mới (DN/source) — server validate. Riêng
+                  PRODUCT chỉ giữ option khi bài cũ đã là PRODUCT (không cho
+                  switch sang PRODUCT vì mode đó cần productData từ /feed). */}
               <div>
                 <label className="block text-xs font-medium text-brand-800 mb-1">
                   Phân loại bài
                 </label>
                 <select
                   value={category}
-                  disabled={!isNew}
                   onChange={(e) => {
                     const c = e.target.value as NewsCategoryUI
                     setCategory(c)
@@ -1017,7 +1029,7 @@ export default function NewsEditorPage({
                     }
                     if (c !== "PRODUCT") setRelatedProduct(null)
                   }}
-                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300 disabled:bg-brand-50/50 disabled:text-brand-500 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-xs bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300"
                 >
                   <option value="GENERAL">Tin tức (/tin-tuc)</option>
                   <option value="RESEARCH">Nghiên cứu khoa học (/nghien-cuu)</option>
@@ -1033,9 +1045,61 @@ export default function NewsEditorPage({
                   <option value="LEGAL">Văn bản pháp lý (/privacy, /terms)</option>
                 </select>
                 <p className="mt-1 text-[11px] text-brand-400 leading-snug">
-                  {isNew
-                    ? "Tin doanh nghiệp cần chọn DN bên dưới. Tin báo chí ngoài cần điền nguồn báo + URL bài gốc."
-                    : "Phân loại đã chốt khi tạo bài, không đổi được. Muốn đổi: xóa và tạo bài mới."}
+                  Tin doanh nghiệp cần chọn DN bên dưới. Tin báo chí ngoài cần điền nguồn báo + URL bài gốc.
+                </p>
+              </div>
+
+              {/* Phân loại phụ — Phase 3.7 round 4 (2026-04). Max 3, không
+                  trùng primary. Bài có secondary sẽ xuất hiện ở list page
+                  của các category đó (vd /tin-tuc + /nghien-cuu); homepage
+                  giữ filter primary-only. */}
+              <div>
+                <label className="block text-xs font-medium text-brand-800 mb-1">
+                  Phân loại phụ <span className="text-[10px] text-brand-400 font-normal">(tối đa 3)</span>
+                </label>
+                <div className="space-y-1.5 rounded-lg border border-brand-200 bg-white p-3">
+                  {(
+                    [
+                      { value: "GENERAL" as const, label: "Tin tức (/tin-tuc)" },
+                      { value: "RESEARCH" as const, label: "Nghiên cứu (/nghien-cuu)" },
+                      { value: "BUSINESS" as const, label: "Tin doanh nghiệp" },
+                      { value: "EXTERNAL_NEWS" as const, label: "Tin báo chí ngoài (/tin-bao-chi)" },
+                      { value: "AGRICULTURE" as const, label: "Khuyến nông (/khuyen-nong)" },
+                    ] satisfies { value: NewsCategoryUI; label: string }[]
+                  )
+                    .filter((opt) => opt.value !== category) // exclude primary
+                    .map((opt) => {
+                      const checked = secondaryCategories.includes(opt.value)
+                      const disabled = !checked && secondaryCategories.length >= 3
+                      return (
+                        <label
+                          key={opt.value}
+                          className={cn(
+                            "flex items-center gap-2 text-xs cursor-pointer",
+                            disabled && "opacity-40 cursor-not-allowed",
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={(e) => {
+                              setSecondaryCategories((prev) =>
+                                e.target.checked
+                                  ? [...prev, opt.value].slice(0, 3)
+                                  : prev.filter((v) => v !== opt.value),
+                              )
+                            }}
+                            className="rounded border-brand-300 accent-brand-700"
+                          />
+                          <span className="text-brand-800">{opt.label}</span>
+                        </label>
+                      )
+                    })}
+                </div>
+                <p className="mt-1 text-[11px] text-brand-400 leading-snug">
+                  Bài có secondary sẽ xuất hiện ở các list page tương ứng. Trang
+                  chủ chỉ filter theo phân loại chính.
                 </p>
               </div>
 

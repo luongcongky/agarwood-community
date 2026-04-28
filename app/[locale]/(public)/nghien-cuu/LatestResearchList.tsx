@@ -16,7 +16,10 @@ type Props = {
   initialHasMore: boolean
   locale: Locale
   q?: string
-  /** Skip offset ban đầu — đếm từ bài hero/sub-hero đã render ở server. */
+  /** Tổng số News đã render trên server (hero + sub-hero + initial latest) —
+   *  dùng làm skip baseline khi load-more (loadMoreResearch fetch News only).
+   *  Phase 3.7 round 4 (2026-04): initialItems có thể chứa Post mixed in,
+   *  nhưng baseline này chỉ count News. */
   offsetStart: number
   pinnedLabel: string
   emptyLabel: string
@@ -45,6 +48,10 @@ export function LatestResearchList({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loading, setLoading] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // Snapshot initial length once → skip = offsetStart + (items.length - initialLen).
+  // initialItems có thể chứa Post mixed (sort theo date), nhưng load-more
+  // luôn fetch News only nên tail items kế tiếp đều là News.
+  const initialLenRef = useRef(initialItems.length)
 
   const l = <T extends Record<string, unknown>>(r: T, f: string) =>
     localize(r, f, locale) as string
@@ -54,7 +61,7 @@ export function LatestResearchList({
     setLoading(true)
     try {
       const result = await loadMoreResearch({
-        skip: offsetStart + items.length,
+        skip: offsetStart + (items.length - initialLenRef.current),
         take: PAGE_SIZE,
         q,
       })
@@ -93,16 +100,23 @@ export function LatestResearchList({
       <ul>
         {items.map((item, idx) => {
           const d = normalizeDate(item.publishedAt)
+          const isPost = item.source === "post"
+          const href = isPost ? `/bai-viet/${item.id}` : `/nghien-cuu/${item.slug}`
           return (
             <li
               key={item.id}
               className={cn("border-b border-neutral-200", idx === 0 && "border-t")}
             >
               <Link
-                href={`/nghien-cuu/${item.slug}`}
+                href={href}
                 className="group flex gap-4 py-5"
               >
                 <div className="relative aspect-4/3 w-32 shrink-0 overflow-hidden bg-neutral-100 sm:w-44">
+                  {isPost && (
+                    <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-md bg-amber-500/95 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                      📝 Bài hội viên
+                    </span>
+                  )}
                   {item.coverImageUrl ? (
                     <Image
                       src={cloudinaryResize(item.coverImageUrl, 320)}

@@ -30,11 +30,21 @@ export function NewsListItemCard({
   const title = localize(item as unknown as Record<string, unknown>, "title", locale) as string
   const excerpt = localize(item as unknown as Record<string, unknown>, "excerpt", locale) as string | null
   const d = normalizeDate(item.publishedAt)
+  // Phase 3.7 round 4 (2026-04): item có thể là Post curated thay vì News.
+  // Source="post" → href /bai-viet/[id] + badge "📝 Bài hội viên".
+  const isPost = item.source === "post"
+  const href = isPost ? `/bai-viet/${item.id}` : `/tin-tuc/${item.slug}`
 
   return (
     <li className={cn("border-b border-neutral-200", isFirst && "border-t")}>
-      <Link href={`/tin-tuc/${item.slug}`} className="group flex gap-4 py-5">
+      <Link href={href} className="group flex gap-4 py-5">
         <div className="relative aspect-4/3 w-32 shrink-0 overflow-hidden bg-neutral-100 sm:w-44">
+          {/* Badge "Bài hội viên" trên ảnh khi source=post */}
+          {isPost && (
+            <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-md bg-amber-500/95 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+              📝 Bài hội viên
+            </span>
+          )}
           {item.coverImageUrl ? (
             <Image
               src={cloudinaryResize(item.coverImageUrl, 320)}

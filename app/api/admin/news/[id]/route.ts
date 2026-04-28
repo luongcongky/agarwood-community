@@ -135,6 +135,31 @@ export async function PATCH(
                   : category === "AGRICULTURE"
                     ? "AGRICULTURE"
                     : "GENERAL"
+  // Phase 3.7 round 4 (2026-04): secondary categories — max 3, exclude primary.
+  if ("secondaryCategories" in body) {
+    const VALID_NEWS_CATEGORIES = [
+      "GENERAL", "RESEARCH", "LEGAL", "SPONSORED_PRODUCT",
+      "BUSINESS", "PRODUCT", "EXTERNAL_NEWS", "AGRICULTURE",
+    ]
+    const raw = Array.isArray(body.secondaryCategories) ? body.secondaryCategories : []
+    // Determine effective primary (newly set or existing). Caller có thể PATCH
+    // chỉ secondaryCategories mà không touch category — query DB để lấy primary
+    // hiện tại để loại trừ. Để đơn giản: dùng data.category nếu set, else
+    // không exclude (tin cậy client).
+    const effectivePrimary =
+      typeof data.category === "string"
+        ? data.category
+        : null
+    data.secondaryCategories = [
+      ...new Set(
+        raw
+          .filter((c: unknown): c is string =>
+            typeof c === "string" && VALID_NEWS_CATEGORIES.includes(c),
+          )
+          .filter((c: string) => effectivePrimary === null || c !== effectivePrimary),
+      ),
+    ].slice(0, 3)
+  }
   if (body.template !== undefined) {
     data.template =
       body.template === "PHOTO"
@@ -219,7 +244,62 @@ export async function PATCH(
   if (!current) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
+  // Defensive (Phase 3.7 round 4, 2026-04): bài public mà publishedAt null
+  // sẽ tụt cuối list public + biến mất khỏi top 6 section trang chủ (sort
+  // by date). Auto-fill now() khi state cuối là isPublished=true mà chưa
+  // có ngày — covers both "vừa flip publish" và "đã true sẵn nhưng client
+  // không gửi publishedAt do React batching ở editor".
+  const finalIsPublished = "isPublished" in data ? data.isPublished : current.isPublished
+  const finalPublishedAt = "publishedAt" in data ? data.publishedAt : current.publishedAt
+  if (finalIsPublished === true && !finalPublishedAt) {
+    data.publishedAt = new Date()
+  }
   const merged = { ...current, ...data } as typeof current
+
+  // Phase 3.7 round 4 (2026-04): admin được đổi primary category sau khi
+  // tạo (vd post nhầm GENERAL → BUSINESS). Validate required field cho
+  // loại mới — mirror POST route. So sánh với `merged` để cover cả case
+  // chỉ patch category mà không gửi relatedCompanyId/source* (giữ giá trị
+  // cũ), và case patch cả 2.
+  if (merged.category === "BUSINESS" || merged.category === "PRODUCT") {
+    if (!merged.relatedCompanyId) {
+      return NextResponse.json(
+        {
+          error: `Tin ${merged.category === "BUSINESS" ? "doanh nghiệp" : "sản phẩm"} cần chọn doanh nghiệp.`,
+        },
+        { status: 400 },
+      )
+    }
+  }
+  if (merged.category === "EXTERNAL_NEWS") {
+    const srcName = merged.sourceName?.trim() ?? ""
+    const srcUrl = merged.sourceUrl?.trim() ?? ""
+    if (!srcName) {
+      return NextResponse.json(
+        { error: "Tin báo chí ngoài cần điền tên báo nguồn." },
+        { status: 400 },
+      )
+    }
+    if (!/^https?:\/\/.+/i.test(srcUrl)) {
+      return NextResponse.json(
+        { error: "URL bài gốc phải bắt đầu bằng http:// hoặc https://" },
+        { status: 400 },
+      )
+    }
+  }
+
+  // Defensive: nếu admin đổi primary mà secondary cũ chứa loại đó thì strip.
+  // Ban đầu secondaryCategories build dùng `data.category` để exclude — chỉ
+  // hoạt động khi caller patch cả 2. Khi chỉ patch `category`, secondary cũ
+  // có thể trùng → loại trừ tại đây để giữ invariant secondary ⊄ primary.
+  if (
+    Array.isArray(merged.secondaryCategories) &&
+    merged.secondaryCategories.includes(merged.category)
+  ) {
+    data.secondaryCategories = merged.secondaryCategories.filter(
+      (c) => c !== merged.category,
+    )
+  }
   // Dùng cache (tag "news:titles"), loại trừ chính bài đang edit.
   const previousTitles = await getPreviousTitles(id)
   const translatedLocaleCount = [merged.title_en, merged.title_zh, merged.title_ar].filter(

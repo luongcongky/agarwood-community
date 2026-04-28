@@ -92,10 +92,14 @@ export async function POST(
         })
       }
 
-      // 6. Update authorPriority on all user's posts
+      // 6. Update authorPriority on all user's posts.
+      // Phase 3.7 round 4 (2026-04): dùng `newPriority` (displayPriority
+      // style, Math.floor(/1M)) — match POST /api/posts. Trước đây ghi
+      // `newContrib` raw VND → mismatch sort: bài cũ priority=50_000_000,
+      // bài mới priority=50 → bài mới của user contribution cao bị buried.
       await tx.post.updateMany({
         where: { authorId: payment.userId },
-        data: { authorPriority: newContrib },
+        data: { authorPriority: newPriority },
       })
     })
 

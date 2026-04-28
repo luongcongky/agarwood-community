@@ -210,6 +210,31 @@ export async function POST(req: Request) {
                   ? "AGRICULTURE"
                   : "GENERAL"
 
+  // Phase 3.7 round 4 (2026-04): secondary categories — max 3, exclude
+  // primary, mỗi value phải là NewsCategory hợp lệ.
+  const VALID_NEWS_CATEGORIES = [
+    "GENERAL",
+    "RESEARCH",
+    "LEGAL",
+    "SPONSORED_PRODUCT",
+    "BUSINESS",
+    "PRODUCT",
+    "EXTERNAL_NEWS",
+    "AGRICULTURE",
+  ] as const
+  const rawSecondary = Array.isArray(body.secondaryCategories)
+    ? body.secondaryCategories
+    : []
+  const validSecondaryCategories = [
+    ...new Set(
+      rawSecondary
+        .filter((c: unknown): c is string =>
+          typeof c === "string" && (VALID_NEWS_CATEGORIES as readonly string[]).includes(c),
+        )
+        .filter((c: string) => c !== validCategory),
+    ),
+  ].slice(0, 3) as (typeof VALID_NEWS_CATEGORIES)[number][]
+
   // Validate template + Phase 3 fields. PHOTO/VIDEO yêu cầu gallery có ít
   // nhất 1 entry; BUSINESS yêu cầu relatedCompanyId; PRODUCT yêu cầu cả 2.
   const validTemplate =
@@ -427,6 +452,15 @@ export async function POST(req: Request) {
   })
 
   const finalIsPublished = canPublish ? (isPublished ?? false) : false
+  // Defensive (Phase 3.7 round 4, 2026-04): publish lần đầu mà client không
+  // gửi publishedAt (vd React state batching ở editor làm onClick auto-fill
+  // chưa kịp commit khi onSubmit chạy) → auto-set now() để bài có ngày hợp
+  // lệ. Section trang chủ + public list sort by date — null = tụt cuối.
+  const finalPublishedAt = publishedAt
+    ? new Date(publishedAt)
+    : finalIsPublished
+      ? new Date()
+      : null
 
   // Atomic create: nếu Product mới được tạo (PRODUCT + productData), gắn vào
   // News trong cùng transaction để tránh orphan khi News fail unique slug.
@@ -467,6 +501,7 @@ export async function POST(req: Request) {
         content_ar: derivedContentAr ? sanitizeArticleHtml(derivedContentAr) : null,
         coverImageUrl: derivedCoverImageUrl ?? null,
         category: validCategory,
+        secondaryCategories: validSecondaryCategories,
         template: validTemplate,
         relatedCompanyId: validCategory === "BUSINESS" || validCategory === "PRODUCT"
           ? (relatedCompanyId as string)
@@ -475,7 +510,7 @@ export async function POST(req: Request) {
         gallery: validTemplate !== "NORMAL" ? galleryArray : undefined,
         isPublished: finalIsPublished,
         isPinned: isPinned ?? false,
-        publishedAt: publishedAt ? new Date(publishedAt) : null,
+        publishedAt: finalPublishedAt,
         authorId: finalAuthorId,
         // SEO
         seoTitle: seoTitle || null,

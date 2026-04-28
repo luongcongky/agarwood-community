@@ -19,6 +19,9 @@ const POST_CARD_SELECT = {
   title: true,
   content: true,
   imageUrls: true,
+  // Phase 3.7 round 4 (2026-04): coverImageUrl explicit thumbnail 16:9.
+  // Fallback ở UI: coverImageUrl > imageUrls[0] > extract from content > placeholder.
+  coverImageUrl: true,
   category: true,
   isPremium: true,
   authorPriority: true,
@@ -33,6 +36,8 @@ const POST_CARD_SELECT = {
       company: { select: { name: true, slug: true } },
     },
   },
+  // certStatus để áp feed-sort algo cho homepage Tin SP section.
+  product: { select: { certStatus: true } },
 } as const
 
 // ── Section 1: Tin tức Hội ────────────────────────────────────────────────────
@@ -312,16 +317,20 @@ const getMergedFeedCached = unstable_cache(
       prisma.post.findMany({
         where: {
           status: "PUBLISHED",
-          // VIP mặc định; admin promote override.
-          OR: [{ isPremium: true }, { isPromoted: true }],
+          // VIP/INFINITE mặc định (isPremium); admin promote override
+          // (isPromoted); ADMIN-authored bao gồm vì admin post = curated
+          // content. Phase 3.7 round 4 (2026-04).
+          OR: [
+            { isPremium: true },
+            { isPromoted: true },
+            { author: { role: "ADMIN" } },
+          ],
           category: postCategory,
         },
-        orderBy: [
-          { isPromoted: "desc" },
-          { authorPriority: "desc" },
-          { createdAt: "desc" },
-        ],
-        take: take * 2,
+        // Pool selection: orderBy createdAt desc + overfetch để feed-sort
+        // ở merge step có đủ candidate.
+        orderBy: { createdAt: "desc" },
+        take: take * 4, // overfetch nhiều hơn để comparator JS có dải candidate
         select: POST_CARD_SELECT,
       }),
       prisma.news.findMany({
@@ -331,29 +340,49 @@ const getMergedFeedCached = unstable_cache(
           category: newsCategory,
         },
         orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
-        take: take * 2,
+        take: take * 4,
         select: NEWS_CARD_SELECT,
       }),
     ])
 
-    const postItems: MergedFeedItem[] = posts.map((p) => ({
+    // Phase 3.7 round 4 (2026-04): apply feed-sort algo (by-day VN → cert
+    // PRODUCT only → priority → date) cho merged list để homepage Tin SP/DN
+    // section consistent với /vi/feed?category. News được treat như post
+    // không có cert + priority=0 (thua cert/high-priority products cùng ngày).
+    type Sortable = MergedFeedItem & {
+      _meta: { dateMs: number; cert: boolean; priority: number }
+    }
+
+    const VN_TZ_OFFSET_MS = 7 * 60 * 60 * 1000
+    const startOfDayVN = (ms: number) => {
+      const vnLocal = ms + VN_TZ_OFFSET_MS
+      return Math.floor(vnLocal / 86400000) * 86400000 - VN_TZ_OFFSET_MS
+    }
+
+    const postItems: Sortable[] = posts.map((p) => ({
       id: `post-${p.id}`,
       href: `/bai-viet/${p.id}`,
       source: "post",
       title: p.title || stripHtml(p.content).slice(0, 80),
-      // Post chưa có dịch i18n — localize() sẽ fallback về title.
       title_en: null,
       title_zh: null,
       title_ar: null,
-      coverUrl: p.imageUrls?.[0] || extractFirstImage(p.content),
+      // Fallback chain: coverImageUrl explicit > imageUrls[0] > first
+      // image extracted from content. Nếu cả 3 null, UI fallback placeholder.
+      coverUrl: p.coverImageUrl || p.imageUrls?.[0] || extractFirstImage(p.content),
       date: p.createdAt,
       excerpt: stripHtml(p.content).slice(0, 200) || null,
       excerpt_en: null,
       excerpt_zh: null,
       excerpt_ar: null,
+      _meta: {
+        dateMs: p.createdAt.getTime(),
+        cert: p.product?.certStatus === "APPROVED",
+        priority: p.authorPriority,
+      },
     }))
 
-    const newsItems: MergedFeedItem[] = news.map((n) => ({
+    const newsItems: Sortable[] = news.map((n) => ({
       id: `news-${n.id}`,
       href: newsHref(n.category, n.slug),
       source: "news",
@@ -367,15 +396,37 @@ const getMergedFeedCached = unstable_cache(
       excerpt_en: n.excerpt_en,
       excerpt_zh: n.excerpt_zh,
       excerpt_ar: n.excerpt_ar,
+      _meta: {
+        dateMs: n.publishedAt ? n.publishedAt.getTime() : 0,
+        cert: false, // News không có concept cert
+        priority: 0, // News không có authorPriority — thua mọi VIP post tier
+      },
     }))
 
+    const includeCertTier = postCategory === "PRODUCT"
     return [...postItems, ...newsItems]
       .sort((a, b) => {
-        const da = a.date ? new Date(a.date).getTime() : 0
-        const db = b.date ? new Date(b.date).getTime() : 0
-        return db - da
+        // Tier 1: day desc (VN tz)
+        const dayA = startOfDayVN(a._meta.dateMs)
+        const dayB = startOfDayVN(b._meta.dateMs)
+        if (dayA !== dayB) return dayB - dayA
+        // Tier 2 (PRODUCT only): cert APPROVED first
+        if (includeCertTier && a._meta.cert !== b._meta.cert) {
+          return a._meta.cert ? -1 : 1
+        }
+        // Tier 3: priority desc
+        if (a._meta.priority !== b._meta.priority) {
+          return b._meta.priority - a._meta.priority
+        }
+        // Tier 4: date desc tie-break
+        return b._meta.dateMs - a._meta.dateMs
       })
       .slice(0, take)
+      // Strip _meta khỏi return value (chỉ internal sort use)
+      .map(({ _meta, ...item }) => {
+        void _meta
+        return item
+      })
   },
   ["homepage_merged_feed"],
   { revalidate: 300, tags: ["homepage", "posts", "news"] },

@@ -14,6 +14,7 @@ import { Section } from "@/components/features/homepage/Section"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
 import { SidebarList } from "@/components/features/article/SidebarList"
 import { LatestAgricultureList } from "./LatestAgricultureList"
+import { mergeByDateDesc } from "../_lib/post-news-merge"
 
 const AGRICULTURE_LIST_SELECT = {
   id: true,
@@ -33,7 +34,13 @@ const PAGE_META_DESC =
 const getDefaultAgricultureList = unstable_cache(
   async (take: number) =>
     prisma.news.findMany({
-      where: { isPublished: true, category: "AGRICULTURE" },
+      where: {
+        isPublished: true,
+        OR: [
+          { category: "AGRICULTURE" },
+          { secondaryCategories: { has: "AGRICULTURE" } },
+        ],
+      },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take,
       select: AGRICULTURE_LIST_SELECT,
@@ -45,7 +52,13 @@ const getDefaultAgricultureList = unstable_cache(
 const getSidebarFeaturedAgriculture = unstable_cache(
   async () =>
     prisma.news.findMany({
-      where: { isPublished: true, category: "AGRICULTURE" },
+      where: {
+        isPublished: true,
+        OR: [
+          { category: "AGRICULTURE" },
+          { secondaryCategories: { has: "AGRICULTURE" } },
+        ],
+      },
       orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }],
       take: 6,
       select: {
@@ -121,13 +134,24 @@ export default async function AgriculturePage({
   const initialTake = isSearch ? LIST_PAGE_SIZE + 1 : HERO_COUNT + LIST_PAGE_SIZE + 1
   const where = {
     isPublished: true,
-    category: "AGRICULTURE" as const,
-    ...(q && {
-      OR: [
-        { title: { contains: q, mode: "insensitive" as const } },
-        { excerpt: { contains: q, mode: "insensitive" as const } },
-      ],
-    }),
+    AND: [
+      {
+        OR: [
+          { category: "AGRICULTURE" as const },
+          { secondaryCategories: { has: "AGRICULTURE" as const } },
+        ],
+      },
+      ...(q
+        ? [
+            {
+              OR: [
+                { title: { contains: q, mode: "insensitive" as const } },
+                { excerpt: { contains: q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   }
   const list = isSearch
     ? await prisma.news.findMany({
@@ -138,11 +162,34 @@ export default async function AgriculturePage({
       })
     : await getDefaultAgricultureList(initialTake)
 
+  // Phase 3.7 round 4 (2026-04): Post curated by admin, newsCategories has AGRICULTURE.
+  const memberPosts = isSearch
+    ? []
+    : await prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          newsCategories: { has: "AGRICULTURE" },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          imageUrls: true,
+          coverImageUrl: true,
+          createdAt: true,
+          author: { select: { name: true, avatarUrl: true } },
+        },
+      })
+
   const showHero = !isSearch
   const heroItem = showHero && list[0] ? list[0] : null
   const subHeroItems = showHero ? list.slice(1, HERO_COUNT) : []
   const heroConsumed = showHero ? HERO_COUNT : 0
-  const initialListItems = list.slice(heroConsumed, heroConsumed + LIST_PAGE_SIZE)
+  // Phase 3.7 round 4 (2026-04): merge Posts vào latest list theo date desc.
+  const newsForLatest = list.slice(heroConsumed, heroConsumed + LIST_PAGE_SIZE)
+  const initialListItems = mergeByDateDesc(newsForLatest, memberPosts)
   const initialHasMore = list.length > heroConsumed + LIST_PAGE_SIZE
 
   const listingJsonLd = {
@@ -297,7 +344,7 @@ export default async function AgriculturePage({
             initialHasMore={initialHasMore}
             locale={locale}
             q={q || undefined}
-            offsetStart={heroConsumed}
+            offsetStart={heroConsumed + newsForLatest.length}
             pinnedLabel={tNews("pinned")}
             emptyLabel={isSearch ? "Không tìm thấy bài khuyến nông phù hợp" : "Chưa có bài khuyến nông nào"}
             loadingLabel="Đang tải thêm…"

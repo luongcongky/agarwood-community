@@ -19,6 +19,9 @@ export type ExternalNewsListItem = {
   coverImageUrl: string | null
   isPinned: boolean
   publishedAt: Date | null
+  // Phase 3.7 round 4 (2026-04): "post" → bài feed admin tag EXTERNAL_NEWS,
+  // render badge + href /bai-viet/[id]. Default → "news".
+  source?: "news" | "post"
 }
 
 export type LoadMoreResult = {
@@ -43,13 +46,24 @@ export async function loadMoreExternalNews(params: {
 }): Promise<LoadMoreResult> {
   const where = {
     isPublished: true,
-    category: "EXTERNAL_NEWS" as const,
-    ...(params.q && {
-      OR: [
-        { title: { contains: params.q, mode: "insensitive" as const } },
-        { excerpt: { contains: params.q, mode: "insensitive" as const } },
-      ],
-    }),
+    AND: [
+      {
+        OR: [
+          { category: "EXTERNAL_NEWS" as const },
+          { secondaryCategories: { has: "EXTERNAL_NEWS" as const } },
+        ],
+      },
+      ...(params.q
+        ? [
+            {
+              OR: [
+                { title: { contains: params.q, mode: "insensitive" as const } },
+                { excerpt: { contains: params.q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   }
   const items = await prisma.news.findMany({
     where,

@@ -16,6 +16,10 @@ export type ResearchListItem = {
   coverImageUrl: string | null
   isPinned: boolean
   publishedAt: Date | null
+  // Phase 3.7 round 4 (2026-04): khi source="post", item là feed Post được
+  // admin tag vào RESEARCH category. Render badge "📝 Bài hội viên" + href
+  // /bai-viet/[id] thay vì /nghien-cuu/[slug]. Optional, default → "news".
+  source?: "news" | "post"
 }
 
 export type LoadMoreResult = {
@@ -45,13 +49,25 @@ export async function loadMoreResearch(params: {
 }): Promise<LoadMoreResult> {
   const where = {
     isPublished: true,
-    category: "RESEARCH" as const,
-    ...(params.q && {
-      OR: [
-        { title: { contains: params.q, mode: "insensitive" as const } },
-        { excerpt: { contains: params.q, mode: "insensitive" as const } },
-      ],
-    }),
+    AND: [
+      // Phase 3.7 round 4 (2026-04): primary OR secondary match.
+      {
+        OR: [
+          { category: "RESEARCH" as const },
+          { secondaryCategories: { has: "RESEARCH" as const } },
+        ],
+      },
+      ...(params.q
+        ? [
+            {
+              OR: [
+                { title: { contains: params.q, mode: "insensitive" as const } },
+                { excerpt: { contains: params.q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   }
   const items = await prisma.news.findMany({
     where,

@@ -7,19 +7,34 @@ import { prisma } from "@/lib/prisma"
 /**
  * PATCH /api/admin/posts/[id]/promote
  *
- * Admin chủ động toggle `isPromoted` cho 1 bài feed — đẩy lên trang chủ
- * (hoặc gỡ xuống). Không cần qua promotion-request flow.
+ * Admin "Đẩy lên trang chủ" — Phase 3.7 round 4 (2026-04) workflow:
+ *  1. Tag bài vào 1-3 News categories (newsCategories[]) → bài xuất hiện
+ *     trong list page tương ứng (/tin-tuc, /nghien-cuu, ...).
+ *  2. Optional: pin top homepage MemberRail (isPromoted boolean).
  *
- * Body: { promote: boolean } (optional — nếu thiếu thì toggle state hiện tại)
+ * Body: {
+ *   newsCategories?: NewsCategory[]  // max 3, validate enum
+ *   isPromoted?: boolean              // optional pin top
+ * }
  *
- * Side effects khi promote=true:
- *  - Post.isPromoted = true
- *  - Nếu đang có request PENDING cho bài này → auto-mark APPROVED với reviewNote
- *    "Promoted by admin" (tránh request mồ côi, inbox sạch).
- *  - Revalidate homepage + feed (bài nhảy lên).
+ * Backward-compat: body cũ `{ promote: boolean }` vẫn được hiểu (chỉ toggle
+ * isPromoted, không touch newsCategories).
+ *
+ * Side effects khi isPromoted=true:
+ *  - Auto-approve PostPromotionRequest PENDING (tránh request mồ côi).
+ *  - Revalidate homepage + feed.
+ *
+ * Side effects khi newsCategories thay đổi:
+ *  - Revalidate list pages tương ứng (/tin-tuc, /nghien-cuu, ...).
  *
  * Chỉ ADMIN. INFINITE read-only không đụng được.
  */
+const VALID_NEWS_CATEGORIES = [
+  "GENERAL", "RESEARCH", "LEGAL", "SPONSORED_PRODUCT",
+  "BUSINESS", "PRODUCT", "EXTERNAL_NEWS", "AGRICULTURE",
+] as const
+type NewsCat = (typeof VALID_NEWS_CATEGORIES)[number]
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -34,11 +49,15 @@ export async function PATCH(
   }
 
   const { id } = await params
-  const body = (await req.json().catch(() => ({}))) as { promote?: boolean }
+  const body = (await req.json().catch(() => ({}))) as {
+    promote?: boolean
+    isPromoted?: boolean
+    newsCategories?: string[]
+  }
 
   const post = await prisma.post.findUnique({
     where: { id },
-    select: { id: true, isPromoted: true, status: true },
+    select: { id: true, isPromoted: true, status: true, newsCategories: true },
   })
   if (!post) {
     return NextResponse.json({ error: "Không tìm thấy bài" }, { status: 404 })
@@ -50,17 +69,42 @@ export async function PATCH(
     )
   }
 
-  const newState = typeof body.promote === "boolean" ? body.promote : !post.isPromoted
+  // Resolve isPromoted target: prefer `isPromoted` if provided, fallback
+  // `promote` (backward-compat), else keep current.
+  let newPromoted: boolean = post.isPromoted
+  if (typeof body.isPromoted === "boolean") {
+    newPromoted = body.isPromoted
+  } else if (typeof body.promote === "boolean") {
+    newPromoted = body.promote
+  }
+
+  // Resolve newsCategories: validate + dedupe + max 3. Nếu body không gửi
+  // field, giữ nguyên giá trị hiện tại.
+  let newCategories: NewsCat[] | undefined
+  if (Array.isArray(body.newsCategories)) {
+    newCategories = [
+      ...new Set(
+        body.newsCategories.filter(
+          (c: unknown): c is NewsCat =>
+            typeof c === "string" &&
+            (VALID_NEWS_CATEGORIES as readonly string[]).includes(c),
+        ),
+      ),
+    ].slice(0, 3)
+  }
+
   const now = new Date()
 
-  // Nếu đang promote và có request PENDING → auto-approve để tránh mồ côi.
-  // Dùng transaction để post.update + request.updateMany atomic.
+  // Atomic: post.update + request.updateMany
   await prisma.$transaction(async (tx) => {
     await tx.post.update({
       where: { id },
-      data: { isPromoted: newState },
+      data: {
+        isPromoted: newPromoted,
+        ...(newCategories !== undefined ? { newsCategories: newCategories } : {}),
+      },
     })
-    if (newState) {
+    if (newPromoted && !post.isPromoted) {
       await tx.postPromotionRequest.updateMany({
         where: { postId: id, status: "PENDING" },
         data: {
@@ -73,12 +117,19 @@ export async function PATCH(
     }
   })
 
-  // Homepage query dùng isPromoted → phải revalidate. Feed cũng vì feed order
-  // dùng isPromoted ở top.
+  // Revalidate cache. Tags + paths đủ cover homepage + feed + list pages.
   revalidateTag("homepage", "max")
   revalidateTag("posts", "max")
+  revalidateTag("news", "max") // list pages query Post + News merged → cùng tag
   revalidatePath("/[locale]", "layout")
   revalidatePath("/[locale]/feed", "page")
+  revalidatePath("/[locale]/tin-tuc", "page")
+  revalidatePath("/[locale]/nghien-cuu", "page")
+  revalidatePath("/[locale]/khuyen-nong", "page")
+  revalidatePath("/[locale]/tin-bao-chi", "page")
 
-  return NextResponse.json({ isPromoted: newState })
+  return NextResponse.json({
+    isPromoted: newPromoted,
+    newsCategories: newCategories ?? post.newsCategories,
+  })
 }

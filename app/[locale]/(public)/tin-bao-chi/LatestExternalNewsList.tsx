@@ -41,6 +41,9 @@ export function LatestExternalNewsList({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loading, setLoading] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // Snapshot initial length — initialItems có thể chứa Post mixed (sort theo
+  // date), load-more luôn fetch News only theo skip baseline = offsetStart.
+  const initialLenRef = useRef(initialItems.length)
 
   const l = <T extends Record<string, unknown>>(r: T, f: string) =>
     localize(r, f, locale) as string
@@ -50,7 +53,7 @@ export function LatestExternalNewsList({
     setLoading(true)
     try {
       const result = await loadMoreExternalNews({
-        skip: offsetStart + items.length,
+        skip: offsetStart + (items.length - initialLenRef.current),
         take: PAGE_SIZE,
         q,
       })
@@ -89,13 +92,20 @@ export function LatestExternalNewsList({
       <ul>
         {items.map((item, idx) => {
           const d = normalizeDate(item.publishedAt)
+          const isPost = item.source === "post"
+          const href = isPost ? `/bai-viet/${item.id}` : `/tin-bao-chi/${item.slug}`
           return (
             <li
               key={item.id}
               className={cn("border-b border-neutral-200", idx === 0 && "border-t")}
             >
-              <Link href={`/tin-bao-chi/${item.slug}`} className="group flex gap-4 py-5">
+              <Link href={href} className="group flex gap-4 py-5">
                 <div className="relative aspect-4/3 w-32 shrink-0 overflow-hidden bg-neutral-100 sm:w-44">
+                  {isPost && (
+                    <span className="absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-md bg-amber-500/95 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                      📝 Bài hội viên
+                    </span>
+                  )}
                   {item.coverImageUrl ? (
                     <Image
                       src={cloudinaryResize(item.coverImageUrl, 320)}

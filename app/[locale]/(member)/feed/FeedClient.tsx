@@ -14,6 +14,22 @@ const FeedLightbox = dynamic(
   { ssr: false },
 )
 
+// Promote modal — Phase 3.7 round 4 (2026-04). Admin click "Đẩy lên trang
+// chủ" mở modal categorize + pin. Lazy load vì chỉ admin dùng.
+const PromotePostModal = dynamic(
+  () =>
+    import("@/components/features/admin/PromotePostModal").then(
+      (m) => m.PromotePostModal,
+    ),
+  { ssr: false },
+)
+type NewsCategoryValue =
+  | "GENERAL"
+  | "RESEARCH"
+  | "BUSINESS"
+  | "EXTERNAL_NEWS"
+  | "AGRICULTURE"
+
 // InlinePostCreator ~500 dòng state + upload logic, chỉ VIP/ADMIN dùng khi
 // muốn đăng bài. Dynamic import + ssr:false để defer parse cost tới sau khi
 // feed đã LCP, giảm TBT ~100-150ms trên mobile Slow 4G. Loading state là
@@ -76,6 +92,7 @@ export type Post = {
   category?: string
   isPremium: boolean
   isPromoted: boolean
+  newsCategories?: string[]
   authorPriority: number
   viewCount: number
   reportCount: number
@@ -106,7 +123,7 @@ export type Post = {
   pendingError?: string | null
 }
 
-export type FilterKey = "NEWS" | "PRODUCT" | "MINE"
+export type FilterKey = "NEWS" | "PRODUCT" | "MINE" | "PINNED"
 /** Filter "MINE" không có composer (không biết tạo category nào) — dùng
  *  type này để narrow prop `mode` cho InlinePostCreator. */
 export type ComposerMode = Exclude<FilterKey, "MINE">
@@ -117,6 +134,8 @@ function buildFeedUrl(filter: FilterKey, cursor?: string | null) {
   const params = new URLSearchParams()
   if (filter === "MINE") {
     params.set("mine", "1")
+  } else if (filter === "PINNED") {
+    params.set("pinned", "1")
   } else {
     params.set("category", filter)
   }
@@ -157,7 +176,7 @@ type FeedClientProps = {
   /** Tab được chọn khi mount — match với filter đã dùng ở server-side query.
    *  Vào thẳng /feed → "NEWS"; từ section "Sản phẩm hội viên" trang chủ
    *  (`/feed?category=PRODUCT`) → "PRODUCT". */
-  initialFilter?: "NEWS" | "PRODUCT"
+  initialFilter?: FilterKey
   currentUserId: string | null
   currentUserRole: string | null
   currentUserName: string | null
@@ -894,11 +913,17 @@ export function FeedClient({
   const t = useTranslations("feed")
 
   // MINE chỉ hiện khi đã login — guest không có "bài của tôi".
+  // PINNED chỉ hiện cho ADMIN — để xem + bỏ ghim các bài đang isPromoted.
+  // Phase 3.7 round 4 (2026-04).
+  const isAdmin = currentUserRole === "ADMIN"
   const FILTERS: { key: FilterKey; label: string }[] = [
     { key: "NEWS", label: t("filterNews") },
     { key: "PRODUCT", label: t("filterProduct") },
     ...(currentUserId
       ? ([{ key: "MINE" as const, label: t("filterMine") }])
+      : []),
+    ...(isAdmin
+      ? ([{ key: "PINNED" as const, label: "📌 Đang ghim" }])
       : []),
   ]
 
@@ -1079,35 +1104,18 @@ export function FeedClient({
     } catch { /* */ }
   }
 
-  /** Admin: toggle isPromoted (đẩy bài lên / gỡ khỏi trang chủ). */
-  async function handlePromote(postId: string) {
+  /** Admin: open modal "Đẩy lên trang chủ" — categorize + pin combined.
+   *  Phase 3.7 round 4 (2026-04). Single confirm → modal flow; modal handles
+   *  API call + result update. */
+  function handlePromote(postId: string) {
     const post = posts.find((p) => p.id === postId)
     if (!post) return
-    const promote = !post.isPromoted
-    const confirmMsg = promote
-      ? t("promoteConfirm")
-      : t("unpromoteConfirm")
-    if (!window.confirm(confirmMsg)) return
-    try {
-      const res = await fetch(`/api/admin/posts/${postId}/promote`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ promote }),
-      })
-      const data = (await res.json()) as { isPromoted?: boolean; error?: string }
-      if (!res.ok) {
-        alert(data.error ?? t("genericError"))
-        return
-      }
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, isPromoted: data.isPromoted ?? promote } : p,
-        ),
-      )
-    } catch {
-      alert(t("genericError"))
-    }
+    setPromoteModalPostId(postId)
   }
+  const [promoteModalPostId, setPromoteModalPostId] = useState<string | null>(null)
+  const promoteModalPost = promoteModalPostId
+    ? posts.find((p) => p.id === promoteModalPostId)
+    : null
 
   /** Owner: xin admin đẩy bài lên trang chủ. */
   async function handleRequestPromotion(postId: string) {
@@ -1344,6 +1352,33 @@ export function FeedClient({
         {sidebarBannersSlot}
       </aside>
     </div>
+
+    {/* Promote modal — render khi admin click "Đẩy lên trang chủ" trên menu post. */}
+    {promoteModalPost && (
+      <PromotePostModal
+        postId={promoteModalPost.id}
+        postTitle={promoteModalPost.title}
+        initialCategories={
+          (promoteModalPost.newsCategories ?? []) as NewsCategoryValue[]
+        }
+        initialPromoted={promoteModalPost.isPromoted}
+        onClose={() => setPromoteModalPostId(null)}
+        onSuccess={(next) => {
+          setPosts((prev) =>
+            prev.map((p) =>
+              p.id === promoteModalPost.id
+                ? {
+                    ...p,
+                    isPromoted: next.isPromoted,
+                    newsCategories: next.newsCategories,
+                  }
+                : p,
+            ),
+          )
+          setPromoteModalPostId(null)
+        }}
+      />
+    )}
     </div>
   )
 }

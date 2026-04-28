@@ -100,9 +100,11 @@ export async function POST(req: Request) {
       })
     }
 
+    // Phase 3.7 round 4 (2026-04): dùng `newPriority` (displayPriority
+    // style) thay vì `newContrib` raw VND — match POST /api/posts logic.
     await tx.post.updateMany({
       where: { authorId: userId },
-      data: { authorPriority: newContrib },
+      data: { authorPriority: newPriority },
     })
 
     return record

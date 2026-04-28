@@ -29,7 +29,14 @@ type Props = { params: Promise<{ locale: Locale; slug: string }> }
 /** React.cache dedupe giữa generateMetadata và main page — 1 query/request. */
 const getResearchBySlug = cache(async (slug: string) =>
   prisma.news.findFirst({
-    where: { slug, isPublished: true, category: "RESEARCH" },
+    where: {
+      slug,
+      isPublished: true,
+      OR: [
+        { category: "RESEARCH" },
+        { secondaryCategories: { has: "RESEARCH" } },
+      ],
+    },
     select: {
       id: true,
       slug: true,
@@ -102,7 +109,14 @@ export default async function ResearchDetailPage({ params }: Props) {
     const normalizedSlug = slugify(slug)
     if (normalizedSlug !== slug) {
       const redirectedNews = await prisma.news.findFirst({
-        where: { slug: normalizedSlug, isPublished: true, category: "RESEARCH" },
+        where: {
+          slug: normalizedSlug,
+          isPublished: true,
+          OR: [
+            { category: "RESEARCH" },
+            { secondaryCategories: { has: "RESEARCH" } },
+          ],
+        },
       })
       if (redirectedNews) {
         redirect(`/nghien-cuu/${normalizedSlug}`)
@@ -126,16 +140,25 @@ export default async function ResearchDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "RESEARCH",
         slug: { not: slug },
-        ...(news.focusKeyword
-          ? {
-              OR: [
-                { focusKeyword: news.focusKeyword },
-                { secondaryKeywords: { has: news.focusKeyword } },
-              ],
-            }
-          : {}),
+        AND: [
+          {
+            OR: [
+              { category: "RESEARCH" },
+              { secondaryCategories: { has: "RESEARCH" } },
+            ],
+          },
+          ...(news.focusKeyword
+            ? [
+                {
+                  OR: [
+                    { focusKeyword: news.focusKeyword },
+                    { secondaryKeywords: { has: news.focusKeyword } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3,
@@ -159,8 +182,11 @@ export default async function ResearchDetailPage({ params }: Props) {
       where: {
         isPublished: true,
         isPinned: true,
-        category: "RESEARCH",
         slug: { not: slug },
+        OR: [
+          { category: "RESEARCH" },
+          { secondaryCategories: { has: "RESEARCH" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 5,
@@ -169,8 +195,11 @@ export default async function ResearchDetailPage({ params }: Props) {
     prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "RESEARCH",
         slug: { not: slug },
+        OR: [
+          { category: "RESEARCH" },
+          { secondaryCategories: { has: "RESEARCH" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 6,
@@ -187,9 +216,12 @@ export default async function ResearchDetailPage({ params }: Props) {
     const fill = await prisma.news.findMany({
       where: {
         isPublished: true,
-        category: "RESEARCH",
         slug: { not: slug },
         id: { notIn: related.map((r) => r.id) },
+        OR: [
+          { category: "RESEARCH" },
+          { secondaryCategories: { has: "RESEARCH" } },
+        ],
       },
       orderBy: { publishedAt: "desc" },
       take: 3 - related.length,

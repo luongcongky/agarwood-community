@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getMonthlyQuota, startOfMonth, startOfNextMonth } from "@/lib/quota"
 import { getMonthlyProductQuota } from "@/lib/product-quota"
 import { writeProductRevision } from "@/lib/product-revision"
+import { getSortedFeedPostIds } from "@/lib/feed-sort"
 import DOMPurify from "isomorphic-dompurify"
 import type { PostCategory } from "@prisma/client"
 
@@ -42,8 +43,10 @@ export async function GET(request: Request) {
   const categoryParam = searchParams.get("category")
   const certifiedOnly = searchParams.get("certified") === "1"
   const mineOnly = searchParams.get("mine") === "1"
+  const pinnedOnly = searchParams.get("pinned") === "1"
   const session = await auth()
   const userId = session?.user?.id
+  const isAdminUser = session?.user?.role === "ADMIN"
 
   const category: PostCategory | undefined = VALID_CATEGORIES.includes(
     categoryParam as PostCategory,
@@ -54,105 +57,137 @@ export async function GET(request: Request) {
   // `mine=1` chỉ có nghĩa khi đã login. Guest gửi mine=1 → bỏ qua, trả
   // feed mặc định (không empty cho viewer chưa login).
   const effectiveMine = mineOnly && !!userId
+  // `pinned=1` chỉ admin được dùng (xem + gỡ ghim). Non-admin → ignore.
+  // Phase 3.7 round 4 (2026-04).
+  const effectivePinned = pinnedOnly && isAdminUser
+
+  // Phase 3.7 round 4 (2026-04): PRODUCT + NEWS dùng thuật toán sort đặc
+  // biệt (by-day VN → [cert PRODUCT only] → priority → createdAt). MINE/
+  // PINNED giữ chronological. GENERAL/no-category giữ isPromoted+priority+date.
+  const useFeedSort =
+    !effectiveMine &&
+    !effectivePinned &&
+    (category === "PRODUCT" || category === "NEWS" || certifiedOnly)
+
+  const POST_SELECT = {
+    id: true,
+    authorId: true,
+    title: true,
+    content: true,
+    imageUrls: true,
+    status: true,
+    category: true,
+    isPremium: true,
+    isPromoted: true,
+    newsCategories: true,
+    authorPriority: true,
+    viewCount: true,
+    reportCount: true,
+    lockedBy: true,
+    lockReason: true,
+    moderationNote: true,
+    createdAt: true,
+    updatedAt: true,
+    lockedAt: true,
+    author: {
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        role: true,
+        accountType: true,
+        contributionTotal: true,
+        company: { select: { name: true, slug: true } },
+      },
+    },
+    product: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        priceRange: true,
+        category: true,
+        badgeUrl: true,
+        certStatus: true,
+      },
+    },
+    reactions: {
+      where: { userId: userId ?? "none" },
+      select: { type: true },
+    },
+    promotionRequests: {
+      take: 1,
+      orderBy: { createdAt: "desc" as const },
+      select: { status: true, reviewNote: true },
+    },
+    _count: { select: { reactions: true } },
+  } as const
 
   // Moderation visibility — match logic in feed/page.tsx:
   //  PUBLISHED → all; LOCKED no-note → all (auto-lock); LOCKED with note or
-  //  PENDING → owner only (bai admin reject voi ly do, hoac cho duyet).
-  //
-  // mine=1 → loại bỏ moderation OR, chỉ lấy bài của chính user (bao gồm
-  // PENDING/LOCKED của họ để họ tracking moderation state). Ignore
-  // category filter cho view MINE — user muốn thấy TẤT CẢ bài của mình.
-  const posts = await prisma.post.findMany({
-    where: effectiveMine
-      ? {
-          authorId: userId,
-          // Loại DELETED để khỏi lộ bài đã xoá mềm
-          status: { not: "DELETED" },
-        }
-      : {
-          ...(userId
-            ? {
-                OR: [
-                  { status: "PUBLISHED" },
-                  { status: "LOCKED", moderationNote: null },
-                  { status: "PENDING", authorId: userId },
-                  { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
-                ],
-              }
-            : {
-                OR: [
-                  { status: "PUBLISHED" },
-                  { status: "LOCKED", moderationNote: null },
-                ],
-              }),
-          ...(category ? { category } : {}),
-          ...(certifiedOnly
-            ? { category: "PRODUCT", product: { is: { certStatus: "APPROVED" } } }
-            : {}),
-        },
-    orderBy: [
-      { isPromoted: "desc" },
-      { authorPriority: "desc" },
-      { createdAt: "desc" },
-    ],
-    take: 10,
-    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    select: {
-      id: true,
-      authorId: true,
-      title: true,
-      content: true,
-      imageUrls: true,
-      status: true,
-      category: true,
-      isPremium: true,
-      isPromoted: true,
-      authorPriority: true,
-      viewCount: true,
-      reportCount: true,
-      lockedBy: true,
-      lockReason: true,
-      moderationNote: true,
-      createdAt: true,
-      updatedAt: true,
-      lockedAt: true,
-      author: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          role: true,
-          accountType: true,
-          contributionTotal: true,
-          company: { select: { name: true, slug: true } },
-        },
-      },
-      product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          priceRange: true,
-          category: true,
-          badgeUrl: true,
-          certStatus: true,
-        },
-      },
-      reactions: {
-        where: { userId: userId ?? "none" },
-        select: { type: true },
-      },
-      // Latest promotion request (chỉ 1 — dùng để hiện badge cho owner).
-      // Nếu không có request nào → array rỗng. Client filter theo authorId
-      // để chỉ attach vào owner's posts (tránh leak state ra viewer khác).
-      promotionRequests: {
-        take: 1,
-        orderBy: { createdAt: "desc" },
-        select: { status: true, reviewNote: true },
-      },
-      _count: { select: { reactions: true } },
-    },
-  })
+  //  PENDING → owner only.
+  let posts: Awaited<ReturnType<typeof prisma.post.findMany<{ select: typeof POST_SELECT }>>>
+  if (useFeedSort) {
+    // 2-step: get sorted IDs from helper, hydrate via findMany, reorder.
+    // certifiedOnly chỉ apply cho PRODUCT — guard ở helper.
+    const helperCategory: PostCategory =
+      certifiedOnly || category === "PRODUCT" ? "PRODUCT" : "NEWS"
+    const ids = await getSortedFeedPostIds({
+      category: helperCategory,
+      userId: userId ?? null,
+      certifiedOnly,
+      cursor,
+      take: 10,
+    })
+    if (ids.length === 0) {
+      posts = []
+    } else {
+      const rows = await prisma.post.findMany({
+        where: { id: { in: ids } },
+        select: POST_SELECT,
+      })
+      const idxMap = new Map(ids.map((id, i) => [id, i]))
+      rows.sort((a, b) => (idxMap.get(a.id) ?? 0) - (idxMap.get(b.id) ?? 0))
+      posts = rows
+    }
+  } else {
+    posts = await prisma.post.findMany({
+      where: effectivePinned
+        ? { isPromoted: true, status: "PUBLISHED" }
+        : effectiveMine
+          ? { authorId: userId, status: { not: "DELETED" } }
+          : {
+              ...(userId
+                ? {
+                    OR: [
+                      { status: "PUBLISHED" },
+                      { status: "LOCKED", moderationNote: null },
+                      { status: "PENDING", authorId: userId },
+                      { status: "LOCKED", moderationNote: { not: null }, authorId: userId },
+                    ],
+                  }
+                : {
+                    OR: [
+                      { status: "PUBLISHED" },
+                      { status: "LOCKED", moderationNote: null },
+                    ],
+                  }),
+              ...(category ? { category } : {}),
+            },
+      // MINE / PINNED chronological; NEWS/GENERAL giữ isPromoted+priority+date.
+      orderBy:
+        effectiveMine || effectivePinned
+          ? [{ createdAt: "desc" }]
+          : [
+              { isPromoted: "desc" },
+              { authorPriority: "desc" },
+              { createdAt: "desc" },
+            ],
+      take: 10,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      select: POST_SELECT,
+    })
+  }
 
   const response = NextResponse.json({
     posts: posts.map((p) => {
@@ -182,10 +217,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { title, content, category, product } = body as {
+  const { title, content, category, coverImageUrl, product } = body as {
     title?: string
     content?: string
     category?: string
+    /** Phase 3.7 round 4 (2026-04): thumbnail 16:9 cho homepage card.
+     *  Optional — UI fallback từ imageUrls[0] / content nếu để trống. */
+    coverImageUrl?: string
     product?: {
       name?: string
       slug?: string
@@ -307,6 +345,13 @@ export async function POST(request: Request) {
   const initialStatus: "PENDING" | "PUBLISHED" =
     session.user.role === "ADMIN" ? "PUBLISHED" : "PENDING"
 
+  // Sanitize coverImageUrl: chỉ accept Cloudinary domain (đã upload xong).
+  const sanitizedCover =
+    typeof coverImageUrl === "string" &&
+    coverImageUrl.startsWith("https://res.cloudinary.com/")
+      ? coverImageUrl
+      : null
+
   // Trường hợp đơn giản — chỉ tạo Post
   if (!wantsProduct) {
     const post = await prisma.post.create({
@@ -315,6 +360,7 @@ export async function POST(request: Request) {
         title: title || null,
         content: sanitizedContent,
         imageUrls: [],
+        coverImageUrl: sanitizedCover,
         category: cat,
         status: initialStatus,
         // INFINITE = "full quyền VIP Vàng" per schema — their posts get
@@ -366,6 +412,7 @@ export async function POST(request: Request) {
         title: title || product!.name!,
         content: sanitizedContent,
         imageUrls: productImages,
+        coverImageUrl: sanitizedCover,
         category: "PRODUCT",
         // Admin override → vẫn giữ moderation status như flow non-admin
         // bình thường (PENDING) để không "lén" auto-publish bài hộ DN.

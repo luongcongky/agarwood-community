@@ -17,7 +17,7 @@ export async function GET(
   const { id } = await params
   const post = await prisma.post.findUnique({
     where: { id },
-    select: { id: true, title: true, content: true, authorId: true },
+    select: { id: true, title: true, content: true, coverImageUrl: true, authorId: true },
   })
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -51,9 +51,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
-  const { title, content, reason } = await req.json() as {
+  const { title, content, coverImageUrl, reason } = await req.json() as {
     title?: string
     content?: string
+    coverImageUrl?: string | null
     /** Phase 3.6: bắt buộc khi admin edit — giải thích lý do để owner hiểu. */
     reason?: string
   }
@@ -74,11 +75,20 @@ export async function PATCH(
   // status (preserve moderation state). Mỗi lần save tạo PostRevision row
   // để build audit history.
   await prisma.$transaction(async (tx) => {
+    // Sanitize coverImageUrl: chỉ accept Cloudinary URL, hoặc null để xóa.
+    const sanitizedCover =
+      coverImageUrl === null
+        ? null
+        : typeof coverImageUrl === "string" &&
+            coverImageUrl.startsWith("https://res.cloudinary.com/")
+          ? coverImageUrl
+          : undefined // undefined = không update field
     const updated = await tx.post.update({
       where: { id },
       data: {
         title: title || null,
         content: sanitizedContent,
+        ...(sanitizedCover !== undefined ? { coverImageUrl: sanitizedCover } : {}),
         ...(isAdminEdit
           ? {}
           : { status: "PENDING", moderationNote: null, moderatedAt: null, moderatedBy: null }),

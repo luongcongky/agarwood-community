@@ -6,6 +6,7 @@ import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/R
 import { Suspense, useState, useEffect, useRef, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
+import dynamic from "next/dynamic"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
@@ -13,6 +14,12 @@ import {
   CompanyPicker,
   type CompanySummary,
 } from "@/app/(admin)/admin/tin-tuc/[id]/CompanyProductPickers"
+
+// Cover image cropper — lazy load để không tăng JS bundle khi user không upload.
+const CoverImageCropper = dynamic(
+  () => import("@/components/ui/CoverImageCropper").then((m) => m.CoverImageCropper),
+  { ssr: false },
+)
 
 /** Slugify tiếng Việt → a-z, 0-9, dấu gạch ngang */
 function slugify(str: string): string {
@@ -91,8 +98,9 @@ function TaoBaiContent({
   const t = useTranslations("postEditor")
   const router = useRouter()
   const searchParams = useSearchParams()
+  // Phase 3.7 round 4 (2026-04): bỏ option GENERAL ("Bài viết chung") theo
+  // yêu cầu khách — user chỉ chọn giữa Tin tức (NEWS) hoặc Sản phẩm (PRODUCT).
   const CATEGORY_OPTIONS: { value: PostCategoryClient; label: string; hint: string }[] = [
-    { value: "GENERAL", label: t("categoryGeneral"), hint: t("categoryGeneralHint") },
     { value: "NEWS",    label: t("categoryNews"), hint: t("categoryNewsHint") },
     { value: "PRODUCT", label: t("categoryProduct"), hint: t("categoryProductHint") },
   ]
@@ -107,8 +115,19 @@ function TaoBaiContent({
   const [adminEditReason, setAdminEditReason] = useState("")
   const editorRef = useRef<RichTextEditorHandle>(null)
   const [title, setTitle] = useState("")
+  // Phase 3.7 round 4 (2026-04): cover image (thumbnail 16:9) cho homepage
+  // card. Pattern khớp NewsEditor: crop modal trước khi upload, delayed
+  // upload (chỉ upload tại thời điểm submit). Fallback display:
+  // coverImageUrl null → imageUrls[0] → extract from content → placeholder.
+  const [coverImageUrl, setCoverImageUrl] = useState("")
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState("")
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const displayCover = coverPreview || coverImageUrl
+  // Phase 3.7 round 4 (2026-04): default sang NEWS thay vì GENERAL (đã bỏ).
   const [category, setCategoryState] = useState<PostCategoryClient>(
-    initialCategory === "NEWS" || initialCategory === "PRODUCT" ? initialCategory : "GENERAL",
+    initialCategory === "PRODUCT" ? "PRODUCT" : "NEWS",
   )
   // Wrap setCategory so the `?category=` query param stays in sync with the
   // selected tab. Without this, a reader who loaded with ?category=PRODUCT
@@ -117,11 +136,7 @@ function TaoBaiContent({
   function setCategory(next: PostCategoryClient) {
     setCategoryState(next)
     const params = new URLSearchParams(searchParams.toString())
-    if (next === "GENERAL") {
-      params.delete("category")
-    } else {
-      params.set("category", next)
-    }
+    params.set("category", next)
     const qs = params.toString()
     router.replace(qs ? `?${qs}` : "?", { scroll: false })
   }
@@ -224,6 +239,7 @@ function TaoBaiContent({
         const data = await res.json()
         if (data.post) {
           setTitle(data.post.title ?? "")
+          setCoverImageUrl(data.post.coverImageUrl ?? "")
           editorRef.current?.setContent(data.post.content)
           setOriginalImages(extractCloudinaryUrls(data.post.content))
           setEditLoaded(true)
@@ -235,6 +251,17 @@ function TaoBaiContent({
     loadPost()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId, editLoaded, editorRef.current?.editor])
+
+  // Cleanup blob URLs (cover preview + crop temp) on unmount để tránh leak.
+  useEffect(() => {
+    return () => {
+      if (coverPreview && coverPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(coverPreview)
+      }
+      if (cropSrc) URL.revokeObjectURL(cropSrc)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Auto-save title changes
   useEffect(() => {
@@ -313,6 +340,23 @@ function TaoBaiContent({
     setError(null)
     setSubmitting(true)
     try {
+      // Upload cover image (nếu có file mới đã crop) — match NewsEditor flow.
+      let finalCoverUrl = coverImageUrl
+      if (coverFile) {
+        const fd = new FormData()
+        fd.append("file", coverFile)
+        fd.append("folder", "bai-viet/thumbnail")
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: fd })
+        if (!uploadRes.ok) {
+          setError("Tải ảnh bìa thất bại. Vui lòng thử lại.")
+          setSubmitting(false)
+          return
+        }
+        const uploadData = await uploadRes.json()
+        finalCoverUrl = uploadData.secure_url ?? uploadData.url
+        setCoverImageUrl(finalCoverUrl)
+        setCoverFile(null)
+      }
       // Upload pending local images to Cloudinary
       const newUploads = await editorRef.current?.processImages() ?? []
       setUploadedImages((prev) => [...prev, ...newUploads])
@@ -325,6 +369,9 @@ function TaoBaiContent({
         body: JSON.stringify({
           title: title || undefined,
           content: html,
+          // Edit flow: gửi null nếu user xóa cover; create flow: undefined
+          // = không có cover, server bỏ qua field.
+          coverImageUrl: finalCoverUrl || (editId ? null : undefined),
           ...(editId ? {} : { category }),
           // Phase 3.6: admin edit lý do — server bắt buộc khi authorId !== editor.
           ...(adminMode ? { reason: adminEditReason.trim() } : {}),
@@ -609,6 +656,103 @@ function TaoBaiContent({
           onChange={(e) => setTitle(e.target.value)}
           className="w-full text-lg font-semibold text-brand-900 placeholder:text-brand-300 bg-transparent outline-none"
         />
+      </div>
+
+      {/* Cover image — file picker với 16:9 cropper. Phase 3.7 round 4
+          (2026-04). Pattern khớp NewsEditor (Ảnh bìa). */}
+      <div className="bg-white rounded-xl border border-brand-200 px-5 py-4 space-y-2">
+        <div>
+          <label className="block text-sm font-medium text-brand-800">Ảnh bìa</label>
+          <p className="text-xs text-brand-500 mt-0.5">
+            Tỉ lệ 16:9. Hiển thị ở trang chủ section &quot;Tin mới nhất&quot;. Nếu
+            để trống, hệ thống tự lấy ảnh đầu tiên trong bài.
+          </p>
+        </div>
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              const blobUrl = URL.createObjectURL(file)
+              setCropSrc(blobUrl)
+            }
+          }}
+        />
+        {displayCover ? (
+          <div className="relative group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={displayCover}
+              alt="Cover preview"
+              className="w-full h-40 rounded-lg object-cover border border-brand-200"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-brand-800 shadow hover:bg-brand-50 transition-colors"
+              >
+                Đổi ảnh
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (coverPreview && coverPreview.startsWith("blob:")) {
+                    URL.revokeObjectURL(coverPreview)
+                  }
+                  setCoverFile(null)
+                  setCoverPreview("")
+                  setCoverImageUrl("")
+                  if (coverInputRef.current) coverInputRef.current.value = ""
+                }}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow hover:bg-red-700 transition-colors"
+              >
+                Xóa
+              </button>
+            </div>
+            {coverFile && (
+              <span className="absolute top-2 right-2 bg-amber-500 text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                Chưa upload
+              </span>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            className="w-full h-32 rounded-lg border-2 border-dashed border-brand-300 hover:border-brand-500 transition-colors flex flex-col items-center justify-center gap-2 text-brand-400 hover:text-brand-600"
+          >
+            <svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+            <span className="text-xs font-medium">Chọn ảnh bìa</span>
+          </button>
+        )}
+        {/* Crop modal (16:9 fixed) */}
+        {cropSrc && (
+          <CoverImageCropper
+            imageSrc={cropSrc}
+            aspect={16 / 9}
+            onCropDone={(croppedBlob) => {
+              if (cropSrc) URL.revokeObjectURL(cropSrc)
+              setCropSrc(null)
+              const croppedFile = new File([croppedBlob], "cover.jpg", { type: "image/jpeg" })
+              setCoverFile(croppedFile)
+              if (coverPreview && coverPreview.startsWith("blob:")) {
+                URL.revokeObjectURL(coverPreview)
+              }
+              setCoverPreview(URL.createObjectURL(croppedBlob))
+            }}
+            onCancel={() => {
+              if (cropSrc) URL.revokeObjectURL(cropSrc)
+              setCropSrc(null)
+              if (coverInputRef.current) coverInputRef.current.value = ""
+            }}
+          />
+        )}
       </div>
 
       {/* Editor or preview */}

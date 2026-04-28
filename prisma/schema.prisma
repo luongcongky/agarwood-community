@@ -700,6 +700,10 @@ model Post {
   title     String?
   content   String     @db.Text
   imageUrls String[] // ảnh đính kèm (Cloudinary)
+  // Phase 3.7 round 4 (2026-04): thumbnail 16:9 hiển thị trên homepage
+  // section "Tin DN/SP mới nhất". Fallback nếu null: imageUrls[0] →
+  // extract first image trong content → AgarwoodPlaceholder.
+  coverImageUrl String?
   status    PostStatus @default(PENDING) // mới: mặc định chờ admin duyệt. Admin tạo thì code override sang PUBLISHED.
 
   // Moderation — lý do admin reject khi duyệt (khác với lockReason của
@@ -711,6 +715,12 @@ model Post {
 
   // Loại bài — phân biệt tin tức DN / tin sản phẩm / bài thường
   category PostCategory @default(GENERAL)
+
+  // Phase 3.7 round 4 (2026-04): Cross-classify Post → News list pages.
+  // Admin tag bài feed chỉnh chu vào 1-3 NewsCategory để bài xuất hiện
+  // thêm ở /tin-tuc, /nghien-cuu, /khuyen-nong, /tin-bao-chi tương ứng.
+  // Empty = chỉ hiện ở /feed như cũ. Validation max 3 ở API layer.
+  newsCategories NewsCategory[] @default([])
 
   // Visibility
   isPremium  Boolean @default(false) // true nếu author là VIP — set tự động
@@ -971,6 +981,11 @@ model News {
   content_ar    String?      @db.Text
   coverImageUrl String?
   category      NewsCategory @default(GENERAL)
+  // Phase 3.7 round 4 (2026-04): max 3 secondary categories cho phép 1 bài
+  // xuất hiện ở nhiều list page (vd primary=BUSINESS + secondary=RESEARCH
+  // → bài hiện ở cả /tin-tuc + /nghien-cuu). Homepage giữ primary-only filter.
+  // Validation max 3 + exclude primary ở API layer.
+  secondaryCategories NewsCategory[] @default([])
   template      NewsTemplate @default(NORMAL)
   isPublished   Boolean      @default(false)
   isPinned      Boolean      @default(false)

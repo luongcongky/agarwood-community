@@ -17,6 +17,10 @@ export type NewsListItem = {
   coverImageUrl: string | null
   isPinned: boolean
   publishedAt: Date | null
+  // Phase 3.7 round 4 (2026-04): khi source="post", item là feed Post được
+  // admin tag vào News categories. Render badge "Bài hội viên" + href dùng
+  // /bai-viet/[id] thay vì /tin-tuc/[slug]. Optional, default → "news".
+  source?: "news" | "post"
 }
 
 export type LoadMoreResult = {
@@ -49,14 +53,25 @@ export async function loadMoreNews(params: {
 }): Promise<LoadMoreResult> {
   const where = {
     isPublished: true,
-    category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] },
     template: TIN_TUC_PUBLIC_TEMPLATE, // Q1=B: chỉ NORMAL; PHOTO/VIDEO → /multimedia
-    ...(params.q && {
-      OR: [
-        { title: { contains: params.q, mode: "insensitive" as const } },
-        { excerpt: { contains: params.q, mode: "insensitive" as const } },
-      ],
-    }),
+    AND: [
+      {
+        OR: [
+          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
+        ],
+      },
+      ...(params.q
+        ? [
+            {
+              OR: [
+                { title: { contains: params.q, mode: "insensitive" as const } },
+                { excerpt: { contains: params.q, mode: "insensitive" as const } },
+              ],
+            },
+          ]
+        : []),
+    ],
   }
   const items = await prisma.news.findMany({
     where,
