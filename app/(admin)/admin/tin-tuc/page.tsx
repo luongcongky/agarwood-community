@@ -156,7 +156,6 @@ export default async function AdminNewsPage({ searchParams }: Props) {
         category: true,
         template: true,
         isPublished: true,
-        isPinned: true,
         // Phase 3.7 round 4 (2026-04): per-section pin trên trang chủ —
         // dùng cho cột "Ghim trang chủ" với 5 chip toggle.
         pinnedInCategories: true,
@@ -341,10 +340,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap">
                 Trạng thái
               </th>
-              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[110px] whitespace-nowrap" title="isPinned global — bài hiện badge 'Nổi bật' ở list page sidebar">
-                Nổi bật
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[170px] whitespace-nowrap" title="pinnedInCategories — admin pin bài lên TOP các section trang chủ. Click chip để toggle.">
+              <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[200px] whitespace-nowrap" title="pinnedInCategories — admin pin bài lên TOP các section trang chủ. Click chip để toggle.">
                 Ghim trang chủ
               </th>
               <th className="px-4 py-3 text-left font-semibold text-brand-800 w-[80px] whitespace-nowrap">
@@ -362,7 +358,7 @@ export default async function AdminNewsPage({ searchParams }: Props) {
             {newsList.length === 0 && (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={8}
                   className="px-4 py-12 text-center"
                 >
                   <div className="text-brand-300 text-4xl mb-2">🔍</div>
@@ -413,13 +409,6 @@ export default async function AdminNewsPage({ searchParams }: Props) {
                     newsId={news.id}
                     field="isPublished"
                     value={news.isPublished}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <NewsListToggle
-                    newsId={news.id}
-                    field="isPinned"
-                    value={news.isPinned}
                   />
                 </td>
                 <td className="px-4 py-3">

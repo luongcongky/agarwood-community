@@ -7,12 +7,12 @@ import type { NewsCategory } from "@prisma/client"
 
 type PinSection = "GENERAL" | "RESEARCH" | "BUSINESS" | "PRODUCT" | "AGRICULTURE"
 
-const SECTIONS: { value: PinSection; short: string; full: string }[] = [
-  { value: "GENERAL", short: "TH", full: "Tin Hội (Tin tức)" },
-  { value: "RESEARCH", short: "NC", full: "Nghiên cứu khoa học" },
-  { value: "BUSINESS", short: "DN", full: "Tin doanh nghiệp" },
-  { value: "PRODUCT", short: "SP", full: "Tin sản phẩm" },
-  { value: "AGRICULTURE", short: "KN", full: "Tin khuyến nông" },
+const SECTIONS: { value: PinSection; label: string }[] = [
+  { value: "GENERAL", label: "Tin Hội" },
+  { value: "RESEARCH", label: "Nghiên cứu khoa học" },
+  { value: "BUSINESS", label: "Tin doanh nghiệp" },
+  { value: "PRODUCT", label: "Tin sản phẩm" },
+  { value: "AGRICULTURE", label: "Tin khuyến nông" },
 ]
 
 /**
@@ -77,15 +77,15 @@ export function PinSectionChips({
   }
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-col gap-1">
       {SECTIONS.map((s) => {
         const isPinned = pinned.has(s.value)
         const isLoading = pending === s.value
         const tooltip = !isAdmin
           ? "Chỉ admin được ghim"
           : isPinned
-            ? `Click để bỏ ghim khỏi "${s.full}"`
-            : `Click để ghim lên "${s.full}"`
+            ? `Click để bỏ ghim khỏi "${s.label}"`
+            : `Click để ghim lên "${s.label}"`
         return (
           <button
             key={s.value}
@@ -93,13 +93,13 @@ export function PinSectionChips({
             onClick={() => toggle(s.value)}
             disabled={!isAdmin || pending !== null}
             title={tooltip}
-            className={`inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold border transition-all min-w-[24px] ${
+            className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium border transition-all whitespace-nowrap ${
               isPinned
                 ? "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200"
                 : "bg-white text-gray-400 border-gray-200 border-dashed hover:border-gray-400 hover:text-gray-600"
             } ${!isAdmin || pending !== null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
           >
-            {isLoading ? "…" : s.short}
+            {isPinned ? "📌" : "○"} {isLoading ? "…" : s.label}
           </button>
         )
       })}

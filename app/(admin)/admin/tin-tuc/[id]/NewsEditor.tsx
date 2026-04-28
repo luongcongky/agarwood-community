@@ -774,7 +774,7 @@ export default function NewsEditorPage({
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form id="news-editor-form" onSubmit={handleSubmit} className="space-y-5 pb-24 lg:pb-0">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
@@ -1268,22 +1268,11 @@ export default function NewsEditorPage({
                   dưới (Save / Preview / Publish) để đổi trạng thái + lưu cùng
                   lúc. Hoặc quick toggle pill ngay trên list /admin/tin-tuc. */}
 
-              {/* Pinned toggle */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => setIsPinned((v) => !v)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    isPinned ? "bg-brand-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      isPinned ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </div>
-                <span className="text-sm text-brand-800">Ghim bài</span>
-              </label>
+              {/* Toggle "Ghim bài" (isPinned global) ẩn khỏi UI — Phase 3.7
+                  round 4 (2026-04). Pin per-section thay thế bằng checkbox
+                  group "Ghim lên section trang chủ" + cột "Ghim trang chủ"
+                  ở /admin/tin-tuc. State `isPinned` giữ load/save để giữ
+                  data cũ; future cleanup có thể drop field nếu không dùng. */}
 
               {/* Published at */}
               <div>
@@ -1366,10 +1355,10 @@ export default function NewsEditorPage({
               </div>
             )}
 
-            {/* Action buttons — order: Lưu → Xem trước → Xuất bản (theo
-                yêu cầu khách 2026-04). Publish button chỉ hiện cho user có
-                news:publish; thay cho việc bấm toggle "Xuất bản" ở sidebar. */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {/* Action buttons — order: Lưu → Xem trước → Xuất bản (desktop
+                ≥ lg). Mobile dùng fixed bar riêng ở dưới (xem cuối JSX) để
+                luôn nhìn thấy không phải scroll. */}
+            <div className="hidden lg:grid lg:grid-cols-3 gap-2">
               <button
                 type="submit"
                 disabled={loading}
@@ -1392,10 +1381,6 @@ export default function NewsEditorPage({
                   disabled={loading}
                   onClick={() => {
                     setIsPublished(true)
-                    // Auto-fill ngày xuất bản = NOW (local) khi user publish
-                    // mà field còn trống → đảm bảo bài luôn có publishedAt
-                    // hợp lệ (sort theo publishedAt ở public list cần value).
-                    // Giữ nguyên giá trị cũ nếu user đã set tay.
                     if (!publishedAt) {
                       setPublishedAt(toLocalDatetimeInput(new Date()))
                     }
@@ -1414,6 +1399,49 @@ export default function NewsEditorPage({
           </div>
         </div>
       </form>
+
+      {/* Mobile-only fixed action bar (< lg). Đặt ngoài form để tránh
+          containing-block do ancestor; buttons gắn form qua attribute
+          `form="news-editor-form"` nên submit vẫn trigger handleSubmit.
+          z-50 cao hơn AdminMobileNav nhưng dưới NewsPreviewModal khi mở. */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 grid grid-cols-3 gap-2 border-t border-brand-200 bg-white px-3 py-3 shadow-md lg:hidden">
+        <button
+          type="submit"
+          form="news-editor-form"
+          disabled={loading}
+          className="rounded-lg bg-brand-700 px-2 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
+        >
+          {loading ? "Đang lưu..." : isNew ? "Tạo" : "Lưu"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="rounded-lg border border-brand-300 px-2 py-2.5 text-sm font-medium text-brand-700 hover:bg-brand-50 transition-colors"
+        >
+          Xem trước
+        </button>
+        {!publishDisabled && (
+          <button
+            type="submit"
+            form="news-editor-form"
+            disabled={loading}
+            onClick={() => {
+              setIsPublished(true)
+              if (!publishedAt) {
+                setPublishedAt(toLocalDatetimeInput(new Date()))
+              }
+            }}
+            title={
+              isPublished
+                ? "Bài đã xuất bản — bấm Lưu để cập nhật"
+                : "Bật xuất bản và lưu ngay"
+            }
+            className="rounded-lg bg-emerald-600 px-2 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            {isPublished ? "✓ Đã đăng" : "Xuất bản"}
+          </button>
+        )}
+      </div>
 
       {/* Lazy modal — code-split, DOMPurify chỉ load khi admin bấm Preview. */}
       {showPreview && (
