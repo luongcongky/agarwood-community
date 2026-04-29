@@ -1,14 +1,17 @@
 import { prisma } from "@/lib/prisma"
 import Image from "next/image"
-import Link from "next/link"
+import type { BannerSlot, BannerStatus } from "@prisma/client"
 import { cloudinaryFit } from "@/lib/cloudinary"
+import { BANNER_SLOT_META, getSlotShapeConfig } from "@/lib/banner-slots"
 import { AdminBannerActions } from "./AdminBannerActions"
+import { BannerSlotsEditor } from "./BannerSlotsEditor"
+import { BannerWorkbench } from "./BannerWorkbench"
 
 export const metadata = {
   title: "Quản lý Banner | Admin",
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+const STATUS_LABELS: Record<BannerStatus, { label: string; color: string }> = {
   PENDING_PAYMENT: { label: "Chờ CK", color: "bg-amber-100 text-amber-800" },
   PENDING_APPROVAL: { label: "Chờ duyệt", color: "bg-blue-100 text-blue-800" },
   ACTIVE: { label: "ACTIVE", color: "bg-emerald-100 text-emerald-800" },
@@ -16,21 +19,40 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   EXPIRED: { label: "Hết hạn", color: "bg-brand-100 text-brand-600" },
 }
 
+const STATUS_KEYS: BannerStatus[] = [
+  "PENDING_PAYMENT",
+  "PENDING_APPROVAL",
+  "ACTIVE",
+  "REJECTED",
+  "EXPIRED",
+]
+
+function isValidStatus(s: string | undefined): s is BannerStatus {
+  return !!s && STATUS_KEYS.includes(s as BannerStatus)
+}
+
+function isValidSlot(s: string | undefined): s is BannerSlot {
+  return !!s && s in BANNER_SLOT_META
+}
+
 export default async function AdminBannerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; slot?: string }>
 }) {
   const sp = await searchParams
-  const filterStatus = sp.status
+  // Default ACTIVE — KH yêu cầu badge luôn phải có 1 cái được chọn.
+  const filterStatus: BannerStatus = isValidStatus(sp.status) ? sp.status : "ACTIVE"
+  const filterSlot = isValidSlot(sp.slot) ? sp.slot : null
 
-  const where = filterStatus
-    ? { status: filterStatus as "PENDING_PAYMENT" | "PENDING_APPROVAL" | "ACTIVE" | "REJECTED" | "EXPIRED" }
-    : undefined
+  const where = {
+    status: filterStatus,
+    ...(filterSlot ? { positions: { has: filterSlot } } : {}),
+  }
 
   const [banners, counts] = await Promise.all([
     prisma.banner.findMany({
-      where,
+      where: Object.keys(where).length ? where : undefined,
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
@@ -40,7 +62,7 @@ export default async function AdminBannerPage({
         startDate: true,
         endDate: true,
         status: true,
-        position: true,
+        positions: true,
         price: true,
         rejectReason: true,
         createdAt: true,
@@ -55,146 +77,177 @@ export default async function AdminBannerPage({
 
   const countMap = Object.fromEntries(counts.map((c) => [c.status, c._count]))
 
-  return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-900">Quản lý Banner Quảng cáo</h1>
-          <p className="mt-1 text-sm text-brand-500">
-            Duyệt nội dung banner sau khi xác nhận chuyển khoản tại{" "}
-            <a href="/admin/thanh-toan" className="underline text-brand-700">
-              /admin/thanh-toan
-            </a>
-          </p>
-        </div>
-        <Link
-          href="/admin/banner/tao-moi"
-          className="shrink-0 rounded bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
-        >
-          + Tạo banner
-        </Link>
-      </header>
+  // Build badge URLs giữ nguyên `?slot=` khi chuyển status.
+  function statusUrl(status: BannerStatus) {
+    const params = new URLSearchParams()
+    params.set("status", status)
+    if (filterSlot) params.set("slot", filterSlot)
+    return `/admin/banner?${params.toString()}`
+  }
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {([
-          { key: "PENDING_PAYMENT", label: "Chờ CK" },
-          { key: "PENDING_APPROVAL", label: "Chờ duyệt" },
-          { key: "ACTIVE", label: "ACTIVE" },
-          { key: "REJECTED", label: "Từ chối" },
-          { key: "EXPIRED", label: "Hết hạn" },
-        ] as const).map((s) => (
-          <a
-            key={s.key}
-            href={`/admin/banner?status=${s.key}`}
-            className={`rounded-xl border p-3 text-center ${
-              filterStatus === s.key
-                ? "border-brand-500 bg-brand-50"
-                : "border-brand-200 bg-white hover:border-brand-300"
-            }`}
-          >
-            <p className="text-2xl font-bold text-brand-900">{countMap[s.key] ?? 0}</p>
-            <p className="text-xs text-brand-500 mt-0.5">{s.label}</p>
-          </a>
-        ))}
+  // Render banner cards once, pass to Workbench. Aspect preview dùng shape
+  // của từng banner (vì list có thể chứa banner cross-shape khi chưa chọn slot).
+  const bannerCards =
+    banners.length === 0 ? (
+      <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
+        Không có banner nào ở trạng thái {STATUS_LABELS[filterStatus].label}.
       </div>
-
-      {filterStatus && (
-        <a href="/admin/banner" className="text-xs text-brand-700 underline">
-          ← Xem tất cả
-        </a>
-      )}
-
-      {/* List */}
+    ) : (
       <div className="space-y-3">
-        {banners.length === 0 ? (
-          <div className="rounded-xl border border-brand-200 bg-white p-12 text-center text-brand-500 italic">
-            Không có banner nào{filterStatus ? ` ở trạng thái ${STATUS_LABELS[filterStatus]?.label}` : ""}
-          </div>
-        ) : (
-          banners.map((banner) => {
-            const status = STATUS_LABELS[banner.status]
-            return (
-              <div
-                key={banner.id}
-                className="bg-white rounded-xl border border-brand-200 overflow-hidden"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-                  <div className="space-y-2">
-                    {/* Preview ở tỉ lệ 5:1 — đúng cảm giác desktop trên trang chủ */}
-                    <div
-                      className="relative w-full overflow-hidden rounded-lg bg-brand-100"
-                      style={{ aspectRatio: "5 / 1" }}
-                    >
-                      <Image
-                        src={cloudinaryFit(banner.imageUrl, { ar: "5:1", w: 800 })}
-                        alt={banner.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                      />
-                    </div>
-                    <p className="text-[10px] text-brand-400 text-center">
-                      Preview tỉ lệ 5:1 (desktop) — Cloudinary auto-crop
-                    </p>
+        {banners.map((banner) => {
+          const status = STATUS_LABELS[banner.status]
+          // Multi-slot: dùng slot ĐẦU TIÊN làm preview shape (mọi slot trong
+          // banner.positions phải cùng shape do form constraint, nên slot[0] đủ).
+          const primarySlot = banner.positions[0] ?? "HOMEPAGE_TOP_LEFT"
+          const shapeConfig = getSlotShapeConfig(primarySlot)
+          const previewAr = shapeConfig.aspectRatio
+          const previewArStr =
+            previewAr === 5
+              ? "5:1"
+              : previewAr < 1
+                ? "2:3"
+                : "485:90"
+          return (
+            <div
+              key={banner.id}
+              className="bg-white rounded-xl border border-brand-200 overflow-hidden"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+                <div className="space-y-2">
+                  <div
+                    className={`relative w-full overflow-hidden rounded-lg bg-brand-100 ${
+                      previewAr < 1 ? "max-w-[120px] mx-auto" : ""
+                    }`}
+                    style={{ aspectRatio: previewAr }}
+                  >
+                    <Image
+                      src={cloudinaryFit(banner.imageUrl, { ar: previewArStr, w: 800 })}
+                      alt={banner.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-semibold text-brand-900 line-clamp-2">{banner.title}</h3>
+                    <span className={`shrink-0 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.color}`}>
+                      {status.label}
+                    </span>
                   </div>
 
-                  <div className="md:col-span-2 flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold text-brand-900 line-clamp-2">{banner.title}</h3>
-                      <div className="shrink-0 flex items-center gap-1.5">
-                        <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-100 text-brand-700">
-                          {banner.position === "TOP" ? "Đầu trang" : banner.position === "MID" ? "Giữa trang" : "Rail dọc (feed)"}
-                        </span>
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                    </div>
+                  {/* Multi-slot pills + inline editor — admin click "Sửa vị trí"
+                      để áp dụng banner cho slot khác cùng shape (hoặc gỡ slot). */}
+                  <div className="flex flex-wrap gap-1">
+                    {banner.positions.map((slot) => (
+                      <span
+                        key={slot}
+                        className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium bg-brand-100 text-brand-700"
+                        title={BANNER_SLOT_META[slot].description}
+                      >
+                        {BANNER_SLOT_META[slot].label}
+                      </span>
+                    ))}
+                  </div>
+                  <BannerSlotsEditor
+                    bannerId={banner.id}
+                    currentPositions={banner.positions}
+                  />
 
-                    <div className="text-xs text-brand-600 space-y-0.5">
-                      <p>
-                        <strong>User:</strong> {banner.user.name} ({banner.user.email}){" "}
-                        <span className="text-brand-400">[{banner.user.role}]</span>
-                      </p>
+                  <div className="text-xs text-brand-600 space-y-0.5">
+                    <p>
+                      <strong>User:</strong> {banner.user.name} ({banner.user.email}){" "}
+                      <span className="text-brand-400">[{banner.user.role}]</span>
+                    </p>
+                    {banner.targetUrl && (
                       <p>
                         <strong>Link:</strong>{" "}
-                        <a href={banner.targetUrl} target="_blank" rel="noopener noreferrer" className="underline break-all">
+                        <a
+                          href={banner.targetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline break-all"
+                        >
                           {banner.targetUrl}
                         </a>
                       </p>
-                      <p>
-                        <strong>Thời gian:</strong>{" "}
-                        {new Date(banner.startDate).toLocaleDateString("vi-VN")} —{" "}
-                        {new Date(banner.endDate).toLocaleDateString("vi-VN")}
-                      </p>
+                    )}
+                    <p>
+                      <strong>Thời gian:</strong>{" "}
+                      {new Date(banner.startDate).toLocaleDateString("vi-VN")} —{" "}
+                      {new Date(banner.endDate).toLocaleDateString("vi-VN")}
+                    </p>
+                    {banner.price > 0 && (
                       <p>
                         <strong>Tiền:</strong> {banner.price.toLocaleString("vi-VN")}đ
                       </p>
-                      <p className="text-brand-400">
-                        Tạo lúc: {new Date(banner.createdAt).toLocaleString("vi-VN")}
-                      </p>
-                    </div>
-
-                    {banner.status === "REJECTED" && banner.rejectReason && (
-                      <div className="rounded-lg bg-red-50 border border-red-200 p-2 text-xs text-red-700">
-                        <strong>Lý do từ chối:</strong> {banner.rejectReason}
-                      </div>
                     )}
+                    <p className="text-brand-400">
+                      Tạo lúc: {new Date(banner.createdAt).toLocaleString("vi-VN")}
+                    </p>
+                  </div>
 
-                    <div className="mt-auto pt-2 flex items-center gap-2 flex-wrap">
-                      <AdminBannerActions
-                        bannerId={banner.id}
-                        status={banner.status}
-                      />
+                  {banner.status === "REJECTED" && banner.rejectReason && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 p-2 text-xs text-red-700">
+                      <strong>Lý do từ chối:</strong> {banner.rejectReason}
                     </div>
+                  )}
+
+                  <div className="mt-auto pt-2 flex items-center gap-2 flex-wrap">
+                    <AdminBannerActions
+                      bannerId={banner.id}
+                      status={banner.status}
+                    />
                   </div>
                 </div>
               </div>
-            )
-          })
-        )}
+            </div>
+          )
+        })}
       </div>
+    )
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold text-brand-900">Quản lý Banner Quảng cáo</h1>
+        <p className="mt-1 text-sm text-brand-500">
+          Click 1 vùng trên mockup bên trái → xem banner đang chạy ở vùng đó (lọc theo
+          status badge) + tạo banner mới cho vùng đó.
+        </p>
+      </header>
+
+      {/* 5 status badges — clickable, preserve ?slot= khi đổi */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {STATUS_KEYS.map((key) => {
+          const meta = STATUS_LABELS[key]
+          const active = filterStatus === key
+          return (
+            <a
+              key={key}
+              href={statusUrl(key)}
+              className={`rounded-xl border p-3 text-center transition-colors ${
+                active
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-brand-200 bg-white hover:border-brand-300"
+              }`}
+            >
+              <p className="text-2xl font-bold text-brand-900">{countMap[key] ?? 0}</p>
+              <p className="text-xs text-brand-500 mt-0.5">{meta.label}</p>
+            </a>
+          )
+        })}
+      </div>
+
+      {/* Workbench: mockup trái + list/form phải */}
+      <BannerWorkbench
+        currentSlot={filterSlot}
+        bannerCards={bannerCards}
+        bannerCount={banners.length}
+        currentStatusLabel={STATUS_LABELS[filterStatus].label}
+      />
     </div>
   )
 }

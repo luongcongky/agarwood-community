@@ -187,10 +187,37 @@ enum BannerStatus {
   EXPIRED // hết hạn (cron daily check)
 }
 
-enum BannerPosition {
-  TOP // Đầu trang chủ — ngay sau thanh menu
-  MID // Giữa trang chủ — sau section Sản phẩm chứng nhận
-  SIDEBAR // Rail dọc bên phải trang /feed (sticky khi scroll)
+// Phase 4 (2026-04-29): banner gắn với (page, vùng) thay vì global position.
+// Tách per-section: tin-tuc/nghien-cuu/khuyen-nong/tin-bao-chi không share slot.
+// Trang chủ tách _LEFT/_RIGHT cho top + 2 sidebar riêng RESEARCH/MULTIMEDIA.
+enum BannerSlot {
+  // Trang chủ — top split 2 banner trái/phải (mỗi banner 485×90, tổng 970×90)
+  HOMEPAGE_TOP_LEFT
+  HOMEPAGE_TOP_RIGHT
+  HOMEPAGE_MID
+  // Trang chủ — 2 sidebar riêng cho 2 section khác nhau
+  HOMEPAGE_RESEARCH_SIDEBAR
+  HOMEPAGE_MULTIMEDIA_SIDEBAR
+
+  // Tin tức (chuyên mục NEWS)
+  NEWS_LIST_SIDEBAR
+  NEWS_DETAIL_SIDEBAR
+
+  // Nghiên cứu (RESEARCH)
+  RESEARCH_LIST_SIDEBAR
+  RESEARCH_DETAIL_SIDEBAR
+
+  // Khuyến nông (AGRICULTURE)
+  AGRICULTURE_LIST_SIDEBAR
+  AGRICULTURE_DETAIL_SIDEBAR
+
+  // Tin báo chí (PRESS / EXTERNAL)
+  PRESS_LIST_SIDEBAR
+  PRESS_DETAIL_SIDEBAR
+
+  // Multimedia + Feed (MXH)
+  MULTIMEDIA_DETAIL_SIDEBAR
+  FEED_SIDEBAR
 }
 
 // Danh mục đóng góp phi tài chính — admin ghi nhận để thăng hạng hội viên
@@ -1177,7 +1204,10 @@ model Banner {
   imageUrl  String // Cloudinary URL
   targetUrl String // link tới DN/SP/bài post (mở tab mới khi click)
   title     String // tiêu đề ngắn (hiện tooltip + alt)
-  position  BannerPosition @default(TOP) // vị trí hiển thị trên trang chủ
+  // Phase 4.2 (2026-04-29): 1 banner có thể assign nhiều slot CÙNG SHAPE
+  // (vd 1 ảnh portrait dùng cho cả NEWS_LIST_SIDEBAR + RESEARCH_LIST_SIDEBAR
+  //  + ...). Validate same-shape ở admin form, không enforce ở DB.
+  positions BannerSlot[] @default([HOMEPAGE_TOP_LEFT])
 
   // Schedule
   startDate DateTime // ngày bắt đầu hiển thị
@@ -1201,8 +1231,9 @@ model Banner {
   @@index([status])
   @@index([endDate])
   @@index([status, endDate]) // homepage query: ACTIVE + đang trong khoảng startDate-endDate
-  @@index([status, position, endDate]) // homepage query tách theo position
-  @@index([status, position, startDate, endDate]) // covers full date-window filter on TOP/MID/SIDEBAR queries
+  // Phase 4.2 (2026-04-29): positions là array → composite B-tree index không
+  // áp dụng được. Render query dùng `positions has slot` → cần GIN index trên
+  // positions; viết bằng raw SQL trong migration (Prisma chưa hỗ trợ trực tiếp).
   @@map("banners")
 }
 

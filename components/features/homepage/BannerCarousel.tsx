@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, type ReactNode } from "react"
-import type { BannerPosition } from "@prisma/client"
+import type { BannerSlot } from "@prisma/client"
 import { cloudinaryFit } from "@/lib/cloudinary"
+import { getSlotShape } from "@/lib/banner-slots"
 
 type BannerItem = {
   id: string
@@ -20,15 +21,15 @@ const ROTATION_INTERVAL_MS = 5000
  * - Không rounded / shadow / title overlay
  * - Auto-rotate 5s, pause on hover
  * - targetUrl rỗng → render <div> thay <a> (banner không clickable)
- * - position điều khiển aspect ratio: SIDEBAR → 2:3 portrait,
- *   MID → responsive landscape (16:9 → 21:9 → 5:1)
+ * - slot điều khiển aspect ratio (qua getSlotShape):
+ *   *_SIDEBAR → 2:3 portrait, *_MID → responsive landscape (16:9 → 21:9 → 5:1)
  */
 export function BannerCarousel({
   banners,
-  position,
+  slot,
 }: {
   banners: BannerItem[]
-  position: BannerPosition
+  slot: BannerSlot
 }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -48,7 +49,7 @@ export function BannerCarousel({
 
   if (banners.length === 0) return null
 
-  const isPortrait = position === "SIDEBAR"
+  const isPortrait = getSlotShape(slot) === "SIDEBAR"
   const containerAspectClass = isPortrait
     ? "aspect-[2/3]"
     : "aspect-video sm:aspect-21/9 lg:aspect-5/1"

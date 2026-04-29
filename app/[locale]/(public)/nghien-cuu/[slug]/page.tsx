@@ -473,7 +473,7 @@ export default async function ResearchDetailPage({ params }: Props) {
           />
 
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="RESEARCH_DETAIL_SIDEBAR" />
           </Suspense>
         </aside>
       </div>

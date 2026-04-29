@@ -65,7 +65,7 @@ export async function MultimediaSection() {
           {main && <MainItem item={main} locale={locale} />}
         </div>
         <div className="min-w-0 lg:col-span-3">
-          <HomepageBannerSlot position="SIDEBAR" />
+          <HomepageBannerSlot slot="HOMEPAGE_MULTIMEDIA_SIDEBAR" />
         </div>
       </div>
     </Section>

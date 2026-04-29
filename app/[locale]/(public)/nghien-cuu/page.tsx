@@ -366,7 +366,7 @@ export default async function ResearchPage({
             <SidebarFeaturedBlock title="Nghiên cứu nổi bật" locale={locale} />
           </Suspense>
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="RESEARCH_LIST_SIDEBAR" />
           </Suspense>
         </aside>
 

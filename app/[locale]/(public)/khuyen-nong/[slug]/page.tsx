@@ -473,7 +473,7 @@ export default async function AgricultureDetailPage({ params }: Props) {
           />
 
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="AGRICULTURE_DETAIL_SIDEBAR" />
           </Suspense>
         </aside>
       </div>

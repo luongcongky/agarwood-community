@@ -268,7 +268,7 @@ export default async function MultimediaDetailPage({
             compact
           />
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="MULTIMEDIA_DETAIL_SIDEBAR" />
           </Suspense>
         </aside>
       </div>

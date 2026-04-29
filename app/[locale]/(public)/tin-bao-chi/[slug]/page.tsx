@@ -539,7 +539,7 @@ export default async function ExternalNewsDetailPage({ params }: Props) {
         {/* Right rail — sticky desktop, mobile dồn xuống cuối article */}
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="PRESS_DETAIL_SIDEBAR" />
           </Suspense>
 
           <SidebarList

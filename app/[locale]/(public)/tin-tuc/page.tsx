@@ -389,7 +389,7 @@ export default async function NewsPage({
             <SidebarFeaturedBlock title={t("sidebarFeatured")} locale={locale} />
           </Suspense>
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="NEWS_LIST_SIDEBAR" />
           </Suspense>
         </aside>
 

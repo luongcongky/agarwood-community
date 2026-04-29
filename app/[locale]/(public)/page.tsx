@@ -64,9 +64,20 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      <Suspense fallback={<BannerSlotSkeleton />}>
-        <HomepageBannerSlot position="TOP" />
-      </Suspense>
+      {/* Top 2 banner trái/phải song song — mỗi banner 485×90, tổng 970×90.
+          Container giữ aspect chung để skeleton + empty state không jump layout. */}
+      <div className="flex aspect-970/90 w-full gap-3">
+        <div className="flex-1">
+          <Suspense fallback={null}>
+            <HomepageBannerSlot slot="HOMEPAGE_TOP_LEFT" />
+          </Suspense>
+        </div>
+        <div className="flex-1">
+          <Suspense fallback={null}>
+            <HomepageBannerSlot slot="HOMEPAGE_TOP_RIGHT" />
+          </Suspense>
+        </div>
+      </div>
 
       <Suspense fallback={null}>
         <BreakingTicker />
@@ -94,7 +105,7 @@ export default async function HomePage() {
       </Suspense>
 
       <Suspense fallback={<BannerSlotSkeleton />}>
-        <HomepageBannerSlot position="MID" />
+        <HomepageBannerSlot slot="HOMEPAGE_MID" />
       </Suspense>
 
       <Suspense fallback={<LatestPostsSkeleton />}>

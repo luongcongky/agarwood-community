@@ -609,7 +609,7 @@ export default async function NewsDetailPage({ params }: Props) {
 
           {/* Banner SIDEBAR — poster dọc 2:3, ẩn nếu không có banner active */}
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="NEWS_DETAIL_SIDEBAR" />
           </Suspense>
         </aside>
       </div>

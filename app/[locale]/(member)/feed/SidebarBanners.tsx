@@ -8,7 +8,7 @@ async function fetchSidebarBanners() {
   return prisma.banner.findMany({
     where: {
       status: "ACTIVE",
-      position: "SIDEBAR",
+      positions: { has: "FEED_SIDEBAR" },
       startDate: { lte: now },
       endDate: { gte: now },
     },

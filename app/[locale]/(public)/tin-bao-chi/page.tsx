@@ -326,7 +326,7 @@ export default async function ExternalNewsPage({
 
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="PRESS_LIST_SIDEBAR" />
           </Suspense>
           <Suspense fallback={<SidebarFeaturedSkeleton />}>
             <SidebarFeaturedBlock title="Tin báo chí nổi bật" locale={locale} />

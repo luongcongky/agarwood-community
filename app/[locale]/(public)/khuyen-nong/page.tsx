@@ -329,7 +329,7 @@ export default async function AgriculturePage({
             <SidebarFeaturedBlock title="Khuyến nông nổi bật" locale={locale} />
           </Suspense>
           <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
+            <HomepageBannerSlot slot="AGRICULTURE_LIST_SIDEBAR" />
           </Suspense>
         </aside>
 

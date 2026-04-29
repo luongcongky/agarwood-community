@@ -4,7 +4,7 @@
 // Chạy Supabase: cross-env DATABASE_URL=$SUPABASE_DIRECT_URL npx tsx prisma/seed-banners.ts
 // ============================================================
 
-import { PrismaClient, BannerPosition, BannerStatus } from "@prisma/client"
+import { PrismaClient, BannerSlot, BannerStatus } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
 import { config as loadEnv } from "dotenv"
@@ -119,15 +119,20 @@ async function main() {
   const start = new Date(now.getTime() - 24 * 60 * 60 * 1000) // hôm qua
   const end = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000) // +90 ngày
 
+  // Phase 4.2 (2026-04-29): positions array — TOP_BANNERS chia LEFT/RIGHT để
+  // minh hoạ layout 2 banner song song.
   const rows = [
-    ...TOP_BANNERS.map((b) => ({ ...b, position: BannerPosition.TOP })),
-    ...MID_BANNERS.map((b) => ({ ...b, position: BannerPosition.MID })),
+    ...TOP_BANNERS.map((b, i) => ({
+      ...b,
+      positions: [i % 2 === 0 ? BannerSlot.HOMEPAGE_TOP_LEFT : BannerSlot.HOMEPAGE_TOP_RIGHT],
+    })),
+    ...MID_BANNERS.map((b) => ({ ...b, positions: [BannerSlot.HOMEPAGE_MID] })),
   ].map((b) => ({
     userId: admin.id,
     title: b.title,
     imageUrl: b.imageUrl,
     targetUrl: b.targetUrl,
-    position: b.position,
+    positions: b.positions,
     startDate: start,
     endDate: end,
     status: BannerStatus.ACTIVE,
@@ -137,9 +142,12 @@ async function main() {
   }))
 
   await prisma.banner.createMany({ data: rows })
-  const topCount = await prisma.banner.count({ where: { position: "TOP", status: "ACTIVE" } })
-  const midCount = await prisma.banner.count({ where: { position: "MID", status: "ACTIVE" } })
-  console.log(`✅ Seeded ${rows.length} banner — TOP ACTIVE: ${topCount}, MID ACTIVE: ${midCount}`)
+  const topLeftCount = await prisma.banner.count({ where: { positions: { has: "HOMEPAGE_TOP_LEFT" }, status: "ACTIVE" } })
+  const topRightCount = await prisma.banner.count({ where: { positions: { has: "HOMEPAGE_TOP_RIGHT" }, status: "ACTIVE" } })
+  const midCount = await prisma.banner.count({ where: { positions: { has: "HOMEPAGE_MID" }, status: "ACTIVE" } })
+  console.log(
+    `✅ Seeded ${rows.length} banner — TOP_LEFT: ${topLeftCount}, TOP_RIGHT: ${topRightCount}, MID: ${midCount}`,
+  )
 }
 
 main()

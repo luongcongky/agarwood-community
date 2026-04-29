@@ -6,8 +6,11 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
+import type { BannerSlot } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { cloudinaryFit } from "@/lib/cloudinary"
+import { getSlotShapeConfig, BANNER_SLOT_META } from "@/lib/banner-slots"
+import { BannerSlotPicker } from "@/components/features/admin/BannerSlotPicker"
 
 type Step = 1 | 2 | 3 | 4
 
@@ -44,10 +47,10 @@ export function BannerRegisterForm() {
   const [step, setStep] = useState<Step>(1)
   const [quota, setQuota] = useState<QuotaInfo | null>(null)
 
-  // Step 1: schedule + position
+  // Step 1: schedule + slot
   const [startDate, setStartDate] = useState(todayPlusDays(1))
   const [endDate, setEndDate] = useState(todayPlusDays(31))
-  const [position, setPosition] = useState<"TOP" | "MID" | "SIDEBAR">("TOP")
+  const [slot, setSlot] = useState<BannerSlot | null>(null)
 
   // Step 2: content
   const [imageUrl, setImageUrl] = useState("")
@@ -84,6 +87,7 @@ export function BannerRegisterForm() {
 
   // ─── Step 1 ────────────────────────────────────────────────────────────
   function validateStep1(): string | null {
+    if (!slot) return "Vui lòng chọn vị trí hiển thị banner"
     if (!startDate || !endDate) return "Vui lòng chọn ngày bắt đầu và kết thúc"
     if (new Date(endDate) <= new Date(startDate)) return "Ngày kết thúc phải sau ngày bắt đầu"
     if (monthsCount < 1) return "Thời gian tối thiểu 1 tháng"
@@ -127,7 +131,7 @@ export function BannerRegisterForm() {
       const res = await fetch("/api/banner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl, targetUrl, title, startDate, endDate, position }),
+        body: JSON.stringify({ imageUrl, targetUrl, title, startDate, endDate, slot }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -218,29 +222,10 @@ export function BannerRegisterForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-800 mb-2">{t("positionLabel")} hiển thị</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {([
-                  { value: "TOP", label: t("positionTop"), desc: "Ngay sau thanh menu" },
-                  { value: "MID", label: t("positionMid"), desc: "Sau khu sản phẩm chứng nhận" },
-                  { value: "SIDEBAR", label: "Rail dọc /feed", desc: "Sticky bên phải trang feed" },
-                ] as const).map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setPosition(opt.value)}
-                    className={cn(
-                      "rounded-lg border p-3 text-left transition-colors",
-                      position === opt.value
-                        ? "border-brand-700 bg-brand-50 ring-1 ring-brand-700"
-                        : "border-brand-200 hover:bg-brand-50/50",
-                    )}
-                  >
-                    <p className="text-sm font-semibold text-brand-900">{opt.label}</p>
-                    <p className="text-xs text-brand-500 mt-0.5">{opt.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <label className="block text-sm font-medium text-brand-800 mb-2">
+                {t("positionLabel")} hiển thị
+              </label>
+              <BannerSlotPicker value={slot} onChange={setSlot} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -391,13 +376,13 @@ export function BannerRegisterForm() {
               />
             </div>
 
-            {/* Preview như trên trang chủ — 3 breakpoint */}
-            {imageUrl && (
+            {/* Preview theo aspect của slot đã chọn */}
+            {imageUrl && slot && (
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-brand-900">
-                  {t("previewLabel")} hiển thị thực tế trên trang chủ
+                  {t("previewLabel")} hiển thị thực tế ({BANNER_SLOT_META[slot].label})
                 </p>
-                <BannerPreview imageUrl={imageUrl} />
+                <BannerPreview imageUrl={imageUrl} slot={slot} />
               </div>
             )}
 
@@ -474,8 +459,8 @@ export function BannerRegisterForm() {
             <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-5 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-brand-600">{t("positionLabel")}:</span>
-                <span className="font-semibold text-brand-900">
-                  {position === "TOP" ? "Đầu trang chủ" : t("positionMid")}
+                <span className="font-semibold text-brand-900 text-right">
+                  {slot ? BANNER_SLOT_META[slot].label : "—"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -605,15 +590,24 @@ function BankRow({ label, value, mono, highlight }: { label: string; value: stri
 }
 
 /**
- * Preview banner ở 3 breakpoint giống thực tế trên trang chủ.
- * URL được rewrite qua Cloudinary transformation để đúng cảm giác cuối cùng.
+ * Preview banner theo aspect của slot — TOP (970:90), MID (5:1 desktop / 21:9
+ * tablet / 16:9 mobile), SIDEBAR (2:3 portrait).
  */
-function BannerPreview({ imageUrl }: { imageUrl: string }) {
-  const previews: { label: string; ar: string; w: number }[] = [
-    { label: "Desktop (≥1024px) — tỉ lệ 5:1", ar: "5:1", w: 1280 },
-    { label: "Tablet (640-1023px) — tỉ lệ 21:9", ar: "21:9", w: 720 },
-    { label: "Mobile (<640px) — tỉ lệ 16:9", ar: "16:9", w: 480 },
-  ]
+function BannerPreview({ imageUrl, slot }: { imageUrl: string; slot: BannerSlot }) {
+  const cfg = getSlotShapeConfig(slot)
+  const previews = (() => {
+    if (cfg.aspectRatio === 970 / 90) {
+      return [{ label: "Leaderboard (970×90)", ar: "970:90", w: 1280 }]
+    }
+    if (cfg.aspectRatio < 1) {
+      return [{ label: "Sidebar dọc (2:3)", ar: "2:3", w: 800 }]
+    }
+    return [
+      { label: "Desktop (≥1024px) — tỉ lệ 5:1", ar: "5:1", w: 1280 },
+      { label: "Tablet (640-1023px) — tỉ lệ 21:9", ar: "21:9", w: 720 },
+      { label: "Mobile (<640px) — tỉ lệ 16:9", ar: "16:9", w: 480 },
+    ]
+  })()
 
   return (
     <div className="space-y-3">
@@ -621,7 +615,10 @@ function BannerPreview({ imageUrl }: { imageUrl: string }) {
         <div key={p.ar} className="space-y-1">
           <p className="text-xs text-brand-500">{p.label}</p>
           <div
-            className="relative w-full overflow-hidden rounded-lg border border-brand-200 bg-brand-100"
+            className={cn(
+              "relative w-full overflow-hidden rounded-lg border border-brand-200 bg-brand-100",
+              cfg.aspectRatio < 1 ? "max-w-xs" : "",
+            )}
             style={{ aspectRatio: p.ar.replace(":", " / ") }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

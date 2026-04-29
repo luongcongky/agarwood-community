@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import { revalidateTag } from "next/cache"
+import type { BannerSlot } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
+import { BANNER_SLOT_META, getSlotShape } from "@/lib/banner-slots"
 
 /**
  * POST /api/admin/banner — admin tự đăng banner trực tiếp (bypass payment +
@@ -12,7 +14,9 @@ import { prisma } from "@/lib/prisma"
  *  - Tạo thẳng với status=ACTIVE, approvedAt=now, approvedBy=self
  *  - price=0
  *
- * Body: { position, imageUrl, targetUrl, title, startDate, endDate }
+ * Body: { slot, imageUrl, targetUrl, title, startDate, endDate }
+ *
+ * `slot` là 1 trong các giá trị enum `BannerSlot` (page-prefixed).
  */
 export async function POST(req: Request) {
   const session = await auth()
@@ -21,8 +25,8 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const { position, imageUrl, targetUrl, title, startDate, endDate } = body as {
-    position?: "TOP" | "MID" | "SIDEBAR"
+  const { slots, imageUrl, targetUrl, title, startDate, endDate } = body as {
+    slots?: string[]
     imageUrl?: string
     targetUrl?: string
     title?: string
@@ -36,12 +40,32 @@ export async function POST(req: Request) {
       { status: 400 },
     )
   }
-  if (position !== "TOP" && position !== "MID" && position !== "SIDEBAR") {
+  if (!Array.isArray(slots) || slots.length === 0) {
     return NextResponse.json(
-      { error: "position phải là TOP / MID / SIDEBAR." },
+      { error: "Cần chọn ít nhất 1 vùng hiển thị." },
       { status: 400 },
     )
   }
+  for (const s of slots) {
+    if (!(s in BANNER_SLOT_META)) {
+      return NextResponse.json(
+        { error: `Slot không hợp lệ: ${s}` },
+        { status: 400 },
+      )
+    }
+  }
+  // Mọi slot trong list phải cùng shape (vd cùng SIDEBAR) — vì share 1 ảnh
+  // 1 aspect ratio. Form đã validate ở client, server check lại để chắc.
+  const validSlots = slots as BannerSlot[]
+  const shapes = new Set(validSlots.map(getSlotShape))
+  if (shapes.size > 1) {
+    return NextResponse.json(
+      { error: "Các vùng được chọn phải cùng aspect ratio (vd cùng SIDEBAR)." },
+      { status: 400 },
+    )
+  }
+  // Dedup
+  const uniqueSlots = Array.from(new Set(validSlots))
   // targetUrl optional — nếu có phải là https://. Admin có thể để trống cho
   // banner không clickable (brand awareness).
   if (targetUrl && !/^https:\/\//.test(targetUrl)) {
@@ -72,7 +96,7 @@ export async function POST(req: Request) {
   const banner = await prisma.banner.create({
     data: {
       userId: session.user.id,
-      position,
+      positions: uniqueSlots,
       imageUrl,
       targetUrl: targetUrl ?? "",
       title,

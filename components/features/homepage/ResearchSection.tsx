@@ -81,7 +81,7 @@ export async function ResearchSection() {
         {/* Col 3 — banner SIDEBAR (2:3 portrait). Tự ẩn nếu không có banner
             ACTIVE; cột để trống là acceptable (grid không collapse). */}
         <div className="min-w-0 lg:col-span-3">
-          <HomepageBannerSlot position="SIDEBAR" />
+          <HomepageBannerSlot slot="HOMEPAGE_RESEARCH_SIDEBAR" />
         </div>
       </div>
     </Section>

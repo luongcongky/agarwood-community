@@ -1,16 +1,10 @@
 import { redirect } from "next/navigation"
-import { auth } from "@/lib/auth"
-import { canAdminWrite } from "@/lib/roles"
-import { AdminBannerEditor } from "../AdminBannerEditor"
 
-export const metadata = {
-  title: "Tạo banner | Admin",
-}
-
-export default async function AdminBannerCreatePage() {
-  const session = await auth()
-  if (!session?.user || !canAdminWrite(session.user.role)) {
-    redirect("/login")
-  }
-  return <AdminBannerEditor />
+/**
+ * Backward-compat redirect: trang tạo banner đã gộp vào `/admin/banner`
+ * thành workbench (mockup chọn vị trí + form bên phải). Bookmark cũ vẫn
+ * hoạt động.
+ */
+export default function AdminBannerCreatePage() {
+  redirect("/admin/banner")
 }

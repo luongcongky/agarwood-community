@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
+import type { BannerSlot } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getBannerPricePerMonth, getBannerQuotaUsage } from "@/lib/bannerQuota"
+import { BANNER_SLOT_META, getSlotShape } from "@/lib/banner-slots"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
@@ -22,21 +24,32 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const { imageUrl, targetUrl, title, startDate, endDate, position } = body as {
+  const { imageUrl, targetUrl, title, startDate, endDate, slots } = body as {
     imageUrl?: string
     targetUrl?: string
     title?: string
     startDate?: string
     endDate?: string
-    position?: "TOP" | "MID" | "SIDEBAR"
+    slots?: string[]
   }
 
   // Validate fields
   if (!imageUrl || !targetUrl || !title || !startDate || !endDate) {
     return NextResponse.json({ error: "Thiếu thông tin bắt buộc" }, { status: 400 })
   }
-  const bannerPosition: "TOP" | "MID" | "SIDEBAR" =
-    position === "MID" ? "MID" : position === "SIDEBAR" ? "SIDEBAR" : "TOP"
+  if (!Array.isArray(slots) || slots.length === 0) {
+    return NextResponse.json({ error: "Cần chọn ít nhất 1 vùng hiển thị." }, { status: 400 })
+  }
+  for (const s of slots) {
+    if (!(s in BANNER_SLOT_META)) {
+      return NextResponse.json({ error: `Slot không hợp lệ: ${s}` }, { status: 400 })
+    }
+  }
+  const validSlots = slots as BannerSlot[]
+  if (new Set(validSlots.map(getSlotShape)).size > 1) {
+    return NextResponse.json({ error: "Các vùng phải cùng aspect ratio." }, { status: 400 })
+  }
+  const uniqueSlots = Array.from(new Set(validSlots))
   if (!/^https:\/\//.test(targetUrl)) {
     return NextResponse.json({ error: "Đường dẫn đích phải bắt đầu bằng https://" }, { status: 400 })
   }
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
         endDate: end,
         status: "PENDING_PAYMENT",
         price: totalPrice,
-        position: bannerPosition,
+        positions: uniqueSlots,
       },
     })
     const payment = await tx.payment.create({
