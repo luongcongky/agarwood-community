@@ -163,7 +163,7 @@ Document (Google Drive)
 | Payment | ~200/nam | Membership + cert fee |
 | Certification | ~100/nam | |
 | MediaOrder | ~50/nam | |
-| News | ~100-200 (admin nhap + crawled) | **category** (GENERAL/RESEARCH), **sourceUrl**, **originalAuthor** |
+| News | ~100-200 (admin nhap + crawled) | **category** (8 enum), **secondaryCategories[]** (cross-list, max 3), **pinnedInCategories[]** (per-section pin homepage), **sourceUrl**, **originalAuthor** |
 | **MembershipApplication** | ~50-100 | Don ket nap (Dieu 11) — status + reviewer + reject reason |
 | Document | ~20 legal + N tai lieu | **DIEU_LE/QUY_CHE/GIAY_PHEP** + issuer + sortOrder |
 | **Banner** | ~50 ACTIVE | `position` (TOP/MID) — 2 slot tach biet tren trang chu |
@@ -192,7 +192,13 @@ enum NewsCategory {
   SPONSORED_PRODUCT    // legacy — bai san pham tra phi (Phase 2)
   BUSINESS             // tin doanh nghiep — yeu cau News.relatedCompanyId   (Phase 3.3)
   PRODUCT              // tin san pham — yeu cau News.relatedCompanyId + relatedProductId (Phase 3.3)
+  EXTERNAL_NEWS        // tin bao chi ngoai — /tin-bao-chi (Phase 3.5, yeu cau sourceName + sourceUrl)
+  AGRICULTURE          // tin khuyen nong — /khuyen-nong (Phase 3.5)
 }
+
+// Phase 3.7 round 4 (2026-04): cross-list + pin per-section
+// News.secondaryCategories: NewsCategory[] @default([])  // max 3, exclude primary
+// News.pinnedInCategories:  NewsCategory[] @default([])  // admin-only, no max
 
 enum NewsTemplate {    // Phase 3.3 (2026-04)
   NORMAL               // RichTextEditor: text + anh + video chen lan
@@ -238,6 +244,12 @@ enum DocumentCategory {
 - `add_news_source_url` — `News.sourceUrl` (crawl reference)
 - `add_news_original_author` — `News.originalAuthor`
 - `add_legal_doc_categories` — `DocumentCategory` them 3 enum values + `Document.issuer` + `Document.sortOrder`
+
+### Migrations Phase 3.7 round 4 (2026-04):
+- `20260428000000_post_cover_image` — `Post.coverImageUrl` (admin promote post can cover 16:9 dedicated)
+- `20260428100000_news_secondary_categories` — `News.secondaryCategories: NewsCategory[]` + GIN index (cross-list bai len nhieu list page)
+- `20260428200000_post_news_categories` — `Post.newsCategories: NewsCategory[]` + GIN index (admin tag bai feed thanh nguon news, hien o /tin-tuc, /nghien-cuu, ...)
+- `20260428300000_news_pinned_in_categories` — `News.pinnedInCategories: NewsCategory[]` + GIN index (admin pin per-section trang chu, mo rong visibility cross-list)
 - `add_banner_position` — `BannerPosition` enum (TOP/MID) + `Banner.position` + index `(status, position, endDate)`
 - `add_post_product_relation` — `Product.postId String? @unique` (1-1 voi Post, Cascade tu Post)
 - `add_news_category_legal` — them gia tri `LEGAL` vao `NewsCategory`
@@ -419,24 +431,42 @@ model Product {
 | Public detail | 1800-3600s | Chi tiet tin, SP, DN |
 
 ### Phase 3 — Trang chu Newspaper Layout
-6 section, query chia trong `lib/homepage.ts` voi `unstable_cache`:
+Section, query chia trong `lib/homepage.ts` voi `unstable_cache`:
 
 | Section | Data fetcher | Cache | Filter chinh |
 |---------|-------------|-------|-------------|
 | 0. Banner TOP (sau menu) | `HomepageBannerSlot position="TOP"` | 60s | Banner ACTIVE + position=TOP |
-| 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished, sort isPinned + publishedAt |
-| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (3 top) + `getRotatingMemberPosts` (6 rotating) | 300s | isPremium=true (top), bao gom Tai khoan co ban (rotate) |
+| 1. Tin tuc Hoi | `getAssociationNews` | 300s | News.isPublished — sort: pinnedInCategories has GENERAL → isPinned global → publishedAt DESC (overfetch 21, slice 7) |
+| 2. Ban tin hoi vien (right rail) | `getTopVipMemberPosts` (4 top) + `getRotatingMemberPosts` (9 rotating) | 300s | Top: isPremium OR isPromoted, sort `isPromoted → day VN → contributionTotal → date`. Rotate pool 30 (KHONG filter VIP), score `(log10(contributionTotal+1)+1) * (0.5 + rng())` — Phase 3.7 round 4 (ADR-035) |
 | 3. SP tieu bieu (carousel) | `getFeaturedProductsForHomepage` | 600s | isFeatured=true + owner.role=VIP (Hoi vien) |
 | 4. Banner MID (giua trang) | `HomepageBannerSlot position="MID"` | 60s | Banner ACTIVE + position=MID |
-| 5. Tin DN moi nhat | `getMergedFeed("NEWS","BUSINESS",6)` | 300s | Post.NEWS (isPremium/isPromoted) ∪ News.BUSINESS template=NORMAL — sort date DESC (Q0=C, ADR-036) |
-| 6. Tin SP moi nhat | `getMergedFeed("PRODUCT","PRODUCT",5)` | 300s | Post.PRODUCT ∪ News.PRODUCT template=NORMAL — sort date DESC (Q0=C, ADR-036) |
-| 7. Doi tac & Co quan lien ket | `getActivePartners` (PartnersCarousel) | 300s | Partner.isActive=true, sort sortOrder ASC |
+| 5. Nghien cuu khoa hoc | `getLatestResearchNews(5)` | 300s | category=RESEARCH OR pinnedInCategories has RESEARCH — sort pin first → publishedAt DESC. Layout: 1 hero + 4 sub-hero + SIDEBAR banner |
+| 6. Tin khuyen nong | `getLatestAgricultureNews(7)` | 300s | category=AGRICULTURE OR pinnedInCategories has AGRICULTURE — sort pin first → publishedAt DESC. Layout: 1 hero + 2 mid + 4 small. **Hide khi count < 7** |
+| 7. Tin DN | `getMergedFeed("NEWS","BUSINESS",6)` | 300s | Post.NEWS (isPremium/isPromoted/admin) ∪ News.BUSINESS (category OR pin has BUSINESS), template=NORMAL — sort: **pin trump tat ca** → day VN → priority → date (Q0=C, ADR-036) |
+| 8. Tin SP | `getMergedFeed("PRODUCT","PRODUCT",5)` | 300s | Post.PRODUCT ∪ News.PRODUCT (category OR pin has PRODUCT) — sort: pin → day → cert APPROVED → priority → date |
+| 9. Doi tac & Co quan lien ket | `getActivePartners` (PartnersCarousel) | 300s | Partner.isActive=true, sort sortOrder ASC |
 
-**Rotating slots algorithm** (right rail):
-- Pool 50 bai, exclude top Hoi vien da hien thi
-- Weighted random: `score = (authorPriority + 1) * (0.5 + rng())`
+**Per-section pin** (Phase 3.7 round 4, 2026-04 — ADR-038):
+- `News.pinnedInCategories: NewsCategory[]` — admin tick checkbox `Ghim len section trang chu`
+- Mo rong visibility cross-list: bai primary RESEARCH co the duoc pin len section AGRICULTURE → bai xuat hien o homepage Khuyen nong (du khong phai primary)
+- Sort moi section: `pin-for-this-section first → publishedAt DESC` (overfetch 3x + JS sort vi Prisma orderBy khong support array `has`)
+- Khac voi `News.isPinned` (boolean global, dung cho NewsSection Tin Hoi + sidebar `Noi bat` o list pages)
+- API: chi `admin:full` write duoc; PATCH/POST validate enum + dedupe, server strip neu non-admin
+- Admin UI: cot `Ghim trang chu` o `/admin/tin-tuc` voi 5 chip toggle inline (TH/NC/DN/SP/KN); filter `pin` query param
+
+**Top VIP member posts** order (Phase 3.7 round 4):
+- Tier 1: `isPromoted` (admin curate flag)
+- Tier 2: ngay VN (startOfDay UTC+7) — bai cung 1 ngay group voi nhau
+- Tier 3: `author.contributionTotal` DESC (do cong hien thuc te, thay `authorPriority` cu)
+- Tier 4: `createdAt` DESC tie-break
+- Overfetch 20 + JS sort (Prisma khong day-bucket native)
+
+**Rotating slots algorithm** (right rail) (Phase 3.7 round 4):
+- Pool 30 bai (truoc 50), exclude top member da hien thi
+- Score `(log10(contributionTotal + 1) + 1) * (0.5 + rng())` — log scale vi range 0-20M+ VND, linear lam contrib cao luon thang deterministic
 - Seed = `Math.floor(Date.now() / 300_000)` (5-min bucket) → deterministic trong 5 phut
 - Mulberry32 PRNG inline (~8 dong code)
+- Default count 9 (truoc 6)
 
 **Cache invalidation tags**: `homepage`, `news`, `posts`, `products`, `companies`, `banners`, `partners`, `legal-pages`, `footer`, `site-config`
 - Admin pin/unpin → `revalidateTag("homepage", "max")` + tag tuong ung

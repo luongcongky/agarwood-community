@@ -126,7 +126,7 @@ function CompactItem({ post }: { post: HomepagePost }) {
       className="group flex gap-2 text-sm"
     >
       <span className="shrink-0 font-bold text-brand-700">▸</span>
-      <span className="line-clamp-2 leading-snug text-brand-900 group-hover:text-brand-700 group-hover:underline">
+      <span className="line-clamp-2 font-bold leading-snug text-brand-900 group-hover:text-brand-700 group-hover:underline">
         {title}
       </span>
     </Link>

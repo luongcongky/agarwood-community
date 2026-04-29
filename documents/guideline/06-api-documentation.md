@@ -665,21 +665,62 @@ Xoa van ban (ca Drive + DB). Yeu cau: ADMIN. Best-effort Drive delete.
 
 ### POST /api/admin/news + PATCH /api/admin/news/{id}
 
-**Field `category`** — 5 gia tri (Phase 3.3 them 2 moi):
+**Field `category`** — 8 gia tri (Phase 3.5 them 2 moi):
 
 ```json
-{ "category": "GENERAL" }    // → /tin-tuc
-{ "category": "RESEARCH" }   // → /nghien-cuu
-{ "category": "BUSINESS" }   // → tin doanh nghiep, yeu cau relatedCompanyId
-{ "category": "PRODUCT" }    // → tin san pham, yeu cau relatedCompanyId + relatedProductId
-{ "category": "LEGAL" }      // → /privacy hoac /terms (slug co dinh)
+{ "category": "GENERAL" }         // → /tin-tuc
+{ "category": "RESEARCH" }        // → /nghien-cuu
+{ "category": "BUSINESS" }        // → tin doanh nghiep, yeu cau relatedCompanyId
+{ "category": "PRODUCT" }         // → tin san pham, yeu cau relatedCompanyId + relatedProductId
+{ "category": "EXTERNAL_NEWS" }   // → /tin-bao-chi, yeu cau sourceName + sourceUrl (Phase 3.5)
+{ "category": "AGRICULTURE" }     // → /khuyen-nong (Phase 3.5)
+{ "category": "LEGAL" }           // → /privacy hoac /terms (slug co dinh)
+{ "category": "SPONSORED_PRODUCT" } // legacy
 ```
 
 Server validate (return 400 neu thieu):
-- `BUSINESS` -> `relatedCompanyId` bat buoc
-- `PRODUCT` -> `relatedCompanyId` + `relatedProductId` bat buoc
-- `relatedCompanyId` / `relatedProductId` se bi clear ve null cho cac category
-  khac (vd doi tu PRODUCT -> GENERAL → 2 field xoa)
+- `BUSINESS` / `PRODUCT` -> `relatedCompanyId` bat buoc
+- `PRODUCT` -> them `relatedProductId` (hoac `productData` o POST flow)
+- `EXTERNAL_NEWS` -> `sourceName` (non-empty) + `sourceUrl` (regex `^https?://.+`)
+- PATCH **cho phep doi primary category** sau khi tao (Phase 3.7 round 4) —
+  validate dua tren `merged` state (data.field hoac current.field). Mat
+  `relatedCompanyId/source*` khi doi sang BUSINESS/PRODUCT/EXTERNAL_NEWS ma
+  ca patch va current deu thieu → 400.
+
+**Field `secondaryCategories`** (Phase 3.7 round 4) — array NewsCategory, max 3,
+exclude primary:
+
+```json
+{ "category": "BUSINESS", "secondaryCategories": ["RESEARCH", "AGRICULTURE"] }
+```
+
+- Bai xuat hien o list page tuong ung primary va moi secondary (vd primary
+  BUSINESS → /tin-tuc; secondary RESEARCH → /nghien-cuu; secondary AGRICULTURE
+  → /khuyen-nong)
+- Server: filter enum hop le, dedupe, slice 3, exclude effective primary
+- PATCH defensive: neu primary vua doi va secondary cu chua primary moi → tu
+  strip de giu invariant `secondary ∩ primary = ∅`
+
+**Field `pinnedInCategories`** (Phase 3.7 round 4, **admin:full only**) —
+array NewsCategory, khong gioi han so luong:
+
+```json
+{ "pinnedInCategories": ["BUSINESS", "RESEARCH"] }
+```
+
+- Admin pin bai len section homepage cu the (mo rong visibility cross-list:
+  bai khong primary/secondary nhung duoc pin van xuat hien tren section do)
+- Section homepage sort: pinned-for-this-section first → date DESC
+- Server: chi `admin:full` set duoc; non-admin gui thi server **strip** (data
+  field bo qua, gia tri cu giu nguyen). Validate enum + dedupe.
+- Khac voi `isPinned` boolean global (van giu cho NewsSection + sidebar
+  `Noi bat` o list pages)
+
+**Field `publishedAt` defensive auto-fill** (Phase 3.7 round 4):
+- Neu `isPublished=true` (sau merge POST/PATCH state) ma `publishedAt` null
+  → server tu set `new Date()`. Bao dam bai luon co ngay khi public.
+- Reasoning: editor co edge-case React batching lam client gui isPublished=true
+  nhung publishedAt null → bai mat khoi top section homepage (sort by-day).
 
 **Field `template`** — 3 gia tri (moi):
 

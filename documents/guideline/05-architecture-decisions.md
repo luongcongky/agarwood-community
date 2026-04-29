@@ -1552,3 +1552,194 @@ Sau ADR-035 (5 categories + 3 templates), can quyet 5 cau hoi routing/UX:
   tab `news` voi list rendering.
 - `messages/{vi,en,zh,ar}.json` — them `companyTabs.tabNews` +
   `companyTabs.noNews`.
+
+---
+
+## ADR-037: News cross-classification + curated feed Posts (Phase 3.7 round 4, 2026-04)
+
+### Quyet dinh
+1 bai tin tuc co the thuoc nhieu category cung luc (vd vua la BUSINESS vua la
+RESEARCH). 2 co che:
+
+- **`News.secondaryCategories: NewsCategory[]`** (max 3, exclude primary) — bai
+  xuat hien o moi list page tuong ung (vd primary BUSINESS + secondary RESEARCH
+  → /tin-tuc + /nghien-cuu).
+- **`Post.newsCategories: NewsCategory[]`** (admin tag bai feed) — Post cua hoi
+  vien duoc admin curate, hien xen ke trong list page tin tuc voi badge
+  `📝 Bai hoi vien`. Click → `/bai-viet/[id]` (canonical Post URL) thay vi
+  `/tin-tuc/[slug]`.
+
+### Reasoning
+- Khach hang feedback: 1 bai phong su DN co the bao gom thanh phan nghien cuu
+  → khong nen bat admin chon 1 category duy nhat. Cross-list giai bai toan
+  visibility ma khong duplicate du lieu.
+- Curated feed Posts: Post cua hoi vien chuyen sau ve trầm huong (vd ky thuat
+  trong, kinh nghiem) cung co gia tri editorial. Thay vi admin viet lai thanh
+  News, admin tag de Post xuat hien tren list page (giu tac gia, link goc).
+
+### Sort logic
+List pages (/tin-tuc, /nghien-cuu, /khuyen-nong, /tin-bao-chi):
+- Hero/sub-hero: News-only (editorial layout) — primary OR secondary match
+- Latest list: merge curated Posts vao theo `publishedAt DESC` (Post dung
+  `createdAt` lam proxy). Pinned News o top.
+- Load-more: News-only (Post da merge het vao initial render)
+
+### Files
+- `prisma/migrations/20260428000000_post_cover_image` — `Post.coverImageUrl`
+- `prisma/migrations/20260428100000_news_secondary_categories` — array + GIN
+- `prisma/migrations/20260428200000_post_news_categories` — array + GIN
+- `app/[locale]/(public)/_lib/post-news-merge.ts` — `mergeByDateDesc()`,
+  `postToListItem()` helpers
+- `app/[locale]/(public)/{tin-tuc,nghien-cuu,khuyen-nong,tin-bao-chi}/page.tsx` —
+  WHERE expand `OR: [{category}, {secondaryCategories: {has}}]`
+- `app/[locale]/(public)/{tin-tuc/NewsListItemCard,nghien-cuu/LatestResearchList,
+  khuyen-nong/LatestAgricultureList,tin-bao-chi/LatestExternalNewsList}.tsx` —
+  badge `📝 Bai hoi vien` + href conditional
+- `components/features/admin/PromotePostModal.tsx` — UI admin tag Post +
+  isPromoted (dong thoi 2 thao tac trong 1 modal)
+
+---
+
+## ADR-038: Per-section pin trang chu (Phase 3.7 round 4, 2026-04)
+
+### Quyet dinh
+Them `News.pinnedInCategories: NewsCategory[]` cho admin pin bai len cac
+section trang chu cu the (Tin Hoi, Nghien cuu, Tin DN, Tin SP, Tin khuyen
+nong). Khac voi `News.isPinned` (boolean global) van giu cho NewsSection +
+sidebar `Noi bat` o list pages.
+
+### Reasoning
+- 1 bai thuoc nhieu category (qua secondary), admin can quyen ghim len SECTION
+  CU THE chu khong phai global. `isPinned` boolean khong du linh hoat.
+- Khach hang muon: bai chinh thuoc primary RESEARCH co the duoc admin ghim
+  len section homepage Khuyen nong → pin **mo rong visibility** cross-list
+  (bai khong primary/secondary AGRICULTURE van xuat hien neu duoc pin).
+- Khong gioi han so luong pin per section — admin tu kiem soat.
+
+### Sort & visibility
+Moi section homepage:
+1. WHERE: `category = X OR pinnedInCategories has X` (mo rong tu primary-only)
+2. Sort tier 0: `pin-for-this-section` first (trump tat ca, ke ca day-bucket
+   o `getMergedFeedCached`)
+3. Tier 1+: theo logic cu cua tung section (date, cert, priority, ...)
+
+Implementation: Prisma `orderBy` khong support array `has` check → overfetch 3x
++ JS sort. Cost ~20-30 row mỗi 5 phut (cache), khong dang ke.
+
+### Permission
+Chi `admin:full` write duoc `pinnedInCategories`. Server strip neu non-admin
+gui (defense-in-depth). UI checkbox group an khi non-admin.
+
+### Files
+- `prisma/migrations/20260428300000_news_pinned_in_categories` — array + GIN
+- `lib/homepage.ts` — update `NEWS_CARD_SELECT` + 4 fetcher (Association,
+  Research, Agriculture, MergedFeed) thanh `WHERE OR + JS sort`
+- `app/api/admin/news/route.ts` + `[id]/route.ts` — accept field, validate
+  `admin:full` + enum dedupe
+- `app/(admin)/admin/tin-tuc/[id]/NewsEditor.tsx` — checkbox group
+  "Ghim len section trang chu" admin-only
+- `app/(admin)/admin/tin-tuc/PinSectionChips.tsx` — inline 5 chip toggle
+  o /admin/tin-tuc list page (cot moi `Ghim trang chu`)
+- `app/(admin)/admin/tin-tuc/page.tsx` — them filter `pin` + select dropdown
+  "Ghim section"; an cot cu `Noi bat` (isPinned global) khoi list, admin
+  chinh trong detail neu can
+
+---
+
+## ADR-039: MemberRail re-tune (Phase 3.7 round 4, 2026-04)
+
+### Quyet dinh
+Right rail "Ban tin hoi vien" tren trang chu duoc tinh chinh ca config va
+thuat toan:
+
+**Top section** (khac voi rotate):
+- Slot count: 3 → **4**
+- Order moi: `isPromoted DESC → day VN DESC → contributionTotal DESC → createdAt DESC`
+- Truoc: `isPromoted DESC → authorPriority DESC → createdAt DESC` (ADR cu)
+- Reasoning: Day-bucket ngat doan giua "bai hom nay cua hoi vien thap" vs
+  "bai hom qua cua hoi vien cao" — ngay moi luon thang. Trong cung 1 ngay,
+  contribution cao thang. Tier `authorPriority` chi phan anh tier label —
+  `contributionTotal` phan anh do cong hien thuc te (so VND).
+
+**Rotate section**:
+- Slot count: 6 → **9**
+- Pool size: 50 → **30** bai moi nhat
+- Score moi: `(log10(contributionTotal + 1) + 1) * (0.5 + rng())`
+- Truoc: `(authorPriority + 1) * (0.5 + rng())`
+- Reasoning: Linear scale `contributionTotal` (range 0-20M+ VND) lam contrib
+  cao luon thang deterministic, mat hieu ung xoay vong. Log10 thu hep gap:
+  `0 VND → 0`, `10M (Bac) → 7`, `20M (Vang) → 7.3`, `100M → 8`. Khoang cach
+  0.3-0.4 giua tier x random 0.5-1.5 = vua giu uu the contrib cao, vua cho
+  hoi vien thuong co co hoi.
+
+### Files
+- `lib/homepage.ts`:
+  - `POST_CARD_SELECT` them `isPromoted` (cho top sort) + `author.contributionTotal`
+  - `getTopVipMemberPosts` overfetch 20 + JS sort by-day VN
+  - `pickRotatingMembers` default count 9 + log10 score
+  - `getMemberPostsPoolCached` take 30
+- `components/features/homepage/MemberRail.tsx` — bo `.slice(0, 8)` (dead code,
+  picker da tra dung count)
+
+---
+
+## ADR-040: Editorial sections trang chu — Research + Agriculture redesign (Phase 3.7 round 4, 2026-04)
+
+### Quyet dinh
+- **ResearchSection**: redesign 3-cot — `1 hero (col 5) + 4 sub-hero (col 4) +
+  SIDEBAR banner (col 3)`. Truoc do la `1 main + 3 list` (4 items text).
+- **AgricultureSection** (moi): them section trang chu cho category=AGRICULTURE
+  voi 3-cot — `1 hero (col 5) + 2 mid (col 4) + 4 small (col 3)`. **An hoan
+  toan khi count < 7** (layout sparse khong dep).
+- Section title bo "moi nhat" (rut gon): `Tin doanh nghiep / Tin san pham /
+  Nghien cuu khoa hoc / Tin khuyen nong`. Apply ca 4 locale (vi/en/zh/ar).
+
+### Reasoning
+- Khach hang gui mock layout VOV/VTV-style → admin muon doi trang chu
+  newspaper-style theo do.
+- AgricultureSection ngu canh ngat khoi RESEARCH va GENERAL — yeu cau khach
+  ket noi nguoi trong cay do bau.
+- "Moi nhat" trong title du thua (mac dinh moi section dau hien noi dung moi
+  nhat). Tit ngan gon hon.
+
+### Files
+- `lib/homepage.ts` — `getLatestAgricultureNews` (moi), `getLatestResearchNews`
+  (existing, cap nhat WHERE expand pin)
+- `components/features/homepage/AgricultureSection.tsx` — moi
+- `components/features/homepage/ResearchSection.tsx` — rewrite 3-cot
+- `app/[locale]/(public)/page.tsx` — them `<AgricultureSection>` ngay sau
+  `<ResearchSection>`
+- `messages/{vi,en,zh,ar}.json` — bo "moi nhat" o `businessNews`, `productNews`,
+  `researchTitle`; them `agricultureTitle/Subtitle/Empty` (4 locale)
+
+---
+
+## ADR-041: Auto-fill publishedAt + unlock primary category (Phase 3.7 round 4, 2026-04)
+
+### Quyet dinh
+- Server defensive: POST + PATCH `/api/admin/news` auto-set
+  `publishedAt = new Date()` khi `isPublished=true` ma client gui null.
+- Client unlock: cho phep doi `category` (primary) sau khi tao bai. Server
+  validate required field (BUSINESS/PRODUCT → relatedCompanyId,
+  EXTERNAL_NEWS → sourceName + sourceUrl) khi merged state co category moi.
+
+### Reasoning
+- Bug truoc: editor "Xuat ban" button onClick set `setPublishedAt(now)` +
+  `setIsPublished(true)`, nhung React state batching → form submit thay state
+  cu (publishedAt vẫn rỗng). Bai luu DB voi `isPublished=true` + `publishedAt=null`
+  → tut cuoi list public (sort by date) + bien mat khoi top 6 section trang chu
+  (sort by-day, null = epoch).
+- Server fix triet de: catch tat ca code path (kể ca PATCH manual toggle).
+  Backfill 8 record orphan = `createdAt` cho moi bai (giu thu tu lich su).
+- Khach hang feedback: bai sau khi tao co the can doi loai (vd post nham
+  GENERAL → BUSINESS). Lock cu ("dieu chinh sau khi tao se pha vo ngu nghia")
+  qua bao thu — voi cross-list co san, doi primary an toan hon.
+- PRODUCT van locked (chi giu option neu bai cu da PRODUCT) vi mode do can
+  `productData` qua flow `/feed/tao-bai`.
+
+### Files
+- `app/api/admin/news/route.ts` — POST: derive `finalPublishedAt`
+- `app/api/admin/news/[id]/route.ts` — PATCH: defensive sau khi build `merged`,
+  validate required field theo final category
+- `app/(admin)/admin/tin-tuc/[id]/NewsEditor.tsx` — bo `disabled={!isNew}` o
+  category select; helper text update

@@ -310,8 +310,25 @@ Tuong tu, voi 5 cot: Tieu bieu / Thu tu / Doanh nghiep / Chu so huu / Xac minh.
   toggle nhanh. Optimistic UI flip ngay, rollback neu API loi.
   - Chi user co `news:publish` (ADMIN, Ban Truyen thong) duoc bam. INFINITE
     thay disabled + tooltip giai thich.
-- **Cot "Ghim"**: badge 📌 (highlight) hoac xam → click de toggle ghim.
-  Bat ky user co `news:write` deu bam duoc.
+- **Cot "Ghim trang chu"** (Phase 3.7 round 4 — 2026-04): 5 chip dung
+  (Tin Hoi / Nghien cuu khoa hoc / Tin doanh nghiep / Tin san pham / Tin
+  khuyen nong) — chip vang filled = bai dang duoc pin len section do tren
+  trang chu, chip xam outline = chua pin. Click chip de toggle inline,
+  optimistic UI + revalidate cache homepage.
+  - Chi `admin:full` thao tac duoc; non-admin thay chip read-only.
+  - Bai pin se nhay len TOP section homepage tuong ung, ngay ca khi
+    primary/secondary category cua bai khong khop voi section (mo rong
+    visibility cross-list).
+- Cot cu "Noi bat" (`isPinned` global) **da an khoi danh sach** (3.7 round 4)
+  — admin chinh trong trang detail neu can. Field van con tac dung o
+  list pages sidebar `Noi bat`.
+
+**Bo loc filter** (Phase 3.7 round 4) — co them dropdown `Ghim section` voi
+5 muc + `Tat ca` de quick view bai dang pin theo tung section trang chu.
+
+**Mobile layout**: Filter bar tu dong sap xep 4 hang gon — Search /
+`Phan loai + Loai bai` / `Tu + Den` / `Ghim + Loc + Xoa loc`. Cot tieu de
+trong bang cho phep tieu de dai max 4 dong (line-clamp-4) moi rot `…`.
 
 Khong can vao trang chi tiet de bat/tat publish hoac ghim — tang toc thao tac
 khi quan ly nhieu bai.
@@ -327,13 +344,37 @@ khi quan ly nhieu bai.
 |------|------|----------|------------------|
 | 📰 Tin tuc | `GENERAL` | `/tin-tuc` | — |
 | 📚 Nghien cuu khoa hoc | `RESEARCH` | `/nghien-cuu` | — |
-| 🏢 Tin doanh nghiep | `BUSINESS` | (lang TBD) | Phai chon Doanh nghiep lien quan |
-| 📦 Tin san pham | `PRODUCT` | (lang TBD) | Chon Doanh nghiep + San pham cu the |
+| 🏢 Tin doanh nghiep | `BUSINESS` | `/tin-tuc` | Phai chon Doanh nghiep lien quan |
+| 📦 Tin san pham | `PRODUCT` | `/tin-tuc` | Chon Doanh nghiep + San pham cu the (chi giu khi edit, khong cho switch toi tu category khac) |
+| 📰 Tin bao chi ngoai | `EXTERNAL_NEWS` | `/tin-bao-chi` | Bat buoc `Ten bao nguon` + URL bai goc (Phase 3.5) |
+| 🌾 Tin khuyen nong | `AGRICULTURE` | `/khuyen-nong` | — (Phase 3.5) |
 | ⚖️ Van ban phap ly | `LEGAL` | `/privacy`, `/terms` | Slug co dinh `chinh-sach-bao-mat`, `dieu-khoan-su-dung` |
 
 **Khi chon BUSINESS hoac PRODUCT**: panel amber hien picker tim doanh nghiep
 theo ten/slug. PRODUCT them ProductPicker filter theo doanh nghiep da chon.
 API enforce required field — luu se loi neu chua chon.
+
+**Phase 3.7 round 4 (2026-04) — co the doi primary category sau khi tao bai**.
+Truoc day select bi khoa sau create; nay khach hang co the doi loai bai sau
+khi luu (vd post nham GENERAL → BUSINESS). Server validate required field
+cho loai moi (vd doi sang BUSINESS thi can `relatedCompanyId`, sang
+EXTERNAL_NEWS thi can `sourceName + sourceUrl`). PRODUCT chi giu duoc khi
+bai cu da PRODUCT (mode do can `productData` qua flow `/feed/tao-bai`).
+
+**Phan loai phu** (`secondaryCategories`, max 3, exclude primary, Phase 3.7
+round 4) — checkbox group nay cho phep bai xuat hien o nhieu list page mot
+luc. Vd primary `BUSINESS` + secondary `RESEARCH` → bai vao `/tin-tuc` va
+`/nghien-cuu`.
+
+**Ghim len section trang chu** (`pinnedInCategories`, **admin:full only**,
+Phase 3.7 round 4) — checkbox group amber duoi cung sidebar editor:
+- Tick category → bai len TOP section trang chu tuong ung (Tin Hoi /
+  Nghien cuu KH / Tin doanh nghiep / Tin san pham / Tin khuyen nong)
+- **Mo rong visibility cross-list**: bai chi co primary `RESEARCH` van co
+  the duoc admin pin len section homepage Khuyen nong → bai xuat hien tren
+  do (du khong primary/secondary AGRICULTURE)
+- Khong gioi han so luong pin per section — admin tu kiem soat
+- Sort logic: pinned-for-this-section first → date desc
 
 4. **Chon dang bai (template)** — Phase 3.3 them 3 dang:
 
@@ -355,7 +396,16 @@ thu tu, sua caption truc tiep tren tung muc.
 7. **3 nut hanh dong** (Phase 3.3 — order moi): **Luu → Xem truoc → Xuat ban**
    - "Luu" = lưu voi trang thai isPublished hien tai
    - "Xem truoc" = mo modal preview giong public page
-   - "Xuat ban" = set isPublished=true + luu (chi user co news:publish)
+   - "Xuat ban" = set isPublished=true + luu (chi user co news:publish).
+     Phase 3.7 round 4: server defensive auto-fill `publishedAt = now()` khi
+     `isPublished=true` ma client gui null → bai luon co ngay khi public.
+   - **Mobile** (Phase 3.7 round 4): action bar chuyen thanh **fixed bottom**
+     luon nhin thay khong can scroll xuong cuoi. 3 nut grid 3 cot voi label
+     ngan gon (Tao / Xem truoc / Xuat ban).
+   - Toggle "Ghim bai" (`isPinned` global) **da an** khoi sidebar editor
+     (Phase 3.7 round 4) — pin per-section thay the qua checkbox group
+     "Ghim len section trang chu". Field van con tac dung backend; muon
+     toggle thi qua Prisma Studio hoac DB.
 
 ### Editor TipTap — tinh nang moi
 
@@ -390,9 +440,23 @@ Bo loc tren danh sach `/admin/tin-tuc`:
 - Tat ca (default)
 - 📰 Tin tuc (GENERAL)
 - 📚 Nghien cuu (RESEARCH)
-- 🏢 Tin doanh nghiep (BUSINESS) — **moi**
-- 📦 Tin san pham (PRODUCT) — **moi**
+- 🏢 Tin doanh nghiep (BUSINESS)
+- 📦 Tin san pham (PRODUCT)
+- 📰 Tin bao chi ngoai (EXTERNAL_NEWS) — Phase 3.5
+- 🌾 Tin khuyen nong (AGRICULTURE) — Phase 3.5
 - ⚖️ Van ban phap ly (LEGAL)
+- 💰 Bai SP legacy (SPONSORED_PRODUCT)
+
+**Filter `Loai bai`** (Phase 3.7 round 4) — them dropdown loc theo
+`template`: NORMAL / PHOTO / VIDEO de tim nhanh tin Multimedia.
+
+**Filter `Ghim section`** (Phase 3.7 round 4) — them dropdown 5 muc cho
+`pinnedInCategories has X` de admin xem nhanh bai dang pin tren tung
+section homepage.
+
+**Filter `Ngay dang tu / Den`** (Phase 3.7 round 4) — date range filter
+theo `publishedAt`. Bai draft (chua publish) khong xuat hien khi co range
+vi `publishedAt = null`.
 
 ### Multimedia da bi go khoi sidebar admin
 
