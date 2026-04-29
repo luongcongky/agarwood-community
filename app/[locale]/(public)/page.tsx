@@ -10,6 +10,7 @@ import { PostsSection } from "@/components/features/homepage/PostsSection"
 import { FeaturedCompanies } from "@/components/features/homepage/FeaturedCompanies"
 import { Partners } from "@/components/features/homepage/Partners"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
+import { HomepageTopBannerRow } from "@/components/features/homepage/HomepageTopBannerRow"
 import { BreakingTicker } from "@/components/features/homepage/BreakingTicker"
 import { HomepageJoinBanner } from "@/components/features/register-nudge/HomepageJoinBanner"
 import {
@@ -65,19 +66,9 @@ export default async function HomePage() {
       />
 
       {/* Top 2 banner trái/phải song song — mỗi banner 485×90, tổng 970×90.
-          Container giữ aspect chung để skeleton + empty state không jump layout. */}
-      <div className="flex aspect-970/90 w-full gap-3">
-        <div className="flex-1">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot slot="HOMEPAGE_TOP_LEFT" />
-          </Suspense>
-        </div>
-        <div className="flex-1">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot slot="HOMEPAGE_TOP_RIGHT" />
-          </Suspense>
-        </div>
-      </div>
+          HomepageTopBannerRow pre-check cả 2 slot, return null nếu cả 2 rỗng
+          → wrapper aspect-970/90 không reserve space khi không có banner. */}
+      <HomepageTopBannerRow />
 
       <Suspense fallback={null}>
         <BreakingTicker />

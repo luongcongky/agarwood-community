@@ -72,9 +72,16 @@ export default async function AdminEditProductPage({
       shippingPolicy: true,
       returnPolicy: true,
       owner: { select: { name: true, email: true } },
+      // Bug fix (2026-04-29): legacy SP có description plain text → fallback
+      // Post.content (HTML) cho RichTextEditor render đúng paragraph.
+      post: { select: { content: true } },
     },
   })
   if (!product) notFound()
+
+  const descIsHtml = !!product.description && /<\w+[\s>]/.test(product.description)
+  const initialDescription =
+    descIsHtml || !product.post?.content ? product.description : product.post.content
 
   const latestRev = await prisma.productRevision.findFirst({
     where: { productId: product.id },
@@ -107,7 +114,7 @@ export default async function AdminEditProductPage({
           id: product.id,
           name: product.name,
           slug: product.slug,
-          description: product.description,
+          description: initialDescription,
           category: product.category,
           priceRange: product.priceRange,
           imageUrls: product.imageUrls as string[],

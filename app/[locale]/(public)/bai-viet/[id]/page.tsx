@@ -42,7 +42,9 @@ export default async function PostDetailPage({
       },
       // Phase 4 (2026-04-29): cần product cho menu admin "Đưa vào Sản phẩm
       // tiêu biểu" trên trang detail (đồng bộ với feed list).
-      product: { select: { id: true, isFeatured: true } },
+      // slug + isFeatured cho menu admin: edit PRODUCT post → ProductForm
+       //  ở /admin/san-pham/{slug}/sua, không phải PostEditor.
+      product: { select: { id: true, slug: true, isFeatured: true } },
       // Latest promotion request — author dùng menu "Xin đẩy lên trang chủ"
       // / "Rút yêu cầu". Chỉ cần status để compute canRequest/hasPending.
       promotionRequests: {

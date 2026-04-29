@@ -461,10 +461,22 @@ function PostCard({
     !hasPendingRequest &&
     post.status === "PUBLISHED"
 
+  // Edit URL theo category — mirror ProductActionsMenu trên detail page.
+  // PRODUCT → ProductForm (có spec sheet + variants + reason field built-in).
+  // NEWS/GENERAL → PostEditor (rich text). Admin edit NEWS phải kèm
+  // `adminMode=1` để hiện UI reason field (server enforce ≥10 ký tự).
+  const isProductPost = post.category === "PRODUCT" && post.product?.slug
+  const editHrefAuthor = isProductPost
+    ? `/san-pham/${post.product!.slug}/sua`
+    : `/feed/tao-bai?edit=${post.id}`
+  const editHrefAdminMod = isProductPost
+    ? `/admin/san-pham/${post.product!.slug}/sua`
+    : `/feed/tao-bai?edit=${post.id}&adminMode=1&returnTo=/feed`
+
   // Menu options based on role
   const menuItems: { label: string; action: () => void; destructive?: boolean }[] = []
   if (isAuthor) {
-    menuItems.push({ label: t("menuEdit"), action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` } })
+    menuItems.push({ label: t("menuEdit"), action: () => { window.location.href = editHrefAuthor } })
     if (canRequestPromotion) {
       menuItems.push({ label: t("menuRequestPromotion"), action: () => onRequestPromotion(post.id) })
     }
@@ -479,7 +491,7 @@ function PostCard({
   if (isAdmin && !isAuthor) {
     menuItems.push({
       label: t("menuEdit"),
-      action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` },
+      action: () => { window.location.href = editHrefAdminMod },
     })
     menuItems.push({ label: isLocked ? t("menuUnlock") : t("menuLock"), action: () => onLock(post.id) })
     if (post.status === "PUBLISHED") {

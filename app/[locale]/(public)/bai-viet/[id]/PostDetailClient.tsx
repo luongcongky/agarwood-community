@@ -44,7 +44,7 @@ type PostData = {
   createdAt: string
   updatedAt: string
   author: Author
-  product: { id: string; isFeatured: boolean } | null
+  product: { id: string; slug: string; isFeatured: boolean } | null
   latestPromotionRequest: { status: PromotionRequestStatus; reviewNote: string | null } | null
   reactions: { type: string }[]
   _count: { reactions: number; comments: number }
@@ -189,9 +189,20 @@ export function PostDetailClient({
     }
   }
 
+  // Edit URL theo category — mirror FeedClient + ProductActionsMenu.
+  // PRODUCT → ProductForm; NEWS → PostEditor (+ adminMode khi admin sửa hộ).
+  const isProductPost = post.category === "PRODUCT" && post.product?.slug
+  const viewerIsAuthor = currentUserId === post.author.id
+  const editHrefSelf = isProductPost
+    ? `/san-pham/${post.product!.slug}/sua`
+    : `/feed/tao-bai?edit=${post.id}`
+  const editHrefAdminMod = isProductPost
+    ? `/admin/san-pham/${post.product!.slug}/sua`
+    : `/feed/tao-bai?edit=${post.id}&adminMode=1&returnTo=/bai-viet/${post.id}`
+
   function openEdit() {
     setMenuOpen(false)
-    window.location.href = `/feed/tao-bai?edit=${post.id}`
+    window.location.href = viewerIsAuthor ? editHrefSelf : editHrefAdminMod
   }
   function openHistory() {
     setMenuOpen(false)
@@ -626,16 +637,16 @@ export function PostDetailClient({
             - Admin (không phải owner): edit (mở admin mode) + xem lịch sử. */}
         {isLoggedIn && (currentUserId === post.author.id || isAdmin(currentUserRole)) && (
           <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-brand-100">
-            {currentUserId === post.author.id ? (
+            {viewerIsAuthor ? (
               <Link
-                href={`/feed/tao-bai?edit=${post.id}`}
+                href={editHrefSelf}
                 className="inline-flex items-center gap-1.5 rounded-md border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
               >
                 ✎ Chỉnh sửa bài
               </Link>
             ) : (
               <Link
-                href={`/feed/tao-bai?edit=${post.id}&adminMode=1&returnTo=/bai-viet/${post.id}`}
+                href={editHrefAdminMod}
                 className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
                 title="Sửa bài hộ owner — thay đổi sẽ được log lại"
               >

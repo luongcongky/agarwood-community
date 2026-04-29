@@ -45,6 +45,11 @@ export default async function EditProductPage({
       shippingPolicy: true,
       returnPolicy: true,
       company: { select: { slug: true } },
+      // Bug fix (2026-04-29): SP cũ tạo qua /feed/tao-bai trước khi fix
+      // htmlToPlainText có description là plain text 1 dòng (mất paragraph
+      // breaks). Fallback về Post.content (HTML) khi description không
+      // phải HTML để RichTextEditor render đúng format.
+      post: { select: { content: true } },
     },
   })
 
@@ -53,8 +58,13 @@ export default async function EditProductPage({
     redirect("/")
   }
 
+  // Detect plain-text legacy description → fallback Post.content (HTML).
+  const descIsHtml = !!product.description && /<\w+[\s>]/.test(product.description)
+  const initialDescription =
+    descIsHtml || !product.post?.content ? product.description : product.post.content
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/san-pham/${slug}`} className="text-brand-600 hover:text-brand-800 text-sm">
           ← Quay lại
@@ -66,7 +76,7 @@ export default async function EditProductPage({
           id: product.id,
           name: product.name,
           slug: product.slug,
-          description: product.description,
+          description: initialDescription,
           category: product.category,
           priceRange: product.priceRange,
           imageUrls: product.imageUrls as string[],
