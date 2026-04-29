@@ -9,7 +9,11 @@ import Image from "next/image"
 import dynamic from "next/dynamic"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
-import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
+import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_DEFAULT_SHIPPING,
+  PRODUCT_DEFAULT_RETURN,
+} from "@/lib/constants/agarwood"
 import {
   CompanyPicker,
   type CompanySummary,
@@ -146,6 +150,17 @@ function TaoBaiContent({
   const [productSlugEdited, setProductSlugEdited] = useState(false)
   const [productCategory, setProductCategory] = useState("")
   const [productPriceRange, setProductPriceRange] = useState("")
+  // Phase 4 (2026-04-29): spec sheet + variants — đồng bộ với ProductForm.
+  const [productOrigin, setProductOrigin] = useState("")
+  const [productTreeAge, setProductTreeAge] = useState("")
+  const [productPackagingNote, setProductPackagingNote] = useState("")
+  const [productScentProfile, setProductScentProfile] = useState("")
+  type ProductVariantInput = { name: string; priceRange: string }
+  const [productVariants, setProductVariants] = useState<ProductVariantInput[]>([])
+  // Phase 4 follow-up (2026-04-29): policy text. Bỏ trống → server fill
+  // default. Placeholder hiển thị default để user biết SP sẽ nhận giá trị gì.
+  const [productShippingPolicy, setProductShippingPolicy] = useState("")
+  const [productReturnPolicy, setProductReturnPolicy] = useState("")
   // Phase 3.5 (2026-04): admin đăng SP hộ DN — phải chọn DN.
   // Phase 3.6 follow-up: chỉ hiện admin picker khi user là admin/INFINITE
   // VÀ KHÔNG có DN riêng (true "đăng hộ" scenario). Nếu admin/INFINITE đã
@@ -387,6 +402,28 @@ function TaoBaiContent({
                   // khi true admin scenario (admin không có DN riêng).
                   ...(showAdminPicker && adminPickedCompany
                     ? { companyId: adminPickedCompany.id }
+                    : {}),
+                  // Phase 4 (2026-04-29): spec sheet + variants — server bỏ
+                  // qua field rỗng. Variants clean trim + filter rỗng client-
+                  // side; server cap 10 + max 50 ký tự/name.
+                  ...(productOrigin.trim() ? { origin: productOrigin.trim() } : {}),
+                  ...(productTreeAge.trim() ? { treeAge: productTreeAge.trim() } : {}),
+                  ...(productPackagingNote.trim() ? { packagingNote: productPackagingNote.trim() } : {}),
+                  ...(productScentProfile.trim() ? { scentProfile: productScentProfile.trim() } : {}),
+                  ...(productVariants.length > 0
+                    ? {
+                        variants: productVariants
+                          .map((v) => ({ name: v.name.trim(), priceRange: v.priceRange.trim() }))
+                          .filter((v) => v.name),
+                      }
+                    : {}),
+                  // Policy text — nếu user nhập, gửi value; bỏ trống → server
+                  // fill default tự động.
+                  ...(productShippingPolicy.trim()
+                    ? { shippingPolicy: productShippingPolicy.trim() }
+                    : {}),
+                  ...(productReturnPolicy.trim()
+                    ? { returnPolicy: productReturnPolicy.trim() }
                     : {}),
                 },
               }
@@ -644,6 +681,166 @@ function TaoBaiContent({
               />
             </div>
           </div>
+
+          {/* Phase 4 (2026-04-29): spec sheet + variants — đồng bộ với
+              /san-pham/[slug]/sua. Optional, collapse mặc định để form ngắn
+              gọn cho user không cần điền chi tiết. */}
+          <details className="rounded-lg border border-brand-200 bg-brand-50/40">
+            <summary className="px-3 py-2 cursor-pointer text-xs font-semibold text-brand-700 hover:bg-brand-100 rounded-lg flex items-center justify-between">
+              <span>📋 Thông số chi tiết — tuỳ chọn</span>
+              <span className="text-[10px] font-normal text-brand-500">
+                Xuất xứ · Tuổi cây · Đóng gói · Mùi hương · Giao hàng · Đổi trả · Phân loại
+              </span>
+            </summary>
+            <div className="px-3 pb-3 pt-2 space-y-3 border-t border-brand-200">
+              <p className="text-[11px] text-brand-500">
+                Càng đầy đủ, sản phẩm càng chuyên nghiệp. Bỏ trống thì trang chi
+                tiết sẽ ẩn các mục tương ứng.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-brand-700 mb-1">Xuất xứ</label>
+                  <input
+                    type="text"
+                    value={productOrigin}
+                    onChange={(e) => setProductOrigin(e.target.value)}
+                    maxLength={100}
+                    placeholder='vd: "Khánh Hoà", "Quảng Nam"'
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-brand-700 mb-1">Tuổi cây</label>
+                  <input
+                    type="text"
+                    value={productTreeAge}
+                    onChange={(e) => setProductTreeAge(e.target.value)}
+                    maxLength={50}
+                    placeholder='vd: "10-15 năm", "trên 25 năm"'
+                    className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-brand-700 mb-1">Quy cách đóng gói</label>
+                <textarea
+                  value={productPackagingNote}
+                  onChange={(e) => setProductPackagingNote(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder='vd: "Hộp gỗ, túi vải lót, có giấy chứng nhận đính kèm"'
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm resize-y"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-brand-700 mb-1">Mùi hương / Đặc điểm</label>
+                <textarea
+                  value={productScentProfile}
+                  onChange={(e) => setProductScentProfile(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder='vd: "Ngọt nhẹ, ấm gỗ, lưu hương 4-6 tiếng"'
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm resize-y"
+                />
+              </div>
+              {/* Policy text — bỏ trống thì server tự fill default. Placeholder
+                  hiển thị default để user biết giá trị nhận được. */}
+              <div>
+                <label className="block text-xs font-medium text-brand-700 mb-1">Tuỳ chọn giao hàng</label>
+                <textarea
+                  value={productShippingPolicy}
+                  onChange={(e) => setProductShippingPolicy(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder={`Bỏ trống → mặc định: "${PRODUCT_DEFAULT_SHIPPING}"`}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm resize-y"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-brand-700 mb-1">Đổi trả &amp; Bảo hành</label>
+                <textarea
+                  value={productReturnPolicy}
+                  onChange={(e) => setProductReturnPolicy(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder={`Bỏ trống → mặc định: "${PRODUCT_DEFAULT_RETURN}"`}
+                  className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm resize-y"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-brand-700">
+                    Phân loại / Trọng lượng
+                    <span className="ml-1 text-[10px] font-normal text-brand-400">
+                      (tuỳ chọn, tối đa 10)
+                    </span>
+                  </label>
+                  {productVariants.length < 10 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProductVariants((prev) => [...prev, { name: "", priceRange: "" }])
+                      }
+                      className="text-xs text-brand-700 hover:text-brand-900 underline"
+                    >
+                      + Thêm phân loại
+                    </button>
+                  )}
+                </div>
+                {productVariants.length === 0 ? (
+                  <p className="text-[11px] text-brand-400 italic">
+                    Vd: 50gr / 100gr / 200gr với mức giá khác nhau. Bỏ trống nếu
+                    SP chỉ có 1 phân loại — trang sẽ ẩn selector.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {productVariants.map((v, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={v.name}
+                          onChange={(e) =>
+                            setProductVariants((prev) =>
+                              prev.map((it, idx) =>
+                                idx === i ? { ...it, name: e.target.value } : it,
+                              ),
+                            )
+                          }
+                          maxLength={50}
+                          placeholder='Tên phân loại (vd "50gr")'
+                          className="flex-1 rounded-lg border border-brand-200 px-3 py-2 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={v.priceRange}
+                          onChange={(e) =>
+                            setProductVariants((prev) =>
+                              prev.map((it, idx) =>
+                                idx === i ? { ...it, priceRange: e.target.value } : it,
+                              ),
+                            )
+                          }
+                          maxLength={50}
+                          placeholder='Mức giá (vd "500k-1tr")'
+                          className="flex-1 rounded-lg border border-brand-200 px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setProductVariants((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          aria-label="Xoá"
+                          className="shrink-0 rounded p-2 text-red-500 hover:bg-red-50"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 

@@ -63,6 +63,14 @@ export default async function AdminEditProductPage({
       priceRange: true,
       imageUrls: true,
       isPublished: true,
+      // Phase 4 (2026-04-29): spec sheet + variants
+      origin: true,
+      treeAge: true,
+      packagingNote: true,
+      scentProfile: true,
+      variants: true,
+      shippingPolicy: true,
+      returnPolicy: true,
       owner: { select: { name: true, email: true } },
     },
   })
@@ -104,7 +112,7 @@ export default async function AdminEditProductPage({
           priceRange: product.priceRange,
           imageUrls: product.imageUrls as string[],
           isPublished: product.isPublished,
-          // @ts-expect-error — i18n fields ProductForm reads via record cast
+          // @ts-expect-error — i18n + spec fields ProductForm reads via record cast
           name_en: product.name_en,
           name_zh: product.name_zh,
           name_ar: product.name_ar,
@@ -114,6 +122,13 @@ export default async function AdminEditProductPage({
           category_en: product.category_en,
           category_zh: product.category_zh,
           category_ar: product.category_ar,
+          origin: product.origin,
+          treeAge: product.treeAge,
+          packagingNote: product.packagingNote,
+          scentProfile: product.scentProfile,
+          variants: product.variants,
+          shippingPolicy: product.shippingPolicy,
+          returnPolicy: product.returnPolicy,
         }}
       />
     </div>

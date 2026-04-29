@@ -22,6 +22,8 @@ export default async function PostDetailPage({
       imageUrls: true,
       status: true,
       moderationNote: true,
+      category: true,
+      newsCategories: true,
       isPremium: true,
       isPromoted: true,
       viewCount: true,
@@ -37,6 +39,16 @@ export default async function PostDetailPage({
           contributionTotal: true,
           company: { select: { name: true, slug: true } },
         },
+      },
+      // Phase 4 (2026-04-29): cần product cho menu admin "Đưa vào Sản phẩm
+      // tiêu biểu" trên trang detail (đồng bộ với feed list).
+      product: { select: { id: true, isFeatured: true } },
+      // Latest promotion request — author dùng menu "Xin đẩy lên trang chủ"
+      // / "Rút yêu cầu". Chỉ cần status để compute canRequest/hasPending.
+      promotionRequests: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { status: true, reviewNote: true },
       },
       reactions: userId
         ? { where: { userId }, select: { type: true } }
@@ -97,6 +109,7 @@ export default async function PostDetailPage({
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
         reactions: Array.isArray(post.reactions) ? post.reactions : [],
+        latestPromotionRequest: post.promotionRequests[0] ?? null,
       }}
       currentUserId={userId ?? null}
       currentUserRole={session?.user?.role ?? null}

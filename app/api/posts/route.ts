@@ -6,6 +6,10 @@ import { getMonthlyQuota, startOfMonth, startOfNextMonth } from "@/lib/quota"
 import { getMonthlyProductQuota } from "@/lib/product-quota"
 import { writeProductRevision } from "@/lib/product-revision"
 import { getSortedFeedPostIds } from "@/lib/feed-sort"
+import {
+  PRODUCT_DEFAULT_SHIPPING,
+  PRODUCT_DEFAULT_RETURN,
+} from "@/lib/constants/agarwood"
 import DOMPurify from "isomorphic-dompurify"
 import type { PostCategory } from "@prisma/client"
 
@@ -18,15 +22,6 @@ const POST_AUTHOR_SELECT = {
   contributionTotal: true,
   company: { select: { name: true, slug: true } },
 } as const
-
-/** Extract plain text từ HTML (dùng làm description cho product sidecar) */
-function htmlToPlainText(html: string, maxLen = 10_000): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen)
-}
 
 /** Extract Cloudinary image URLs từ HTML */
 function extractImageUrls(html: string): string[] {
@@ -109,6 +104,7 @@ export async function GET(request: Request) {
         category: true,
         badgeUrl: true,
         certStatus: true,
+        isFeatured: true,
       },
     },
     reactions: {
@@ -233,6 +229,17 @@ export async function POST(request: Request) {
        *  Server validate role + chuyển ownerId sang chủ DN. Non-admin gửi
        *  field này sẽ bị ignore (override bằng auto company lookup). */
       companyId?: string
+      /** Phase 4 (2026-04-29): spec sheet + variants — đồng bộ với
+       *  ProductForm. Optional; null/empty → bỏ qua. */
+      origin?: string
+      treeAge?: string
+      packagingNote?: string
+      scentProfile?: string
+      variants?: Array<{ name?: string; priceRange?: string }>
+      /** Phase 4 follow-up (2026-04-29): policy text. Empty → server fill
+       *  default từ PRODUCT_DEFAULT_SHIPPING / PRODUCT_DEFAULT_RETURN. */
+      shippingPolicy?: string
+      returnPolicy?: string
     }
   }
 
@@ -379,7 +386,11 @@ export async function POST(request: Request) {
 
   // Trường hợp gộp — tạo Post + Product trong 1 transaction, link qua postId
   const productImages = extractImageUrls(sanitizedContent)
-  const productDescription = htmlToPlainText(sanitizedContent)
+  // Bug fix (2026-04-29): lưu sanitized HTML thay vì plain text. Detail page
+  // render description bằng prose + dangerouslySetInnerHTML → kỳ vọng HTML.
+  // ProductForm edit cũng dùng RichTextEditor (HTML output), nên field này
+  // luôn là HTML. Cap 15000 ký tự để khớp zod schema bên _actions.ts.
+  const productDescription = sanitizedContent.slice(0, 15_000)
 
   // Phase 3.5 (2026-04): admin override → effective owner = chủ DN, không
   // phải session.user.id. Post + Product cùng attribute về chủ DN để bài
@@ -425,6 +436,17 @@ export async function POST(request: Request) {
       },
       include: { author: { select: POST_AUTHOR_SELECT } },
     })
+    // Phase 4 (2026-04-29): clean variants — trim + bỏ row trống + cap 10.
+    const cleanedVariants = Array.isArray(product?.variants)
+      ? product!.variants!
+          .map((v) => ({
+            name: typeof v?.name === "string" ? v.name.trim() : "",
+            priceRange: typeof v?.priceRange === "string" ? v.priceRange.trim() : "",
+          }))
+          .filter((v) => v.name && v.name.length <= 50)
+          .slice(0, 10)
+      : []
+
     const newProduct = await tx.product.create({
       data: {
         ownerId: effectiveOwnerId,
@@ -437,6 +459,15 @@ export async function POST(request: Request) {
         priceRange: product!.priceRange?.trim() || null,
         imageUrls: productImages,
         ownerPriority: effectiveOwnerPriority,
+        // Phase 4 (2026-04-29): spec sheet + variants — đồng bộ với ProductForm.
+        origin: product!.origin?.trim() || null,
+        treeAge: product!.treeAge?.trim() || null,
+        packagingNote: product!.packagingNote?.trim() || null,
+        scentProfile: product!.scentProfile?.trim() || null,
+        variants: cleanedVariants.length > 0 ? cleanedVariants : undefined,
+        // Phase 4 follow-up: create flow → fill default nếu user bỏ trống.
+        shippingPolicy: product!.shippingPolicy?.trim() || PRODUCT_DEFAULT_SHIPPING,
+        returnPolicy: product!.returnPolicy?.trim() || PRODUCT_DEFAULT_RETURN,
       },
     })
     // Seed v0 audit snapshot. Nếu admin override, đánh editedRole=ADMIN +

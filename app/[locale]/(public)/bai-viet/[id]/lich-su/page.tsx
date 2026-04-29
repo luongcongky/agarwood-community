@@ -345,7 +345,7 @@ function DiffSide({
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
         />
       ) : (
-        <p className="text-sm text-brand-800 break-words">{value}</p>
+        <p className="text-sm text-brand-800 wrap-break-word">{value}</p>
       )}
     </div>
   )

@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { PRODUCT_CATEGORIES, AGARWOOD_REGIONS } from "@/lib/constants/agarwood"
+import {
+  PRODUCT_CATEGORIES,
+  AGARWOOD_REGIONS,
+  PRODUCT_DEFAULT_SHIPPING,
+  PRODUCT_DEFAULT_RETURN,
+} from "@/lib/constants/agarwood"
 import { createProduct, updateProduct } from "./_actions"
 import { RichTextEditor, type RichTextEditorHandle } from "@/components/editor/RichTextEditor"
 import { MultiLangInput } from "@/components/ui/multi-lang-input"
@@ -107,6 +112,25 @@ export function ProductForm({
   const [isPublished, setIsPublished] = useState(product?.isPublished ?? true)
   const [slugEdited, setSlugEdited] = useState(false)
 
+  // Phase 4 (2026-04-29): spec sheet + variants
+  const [origin, setOrigin] = useState((p?.origin as string | null) ?? "")
+  const [treeAge, setTreeAge] = useState((p?.treeAge as string | null) ?? "")
+  const [packagingNote, setPackagingNote] = useState((p?.packagingNote as string | null) ?? "")
+  const [scentProfile, setScentProfile] = useState((p?.scentProfile as string | null) ?? "")
+  // Phase 4 follow-up (2026-04-29): policy text. Edit flow → save user input
+  // (clear = null, UI fallback default ở detail page).
+  const [shippingPolicy, setShippingPolicy] = useState((p?.shippingPolicy as string | null) ?? "")
+  const [returnPolicy, setReturnPolicy] = useState((p?.returnPolicy as string | null) ?? "")
+  type Variant = { name: string; priceRange: string }
+  const [variants, setVariants] = useState<Variant[]>(() => {
+    const v = p?.variants
+    if (!Array.isArray(v)) return []
+    return (v as Array<Record<string, unknown>>).map((item) => ({
+      name: typeof item.name === "string" ? item.name : "",
+      priceRange: typeof item.priceRange === "string" ? item.priceRange : "",
+    })).filter((it) => it.name)
+  })
+
   function handleNameChange(val: string) {
     setName(val)
     if (!slugEdited) setSlug(slugify(val))
@@ -151,12 +175,25 @@ export function ProductForm({
 
     await descriptionRef.current?.processImages()
     const description = descriptionRef.current?.getHTML() ?? ""
+    const cleanedVariants = variants
+      .map((v) => ({ name: v.name.trim(), priceRange: v.priceRange.trim() }))
+      .filter((v) => v.name) // bỏ row trống
     const data: Record<string, unknown> = {
       name, name_en: name_en || null, name_zh: name_zh || null, name_ar: name_ar || null,
       slug, description,
       description_en: description_en || null, description_zh: description_zh || null, description_ar: description_ar || null,
       category, category_en: category_en || null, category_zh: category_zh || null, category_ar: category_ar || null,
       priceRange, imageUrls, isPublished,
+      // Phase 4 (2026-04-29): spec sheet + variants
+      origin: origin || null,
+      treeAge: treeAge || null,
+      packagingNote: packagingNote || null,
+      scentProfile: scentProfile || null,
+      variants: cleanedVariants.length > 0 ? cleanedVariants : null,
+      // Phase 4 follow-up (2026-04-29): policy text — clear = null,
+      // detail page fallback default ở display.
+      shippingPolicy: shippingPolicy || null,
+      returnPolicy: returnPolicy || null,
     }
     if (isAdmin) {
       data.reason = reason.trim()
@@ -325,6 +362,153 @@ export function ProductForm({
             className="rounded accent-brand-600"
           />
           <label htmlFor="isPublished" className="text-sm text-brand-800">Công khai sản phẩm</label>
+        </div>
+      </section>
+
+      {/* ── Section: Thông số chi tiết (optional) ──────────────────────── */}
+      <section className="bg-white rounded-xl border border-brand-200 p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-brand-900">Thông số chi tiết</h2>
+          <p className="text-xs text-brand-400 mt-0.5">
+            Tuỳ chọn — bỏ trống thì trang chi tiết không hiển thị section này.
+            Càng đầy đủ, sản phẩm càng chuyên nghiệp.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-800">Xuất xứ</label>
+            <input
+              type="text"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              maxLength={100}
+              placeholder='vd: "Khánh Hoà", "Quảng Nam"'
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-800">Tuổi cây</label>
+            <input
+              type="text"
+              value={treeAge}
+              onChange={(e) => setTreeAge(e.target.value)}
+              maxLength={50}
+              placeholder='vd: "10-15 năm", "trên 25 năm"'
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Quy cách đóng gói</label>
+          <textarea
+            value={packagingNote}
+            onChange={(e) => setPackagingNote(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder='vd: "Hộp gỗ, túi vải lót, có giấy chứng nhận đính kèm"'
+            className={cn(inputClass, "resize-y")}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Mùi hương / Đặc điểm</label>
+          <textarea
+            value={scentProfile}
+            onChange={(e) => setScentProfile(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder='vd: "Ngọt nhẹ, ấm gỗ, lưu hương 4-6 tiếng"'
+            className={cn(inputClass, "resize-y")}
+          />
+        </div>
+
+        {/* Policy text — bỏ trống thì detail page hiển thị default. */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Tuỳ chọn giao hàng</label>
+          <textarea
+            value={shippingPolicy}
+            onChange={(e) => setShippingPolicy(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder={`Bỏ trống → mặc định: "${PRODUCT_DEFAULT_SHIPPING}"`}
+            className={cn(inputClass, "resize-y")}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-800">Đổi trả &amp; Bảo hành</label>
+          <textarea
+            value={returnPolicy}
+            onChange={(e) => setReturnPolicy(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder={`Bỏ trống → mặc định: "${PRODUCT_DEFAULT_RETURN}"`}
+            className={cn(inputClass, "resize-y")}
+          />
+        </div>
+
+        {/* Variants — array of {name, priceRange} */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-sm font-medium text-brand-800">
+              Phân loại / Trọng lượng
+              <span className="ml-1 text-xs font-normal text-brand-400">
+                (tuỳ chọn, tối đa 10)
+              </span>
+            </label>
+            {variants.length < 10 && (
+              <button
+                type="button"
+                onClick={() => setVariants((prev) => [...prev, { name: "", priceRange: "" }])}
+                className="text-xs text-brand-700 hover:text-brand-900 underline"
+              >
+                + Thêm phân loại
+              </button>
+            )}
+          </div>
+          {variants.length === 0 ? (
+            <p className="text-xs text-brand-400 italic">
+              Vd: 50gr / 100gr / 200gr với mức giá khác nhau. Bỏ trống nếu sản
+              phẩm chỉ có 1 phân loại — trang sẽ ẩn selector.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {variants.map((v, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={v.name}
+                    onChange={(e) => setVariants((prev) =>
+                      prev.map((it, idx) => (idx === i ? { ...it, name: e.target.value } : it)),
+                    )}
+                    maxLength={50}
+                    placeholder='Tên phân loại (vd "50gr")'
+                    className={cn(inputClass, "flex-1")}
+                  />
+                  <input
+                    type="text"
+                    value={v.priceRange}
+                    onChange={(e) => setVariants((prev) =>
+                      prev.map((it, idx) => (idx === i ? { ...it, priceRange: e.target.value } : it)),
+                    )}
+                    maxLength={50}
+                    placeholder='Mức giá (vd "500k-1tr")'
+                    className={cn(inputClass, "flex-1")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVariants((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label="Xoá"
+                    className="shrink-0 rounded p-2 text-red-500 hover:bg-red-50"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

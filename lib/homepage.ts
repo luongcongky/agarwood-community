@@ -340,7 +340,9 @@ export const getFeaturedProductsForHomepage = unstable_cache(
       where: {
         isFeatured: true,
         isPublished: true,
-        owner: { role: { in: ["VIP", "ADMIN"] } },
+        // Đồng bộ với /admin/tieu-bieu filter — bao gồm INFINITE để DN hội
+        // viên INFINITE (Sản Xuất Trầm hương VN, ...) cũng được feature.
+        owner: { role: { in: ["VIP", "INFINITE", "ADMIN"] } },
       },
       orderBy: [
         { featuredOrder: "asc" },

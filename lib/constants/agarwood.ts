@@ -1,5 +1,11 @@
 /** Industry-specific constants for agarwood/tram huong */
 
+/** Phase 4 follow-up (2026-04-29): default policy text khi tạo SP mới mà
+ *  user không nhập. Lưu vào DB tại thời điểm create để tránh fallback runtime. */
+export const PRODUCT_DEFAULT_SHIPPING = "Giao hàng toàn quốc"
+export const PRODUCT_DEFAULT_RETURN =
+  "100% chính hãng · Không áp dụng chính sách bảo hành"
+
 export const PRODUCT_CATEGORIES = [
   "Trầm tự nhiên",
   "Tinh dầu",

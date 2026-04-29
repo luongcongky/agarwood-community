@@ -7,6 +7,11 @@ import { z } from "zod"
 import { getUserPermissions, hasPermission } from "@/lib/permissions"
 import { writeProductRevision, type EditorRole } from "@/lib/product-revision"
 
+const variantSchema = z.object({
+  name: z.string().min(1).max(50),
+  priceRange: z.string().max(50).optional().or(z.literal("")),
+})
+
 /** Schema giống `_actions.ts` bên (member), thêm `reason` bắt buộc — admin
  *  phải ghi lý do để owner + audit trail hiểu tại sao chỉnh. Thiếu reason
  *  ≥10 ký tự → từ chối (không cho log rỗng). */
@@ -27,6 +32,16 @@ const adminProductSchema = z.object({
   priceRange: z.string().optional().or(z.literal("")),
   imageUrls: z.array(z.string()).optional(),
   isPublished: z.boolean().optional(),
+  // Phase 4 (2026-04-29): spec sheet + variants
+  origin: z.string().max(100).nullable().optional(),
+  treeAge: z.string().max(50).nullable().optional(),
+  packagingNote: z.string().max(1000).nullable().optional(),
+  scentProfile: z.string().max(1000).nullable().optional(),
+  variants: z.array(variantSchema).max(10).nullable().optional(),
+  // Phase 4 follow-up (2026-04-29): policy text. Admin update — save what
+  // user inputs (clear = null, UI fallback default).
+  shippingPolicy: z.string().max(1000).nullable().optional(),
+  returnPolicy: z.string().max(1000).nullable().optional(),
   reason: z.string().min(10, "Lý do chỉnh sửa tối thiểu 10 ký tự"),
   /** Version mà client đang xem — check để tránh 2 admin/owner ghi đè nhau. */
   expectedVersion: z.number().int().nonnegative(),
@@ -102,6 +117,18 @@ export async function adminUpdateProduct(
         priceRange: parsed.data.priceRange || null,
         imageUrls: parsed.data.imageUrls ?? [],
         isPublished: parsed.data.isPublished ?? true,
+        origin: parsed.data.origin || null,
+        treeAge: parsed.data.treeAge || null,
+        packagingNote: parsed.data.packagingNote || null,
+        scentProfile: parsed.data.scentProfile || null,
+        variants:
+          parsed.data.variants !== undefined
+            ? parsed.data.variants && parsed.data.variants.length > 0
+              ? parsed.data.variants
+              : null
+            : undefined,
+        shippingPolicy: parsed.data.shippingPolicy?.trim() || null,
+        returnPolicy: parsed.data.returnPolicy?.trim() || null,
       },
     })
     await writeProductRevision({

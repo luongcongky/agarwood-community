@@ -78,6 +78,8 @@ export type ProductSidecar = {
   category: string | null
   badgeUrl: string | null
   certStatus: string
+  /** Admin toggle — true → product hiện trong "Sản phẩm tiêu biểu" carousel/page */
+  isFeatured: boolean
 }
 
 type PromotionRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
@@ -381,6 +383,7 @@ function PostCard({
   onDelete,
   onDismiss,
   onPromote,
+  onToggleFeatured,
   onRequestPromotion,
   onCancelRequest,
   tierSilver,
@@ -400,6 +403,8 @@ function PostCard({
   onDismiss: (id: string) => void
   /** Admin action: toggle isPromoted. */
   onPromote: (id: string) => void
+  /** Admin action: toggle Product.isFeatured (chỉ áp dụng PRODUCT post). */
+  onToggleFeatured: (postId: string, productId: string, nextFeatured: boolean) => void
   /** Owner action: submit promotion request. */
   onRequestPromotion: (id: string) => void
   /** Owner action: cancel pending request. */
@@ -468,15 +473,39 @@ function PostCard({
     }
     menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
   }
-  if (isAdmin) {
+  // Admin moderation — chỉ khi admin xem bài của người khác. Tránh case
+  // INFINITE author thấy "Khoá bài / Đẩy lên trang chủ / Featured" trên bài
+  // của họ. Moderation luôn dành cho người khác kiểm duyệt.
+  if (isAdmin && !isAuthor) {
+    menuItems.push({
+      label: t("menuEdit"),
+      action: () => { window.location.href = `/feed/tao-bai?edit=${post.id}` },
+    })
     menuItems.push({ label: isLocked ? t("menuUnlock") : t("menuLock"), action: () => onLock(post.id) })
     if (post.status === "PUBLISHED") {
       menuItems.push({
         label: post.isPromoted ? t("menuUnpromote") : t("menuPromote"),
         action: () => onPromote(post.id),
       })
+      // Sản phẩm tiêu biểu — chỉ áp dụng PRODUCT post (có Product sidecar).
+      // Trưng bày only — không cấp cert, không qua hội đồng (KH 2026-04-29).
+      if (post.category === "PRODUCT" && post.product) {
+        const productId = post.product.id
+        const isFeatured = post.product.isFeatured
+        menuItems.push({
+          label: isFeatured ? t("menuUnfeatureProduct") : t("menuFeatureProduct"),
+          action: () => onToggleFeatured(post.id, productId, !isFeatured),
+        })
+      }
     }
-    if (!isAuthor) menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
+    menuItems.push({ label: t("menuDelete"), action: () => onDelete(post.id), destructive: true })
+  }
+  // Lịch sử thay đổi — owner + admin đều xem được (xem /bai-viet/[id]/lich-su).
+  if (isAuthor || isAdmin) {
+    menuItems.push({
+      label: t("menuHistory"),
+      action: () => { window.location.href = `/bai-viet/${post.id}/lich-su` },
+    })
   }
   if (currentUserRole && currentUserRole !== "GUEST" && !isAuthor) {
     menuItems.push({ label: t("menuReport"), action: () => handleReport(post.id) })
@@ -625,13 +654,13 @@ function PostCard({
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-8 z-20 bg-white rounded-lg border border-brand-200 shadow-lg py-1 min-w-[160px]">
+                <div className="absolute right-0 top-8 z-20 bg-white rounded-lg border border-brand-200 shadow-lg py-1 min-w-[200px]">
                   {menuItems.map((item, i) => (
                     <button
                       key={i}
                       onClick={() => { item.action(); setMenuOpen(false) }}
                       className={cn(
-                        "w-full text-left px-3 py-2 text-sm hover:bg-brand-50 transition-colors",
+                        "w-full text-left px-3 py-2 text-sm whitespace-nowrap hover:bg-brand-50 transition-colors",
                         item.destructive ? "text-red-600" : "text-brand-700",
                       )}
                     >
@@ -1122,6 +1151,48 @@ export function FeedClient({
     if (!post) return
     setPromoteModalPostId(postId)
   }
+
+  /** Admin: toggle Product.isFeatured cho post PRODUCT — shortcut "Sản phẩm
+   *  tiêu biểu" mà không phải vào /admin/tieu-bieu chọn từng SP. Optimistic
+   *  update, rollback nếu API fail. */
+  async function handleToggleFeatured(postId: string, productId: string, nextFeatured: boolean) {
+    // Optimistic
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId && p.product
+          ? { ...p, product: { ...p.product, isFeatured: nextFeatured } }
+          : p,
+      ),
+    )
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/featured`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isFeatured: nextFeatured }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error ?? t("genericError"))
+        // Rollback
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId && p.product
+              ? { ...p, product: { ...p.product, isFeatured: !nextFeatured } }
+              : p,
+          ),
+        )
+      }
+    } catch {
+      alert(t("genericError"))
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId && p.product
+            ? { ...p, product: { ...p.product, isFeatured: !nextFeatured } }
+            : p,
+        ),
+      )
+    }
+  }
   const [promoteModalPostId, setPromoteModalPostId] = useState<string | null>(null)
   const promoteModalPost = promoteModalPostId
     ? posts.find((p) => p.id === promoteModalPostId)
@@ -1285,6 +1356,7 @@ export function FeedClient({
             onDelete={handleDelete}
             onDismiss={handlePostDismiss}
             onPromote={handlePromote}
+            onToggleFeatured={handleToggleFeatured}
             onRequestPromotion={handleRequestPromotion}
             onCancelRequest={handleCancelRequest}
             tierSilver={tierSilver}

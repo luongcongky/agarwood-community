@@ -116,6 +116,7 @@ export default async function FeedPage({
         category: true,
         badgeUrl: true,
         certStatus: true,
+        isFeatured: true,
       },
     },
     reactions: {

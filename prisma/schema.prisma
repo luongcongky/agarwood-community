@@ -526,6 +526,22 @@ model Product {
   priceRange     String? // "500k-1tr", "1tr-5tr",...
   isPublished    Boolean  @default(true)
 
+  // Phase 4 (2026-04-29): KH yêu cầu spec sheet + variant để trang chi tiết
+  // chuyên nghiệp hơn (KH ref Lazada). Tất cả nullable — chưa nhập thì ẩn.
+  origin         String? // Xuất xứ vùng trồng (Khánh Hòa, Quảng Nam,...)
+  treeAge        String? // Tuổi cây dó bầu ("10-15 năm", "trên 25 năm")
+  packagingNote  String? @db.Text // Quy cách đóng gói (hộp/túi/giấy gói)
+  scentProfile   String? @db.Text // Mùi hương profile (ngọt, gỗ, ấm,...)
+  /// Mảng variant theo trọng lượng/kích cỡ — JSON shape:
+  /// `[{ name: "50gr", priceRange: "500k-1tr" }, { name: "100gr", priceRange: "1-2tr" }]`
+  /// Ẩn UI selector nếu null hoặc rỗng.
+  variants       Json?
+  // Phase 4 follow-up (2026-04-29): policy field cho trang chi tiết. Khi
+  // tạo SP mới mà user bỏ trống → server tự điền default text từ
+  // PRODUCT_DEFAULT_SHIPPING / PRODUCT_DEFAULT_RETURN.
+  shippingPolicy String? @db.Text // Tuỳ chọn giao hàng
+  returnPolicy   String? @db.Text // Đổi trả & Bảo hành
+
   // Certification
   certStatus     CertStatus @default(DRAFT)
   badgeUrl       String? // URL badge chứng nhận (Cloudinary)

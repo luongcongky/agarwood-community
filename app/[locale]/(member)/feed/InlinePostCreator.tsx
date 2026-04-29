@@ -9,6 +9,19 @@ import { PRODUCT_CATEGORIES } from "@/lib/constants/agarwood"
 import { saveMyRecentPost } from "@/lib/my-recent-posts"
 import type { ComposerMode, MembershipInfo, Post } from "./FeedClient"
 
+/** Slugify tiếng Việt → a-z, 0-9, dấu gạch ngang. Mirror PostEditor.
+ *  Dùng ̀-ͯ để strip Unicode combining diacritical marks. */
+function slugify(str: string): string {
+  return str
+    .normalize("NFD")
+    // eslint-disable-next-line no-misleading-character-class
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
 type Props = {
   /** Filter đang active — quyết định layout form (NEWS: textarea đơn; PRODUCT:
    *  form có tên/danh mục/giá/tiêu đề + mô tả). Post được tạo với category
@@ -83,16 +96,34 @@ export function InlinePostCreator({
 
   async function handleSubmit() {
     const plainText = content.trim()
+    const isProductMode = mode === "PRODUCT"
 
-    // Validate theo mode. PRODUCT yêu cầu tên + tiêu đề + mô tả; NEWS giữ
-    // threshold 50 ký tự của content.
-    if (mode === "PRODUCT") {
-      if (!productName.trim() || !title.trim() || plainText.length === 0) {
-        setError("Vui lòng điền đủ: Tên sản phẩm, Tiêu đề và Nội dung mô tả.")
+    // Validate theo mode. PRODUCT yêu cầu tên ≥2 + tiêu đề + mô tả ≥50
+    // (match server + full editor). NEWS giữ threshold 50 ký tự của content.
+    if (isProductMode) {
+      if (!productName.trim() || productName.trim().length < 2) {
+        setError("Tên sản phẩm tối thiểu 2 ký tự.")
+        return
+      }
+      if (!title.trim()) {
+        setError("Vui lòng nhập tiêu đề bài đăng.")
+        return
+      }
+      if (plainText.length < 50) {
+        setError(`Mô tả sản phẩm cần ít nhất 50 ký tự (hiện ${plainText.length}).`)
         return
       }
     } else if (plainText.length < 50) {
       setError(t("minContent", { count: plainText.length }))
+      return
+    }
+
+    // Slug từ tên SP — server validate /^[a-z0-9-]+$/ + ≥2 ký tự + unique.
+    // Trùng slug → server trả 409 "Slug đã được sử dụng" → catch block dưới
+    // hiển thị qua pendingError.
+    const productSlug = isProductMode ? slugify(productName) : ""
+    if (isProductMode && (productSlug.length < 2)) {
+      setError("Tên sản phẩm chưa thể tạo slug hợp lệ — vui lòng dùng tên có chữ/số.")
       return
     }
 
@@ -104,25 +135,11 @@ export function InlinePostCreator({
     const paragraphs = plainText.split("\n").filter(Boolean).map((p) => `<p>${p}</p>`).join("")
     const blobImageHtml = blobUrls.map((url) => `<img src="${url}" />`).join("")
 
-    // Build content HTML theo mode. PRODUCT prepend các field (tên/danh mục/
-    // giá/tiêu đề) dạng structured HTML để reader thấy thông tin sản phẩm
-    // ngay trong feed; NEWS giữ nguyên plain content.
-    const productHeaderHtml =
-      mode === "PRODUCT"
-        ? [
-            `<h2>${productName.trim()}</h2>`,
-            productCategory.trim()
-              ? `<p><strong>Danh mục:</strong> ${productCategory.trim()}</p>`
-              : "",
-            priceRange.trim()
-              ? `<p><strong>Khoảng giá:</strong> ${priceRange.trim()}</p>`
-              : "",
-            title.trim() ? `<h3>${title.trim()}</h3>` : "",
-          ]
-            .filter(Boolean)
-            .join("")
-        : ""
-    const postTitle = mode === "PRODUCT" ? productName.trim() : null
+    // Bug fix (2026-04-29): không prepend product header HTML vào content nữa.
+    // Trước đây gắn <h2>tên</h2><p>Danh mục:...</p>... vào content để hiển thị
+    // info SP — giờ Product được link đúng → FeedPostCard render badge từ
+    // post.product. Prepend cũ → duplicate info + post bị "thừa" dòng.
+    const postTitle = isProductMode ? productName.trim() : null
     const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
     // Build optimistic Post. Blob URLs render instantly — the image files
@@ -138,9 +155,12 @@ export function InlinePostCreator({
       id: tempId,
       authorId: currentUserId,
       title: postTitle,
-      content: blobImageHtml + productHeaderHtml + paragraphs,
+      content: blobImageHtml + paragraphs,
       imageUrls: blobUrls,
       status: optimisticStatus,
+      // Bug fix (2026-04-29): set category để PostCard render đúng product
+      // strip cho mode=PRODUCT (badge condition `post.category === "PRODUCT"`).
+      category: mode,
       isPremium: currentUserRole === "VIP" || currentUserRole === "INFINITE",
       isPromoted: false,
       authorPriority: membershipInfo?.displayPriority ?? 0,
@@ -160,6 +180,22 @@ export function InlinePostCreator({
         contributionTotal: membershipInfo?.contributionTotal ?? 0,
         company: membershipInfo?.company ?? null,
       },
+      // Bug fix (2026-04-29): optimistic product để badge hiển thị ngay
+      // khi user vừa đăng. Server response sẽ swap với product thực (có id +
+      // certStatus). Slug đã đúng (slugify deterministic) nên link
+      // "Xem chi tiết" cũng valid.
+      product: isProductMode
+        ? {
+            id: `tmp-product-${tempId}`,
+            name: productName.trim(),
+            slug: productSlug,
+            priceRange: priceRange.trim() || null,
+            category: productCategory.trim() || null,
+            badgeUrl: null,
+            certStatus: "DRAFT",
+            isFeatured: false,
+          }
+        : null,
       reactions: [],
       _count: { reactions: 0, comments: 0 },
       isPending: true,
@@ -195,7 +231,7 @@ export function InlinePostCreator({
         )
 
         const realImageHtml = uploadedUrls.map((url) => `<img src="${url}" />`).join("")
-        const realContent = realImageHtml + productHeaderHtml + paragraphs
+        const realContent = realImageHtml + paragraphs
 
         const res = await fetch("/api/posts", {
           method: "POST",
@@ -204,6 +240,20 @@ export function InlinePostCreator({
             content: realContent,
             category: mode,
             ...(postTitle ? { title: postTitle } : {}),
+            // Bug fix (2026-04-29): gửi product field để server tạo Product
+            // linked → FeedPostCard render badge "Sản phẩm | category | giá"
+            // y hệt full editor flow. Không có field này → API chỉ tạo Post,
+            // post.product null → badge ẩn.
+            ...(isProductMode
+              ? {
+                  product: {
+                    name: productName.trim(),
+                    slug: productSlug,
+                    category: productCategory.trim() || undefined,
+                    priceRange: priceRange.trim() || undefined,
+                  },
+                }
+              : {}),
           }),
         })
         if (!res.ok) {
@@ -217,7 +267,9 @@ export function InlinePostCreator({
         // interactions), the remount is invisible to the user.
         // `status` cần sync từ server để badge moderation (Chờ duyệt /
         // Bị từ chối) hiển thị đúng nếu admin thay đổi logic.
-        const patch = {
+        // `product` lấy từ server (có id thật + certStatus DRAFT) thay
+        // optimistic tmp-product-...
+        const patch: Partial<Post> = {
           id: post.id,
           status: post.status,
           content: realContent,
@@ -226,6 +278,18 @@ export function InlinePostCreator({
           updatedAt: post.updatedAt ?? optimisticPost.updatedAt,
           isPending: false,
           pendingError: null,
+        }
+        if (post.product) {
+          patch.product = {
+            id: post.product.id,
+            name: post.product.name,
+            slug: post.product.slug,
+            priceRange: post.product.priceRange ?? null,
+            category: post.product.category ?? null,
+            badgeUrl: post.product.badgeUrl ?? null,
+            certStatus: post.product.certStatus ?? "DRAFT",
+            isFeatured: post.product.isFeatured ?? false,
+          }
         }
         onPostUpdated(tempId, patch)
 
@@ -318,7 +382,7 @@ export function InlinePostCreator({
               ref={textareaRef}
               value={content}
               onChange={(e) => { setContent(e.target.value); setError(null) }}
-              placeholder="Mô tả chi tiết sản phẩm *"
+              placeholder="Mô tả chi tiết sản phẩm * (≥50 ký tự)"
               className="w-full resize-none border border-brand-200 rounded-lg bg-white px-3 py-2 text-sm text-brand-800 placeholder:text-brand-400 focus:border-brand-600 focus:outline-none min-h-[100px] leading-relaxed"
               rows={4}
             />
@@ -393,9 +457,9 @@ export function InlinePostCreator({
             {t("fullEditorShort")}
           </Link>
 
-          {/* Char count hint — chỉ cho NEWS mode (PRODUCT không có 50-char
-              threshold, validation check trống field thay). */}
-          {!isProduct && content.length > 0 && charCount < 50 && (
+          {/* Char count hint — cả NEWS và PRODUCT đều cần ≥50 ký tự (server +
+              full editor enforce cùng threshold). */}
+          {content.length > 0 && charCount < 50 && (
             <span className="text-xs text-brand-400">
               {charCount}/50
             </span>
@@ -406,13 +470,13 @@ export function InlinePostCreator({
           onClick={handleSubmit}
           disabled={
             isProduct
-              ? !productName.trim() || !title.trim() || charCount === 0
+              ? !productName.trim() || !title.trim() || charCount < 50
               : charCount < 50
           }
           className={cn(
             "rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors",
             (isProduct
-              ? productName.trim() && title.trim() && charCount > 0
+              ? productName.trim() && title.trim() && charCount >= 50
               : charCount >= 50)
               ? "bg-brand-700 text-white hover:bg-brand-800"
               : "bg-brand-100 text-brand-400 cursor-not-allowed",

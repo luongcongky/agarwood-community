@@ -6,6 +6,15 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getProductQuotaUsage } from "@/lib/product-quota"
 import { writeProductRevision } from "@/lib/product-revision"
+import {
+  PRODUCT_DEFAULT_SHIPPING,
+  PRODUCT_DEFAULT_RETURN,
+} from "@/lib/constants/agarwood"
+
+const variantSchema = z.object({
+  name: z.string().min(1).max(50),
+  priceRange: z.string().max(50).optional().or(z.literal("")),
+})
 
 const productSchema = z.object({
   name: z.string().min(2, "Ten san pham toi thieu 2 ky tu"),
@@ -21,6 +30,16 @@ const productSchema = z.object({
   priceRange: z.string().optional().or(z.literal("")),
   imageUrls: z.array(z.string()).optional(),
   isPublished: z.boolean().optional(),
+  // Phase 4 (2026-04-29): spec sheet + variants
+  origin: z.string().max(100).nullable().optional(),
+  treeAge: z.string().max(50).nullable().optional(),
+  packagingNote: z.string().max(1000).nullable().optional(),
+  scentProfile: z.string().max(1000).nullable().optional(),
+  variants: z.array(variantSchema).max(10).nullable().optional(),
+  // Phase 4 follow-up (2026-04-29): policy text. Create flow: empty →
+  // default. Update flow: empty → null (user clear, hiển thị default ở UI).
+  shippingPolicy: z.string().max(1000).nullable().optional(),
+  returnPolicy: z.string().max(1000).nullable().optional(),
 })
 
 export async function createProduct(formData: Record<string, unknown>) {
@@ -71,6 +90,14 @@ export async function createProduct(formData: Record<string, unknown>) {
         imageUrls: parsed.data.imageUrls ?? [],
         isPublished: parsed.data.isPublished ?? true,
         ownerPriority: user?.displayPriority ?? 0,
+        origin: parsed.data.origin || null,
+        treeAge: parsed.data.treeAge || null,
+        packagingNote: parsed.data.packagingNote || null,
+        scentProfile: parsed.data.scentProfile || null,
+        variants: parsed.data.variants && parsed.data.variants.length > 0 ? parsed.data.variants : undefined,
+        // Phase 4 follow-up: create flow → fill default nếu user bỏ trống.
+        shippingPolicy: parsed.data.shippingPolicy?.trim() || PRODUCT_DEFAULT_SHIPPING,
+        returnPolicy: parsed.data.returnPolicy?.trim() || PRODUCT_DEFAULT_RETURN,
       },
     })
     await writeProductRevision({
@@ -128,6 +155,21 @@ export async function updateProduct(productId: string, formData: Record<string, 
         priceRange: parsed.data.priceRange || null,
         imageUrls: parsed.data.imageUrls ?? [],
         isPublished: parsed.data.isPublished ?? true,
+        origin: parsed.data.origin || null,
+        treeAge: parsed.data.treeAge || null,
+        packagingNote: parsed.data.packagingNote || null,
+        scentProfile: parsed.data.scentProfile || null,
+        // Variants — empty array → null (clear data); có item → save array
+        variants:
+          parsed.data.variants !== undefined
+            ? parsed.data.variants && parsed.data.variants.length > 0
+              ? parsed.data.variants
+              : null
+            : undefined,
+        // Phase 4 follow-up: update flow → save what user inputs (clear =
+        // null, hiển thị default ở UI). Default chỉ apply ở create.
+        shippingPolicy: parsed.data.shippingPolicy?.trim() || null,
+        returnPolicy: parsed.data.returnPolicy?.trim() || null,
       },
     })
     await writeProductRevision({

@@ -2,13 +2,18 @@
 
 import { useTranslations } from "next-intl"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { isAdmin } from "@/lib/roles"
 import { CommentLoginBanner } from "@/components/features/register-nudge/CommentLoginBanner"
+import {
+  PromotePostModal,
+  type NewsCategoryValue,
+} from "@/components/features/admin/PromotePostModal"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +27,8 @@ type Author = {
   company: { name: string; slug: string } | null
 }
 
+type PromotionRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
+
 type PostData = {
   id: string
   authorId: string
@@ -29,12 +36,16 @@ type PostData = {
   content: string
   imageUrls: string[]
   status: string
+  category: string
+  newsCategories: string[]
   isPremium: boolean
   isPromoted: boolean
   viewCount: number
   createdAt: string
   updatedAt: string
   author: Author
+  product: { id: string; isFeatured: boolean } | null
+  latestPromotionRequest: { status: PromotionRequestStatus; reviewNote: string | null } | null
   reactions: { type: string }[]
   _count: { reactions: number; comments: number }
 }
@@ -89,6 +100,8 @@ export function PostDetailClient({
   adminEditedAfterOwner?: boolean
 }) {
   const t = useTranslations("postDetail")
+  const tFeed = useTranslations("feed")
+  const router = useRouter()
 
   const [isMounted, setIsMounted] = useState(false)
   const [reactionCount, setReactionCount] = useState(post._count.reactions)
@@ -99,7 +112,151 @@ export function PostDetailClient({
   const [replyTo, setReplyTo] = useState<{ id: string; name: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Admin/owner action menu state
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [postState, setPostState] = useState({
+    status: post.status,
+    isPromoted: post.isPromoted,
+    newsCategories: post.newsCategories as NewsCategoryValue[],
+    productIsFeatured: post.product?.isFeatured ?? false,
+    latestPromotionRequest: post.latestPromotionRequest,
+  })
+  const [promoteModalOpen, setPromoteModalOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => setIsMounted(true), [])
+
+  // Close menu khi click ngoài
+  useEffect(() => {
+    if (!menuOpen) return
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside)
+    return () => document.removeEventListener("mousedown", onClickOutside)
+  }, [menuOpen])
+
+  const isAuthor = currentUserId === post.authorId
+  const isAdminViewer = isAdmin(currentUserRole)
+  const isLoggedInNonGuest = !!currentUserRole && currentUserRole !== "GUEST"
+  // Menu hiện cho author (chỉnh sửa/xoá), admin (moderation), hoặc bất kỳ user
+  // đăng nhập non-GUEST (chỉ để báo cáo bài).
+  const canSeeMenu = isAuthor || isAdminViewer || (isLoggedInNonGuest && !isAuthor)
+  const isPostLocked = postState.status === "LOCKED"
+
+  // ── Admin/owner action handlers ─────────────────────────────────────────
+  async function handleLockToggle() {
+    setMenuOpen(false)
+    try {
+      const res = await fetch(`/api/posts/${post.id}/lock`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok) setPostState((s) => ({ ...s, status: data.status }))
+      else alert(data.error ?? "Lỗi")
+    } catch { alert("Lỗi kết nối") }
+  }
+
+  async function handleDelete() {
+    setMenuOpen(false)
+    if (!window.confirm(tFeed("deleteConfirm"))) return
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" })
+      if (res.ok) router.push("/feed")
+      else alert("Xoá thất bại.")
+    } catch { alert("Lỗi kết nối") }
+  }
+
+  async function handleToggleFeatured() {
+    setMenuOpen(false)
+    if (!post.product) return
+    const next = !postState.productIsFeatured
+    setPostState((s) => ({ ...s, productIsFeatured: next }))
+    try {
+      const res = await fetch(`/api/admin/products/${post.product.id}/featured`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ isFeatured: next }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error ?? "Lỗi")
+        setPostState((s) => ({ ...s, productIsFeatured: !next }))
+      }
+    } catch {
+      alert("Lỗi kết nối")
+      setPostState((s) => ({ ...s, productIsFeatured: !next }))
+    }
+  }
+
+  function openEdit() {
+    setMenuOpen(false)
+    window.location.href = `/feed/tao-bai?edit=${post.id}`
+  }
+  function openHistory() {
+    setMenuOpen(false)
+    window.location.href = `/bai-viet/${post.id}/lich-su`
+  }
+  function openPromoteModal() {
+    setMenuOpen(false)
+    setPromoteModalOpen(true)
+  }
+
+  /** Owner: xin admin đẩy bài lên trang chủ. */
+  async function handleRequestPromotion() {
+    setMenuOpen(false)
+    const reason = window.prompt(tFeed("requestPromotionPrompt"))
+    if (reason === null) return // user cancelled
+    try {
+      const res = await fetch(`/api/posts/${post.id}/request-promotion`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason: reason.trim() || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error ?? tFeed("genericError")); return }
+      setPostState((s) => ({
+        ...s,
+        latestPromotionRequest: { status: "PENDING", reviewNote: null },
+      }))
+      alert(tFeed("requestPromotionSubmitted"))
+    } catch { alert(tFeed("genericError")) }
+  }
+
+  /** Non-author logged-in users: báo cáo bài. */
+  async function handleReport() {
+    setMenuOpen(false)
+    const reason = window.prompt(tFeed("reportPrompt"))
+    if (!reason) return
+    try {
+      await fetch(`/api/posts/${post.id}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      })
+      alert(tFeed("reportSent"))
+    } catch { alert(tFeed("genericError")) }
+  }
+
+  /** Owner: rút yêu cầu PENDING. */
+  async function handleCancelRequest() {
+    setMenuOpen(false)
+    if (!window.confirm(tFeed("cancelRequestConfirm"))) return
+    try {
+      const res = await fetch(`/api/posts/${post.id}/request-promotion`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        alert(data.error ?? tFeed("genericError"))
+        return
+      }
+      setPostState((s) => ({
+        ...s,
+        latestPromotionRequest: { status: "CANCELLED", reviewNote: null },
+      }))
+    } catch { alert(tFeed("genericError")) }
+  }
 
   // Load comments
   const loadComments = useCallback(async () => {
@@ -242,8 +399,8 @@ export function PostDetailClient({
           </div>
         )}
 
-        {/* Author */}
-        <div className="flex items-center gap-3">
+        {/* Author + admin/owner action menu */}
+        <div className="flex items-start gap-3">
           <div className="relative w-12 h-12 rounded-full bg-brand-200 flex items-center justify-center shrink-0 overflow-hidden">
             {post.author.avatarUrl ? (
               <Image src={post.author.avatarUrl} alt="" fill className="object-cover" sizes="48px" />
@@ -251,7 +408,7 @@ export function PostDetailClient({
               <span className="text-sm font-bold text-brand-700">{getInitials(post.author.name)}</span>
             )}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-brand-900">{post.author.name}</span>
               {post.author.company && (
@@ -267,6 +424,149 @@ export function PostDetailClient({
               {isMounted ? timeAgo(post.createdAt) : ""}
             </span>
           </div>
+
+          {/* Action menu — chỉ hiện cho author hoặc admin */}
+          {canSeeMenu && (
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-label="Tuỳ chọn"
+                className="rounded-full p-2 text-brand-500 hover:bg-brand-50 hover:text-brand-800"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+                  <circle cx="5" cy="12" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="19" cy="12" r="2" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+                  {/* Author actions */}
+                  {isAuthor && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={openEdit}
+                        className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                      >
+                        {tFeed("menuEdit")}
+                      </button>
+                      {/* Request / Cancel promotion — author flow. canRequest
+                          khi: chưa promoted + không có pending + status PUBLISHED. */}
+                      {(() => {
+                        const promoStatus = postState.latestPromotionRequest?.status
+                        const hasPending = promoStatus === "PENDING"
+                        const canRequest =
+                          !postState.isPromoted &&
+                          !hasPending &&
+                          postState.status === "PUBLISHED"
+                        return (
+                          <>
+                            {canRequest && (
+                              <button
+                                type="button"
+                                onClick={handleRequestPromotion}
+                                className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                              >
+                                {tFeed("menuRequestPromotion")}
+                              </button>
+                            )}
+                            {hasPending && (
+                              <button
+                                type="button"
+                                onClick={handleCancelRequest}
+                                className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                              >
+                                {tFeed("menuCancelPromotionRequest")}
+                              </button>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </>
+                  )}
+                  {/* Admin moderation — chỉ khi admin xem bài của người khác.
+                      Tránh case INFINITE author thấy "Khoá / Đẩy lên trang chủ"
+                      trên bài của họ — moderation luôn là người khác kiểm duyệt. */}
+                  {isAdminViewer && !isAuthor && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={openEdit}
+                        className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                      >
+                        {tFeed("menuEdit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLockToggle}
+                        className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                      >
+                        {isPostLocked ? tFeed("menuUnlock") : tFeed("menuLock")}
+                      </button>
+                      {postState.status === "PUBLISHED" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={openPromoteModal}
+                            className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                          >
+                            {postState.isPromoted ? tFeed("menuUnpromote") : tFeed("menuPromote")}
+                          </button>
+                          {post.category === "PRODUCT" && post.product && (
+                            <button
+                              type="button"
+                              onClick={handleToggleFeatured}
+                              className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                            >
+                              {postState.productIsFeatured
+                                ? tFeed("menuUnfeatureProduct")
+                                : tFeed("menuFeatureProduct")}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                  {/* History — author + admin */}
+                  {(isAuthor || isAdminViewer) && (
+                    <button
+                      type="button"
+                      onClick={openHistory}
+                      className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                    >
+                      {tFeed("menuHistory")}
+                    </button>
+                  )}
+                  {/* Report — user đăng nhập non-GUEST, không phải author */}
+                  {isLoggedInNonGuest && !isAuthor && (
+                    <button
+                      type="button"
+                      onClick={handleReport}
+                      className="block w-full px-4 py-2 text-left text-sm text-brand-800 hover:bg-brand-50"
+                    >
+                      {tFeed("menuReport")}
+                    </button>
+                  )}
+                  {/* Delete — author hoặc admin (admin chỉ khi !isAuthor để
+                      tránh duplicate item) */}
+                  {(isAuthor || (isAdminViewer && !isAuthor)) && (
+                    <>
+                      <div className="my-1 border-t border-neutral-100" />
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      >
+                        {tFeed("menuDelete")}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Promoted */}
@@ -423,6 +723,26 @@ export function PostDetailClient({
         )}
       </section>
     </div>
+
+    {/* Promote modal — admin "Đẩy lên trang chủ" with category tagging */}
+    {promoteModalOpen && (
+      <PromotePostModal
+        postId={post.id}
+        postTitle={post.title}
+        initialCategories={postState.newsCategories}
+        initialPromoted={postState.isPromoted}
+        onClose={() => setPromoteModalOpen(false)}
+        onSuccess={(next) => {
+          setPostState((s) => ({
+            ...s,
+            isPromoted: next.isPromoted,
+            newsCategories: next.newsCategories,
+          }))
+          setPromoteModalOpen(false)
+          router.refresh()
+        }}
+      />
+    )}
     </div>
   )
 }

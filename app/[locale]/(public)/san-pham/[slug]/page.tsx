@@ -13,7 +13,13 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductGallery } from "./ProductGallery"
+import { ProductActionsMenu } from "./ProductActionsMenu"
+import { ProductPriceBlock, type ProductVariant } from "./ProductPriceBlock"
 import { CommentsSection } from "@/components/features/comments/CommentsSection"
+import {
+  PRODUCT_DEFAULT_SHIPPING,
+  PRODUCT_DEFAULT_RETURN,
+} from "@/lib/constants/agarwood"
 
 export const revalidate = 3600
 
@@ -34,6 +40,10 @@ const getProductBySlug = cache(async (slug: string) =>
         select: {
           name: true, name_en: true, name_zh: true, name_ar: true, slug: true, logoUrl: true, isVerified: true,
           ownerId: true, phone: true, website: true,
+          // Phase 4 (2026-04-29): seller card cần thêm các stat về DN
+          description: true, description_en: true, description_zh: true, description_ar: true,
+          foundedYear: true, address: true,
+          representativeName: true, representativePosition: true,
         },
       },
       certifications: {
@@ -41,6 +51,25 @@ const getProductBySlug = cache(async (slug: string) =>
         orderBy: { approvedAt: "desc" },
         take: 1,
         select: { id: true, approvedAt: true, reviewMode: true },
+      },
+      // Phase 4 (2026-04-29): post linked qua Product.postId — cần fields
+      // status/isPromoted/newsCategories/category cho ProductActionsMenu
+      // (Khoá / Đẩy lên trang chủ / Xoá — đồng bộ với feed admin menu).
+      // promotionRequests: owner flow "Xin đẩy lên trang chủ" / "Rút yêu cầu".
+      post: {
+        select: {
+          id: true,
+          status: true,
+          isPromoted: true,
+          newsCategories: true,
+          category: true,
+          title: true,
+          promotionRequests: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { status: true },
+          },
+        },
       },
     },
   }),
@@ -72,25 +101,30 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  // Related products: same category OR same company/owner, cert products first
-  const relatedProducts = await prisma.product.findMany({
-    where: {
-      isPublished: true,
-      slug: { not: slug },
-      OR: [
-        { category: product.category },
-        ...(product.companyId ? [{ companyId: product.companyId }] : []),
-        { ownerId: product.ownerId },
-      ],
-    },
-    take: 3,
-    orderBy: { certStatus: "desc" },
-    select: {
-      id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
-      category: true, category_en: true, category_zh: true, category_ar: true, priceRange: true, certStatus: true,
-      company: { select: { name: true } },
-    },
-  })
+  // Phase 4 (2026-04-29): Tách thành 2 query —
+  //  1. sameCompanyProducts: SP khác cùng DN (cho Zone 4 "Khác từ DN này")
+  //  2. companyProductsCount: tổng SP của DN cho seller card stat
+  // Bỏ "related products" gộp lẫn cả category + owner + company — tách rõ.
+  const [sameCompanyProducts, companyProductsCount] = await Promise.all([
+    product.companyId
+      ? prisma.product.findMany({
+          where: {
+            isPublished: true,
+            companyId: product.companyId,
+            slug: { not: slug },
+          },
+          take: 4,
+          orderBy: [{ certStatus: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true, name: true, name_en: true, name_zh: true, name_ar: true, slug: true, imageUrls: true,
+            category: true, category_en: true, category_zh: true, category_ar: true, priceRange: true, certStatus: true,
+          },
+        })
+      : Promise.resolve([]),
+    product.companyId
+      ? prisma.product.count({ where: { isPublished: true, companyId: product.companyId } })
+      : Promise.resolve(0),
+  ])
 
   const imageUrls = product.imageUrls as string[]
   const approvedCert = product.certifications[0] ?? null
@@ -131,7 +165,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <div className="bg-brand-50/60 min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
 
       {/* Breadcrumb — outside the card, on page background */}
@@ -149,175 +183,291 @@ export default async function ProductDetailPage({ params }: Props) {
         <span className="text-brand-800 font-medium line-clamp-1">{l(product, "name")}</span>
       </nav>
 
-      {/* Main content card */}
-      <div className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-8 mb-10">
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-          {/* Left: gallery */}
-          <ProductGallery imageUrls={imageUrls} productName={l(product, "name")} />
+      <div className="space-y-6 lg:space-y-8">
 
-          {/* Right: info */}
-          <div className="space-y-5">
+      {/* ─────────────────────────────────────────────────────────────────
+          ZONE 1 — VÙNG SẢN PHẨM (Lazada-flush style)
+          KH yêu cầu (2026-04-29): tỉ lệ ảnh + typography + no-border + zoom
+          theo Lazada. Card chỉ giữ bg trắng, bỏ border bao quanh; gallery
+          flush không border; label typography subtle gray uppercase; spacing
+          rộng rãi.
+          ───────────────────────────────────────────────────────────── */}
+      <section className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-8">
+        {/* Tỉ lệ 2:5 / 3:5 (gallery / info) — KH yêu cầu Lazada-like (info
+            column rộng hơn để typography và CTA thoáng). Mobile vẫn 1 col. */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 sm:gap-8 lg:gap-10">
+          {/* Left: gallery flush, hover-zoom (col-span-2 / 5) */}
+          <div className="md:col-span-2">
+            <ProductGallery imageUrls={imageUrls} productName={l(product, "name")} />
+          </div>
+
+          {/* Right: buying info (col-span-3 / 5) — typography hierarchy Lazada */}
+          <div className="md:col-span-3 space-y-5">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-brand-900 leading-tight">
-                {l(product, "name")}
-              </h1>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="flex items-start justify-between gap-3">
+                {/* Title — medium-bold, không quá to */}
+                <h1 className="text-xl sm:text-2xl font-semibold text-neutral-900 leading-snug">
+                  {l(product, "name")}
+                </h1>
+                <ProductActionsMenu
+                  productId={product.id}
+                  slug={slug}
+                  isOwner={isOwner}
+                  canProductWrite={canProductWrite}
+                  isAdminViewer={viewerIsAdmin}
+                  certStatus={product.certStatus}
+                  initialIsFeatured={product.isFeatured}
+                  post={product.post}
+                />
+              </div>
+
+              {/* Mini company line — subtle */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                 {hasCompany ? (
                   <>
-                    <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
-                      {product.company!.logoUrl ? (
-                        <Image src={product.company!.logoUrl} alt={product.company!.name} fill className="object-cover" sizes="24px" />
-                      ) : (
-                        <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
-                          {product.company!.name[0]}
-                        </span>
-                      )}
-                    </div>
-                    <Link href={`/doanh-nghiep/${product.company!.slug}`} className="text-sm text-brand-600 hover:text-brand-800">
+                    <span className="text-neutral-500">Thương hiệu:</span>
+                    <Link href={`/doanh-nghiep/${product.company!.slug}`} className="font-medium text-amber-700 hover:text-amber-800 hover:underline">
                       {product.company!.name}
                     </Link>
                     {product.company!.isVerified && (
-                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">{tP("verified")}</span>
+                      <span className="shrink-0 whitespace-nowrap text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">{tP("verified")}</span>
                     )}
                   </>
                 ) : (
                   <>
-                    <div className="relative w-6 h-6 rounded-full bg-brand-200 overflow-hidden shrink-0">
-                      {product.owner.avatarUrl ? (
-                        <Image src={product.owner.avatarUrl} alt={product.owner.name} fill className="object-cover" sizes="24px" />
-                      ) : (
-                        <span className="w-full h-full flex items-center justify-center text-[10px] font-bold text-brand-700">
-                          {product.owner.name[0]}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-brand-600">{product.owner.name}</span>
+                    <span className="text-neutral-500">Người bán:</span>
+                    <span className="font-medium text-neutral-900">{product.owner.name}</span>
                     {(product.owner.role === "VIP" || product.owner.role === "INFINITE") && (
-                      <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">{tP("member")}</span>
+                      <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">{tP("member")}</span>
                     )}
                   </>
                 )}
               </div>
             </div>
 
-            {/* Category & price */}
-            <div className="flex flex-wrap gap-3">
-              {l(product, "category") && (
-                <span className="bg-brand-100 text-brand-700 text-sm px-3 py-1 rounded-full">{l(product, "category")}</span>
+            {/* Category pill — subtle outlined */}
+            {l(product, "category") && (
+              <div className="flex flex-wrap gap-2">
+                <span className="border border-neutral-200 bg-neutral-50 text-neutral-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                  {l(product, "category")}
+                </span>
+              </div>
+            )}
+
+            {/* Price block — compact label hàng trên, giá to hàng dưới (Lazada) */}
+            <ProductPriceBlock
+              defaultPriceRange={product.priceRange}
+              variants={
+                Array.isArray(product.variants)
+                  ? (product.variants as unknown as ProductVariant[])
+                  : null
+              }
+            />
+
+            {/* Trust signals + chính sách — row style Lazada (label trái + value phải).
+                Spec ngắn (Xuất xứ / Tuổi cây) đặt ở đầu vì là decision factors.
+                Sau đó: Chứng nhận (chỉ APPROVED) / Giao hàng / Đổi trả / Loại SP. */}
+            <div className="space-y-2 border-t border-neutral-100 pt-4">
+              {product.origin && (
+                <div className="flex items-start gap-3 text-sm">
+                  <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Xuất xứ:</span>
+                  <span className="flex-1 text-neutral-800">{product.origin}</span>
+                </div>
               )}
-              {product.priceRange && (
-                <span className="bg-brand-500 text-white text-sm font-semibold px-3 py-1 rounded-full">{product.priceRange}</span>
+              {product.treeAge && (
+                <div className="flex items-start gap-3 text-sm">
+                  <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Tuổi cây:</span>
+                  <span className="flex-1 text-neutral-800">{product.treeAge}</span>
+                </div>
+              )}
+              {product.certStatus === "APPROVED" && (
+                <div className="flex items-start gap-3 text-sm">
+                  <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Chứng nhận:</span>
+                  <span className="flex-1 text-neutral-800">
+                    <span className="inline-flex items-center gap-1 font-medium text-amber-800">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-600 text-white text-[10px] font-bold">✓</span>
+                      Hội Trầm Hương Việt Nam
+                    </span>
+                    {certDate && (
+                      <span className="ml-1 text-xs text-neutral-500">— Cấp {certDate}</span>
+                    )}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-start gap-3 text-sm">
+                <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Giao hàng:</span>
+                <span className="flex-1 text-neutral-800 whitespace-pre-line">
+                  {product.shippingPolicy?.trim() || PRODUCT_DEFAULT_SHIPPING}
+                </span>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Đổi trả &amp; Bảo hành:</span>
+                <span className="flex-1 text-neutral-800 whitespace-pre-line">
+                  {product.returnPolicy?.trim() || PRODUCT_DEFAULT_RETURN}
+                </span>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <span className="shrink-0 w-36 text-neutral-500 text-xs uppercase tracking-wide pt-0.5">Loại sản phẩm:</span>
+                <span className="flex-1 text-neutral-800">Đóng hộp</span>
+              </div>
+            </div>
+
+            {product.certStatus === "PENDING" || product.certStatus === "UNDER_REVIEW" ? (
+              <p className="text-xs text-yellow-700 italic">⏳ Đang chờ xét duyệt chứng nhận</p>
+            ) : product.certStatus !== "APPROVED" ? (
+              <p className="text-xs text-neutral-400 italic">Sản phẩm chưa có chứng nhận từ Hội</p>
+            ) : null}
+
+            {/* Visitor CTA — guests/non-admin/non-owner. Full-width như Lazada */}
+            {!isOwner && !viewerIsAdmin && (
+              <div className="space-y-2 pt-2">
+                {hasCompany && (
+                  <Link
+                    href={`/doanh-nghiep/${product.company!.slug}`}
+                    className="block w-full rounded-lg bg-amber-700 text-white text-center px-4 py-3 text-sm font-semibold hover:bg-amber-800 transition-colors"
+                  >
+                    Liên hệ doanh nghiệp
+                  </Link>
+                )}
+                {!hasCompany && product.owner.phone && (
+                  <a
+                    href={`tel:${product.owner.phone}`}
+                    className="block w-full rounded-lg bg-amber-700 text-white text-center px-4 py-3 text-sm font-semibold hover:bg-amber-800 transition-colors"
+                  >
+                    📞 Gọi: {product.owner.phone}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────
+          ZONE 2 — VÙNG CÔNG TY
+          Seller card — pattern Lazada "Sold by". Logo to + name + verified
+          + description ngắn + stats grid (số SP, năm thành lập, địa chỉ)
+          + CTA "Xem trang doanh nghiệp" + "Gọi". Ẩn nếu product không có
+          company (cá nhân tự đăng).
+          ───────────────────────────────────────────────────────────── */}
+      {hasCompany && (
+        <section className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row gap-5">
+            {/* Logo */}
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-brand-100 overflow-hidden shrink-0">
+              {product.company!.logoUrl ? (
+                <Image src={product.company!.logoUrl} alt={product.company!.name} fill className="object-cover" sizes="96px" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-700">
+                  {product.company!.name[0]}
+                </span>
               )}
             </div>
 
-            {/* Description */}
-            {l(product, "description") && (
+            {/* Info column */}
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={`/doanh-nghiep/${product.company!.slug}`}
+                  className="text-lg sm:text-xl font-bold text-brand-900 hover:text-brand-700"
+                >
+                  {l(product.company!, "name")}
+                </Link>
+                {product.company!.isVerified && (
+                  <span className="shrink-0 whitespace-nowrap text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                    {tP("verified")}
+                  </span>
+                )}
+              </div>
+
+              {/* Address (trái) + CTAs (phải) cùng 1 hàng — KH yêu cầu
+                  2026-04-29. Mobile xếp dọc tự nhiên qua flex-wrap. */}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                {product.company!.address && (
+                  <dl className="text-sm flex-1 min-w-0">
+                    <dt className="text-[11px] uppercase tracking-wide text-brand-500">Địa chỉ</dt>
+                    <dd className="text-sm text-brand-800 line-clamp-2" title={product.company!.address ?? ""}>
+                      {product.company!.address}
+                    </dd>
+                  </dl>
+                )}
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Link
+                    href={`/doanh-nghiep/${product.company!.slug}`}
+                    className="rounded-lg border border-brand-700 text-brand-700 px-3 py-1.5 text-xs font-semibold hover:bg-brand-700 hover:text-white transition-colors"
+                  >
+                    Xem trang doanh nghiệp
+                  </Link>
+                  {product.company!.phone && (
+                    <a
+                      href={`tel:${product.company!.phone}`}
+                      className="rounded-lg border border-brand-300 text-brand-700 px-3 py-1.5 text-xs font-semibold hover:bg-brand-50 transition-colors"
+                    >
+                      📞 {product.company!.phone}
+                    </a>
+                  )}
+                  {product.company!.website && (
+                    <a
+                      href={product.company!.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-brand-300 text-brand-700 px-3 py-1.5 text-xs font-semibold hover:bg-brand-50 transition-colors"
+                    >
+                      🌐 Website
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          ZONE 3 — VÙNG CHI TIẾT + ĐÁNH GIÁ
+          Gom Description (long) + Spec sheet + Comments. Pattern Lazada
+          "Description / Specifications / Reviews" — không dùng tabs vì
+          content ngắn, scroll thẳng tự nhiên hơn.
+          ───────────────────────────────────────────────────────────── */}
+      {(l(product, "description") ||
+        product.packagingNote ||
+        product.scentProfile) && (
+        <section className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-8 space-y-8">
+          {l(product, "description") && (
+            <div>
+              <h2 className="text-base font-bold text-brand-900 mb-3">Mô tả sản phẩm</h2>
               <div
                 className="prose prose-sm max-w-none text-brand-700 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(l(product, "description") ?? "") }}
               />
-            )}
-
-            {/* ── Certification section (most prominent) ────────────────── */}
-            {product.certStatus === "APPROVED" && (
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-3">
-                <div className="flex items-start gap-3">
-                  {product.badgeUrl && (
-                    <Image src={product.badgeUrl} alt="Badge" width={56} height={56} className="rounded-lg object-contain shrink-0" />
-                  )}
-                  <div>
-                    <p className="text-amber-900 font-bold text-base uppercase tracking-wide">
-                      ✓ Sản phẩm đã được chứng nhận
-                    </p>
-                    <p className="text-amber-800 text-sm mt-0.5">Hội Trầm Hương Việt Nam</p>
-                  </div>
-                </div>
-                <div className="text-sm text-amber-800 space-y-1">
-                  {certDate && <p>Ngày cấp: <span className="font-semibold">{certDate}</span></p>}
-                  {approvedCert?.reviewMode && (
-                    <p>Hình thức: <span className="font-semibold">{approvedCert.reviewMode === "ONLINE" ? "Kiểm tra trực tuyến" : "Kiểm tra trực tiếp"}</span></p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {product.certStatus === "PENDING" || product.certStatus === "UNDER_REVIEW" ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <p className="text-yellow-800 font-medium text-sm">Đang chờ xét duyệt chứng nhận</p>
-              </div>
-            ) : product.certStatus !== "APPROVED" ? (
-              <div className="bg-brand-50 border border-brand-200 rounded-xl p-4">
-                <p className="text-brand-500 text-sm">Sản phẩm chưa có chứng nhận từ Hội</p>
-              </div>
-            ) : null}
-
-            {/* ── Role-based CTAs ────────────────────────────────────────── */}
-            <div className="flex flex-wrap gap-3 pt-2">
-              {isOwner && (
-                <>
-                  <Link
-                    href={`/san-pham/${slug}/sua`}
-                    className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
-                  >
-                    Chỉnh sửa sản phẩm
-                  </Link>
-                  <Link
-                    href={`/san-pham/${slug}/lich-su`}
-                    className="rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
-                  >
-                    Lịch sử chỉnh sửa
-                  </Link>
-                  {product.certStatus === "DRAFT" && (
-                    <Link
-                      href="/chung-nhan/nop-don"
-                      className="rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
-                    >
-                      Nộp đơn chứng nhận
-                    </Link>
-                  )}
-                </>
-              )}
-              {/* Admin hoặc committee TRUYEN_THONG — đi qua admin edit
-                  route để thao tác được ghi vào audit trail với
-                  editedRole phù hợp. */}
-              {!isOwner && canProductWrite && (
-                <>
-                  <Link
-                    href={`/admin/san-pham/${slug}/sua`}
-                    className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
-                  >
-                    Chỉnh sửa (Admin)
-                  </Link>
-                  <Link
-                    href={`/san-pham/${slug}/lich-su`}
-                    className="rounded-lg border border-brand-300 text-brand-700 px-4 py-2.5 text-sm font-medium hover:bg-brand-50 transition-colors"
-                  >
-                    Lịch sử chỉnh sửa
-                  </Link>
-                </>
-              )}
-              {!isOwner && !viewerIsAdmin && hasCompany && (
-                <Link
-                  href={`/doanh-nghiep/${product.company!.slug}`}
-                  className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
-                >
-                  Liên hệ doanh nghiệp
-                </Link>
-              )}
-              {!isOwner && !viewerIsAdmin && !hasCompany && product.owner.phone && (
-                <a
-                  href={`tel:${product.owner.phone}`}
-                  className="rounded-lg bg-brand-700 text-white px-4 py-2.5 text-sm font-semibold hover:bg-brand-800 transition-colors"
-                >
-                  Gọi: {product.owner.phone}
-                </a>
-              )}
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Comments / Discussion section — inside the card */}
+          {(product.packagingNote || product.scentProfile) && (
+            <div>
+              <h2 className="text-base font-bold text-brand-900 mb-3">Thông số sản phẩm</h2>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm rounded-lg border border-brand-200 bg-brand-50/40 p-4">
+                {product.packagingNote && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-brand-500">Quy cách đóng gói</dt>
+                    <dd className="text-brand-800 leading-snug whitespace-pre-line">{product.packagingNote}</dd>
+                  </div>
+                )}
+                {product.scentProfile && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-[11px] uppercase tracking-wide text-brand-500">Mùi hương / Đặc điểm</dt>
+                    <dd className="text-brand-800 leading-snug whitespace-pre-line">{product.scentProfile}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Comments — section riêng (Zone 3 phần 2) */}
+      <section className="bg-white rounded-2xl border border-brand-200 shadow-sm p-6 sm:p-8">
+        <h2 className="text-base font-bold text-brand-900 mb-3">Đánh giá &amp; Bình luận</h2>
         <CommentsSection
           productId={product.id}
           currentUserId={session?.user?.id ?? null}
@@ -325,14 +475,28 @@ export default async function ProductDetailPage({ params }: Props) {
           currentUserName={session?.user?.name}
           currentUserAvatar={session?.user?.image}
         />
-      </div>
+      </section>
 
-      {/* Related products — outside the card, on page background */}
-      {relatedProducts.length > 0 && (
-        <section className="pt-8">
-          <h2 className="text-xl font-semibold text-brand-900 mb-5">{tP("relatedProducts")}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {relatedProducts.map((rp) => {
+      {/* ─────────────────────────────────────────────────────────────────
+          ZONE 4 — VÙNG SẢN PHẨM CÙNG CÔNG TY
+          Carousel grid SP khác từ DN này. Pattern Lazada "From This Shop".
+          Ẩn nếu DN chỉ có duy nhất SP đang xem.
+          ───────────────────────────────────────────────────────────── */}
+      {sameCompanyProducts.length > 0 && (
+        <section>
+          <div className="flex items-baseline justify-between gap-3 mb-5">
+            <h2 className="text-xl font-semibold text-brand-900">
+              Sản phẩm khác từ {l(product.company!, "name")}
+            </h2>
+            <Link
+              href={`/doanh-nghiep/${product.company!.slug}`}
+              className="text-sm text-brand-600 hover:text-brand-800 underline shrink-0"
+            >
+              Xem tất cả ({companyProductsCount})
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {sameCompanyProducts.map((rp) => {
               const rpImages = rp.imageUrls as string[]
               return (
                 <Link
@@ -347,13 +511,21 @@ export default async function ProductDetailPage({ params }: Props) {
                       <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
                     )}
                     {rp.certStatus === "APPROVED" && (
-                      <span className="absolute top-2 right-2 bg-brand-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full shadow">✓</span>
+                      <span className="absolute top-2 right-2 bg-amber-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full shadow">
+                        ✓
+                      </span>
                     )}
                   </div>
-                  <div className="p-3 space-y-0.5">
-                    <p className="text-sm font-semibold text-brand-900 group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug">{l(rp, "name")}</p>
-                    <p className="text-xs text-brand-500">{rp.company?.name ?? ""}</p>
-                    {l(rp, "category") && <p className="text-xs text-brand-400">{l(rp, "category")}</p>}
+                  <div className="p-3 space-y-1">
+                    <p className="text-sm font-semibold text-brand-900 group-hover:text-brand-700 line-clamp-2 leading-snug">
+                      {l(rp, "name")}
+                    </p>
+                    {l(rp, "category") && (
+                      <p className="text-xs text-brand-500">{l(rp, "category")}</p>
+                    )}
+                    {rp.priceRange && (
+                      <p className="text-sm font-bold text-amber-700">{rp.priceRange}</p>
+                    )}
                   </div>
                 </Link>
               )
@@ -361,6 +533,7 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
         </section>
       )}
+      </div>
       </div>
     </div>
   )
