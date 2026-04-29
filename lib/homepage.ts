@@ -255,10 +255,16 @@ export const getTopVipMemberPosts = unstable_cache(
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
+/** Cửa sổ thời gian cho pool MemberRail rotate — chỉ lấy bài trong 3 ngày
+ *  gần nhất (KH yêu cầu 2026-04-29). Bài cũ hơn không xoay vòng nữa để
+ *  trang chủ luôn "tươi". Trade-off: ngày SL bài < 9 → MemberRail hiện ít
+ *  item hơn, nhưng tốt hơn là show bài cũ. */
+const MEMBER_POOL_DAYS = 3
+
 /**
- * Pool cho slot rotate — 30 bài VIP+non-VIP mới nhất, KHÔNG filter excludeIds
- * ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`) để MemberRail
- * có thể fetch pool + top song song (bỏ serialization cũ: top xong → pool).
+ * Pool cho slot rotate — bài VIP+non-VIP mới nhất trong 3 ngày, KHÔNG filter
+ * excludeIds ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`)
+ * để MemberRail fetch pool + top song song.
  */
 export function getMemberPostsPool() {
   const bucket = Math.floor(Date.now() / 300_000) // 5-min bucket
@@ -268,8 +274,9 @@ export function getMemberPostsPool() {
 const getMemberPostsPoolCached = unstable_cache(
   async (_bucket: number) => {
     void _bucket
+    const cutoff = new Date(Date.now() - MEMBER_POOL_DAYS * 24 * 60 * 60 * 1000)
     return prisma.post.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", createdAt: { gte: cutoff } },
       orderBy: [{ createdAt: "desc" }],
       take: 30,
       select: POST_CARD_SELECT,
