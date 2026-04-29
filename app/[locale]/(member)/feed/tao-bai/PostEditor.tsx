@@ -223,25 +223,17 @@ function TaoBaiContent({
     return () => { editor.off("update", handler) }
   }, [editorRef.current?.editor, title])
 
-  // Restore draft on mount — only for NEW posts
+  // KH yêu cầu (2026-04-29): "Tạo bài mới" luôn form trống — bỏ tính năng
+  // restore draft on mount. Auto-save vẫn chạy (write feed_draft khi user
+  // typing) nhưng không restore khi quay lại. Thay vào đó: clear feed_draft
+  // ngay khi mount tao-bai ở chế độ tạo mới. Trade-off: mất recovery khi
+  // user accidentally close tab — KH chấp nhận để đảm bảo flow "tạo bài
+  // mới = trắng".
   useEffect(() => {
     if (editId) return
-    const raw = localStorage.getItem("feed_draft")
-    if (!raw) return
-    try {
-      const parsed = JSON.parse(raw)
-      if (parsed.title) setTitle(parsed.title)
-      if (parsed.content) {
-        editorRef.current?.setContent(parsed.content)
-        setOriginalImages(extractCloudinaryUrls(parsed.content))
-      }
-      if (parsed.savedAt)
-        setDraftSavedAt(new Date(parsed.savedAt).toLocaleTimeString("vi-VN"))
-    } catch {
-      // ignore corrupt draft
-    }
+    localStorage.removeItem("feed_draft")
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editId, editorRef.current?.editor])
+  }, [editId])
 
   // Load post for editing
   useEffect(() => {
@@ -306,6 +298,18 @@ function TaoBaiContent({
     return "/feed"
   }
 
+  /** Clear autosave timer trước khi xoá draft — tránh race condition: nếu
+   *  user vừa edit ~1.5s trước rồi submit/cancel, timer vẫn pending sẽ fire
+   *  sau localStorage.removeItem và ghi lại draft cũ → lần sau tạo bài mới
+   *  thấy data cũ restore. Bug fix (2026-04-29). */
+  function clearDraftAndTimer() {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = null
+    }
+    localStorage.removeItem("feed_draft")
+  }
+
   async function handleCancel() {
     // Fire-and-forget parallel cleanup — don't block redirect
     void Promise.all(
@@ -319,7 +323,7 @@ function TaoBaiContent({
         }),
       ),
     )
-    localStorage.removeItem("feed_draft")
+    clearDraftAndTimer()
     router.push(feedReturnUrl())
   }
 
@@ -444,7 +448,7 @@ function TaoBaiContent({
         }
         // Fire-and-forget orphan cleanup — don't block redirect on it
         void deleteOrphanedImages([...originalImages, ...uploadedImages], html)
-        localStorage.removeItem("feed_draft")
+        clearDraftAndTimer()
         // Phase 3.6: admin sửa từ moderation page → quay lại cho-duyet (qua
         // returnTo query). Otherwise: preserve mode tab khi quay về /feed.
         router.push(feedReturnUrl())

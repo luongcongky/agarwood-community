@@ -67,11 +67,20 @@ export async function PostsSection({
   emptyText: string
   /** "grid" = 4-col thumbnail wall (default).
    *  "feature-list" = 2 featured cards + 4 text-only list items (3 col).
-   *  "hero-list" = 1 big hero left + 3 side-thumb items right (2 col) */
-  variant?: "grid" | "feature-list" | "hero-list"
+   *  "hero-list" = 1 big hero left + 3 side-thumb items right (2 col).
+   *  "column-feature" = 1 hero + 3 side-thumb stack vertically — design cho
+   *  cột hẹp (col-span-7 trong grid 12-col).
+   *  "column-grid" = 2-col thumbnail grid (3 hàng = 6 items) — design cho
+   *  cột hẹp (col-span-5). 2 variant này dùng cho row "tin DN || tin SP"
+   *  song song trên trang chủ — KH yêu cầu đa dạng bố cục (2026-04-29). */
+  variant?: "grid" | "feature-list" | "hero-list" | "column-feature" | "column-grid"
 }) {
   const take =
-    variant === "feature-list" ? 6 : variant === "hero-list" ? 5 : 8
+    variant === "feature-list" ? 6
+      : variant === "hero-list" ? 5
+      : variant === "column-feature" ? 5
+      : variant === "column-grid" ? 8
+      : 8
   const [items] = await Promise.all([
     getMergedFeed(category, newsCategory, take),
     getTranslations("homepage"),
@@ -104,9 +113,76 @@ export async function PostsSection({
     return <HeroListLayout items={items} title={title} locale={locale} titleHref={titleHref} />
   }
 
+  if (variant === "column-feature") {
+    return <ColumnFeatureLayout items={items} title={title} locale={locale} titleHref={titleHref} />
+  }
+
+  if (variant === "column-grid") {
+    return <ColumnGridLayout items={items} title={title} locale={locale} titleHref={titleHref} />
+  }
+
   return (
     <Section title={title} titleHref={titleHref}>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {items.map((it) => (
+          <ThumbnailCard
+            key={it.id}
+            href={it.href}
+            coverUrl={it.coverUrl}
+            title={localizedTitle(it, locale)}
+            meta={fmtDate(it.date)}
+          />
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+/** Variant `column-feature`: 1 hero card top + 3 SideThumb item stack dọc.
+ *  Dùng cho cột narrower trong layout side-by-side (KH yêu cầu 2026-04-29). */
+function ColumnFeatureLayout({
+  items,
+  title,
+  locale,
+  titleHref,
+}: {
+  items: MergedFeedItem[]
+  title: string
+  locale: Locale
+  titleHref: string
+}) {
+  const [main, ...rest] = items
+  const list = rest.slice(0, 4)
+  return (
+    <Section title={title} titleHref={titleHref}>
+      <div className="space-y-5">
+        {main && <HeroCard item={main} locale={locale} />}
+        <div className="space-y-4 border-t border-brand-100 pt-4">
+          {list.map((it) => (
+            <SideThumbItem key={it.id} item={it} locale={locale} />
+          ))}
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+/** Variant `column-grid`: 2-col grid 6 thumbnail (3 hàng). Cùng vibe carousel
+ *  thương mại — đặt cạnh ColumnFeatureLayout tạo tương phản editorial/grid. */
+function ColumnGridLayout({
+  items,
+  title,
+  locale,
+  titleHref,
+}: {
+  items: MergedFeedItem[]
+  title: string
+  locale: Locale
+  titleHref: string
+}) {
+  return (
+    <Section title={title} titleHref={titleHref}>
+      <div className="grid grid-cols-2 gap-3">
         {items.map((it) => (
           <ThumbnailCard
             key={it.id}
@@ -242,10 +318,7 @@ function SideThumbItem({
   return (
     <Link href={item.href} className="group flex gap-3">
       <div className="min-w-0 flex-1">
-        <h3
-          style={{ fontWeight: 400 }}
-          className="line-clamp-3 text-[15px] leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline"
-        >
+        <h3 className="line-clamp-3 text-[15px] font-bold leading-snug text-brand-900 underline-offset-2 decoration-brand-700 group-hover:text-brand-700 group-hover:underline">
           {title}
         </h3>
         <div className="mt-1.5">

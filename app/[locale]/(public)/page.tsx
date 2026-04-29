@@ -107,30 +107,39 @@ export default async function HomePage() {
         <AgricultureSection />
       </Suspense>
 
-      <Suspense fallback={<LatestPostsSkeleton />}>
-        {/* Q0=C (Phase 3.3 2026-04): gộp Post.NEWS + News.BUSINESS — bài
-            user-feed về tin doanh nghiệp + tin admin BUSINESS chung 1 list,
-            sort theo date desc. */}
-        <PostsSection
-          category="NEWS"
-          newsCategory="BUSINESS"
-          title={t("businessNews")}
-          emptyText={t("businessNewsEmpty")}
-          variant="feature-list"
-        />
-      </Suspense>
-
-      <Suspense fallback={<LatestPostsSkeleton />}>
-        {/* Q0=C: gộp Post.PRODUCT + News.PRODUCT — admin tin sản phẩm vào
-            chung list với bài user khoe sản phẩm. */}
-        <PostsSection
-          category="PRODUCT"
-          newsCategory="PRODUCT"
-          title={t("productNews")}
-          emptyText={t("productNewsEmpty")}
-          variant="hero-list"
-        />
-      </Suspense>
+      {/* Tin DN + Tin SP song song — KH yêu cầu đa dạng bố cục (2026-04-29).
+          Tỉ lệ 7:5 lệch chuẩn (≠ 1:1) + 2 variant khác nhau (column-feature
+          editorial vs column-grid commerce) tạo rhythm khác section full-
+          width xung quanh. Mobile stack tự nhiên qua flex-col → lg:grid. */}
+      <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="min-w-0 lg:col-span-7">
+          <Suspense fallback={<LatestPostsSkeleton />}>
+            {/* Q0=C (Phase 3.3 2026-04): gộp Post.NEWS + News.BUSINESS — bài
+                user-feed về tin doanh nghiệp + tin admin BUSINESS chung 1 list,
+                sort theo date desc. */}
+            <PostsSection
+              category="NEWS"
+              newsCategory="BUSINESS"
+              title={t("businessNews")}
+              emptyText={t("businessNewsEmpty")}
+              variant="column-feature"
+            />
+          </Suspense>
+        </div>
+        <div className="min-w-0 lg:col-span-5">
+          <Suspense fallback={<LatestPostsSkeleton />}>
+            {/* Q0=C: gộp Post.PRODUCT + News.PRODUCT — admin tin sản phẩm vào
+                chung list với bài user khoe sản phẩm. */}
+            <PostsSection
+              category="PRODUCT"
+              newsCategory="PRODUCT"
+              title={t("productNews")}
+              emptyText={t("productNewsEmpty")}
+              variant="column-grid"
+            />
+          </Suspense>
+        </div>
+      </div>
 
       <Suspense fallback={null}>
         <FeaturedCompanies />
