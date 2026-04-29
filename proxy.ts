@@ -44,6 +44,10 @@ const MEMBER_PREFIXES = [
 const LOGGED_IN_PREFIXES = [
   "/banner/dang-ky",   // Phase 6: mọi user đăng ký banner
   "/banner/lich-su",   // Phase 6: xem lịch sử banner của mình
+  // Hội đồng thẩm định: bất kỳ user đăng nhập nào đều có thể được admin chỉ
+  // định vào HĐ (kể cả GUEST). Page tự enforce check `isCouncilMember`. Đặt
+  // ở MEMBER_PREFIXES sẽ chặn GUEST → 'Không có quyền truy cập' sai lệch.
+  "/hoi-dong",
 ]
 
 /** Chỉ ADMIN mới vào được */

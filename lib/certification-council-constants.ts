@@ -11,4 +11,4 @@
 export const COUNCIL_SIZE = 5
 
 /** Thời hạn chứng nhận mặc định (năm) sau khi được duyệt. */
-export const CERT_VALIDITY_YEARS = 2
+export const CERT_VALIDITY_YEARS = 1

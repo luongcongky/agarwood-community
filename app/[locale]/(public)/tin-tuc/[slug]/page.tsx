@@ -287,8 +287,15 @@ export default async function NewsDetailPage({ params }: Props) {
   const seoDesc = (l(news, "seoDescription") as string | null) || l(news, "excerpt")
   const coverAlt = (l(news, "coverImageAlt") as string | null) || l(news, "title")
   const localizedContent = (l(news, "content") as string | undefined) ?? ""
-  const keywords = [news.focusKeyword, ...(news.secondaryKeywords ?? [])]
-    .filter((k): k is string => Boolean(k && k.trim()))
+  // Dedup: admin có thể nhập focusKeyword trùng với 1 secondaryKeyword
+  // → trùng key React + SEO tag lặp. Set giữ thứ tự xuất hiện đầu tiên.
+  const keywords = Array.from(
+    new Set(
+      [news.focusKeyword, ...(news.secondaryKeywords ?? [])]
+        .filter((k): k is string => Boolean(k && k.trim()))
+        .map((k) => k.trim()),
+    ),
+  )
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -342,8 +349,8 @@ export default async function NewsDetailPage({ params }: Props) {
   const excerpt = l(news, "excerpt") as string | null
   const hasDistinctCaption = coverAlt && coverAlt !== l(news, "title")
 
-  const tags = [news.focusKeyword, ...(news.secondaryKeywords ?? [])]
-    .filter((k): k is string => Boolean(k && k.trim()))
+  // tags === keywords — derivation giống hệt, reuse để tránh dedup 2 lần.
+  const tags = keywords
   const siteAbbr = "VAWA" // Vietnam Agarwood Association — prefix sapo kiểu VTV.vn
   const publishedTimeLabel = news.publishedAt
     ? new Date(news.publishedAt).toLocaleString("vi-VN", {

@@ -8,6 +8,7 @@ import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
 import { cn } from "@/lib/utils"
 import { isAdmin } from "@/lib/roles"
+import { CommentLoginBanner } from "@/components/features/register-nudge/CommentLoginBanner"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -393,11 +394,7 @@ export function PostDetailClient({
             </div>
           </div>
         ) : (
-          <div className="text-center py-4">
-            <Link href="/login" className="text-sm text-brand-600 hover:text-brand-800 font-medium">
-              {t("loginToComment")}
-            </Link>
-          </div>
+          <CommentLoginBanner />
         )}
 
         {/* Comments list */}

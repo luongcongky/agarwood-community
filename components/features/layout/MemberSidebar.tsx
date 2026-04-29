@@ -74,7 +74,9 @@ export function VipNavLinks({ accountType, role, membershipActive = true, isCoun
       : !membershipActive
         ? INACTIVE_VIP_NAV_ITEMS
         : VIP_NAV_ITEMS.filter((it) => !it.businessOnly || accountType !== "INDIVIDUAL")
-  const items = isCouncilMember && role !== "GUEST" ? [...baseItems, COUNCIL_NAV_ITEM] : baseItems
+  // Council member có thể là GUEST (do admin chỉ định, không bắt buộc VIP đóng
+  // phí) → không gate theo role, chỉ check isCouncilMember.
+  const items = isCouncilMember ? [...baseItems, COUNCIL_NAV_ITEM] : baseItems
 
   return (
     <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

@@ -62,6 +62,22 @@
     "copyrightNoticeDefault": "⚠ 未经越南沉香协会书面同意，禁止以任何形式复制。转载本网站信息时请注明来源 hoitramhuong.vn。",
     "quickLinksDefault": "首页|/\n企业|/doanh-nghiep\n服务|/dich-vu\n协会章程|/dieu-le\n法律文件|/phap-ly\n联系我们|/lien-he"
   },
+  "registerNudge": {
+    "commentTitle": "加入沉香社区讨论",
+    "commentText": "评论、分享并与50多家沉香行业企业建立联系。免费注册成为越南沉香协会会员。",
+    "commentRegisterCta": "免费注册",
+    "commentLoginCta": "已有账户？登录",
+    "heroEyebrow": "越南沉香社区",
+    "heroTitle": "成为会员 — 联系、认证、可持续发展",
+    "heroText": "越南沉香协会汇聚领先企业、工匠和研究人员。免费注册以解锁会员权益。",
+    "heroBenefit1": "正品产品认证 — 打击假冒，建立信任",
+    "heroBenefit2": "及时了解深度资讯、法律文件和研究资料",
+    "heroBenefit3": "行业联系，国内外市场机会",
+    "heroCta": "成为会员",
+    "heroLogin": "已是会员？登录",
+    "badgeText": "成为会员",
+    "badgeDismiss": "关闭"
+  },
   "auth": {
     "loginTitle": "登录",
     "welcome": "欢迎回来！",

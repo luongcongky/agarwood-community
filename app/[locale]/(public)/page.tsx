@@ -11,6 +11,7 @@ import { FeaturedCompanies } from "@/components/features/homepage/FeaturedCompan
 import { Partners } from "@/components/features/homepage/Partners"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
 import { BreakingTicker } from "@/components/features/homepage/BreakingTicker"
+import { HomepageJoinBanner } from "@/components/features/register-nudge/HomepageJoinBanner"
 import {
   BannerSlotSkeleton,
   LatestPostsSkeleton,
@@ -56,6 +57,7 @@ export default async function HomePage() {
   }
 
   return (
+    <>
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-4 sm:px-6 lg:px-8 lg:py-6 lg:space-y-10">
       <script
         type="application/ld+json"
@@ -136,5 +138,12 @@ export default async function HomePage() {
         <Partners />
       </Suspense>
     </div>
+
+    {/* Hero CTA banner — full-width, ngoài max-w-7xl container để gradient
+        bg fill toàn viewport. Chỉ hiện cho guest, gate ở server-side. */}
+    <Suspense fallback={null}>
+      <HomepageJoinBanner />
+    </Suspense>
+    </>
   )
 }

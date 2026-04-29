@@ -3,18 +3,24 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-interface Props {
-  certId: string
-}
-
 type VoteChoice = "APPROVE" | "REJECT"
 
-export function VoteForm({ certId }: Props) {
+interface Props {
+  certId: string
+  /** Vote đã ghi trước đó — null nếu chưa vote bao giờ. */
+  initialVote?: VoteChoice | null
+  /** Nhận xét đã ghi trước đó. */
+  initialComment?: string
+}
+
+export function VoteForm({ certId, initialVote = null, initialComment = "" }: Props) {
   const router = useRouter()
-  const [vote, setVote] = useState<VoteChoice | null>(null)
-  const [comment, setComment] = useState("")
+  const [vote, setVote] = useState<VoteChoice | null>(initialVote)
+  const [comment, setComment] = useState(initialComment)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const isUpdate = initialVote !== null
 
   async function submit() {
     if (!vote) {
@@ -27,8 +33,10 @@ export function VoteForm({ certId }: Props) {
     }
     const confirmMsg =
       vote === "REJECT"
-        ? "Vote REJECT sẽ tự động từ chối toàn bộ đơn (veto). Xác nhận?"
-        : "Xác nhận vote APPROVE?"
+        ? "Vote REJECT sẽ phủ quyết đơn khi đủ 5 phiếu. Bạn vẫn có thể đổi lại trước khi đủ 5/5. Xác nhận?"
+        : isUpdate
+          ? "Cập nhật vote APPROVE?"
+          : "Xác nhận vote APPROVE?"
     if (!window.confirm(confirmMsg)) return
 
     setLoading(true)
@@ -55,9 +63,13 @@ export function VoteForm({ certId }: Props) {
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
       <div>
-        <h2 className="text-base font-bold text-brand-900">Vote của bạn</h2>
+        <h2 className="text-base font-bold text-brand-900">
+          {isUpdate ? "Cập nhật vote" : "Vote của bạn"}
+        </h2>
         <p className="text-xs text-muted-foreground mt-1">
-          Bắt buộc để lại nhận xét. Đây là vote cuối cùng — không thể thay đổi sau khi gửi.
+          Bắt buộc để lại nhận xét. Có thể đổi vote (kể cả REJECT) trước khi đủ
+          5/5 phiếu. Khi đủ 5: chỉ cần 1 REJECT là đơn bị phủ quyết, 5 APPROVE
+          mới được duyệt.
         </p>
       </div>
 
@@ -99,7 +111,7 @@ export function VoteForm({ certId }: Props) {
         disabled={loading || !vote || !comment.trim()}
         className="w-full rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-50 transition-colors"
       >
-        {loading ? "Đang gửi..." : "Gửi vote"}
+        {loading ? "Đang gửi..." : isUpdate ? "Cập nhật vote" : "Gửi vote"}
       </button>
     </div>
   )

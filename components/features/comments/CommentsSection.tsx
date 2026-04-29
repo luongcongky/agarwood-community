@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import Link from "next/link"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { isAdmin } from "@/lib/roles"
+import { CommentLoginBanner } from "@/components/features/register-nudge/CommentLoginBanner"
 
 type CommentData = {
   id: string
@@ -195,11 +195,7 @@ export function CommentsSection({
           </div>
         </div>
       ) : (
-        <div className="text-center py-4">
-          <Link href="/login" className="text-sm text-brand-600 hover:text-brand-800 font-medium">
-            Đăng nhập để bình luận
-          </Link>
-        </div>
+        <CommentLoginBanner />
       )}
 
       {/* Comments list */}

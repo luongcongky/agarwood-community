@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
@@ -62,15 +63,33 @@ export async function SiteFooter() {
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 py-10 sm:px-6 lg:grid-cols-6 lg:gap-10 lg:px-8 lg:py-12">
         {/* About — full width mobile + sm, col-span-2 on desktop */}
         <div className="col-span-2 lg:col-span-2">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
-            {tCommon("siteName")}
-          </h3>
+          <div className="mb-3 flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt={tCommon("siteName")}
+              width={48}
+              height={48}
+              className="h-12 w-12 shrink-0 object-contain"
+            />
+            <h3 className="text-sm font-bold uppercase tracking-wide text-white">
+              {tCommon("siteName")}
+            </h3>
+          </div>
           <p className="text-[13px] leading-relaxed text-neutral-300">
             {t("brandDescDefault")}
           </p>
           <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
             {t("establishedNotice")}
           </p>
+          {/* Anti-copy sticky note — cảnh báo các trang giả mạo. Dùng amber
+              để nổi bật trên nền brand-900 dark. Border-l đậm tạo cảm giác
+              "sticker dán" thay vì block phẳng. */}
+          <div
+            role="note"
+            className="mt-4 border-l-4 border-amber-400 bg-amber-50/95 px-3 py-2 text-[11px] leading-relaxed text-amber-900 shadow-sm"
+          >
+            {t("copyrightNoticeDefault")}
+          </div>
         </div>
 
         {/* Leadership */}

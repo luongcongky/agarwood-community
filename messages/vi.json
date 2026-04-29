@@ -62,6 +62,22 @@
     "copyrightNoticeDefault": "⚠ Cấm sao chép dưới mọi hình thức nếu không có sự chấp thuận bằng văn bản của Hội Trầm Hương Việt Nam. Ghi rõ nguồn hoitramhuong.vn khi phát hành lại thông tin từ website này.",
     "quickLinksDefault": "Trang chủ|/\nDoanh nghiệp|/doanh-nghiep\nDịch vụ|/dich-vu\nĐiều lệ Hội|/dieu-le\nVăn bản pháp quy|/phap-ly\nLiên hệ|/lien-he"
   },
+  "registerNudge": {
+    "commentTitle": "Tham gia thảo luận cùng cộng đồng trầm hương",
+    "commentText": "Bình luận, chia sẻ và kết nối với hơn 50 doanh nghiệp ngành trầm. Đăng ký miễn phí để trở thành hội viên Hội Trầm Hương Việt Nam.",
+    "commentRegisterCta": "Đăng ký miễn phí",
+    "commentLoginCta": "Đã có tài khoản? Đăng nhập",
+    "heroEyebrow": "Cộng đồng Trầm Hương Việt Nam",
+    "heroTitle": "Trở thành hội viên — kết nối, chứng nhận, phát triển bền vững",
+    "heroText": "Hội Trầm Hương Việt Nam quy tụ doanh nghiệp, nghệ nhân và nhà nghiên cứu hàng đầu. Đăng ký miễn phí để khai mở quyền lợi hội viên.",
+    "heroBenefit1": "Chứng nhận sản phẩm chính danh — chống hàng giả, gia tăng uy tín",
+    "heroBenefit2": "Cập nhật tin chuyên sâu, văn bản pháp lý và tài liệu nghiên cứu",
+    "heroBenefit3": "Kết nối doanh nghiệp ngành, cơ hội thị trường trong & ngoài nước",
+    "heroCta": "Đăng ký hội viên",
+    "heroLogin": "Đã là hội viên? Đăng nhập",
+    "badgeText": "Đăng ký thành viên",
+    "badgeDismiss": "Đóng"
+  },
   "auth": {
     "loginTitle": "Đăng nhập",
     "welcome": "Chào mừng trở lại!",

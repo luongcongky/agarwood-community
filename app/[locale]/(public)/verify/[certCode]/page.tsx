@@ -150,13 +150,16 @@ export default async function VerifyPage({ params }: Props) {
     color: { dark: "#1a5632", light: "#ffffff" },
   })
 
-  const approvedCert = cert.reviews.filter((r) => r.comment).length > 0
   const displayDate = formatDate(cert.approvedAt ?? cert.product.certApprovedAt)
+  const displayExpiredAt = formatDate(cert.product.certExpiredAt)
   const displayCode = cert.certCode ?? "—"
 
   return (
-    <div className="bg-amber-50/30 min-h-screen py-8 print:bg-white print:py-0">
-      <div className="mx-auto max-w-[820px] px-4 print:px-0 print:max-w-none">
+    <div className="bg-linear-to-br from-amber-50/40 via-white to-amber-50/40 min-h-screen py-8 print:bg-white print:py-0">
+      {/* Print: ép khổ A4 ngang, bỏ margin để article fill cả tờ */}
+      <style>{`@media print { @page { size: A4 landscape; margin: 0 } }`}</style>
+
+      <div className="mx-auto max-w-[1180px] px-4 print:px-0 print:max-w-none">
         {/* Toolbar (hidden on print) */}
         <div className="flex items-center justify-between mb-4 print:hidden">
           <Link href="/" className="text-sm text-brand-600 hover:text-brand-800 underline">
@@ -165,54 +168,127 @@ export default async function VerifyPage({ params }: Props) {
           <PrintButton />
         </div>
 
-        {/* Certificate */}
-        <article className="relative bg-white border-[6px] border-amber-700 shadow-xl print:shadow-none print:border-4 aspect-[1/1.414] overflow-hidden">
-          {/* Inner decorative border */}
-          <div className="absolute inset-4 border-2 border-amber-600/60 pointer-events-none" />
+        {/* Certificate — landscape A4 (1.414:1). Layered borders + corner
+            ornaments + watermark logo cho cảm giác bằng khen cao cấp. */}
+        <article className="relative aspect-[1.414/1] overflow-hidden bg-[#fdf8ec] shadow-2xl print:shadow-none ring-1 ring-amber-900/10">
+          {/* Outer thick gold band */}
+          <div className="absolute inset-0 border-10 border-amber-700 print:border-8" />
+          {/* Inner thin gold rule */}
+          <div className="pointer-events-none absolute inset-[18px] border border-amber-600/70" />
+          {/* Even tighter inner rule for double-line elegance */}
+          <div className="pointer-events-none absolute inset-[24px] border border-amber-500/40" />
 
-          <div className="relative h-full flex flex-col px-10 py-8 print:px-12 print:py-10">
-            {/* Header */}
-            <header className="flex items-center justify-center gap-4 pb-4 border-b-2 border-amber-700/30">
-              <Image
-                src="/logo.png"
-                alt="Hội Trầm Hương Việt Nam"
-                width={68}
-                height={68}
-                className="h-[68px] w-auto"
-              />
-              <div className="text-center">
-                <p className="text-xs tracking-[0.3em] text-amber-900 font-semibold uppercase">
-                  Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam
+          {/* Corner ornaments — fleurons tạo điểm nhấn 4 góc */}
+          {(["top-[14px] left-[14px]", "top-[14px] right-[14px]", "bottom-[14px] left-[14px]", "bottom-[14px] right-[14px]"] as const).map((pos, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className={`absolute ${pos} h-8 w-8 text-amber-700 select-none`}
+            >
+              <svg viewBox="0 0 32 32" className="h-full w-full">
+                <path
+                  d="M2 2 L14 2 M2 2 L2 14 M6 2 L6 6 L2 6 M10 2 L10 4 L8 4 L8 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  transform={
+                    i === 1
+                      ? "translate(32 0) scale(-1 1)"
+                      : i === 2
+                        ? "translate(0 32) scale(1 -1)"
+                        : i === 3
+                          ? "translate(32 32) scale(-1 -1)"
+                          : undefined
+                  }
+                />
+              </svg>
+            </span>
+          ))}
+
+          {/* Watermark logo — center, mờ, dùng làm anti-counterfeit visual */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.05]">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={520}
+              height={520}
+              className="h-[60%] w-auto"
+            />
+          </div>
+
+          {/* Content layer */}
+          <div className="relative h-full flex flex-col px-14 py-8 print:px-16 print:py-10">
+            {/* ── Header band ─────────────────────────────────────────── */}
+            <header className="flex items-start justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/logo.png"
+                  alt="Hội Trầm Hương Việt Nam"
+                  width={70}
+                  height={70}
+                  className="h-[60px] w-auto"
+                />
+                <div className="leading-tight">
+                  <p className="text-[10px] tracking-[0.28em] text-amber-900 font-bold uppercase">
+                    Cộng Hòa Xã Hội Chủ Nghĩa Việt Nam
+                  </p>
+                  <p className="text-[10px] text-amber-800 italic">Độc lập — Tự do — Hạnh phúc</p>
+                  <p className="text-[13px] font-bold text-amber-900 mt-1 tracking-wide">
+                    HỘI TRẦM HƯƠNG VIỆT NAM
+                  </p>
+                  <p className="text-[9px] tracking-[0.25em] text-amber-700/80 uppercase">
+                    Vietnam Agarwood Association
+                  </p>
+                </div>
+              </div>
+
+              {/* Cert code badge — góc phải, formal nhưng không lấn hero */}
+              <div className="text-right">
+                <p className="text-[9px] tracking-[0.3em] text-amber-700 uppercase">Mã chứng nhận</p>
+                <p className="text-base font-mono font-bold text-amber-900 tracking-wide">
+                  {displayCode}
                 </p>
-                <p className="text-[11px] text-amber-800 italic">Độc lập — Tự do — Hạnh phúc</p>
-                <p className="text-sm font-bold text-amber-900 mt-1">HỘI TRẦM HƯƠNG VIỆT NAM</p>
+                <p className="text-[10px] text-amber-700 mt-0.5">Cấp ngày {displayDate}</p>
+                <p className="text-[10px] text-amber-700 font-semibold">
+                  Hiệu lực đến {displayExpiredAt}
+                </p>
               </div>
             </header>
 
-            {/* Title */}
-            <div className="text-center mt-6 space-y-1">
-              <p className="text-xs tracking-[0.4em] text-amber-800 uppercase">Giấy</p>
-              <h1 className="text-4xl font-serif font-bold text-amber-900 tracking-wider uppercase">
+            {/* ── Hero / Title ─────────────────────────────────────────── */}
+            <div className="text-center mt-3">
+              <p className="text-[11px] tracking-[0.5em] text-amber-700 uppercase">Giấy</p>
+              <h1 className="font-serif-headline text-5xl text-amber-900 tracking-wide uppercase mt-1 leading-none print:text-[44pt]">
                 Chứng Nhận Sản Phẩm
               </h1>
-              <p className="text-xs tracking-[0.3em] text-amber-700/80 uppercase">
-                Product Certification
+              {/* Ornamental divider: thin line — fleuron — thin line */}
+              <div className="flex items-center justify-center gap-3 mt-2">
+                <span className="h-px w-24 bg-linear-to-r from-transparent to-amber-700" />
+                <span className="text-amber-700 text-base leading-none" aria-hidden>
+                  ❦
+                </span>
+                <span className="h-px w-24 bg-linear-to-l from-transparent to-amber-700" />
+              </div>
+              <p className="text-[10px] tracking-[0.4em] text-amber-700/80 uppercase mt-1">
+                Product Certification · VAWA
               </p>
             </div>
 
-            {/* Body: product + company */}
-            <div className="mt-6 text-center space-y-2">
-              <p className="text-sm text-amber-900">Chứng nhận sản phẩm</p>
-              <p className="text-2xl font-serif font-bold text-amber-950">
-                {cert.product.name}
+            {/* ── Body: product + company + praise ─────────────────────── */}
+            <div className="text-center mt-4 px-8">
+              <p className="text-sm text-amber-900 italic">Trân trọng chứng nhận sản phẩm</p>
+              <p className="font-serif-headline text-3xl text-amber-950 mt-2 tracking-wide leading-tight print:text-[26pt]">
+                &ldquo;{cert.product.name}&rdquo;
               </p>
               {cert.product.company && (
-                <p className="text-sm text-amber-800">
+                <p className="text-base text-amber-800 mt-2">
                   của doanh nghiệp{" "}
-                  <span className="font-semibold">{cert.product.company.name}</span>
+                  <span className="font-semibold text-amber-950">
+                    {cert.product.company.name}
+                  </span>
                 </p>
               )}
-              <p className="text-sm text-amber-900 max-w-[560px] mx-auto leading-relaxed pt-1">
+              <p className="text-[13px] text-amber-900 max-w-[680px] mx-auto leading-relaxed mt-3">
                 đã được <strong>Hội đồng thẩm định</strong> gồm{" "}
                 <strong>{cert.reviews.length || 5}</strong> thành viên của{" "}
                 <strong>Hội Trầm Hương Việt Nam</strong> xem xét, đánh giá và nhất
@@ -220,64 +296,60 @@ export default async function VerifyPage({ params }: Props) {
               </p>
             </div>
 
-            {/* Reviews grid */}
-            {approvedCert && (
-              <section className="mt-4 flex-1">
-                <p className="text-xs tracking-[0.2em] text-amber-800 uppercase text-center mb-2">
-                  Nhận xét của hội đồng
+            <div className="flex-1" />
+
+            {/* ── Footer: 3-col QR | Council | Signature ──────────────── */}
+            <footer className="grid grid-cols-12 items-end gap-6 pt-3 border-t border-amber-700/30">
+              {/* QR + verify URL */}
+              <div className="col-span-3 flex flex-col items-start">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrDataUrl}
+                  alt="QR xác minh"
+                  className="w-[88px] h-[88px] rounded-sm border border-amber-700/30 bg-white p-1"
+                />
+                <p className="text-[9px] text-amber-700 mt-1.5 italic">
+                  Quét QR để xác minh tại
                 </p>
-                <ul className="grid grid-cols-1 gap-1.5 text-[11px] leading-relaxed max-h-[200px] overflow-hidden">
-                  {cert.reviews.map((r) => (
-                    <li key={r.id} className="border-l-2 border-amber-600 pl-2">
-                      <p className="font-semibold text-amber-900">{r.reviewer.name}</p>
-                      {r.comment && (
-                        <p className="text-amber-800 italic line-clamp-2">&ldquo;{r.comment}&rdquo;</p>
-                      )}
+                <p className="text-[10px] font-mono text-amber-800 break-all">
+                  {siteUrl.replace(/^https?:\/\//, "")}/verify/{displayCode}
+                </p>
+              </div>
+
+              {/* Council members — vertical list, names only, no comments để giữ
+                  mỹ thuật. Nhận xét xem qua trang verify online. */}
+              <div className="col-span-5 self-stretch flex flex-col">
+                <p className="text-[9px] tracking-[0.35em] text-amber-700 uppercase text-center mb-2">
+                  Hội đồng thẩm định
+                </p>
+                <ul className="grid grid-cols-1 gap-1 text-[12px] leading-tight text-amber-900 px-2">
+                  {cert.reviews.slice(0, 5).map((r) => (
+                    <li key={r.id} className="flex items-baseline gap-2 justify-center">
+                      <span className="text-amber-700" aria-hidden>
+                        ✦
+                      </span>
+                      <span className="font-medium">{r.reviewer.name}</span>
                     </li>
                   ))}
                 </ul>
-              </section>
-            )}
-            {!approvedCert && <div className="flex-1" />}
-
-            {/* Footer: code + QR + stamp + signature */}
-            <footer className="mt-4 pt-3 border-t-2 border-amber-700/30 grid grid-cols-3 items-end gap-4">
-              {/* QR + code */}
-              <div className="flex flex-col items-start gap-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrDataUrl} alt="QR xác minh" className="w-[90px] h-[90px]" />
-                <div>
-                  <p className="text-[10px] text-amber-700 uppercase tracking-wide">Mã chứng nhận</p>
-                  <p className="text-xs font-mono font-bold text-amber-900">{displayCode}</p>
-                </div>
-              </div>
-
-              {/* Date */}
-              <div className="text-center text-xs text-amber-900">
-                <p>Ngày cấp: <strong>{displayDate}</strong></p>
-                <p className="mt-1 italic text-amber-700">
-                  Truy cập {siteUrl.replace(/^https?:\/\//, "")}/verify/{displayCode} để xác minh
-                </p>
               </div>
 
               {/* Signature + stamp */}
-              <div className="relative flex flex-col items-end">
-                <div className="text-center">
-                  <p className="text-[10px] text-amber-800 italic">T/M Ban Chấp hành</p>
-                  <p className="text-xs font-semibold text-amber-900">Chủ tịch Hội</p>
-                </div>
-                <div className="relative h-[100px] w-[180px] mt-1">
+              <div className="col-span-4 flex flex-col items-center">
+                <p className="text-[10px] text-amber-800 italic">T/M Ban Chấp hành</p>
+                <p className="text-[13px] font-bold text-amber-900 tracking-wide">Chủ tịch Hội</p>
+                <div className="relative h-[110px] w-[200px] mt-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/cert/signature-placeholder.svg"
                     alt="Chữ ký"
-                    className="absolute inset-0 w-full h-auto"
+                    className="absolute left-0 top-2 w-[150px] h-auto"
                   />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/cert/stamp-placeholder.svg"
                     alt="Mộc đỏ"
-                    className="absolute -top-2 right-0 w-[110px] h-[110px] opacity-85 mix-blend-multiply"
+                    className="absolute -top-1 right-0 w-[120px] h-[120px] opacity-90 mix-blend-multiply"
                   />
                 </div>
               </div>

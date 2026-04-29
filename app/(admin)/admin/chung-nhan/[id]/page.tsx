@@ -54,18 +54,24 @@ export default async function CertReviewPage({ params }: Props) {
 
   if (!cert) notFound()
 
-  // Load candidate council members only when we need the assign form (PENDING + no reviews yet).
-  const candidates =
-    cert.status === "PENDING" && cert.reviews.length === 0
-      ? await prisma.user.findMany({
-          where: {
-            isCouncilMember: true,
-            id: { not: cert.applicantId },
-          },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true, email: true },
-        })
-      : []
+  // Load candidate council members:
+  //  - PENDING + chưa có reviews: dùng cho AssignCouncilForm (chỉ định lần đầu).
+  //  - UNDER_REVIEW: dùng cho ReplaceReviewerButton (đổi reviewer chưa vote) — loại
+  //    bỏ 5 reviewer hiện tại để admin chỉ thấy người khả dụng.
+  const needsCandidates =
+    (cert.status === "PENDING" && cert.reviews.length === 0) ||
+    cert.status === "UNDER_REVIEW"
+  const excludedIds = [cert.applicantId, ...cert.reviews.map((r) => r.reviewer.id)]
+  const candidates = needsCandidates
+    ? await prisma.user.findMany({
+        where: {
+          isCouncilMember: true,
+          id: { notIn: excludedIds },
+        },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, email: true },
+      })
+    : []
 
   return (
     <div className="space-y-6">
@@ -238,11 +244,13 @@ export default async function CertReviewPage({ params }: Props) {
           {/* UNDER_REVIEW / APPROVED / REJECTED: tiến độ vote + nhận xét */}
           {cert.reviews.length > 0 && (
             <ReviewProgress
+              certId={cert.id}
               status={cert.status}
               reviews={cert.reviews}
               certCode={cert.certCode}
               approvedAt={cert.approvedAt}
               rejectedAt={cert.rejectedAt}
+              candidates={candidates}
             />
           )}
 

@@ -74,7 +74,7 @@ async function notifyReviewers(certId: string, reviewerIds: string[]) {
                 <li><strong>Người nộp:</strong> ${cert.applicant.name}</li>
                 <li><strong>Hình thức:</strong> ${modeText}</li>
               </ul>
-              <p>Bắt buộc để lại nhận xét khi vote. Đủ 5/5 APPROVE đơn được duyệt, 1 REJECT đơn bị tự động từ chối (veto).</p>
+              <p>Bắt buộc để lại nhận xét khi vote. Có thể đổi vote trước khi đủ 5/5 phiếu. Khi đủ 5: 5 APPROVE → đơn được duyệt, từ 1 REJECT trở lên → đơn bị phủ quyết (veto).</p>
               <p><a href="${voteUrl}" style="display:inline-block;background:#1a5632;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Xem & Vote</a></p>
               <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
               <p style="color:#888;font-size:12px;">Hội Trầm Hương Việt Nam</p>

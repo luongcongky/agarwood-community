@@ -55,7 +55,10 @@ export default async function CouncilVotePage({ params }: Props) {
     )
   }
 
-  const canVote = myReview.vote === "PENDING" && cert.status === "UNDER_REVIEW"
+  // Cho phép vote/đổi vote khi đơn còn UNDER_REVIEW. Sau khi APPROVED/REJECTED
+  // thì khóa — chỉ hiện vote đã ghi nhận.
+  const canVote = cert.status === "UNDER_REVIEW"
+  const hasVoted = myReview.vote !== "PENDING"
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -133,10 +136,14 @@ export default async function CouncilVotePage({ params }: Props) {
         {/* Right: vote form + peer reviews */}
         <div className="lg:col-span-2 space-y-4">
           {canVote ? (
-            <VoteForm certId={cert.id} />
+            <VoteForm
+              certId={cert.id}
+              initialVote={hasVoted ? (myReview.vote as "APPROVE" | "REJECT") : null}
+              initialComment={myReview.comment ?? ""}
+            />
           ) : (
             <div className="rounded-xl border bg-white p-6 shadow-sm space-y-2">
-              <h2 className="text-base font-bold text-brand-900">Bạn đã vote</h2>
+              <h2 className="text-base font-bold text-brand-900">Vote đã ghi nhận</h2>
               <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${VOTE_STYLES[myReview.vote].cls}`}>
                 {VOTE_STYLES[myReview.vote].label}
               </span>
@@ -145,11 +152,9 @@ export default async function CouncilVotePage({ params }: Props) {
                   {myReview.comment}
                 </p>
               )}
-              {cert.status !== "UNDER_REVIEW" && (
-                <p className="text-xs text-muted-foreground">
-                  Trạng thái đơn hiện tại: <span className="font-semibold">{cert.status}</span>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Trạng thái đơn hiện tại: <span className="font-semibold">{cert.status}</span> — không thể đổi vote nữa.
+              </p>
             </div>
           )}
 

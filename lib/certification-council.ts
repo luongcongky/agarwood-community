@@ -64,6 +64,67 @@ export async function assignCouncil(certId: string, reviewerIds: string[]) {
   })
 }
 
+/**
+ * Đổi thành viên hội đồng cho đơn đang UNDER_REVIEW.
+ * Chỉ được đổi reviewer đang có vote `PENDING` (chưa vote). Đã APPROVE/REJECT
+ * thì coi như ý kiến đã ghi nhận, không thay được nữa — bảo toàn tính minh bạch.
+ */
+export async function replaceReviewer(
+  certId: string,
+  oldReviewerId: string,
+  newReviewerId: string,
+) {
+  if (oldReviewerId === newReviewerId) {
+    throw new CouncilError("Người mới phải khác người cũ")
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const cert = await tx.certification.findUnique({
+      where: { id: certId },
+      include: { reviews: true },
+    })
+    if (!cert) throw new CouncilError("Không tìm thấy đơn", 404)
+    if (cert.status !== "UNDER_REVIEW") {
+      throw new CouncilError("Chỉ đổi thành viên khi đơn còn trong quá trình thẩm định")
+    }
+    if (newReviewerId === cert.applicantId) {
+      throw new CouncilError("Người nộp đơn không thể tham gia hội đồng thẩm định chính đơn của mình")
+    }
+
+    const oldReview = cert.reviews.find((r) => r.reviewerId === oldReviewerId)
+    if (!oldReview) {
+      throw new CouncilError("Không tìm thấy thành viên cần đổi trong hội đồng đơn này", 404)
+    }
+    if (oldReview.vote !== "PENDING") {
+      throw new CouncilError("Không thể đổi thành viên đã vote — chỉ đổi được người chưa vote")
+    }
+
+    if (cert.reviews.some((r) => r.reviewerId === newReviewerId)) {
+      throw new CouncilError("Người mới đã có trong hội đồng đơn này")
+    }
+
+    const newUser = await tx.user.findFirst({
+      where: { id: newReviewerId, isCouncilMember: true },
+      select: { id: true },
+    })
+    if (!newUser) {
+      throw new CouncilError("Người mới không phải thành viên hội đồng thẩm định")
+    }
+
+    // Update record cũ thay vì delete + create — giữ createdAt để audit. Reset
+    // votedAt và comment vì đây là người mới.
+    await tx.certificationReview.update({
+      where: { id: oldReview.id },
+      data: {
+        reviewerId: newReviewerId,
+        vote: "PENDING",
+        comment: null,
+        votedAt: null,
+      },
+    })
+  })
+}
+
 type VoteResult =
   | { finalDecision: null }
   | { finalDecision: "REJECTED" }
@@ -97,9 +158,9 @@ export async function castVote(
     if (!myReview) {
       throw new CouncilError("Bạn không phải thành viên hội đồng thẩm định đơn này", 403)
     }
-    if (myReview.vote !== "PENDING") {
-      throw new CouncilError("Bạn đã vote cho đơn này rồi")
-    }
+    // Cho phép đổi vote khi đơn còn UNDER_REVIEW (chưa đủ 5 APPROVE và chưa
+    // có REJECT nào kích veto). Khi đơn chuyển APPROVED/REJECTED thì check
+    // `cert.status !== "UNDER_REVIEW"` ở trên đã chặn.
 
     const now = new Date()
 
@@ -108,8 +169,26 @@ export async function castVote(
       data: { vote, comment: trimmedComment, votedAt: now },
     })
 
-    // Veto: 1 REJECT auto-rejects whole application
-    if (vote === "REJECT") {
+    // Defer veto: chỉ chốt quyết định khi đủ 5 phiếu — tránh tình huống
+    // bất cẩn click REJECT làm khóa luôn cả đơn (KH yêu cầu 2026-04-29).
+    // Trong lúc còn PENDING, mọi reviewer được phép đổi vote tự do.
+    const updatedReviews = cert.reviews.map((r) =>
+      r.id === myReview.id ? { ...r, vote } : r,
+    )
+    const allVoted =
+      updatedReviews.length === COUNCIL_SIZE &&
+      updatedReviews.every((r) => r.vote !== "PENDING")
+
+    if (!allVoted) {
+      return { finalDecision: null }
+    }
+
+    // Đủ 5 phiếu → chốt: 1 REJECT = veto → REJECTED; 5/5 APPROVE → APPROVED.
+    const hasReject = updatedReviews.some((r) => r.vote === "REJECT")
+
+    if (hasReject) {
+      const rejectVotes = updatedReviews.filter((r) => r.vote === "REJECT")
+      const reviewNote = `Bị phủ quyết bởi hội đồng (${rejectVotes.length}/5 REJECT).`
       await tx.certification.update({
         where: { id: certId },
         data: {
@@ -117,7 +196,7 @@ export async function castVote(
           rejectedAt: now,
           reviewedAt: now,
           reviewedBy: reviewerId,
-          reviewNote: `Bị phủ quyết bởi hội đồng: ${trimmedComment}`,
+          reviewNote,
         },
       })
       await tx.product.update({
@@ -127,43 +206,32 @@ export async function castVote(
       return { finalDecision: "REJECTED" }
     }
 
-    // Consensus: 5/5 APPROVE auto-approves + generates certCode
-    const updatedReviews = cert.reviews.map((r) =>
-      r.id === myReview.id ? { ...r, vote } : r,
-    )
-    const allApproved =
-      updatedReviews.length === COUNCIL_SIZE &&
-      updatedReviews.every((r) => r.vote === "APPROVE")
+    // 5/5 APPROVE → APPROVED + generate certCode
+    const year = now.getFullYear()
+    const approvedCount = await tx.certification.count({
+      where: { status: "APPROVED", approvedAt: { gte: new Date(`${year}-01-01`) } },
+    })
+    const certCode = `HTHVN-${year}-${String(approvedCount + 1).padStart(4, "0")}`
 
-    if (allApproved) {
-      const year = now.getFullYear()
-      const approvedCount = await tx.certification.count({
-        where: { status: "APPROVED", approvedAt: { gte: new Date(`${year}-01-01`) } },
-      })
-      const certCode = `HTHVN-${year}-${String(approvedCount + 1).padStart(4, "0")}`
-
-      await tx.certification.update({
-        where: { id: certId },
-        data: {
-          status: "APPROVED",
-          approvedAt: now,
-          reviewedAt: now,
-          reviewedBy: reviewerId,
-          certCode,
-        },
-      })
-      await tx.product.update({
-        where: { id: cert.productId },
-        data: {
-          certStatus: "APPROVED",
-          certApprovedAt: now,
-          certExpiredAt: addYears(now, CERT_VALIDITY_YEARS),
-          badgeUrl: "/badge-chung-nhan.png",
-        },
-      })
-      return { finalDecision: "APPROVED", certCode }
-    }
-
-    return { finalDecision: null }
+    await tx.certification.update({
+      where: { id: certId },
+      data: {
+        status: "APPROVED",
+        approvedAt: now,
+        reviewedAt: now,
+        reviewedBy: reviewerId,
+        certCode,
+      },
+    })
+    await tx.product.update({
+      where: { id: cert.productId },
+      data: {
+        certStatus: "APPROVED",
+        certApprovedAt: now,
+        certExpiredAt: addYears(now, CERT_VALIDITY_YEARS),
+        badgeUrl: "/badge-chung-nhan.png",
+      },
+    })
+    return { finalDecision: "APPROVED", certCode }
   })
 }

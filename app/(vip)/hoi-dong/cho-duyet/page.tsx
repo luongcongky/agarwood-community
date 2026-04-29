@@ -55,7 +55,7 @@ export default async function CouncilInboxPage() {
       <div>
         <h1 className="text-2xl font-bold text-brand-900">Hội đồng thẩm định</h1>
         <p className="mt-1 text-sm text-brand-600">
-          Các đơn chứng nhận sản phẩm được giao cho bạn. Cần để lại nhận xét khi vote. Đủ 5/5 APPROVE đơn được duyệt, 1 REJECT đơn bị tự động từ chối.
+          Các đơn chứng nhận sản phẩm được giao cho bạn. Cần để lại nhận xét khi vote. Có thể đổi vote tự do trước khi đủ 5/5 phiếu — khi đủ: 5 APPROVE → đơn được duyệt, từ 1 REJECT trở lên → đơn bị phủ quyết.
         </p>
       </div>
 

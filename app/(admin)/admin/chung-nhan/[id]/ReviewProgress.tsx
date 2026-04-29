@@ -1,4 +1,5 @@
 import type { ReviewVote, CertStatus } from "@prisma/client"
+import { ReplaceReviewerButton } from "./ReplaceReviewerButton"
 
 interface ReviewItem {
   id: string
@@ -8,12 +9,21 @@ interface ReviewItem {
   reviewer: { id: string; name: string; email: string }
 }
 
+interface Candidate {
+  id: string
+  name: string
+  email: string
+}
+
 interface Props {
+  certId: string
   status: CertStatus
   reviews: ReviewItem[]
   certCode: string | null
   approvedAt: Date | null
   rejectedAt: Date | null
+  /** Council members khả dụng để thay thế (đã loại 5 reviewer hiện tại + applicant). */
+  candidates: Candidate[]
 }
 
 const VOTE_STYLES: Record<ReviewVote, { label: string; cls: string }> = {
@@ -22,7 +32,7 @@ const VOTE_STYLES: Record<ReviewVote, { label: string; cls: string }> = {
   REJECT: { label: "REJECT", cls: "bg-red-100 text-red-700" },
 }
 
-export function ReviewProgress({ status, reviews, certCode, approvedAt, rejectedAt }: Props) {
+export function ReviewProgress({ certId, status, reviews, certCode, approvedAt, rejectedAt, candidates }: Props) {
   const approved = reviews.filter((r) => r.vote === "APPROVE").length
   const rejected = reviews.filter((r) => r.vote === "REJECT").length
   const pending = reviews.filter((r) => r.vote === "PENDING").length
@@ -62,6 +72,9 @@ export function ReviewProgress({ status, reviews, certCode, approvedAt, rejected
       <ul className="space-y-3">
         {reviews.map((r) => {
           const style = VOTE_STYLES[r.vote]
+          // Chỉ cho phép đổi khi đơn còn UNDER_REVIEW và reviewer chưa vote.
+          // Đã APPROVE/REJECT → vote đã ghi nhận, không đổi được.
+          const canReplace = status === "UNDER_REVIEW" && r.vote === "PENDING"
           return (
             <li key={r.id} className="rounded-lg border bg-brand-50/40 p-3 text-sm space-y-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -82,6 +95,14 @@ export function ReviewProgress({ status, reviews, certCode, approvedAt, rejected
                 <p className="text-xs text-muted-foreground">
                   Vote lúc: {new Date(r.votedAt).toLocaleString("vi-VN")}
                 </p>
+              )}
+              {canReplace && (
+                <ReplaceReviewerButton
+                  certId={certId}
+                  oldReviewerId={r.reviewer.id}
+                  oldReviewerName={r.reviewer.name}
+                  candidates={candidates}
+                />
               )}
             </li>
           )

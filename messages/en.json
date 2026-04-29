@@ -62,6 +62,22 @@
     "copyrightNoticeDefault": "⚠ Reproduction in any form without written consent from the Vietnam Agarwood Association is prohibited. Please cite hoitramhuong.vn as the source when republishing information from this website.",
     "quickLinksDefault": "Home|/\nBusinesses|/doanh-nghiep\nServices|/dich-vu\nCharter|/dieu-le\nLegal Documents|/phap-ly\nContact|/lien-he"
   },
+  "registerNudge": {
+    "commentTitle": "Join the agarwood community discussion",
+    "commentText": "Comment, share, and connect with 50+ agarwood industry businesses. Register for free to become a member of the Vietnam Agarwood Association.",
+    "commentRegisterCta": "Register for free",
+    "commentLoginCta": "Already have an account? Sign in",
+    "heroEyebrow": "Vietnam Agarwood Community",
+    "heroTitle": "Become a member — connect, certify, grow sustainably",
+    "heroText": "The Vietnam Agarwood Association brings together leading businesses, artisans, and researchers. Register for free to unlock member benefits.",
+    "heroBenefit1": "Authentic product certification — fight counterfeits, build trust",
+    "heroBenefit2": "Stay updated on in-depth news, legal documents, and research",
+    "heroBenefit3": "Industry connections, domestic & international market opportunities",
+    "heroCta": "Become a member",
+    "heroLogin": "Already a member? Sign in",
+    "badgeText": "Become a member",
+    "badgeDismiss": "Dismiss"
+  },
   "auth": {
     "loginTitle": "Sign in",
     "welcome": "Welcome back!",
