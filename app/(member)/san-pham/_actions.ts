@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getProductQuotaUsage } from "@/lib/product-quota"
@@ -159,12 +160,13 @@ export async function updateProduct(productId: string, formData: Record<string, 
         treeAge: parsed.data.treeAge || null,
         packagingNote: parsed.data.packagingNote || null,
         scentProfile: parsed.data.scentProfile || null,
-        // Variants — empty array → null (clear data); có item → save array
+        // Variants — empty array → DB NULL (clear data); có item → save array.
+        // Prisma Json? field cần Prisma.DbNull (literal null không hợp lệ).
         variants:
           parsed.data.variants !== undefined
             ? parsed.data.variants && parsed.data.variants.length > 0
               ? parsed.data.variants
-              : null
+              : Prisma.DbNull
             : undefined,
         // Phase 4 follow-up: update flow → save what user inputs (clear =
         // null, hiển thị default ở UI). Default chỉ apply ở create.

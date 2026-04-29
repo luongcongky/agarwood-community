@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getUserPermissions, hasPermission } from "@/lib/permissions"
@@ -121,11 +122,13 @@ export async function adminUpdateProduct(
         treeAge: parsed.data.treeAge || null,
         packagingNote: parsed.data.packagingNote || null,
         scentProfile: parsed.data.scentProfile || null,
+        // Prisma Json? field cần Prisma.DbNull để clear DB NULL (literal null
+         //  không hợp lệ với NullableJsonNullValueInput).
         variants:
           parsed.data.variants !== undefined
             ? parsed.data.variants && parsed.data.variants.length > 0
               ? parsed.data.variants
-              : null
+              : Prisma.DbNull
             : undefined,
         shippingPolicy: parsed.data.shippingPolicy?.trim() || null,
         returnPolicy: parsed.data.returnPolicy?.trim() || null,
