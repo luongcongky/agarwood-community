@@ -178,28 +178,19 @@ export function CategoryBar({ loggedIn = false }: Props) {
             )
           })}
 
-          {/* Auth CTAs — chỉ hiện cho guest. Desktop: push right với ml-auto.
-              Mobile: append cuối scroll list (natural flow). Button "Đăng ký"
-              dùng amber để tạo contrast mạnh trên nền nâu → user mới dễ thấy. */}
+          {/* Auth CTA — chỉ hiện nút "Đăng nhập" cho guest, đẩy phải bằng
+              ml-auto trên desktop. Nút "Đăng ký hội viên" đã chuyển hoàn toàn
+              sang các nudge banner (hero, comment, floating badge) để menu
+              gọn lại và CTA không lặp 2 chỗ. */}
           {!loggedIn && (
-            <>
-              <li className="lg:ml-auto">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center px-3.5 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-white/95 border border-white/40 ml-2 transition-colors hover:bg-white/10"
-                >
-                  {t("login")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/dang-ky"
-                  className="inline-flex items-center px-4 py-2.5 text-[13px] font-bold uppercase tracking-wide text-brand-900 bg-amber-400 ml-2 transition-colors hover:bg-amber-300"
-                >
-                  {t("register")}
-                </Link>
-              </li>
-            </>
+            <li className="lg:ml-auto">
+              <Link
+                href="/login"
+                className="inline-flex items-center px-3.5 py-2.5 text-[13px] font-semibold uppercase tracking-wide text-white/95 border border-white/40 ml-2 transition-colors hover:bg-white/10"
+              >
+                {t("login")}
+              </Link>
+            </li>
           )}
         </ul>
       </div>
