@@ -136,7 +136,7 @@ export default async function AgricultureDetailPage({ params }: Props) {
     publishedAt: true,
     template: true, gallery: true, // Phase 3.7 round 4 — sidebar fallback thumb
   } as const
-  const [relatedPool, author, sidebarPinned, sidebarLatest] = await Promise.all([
+  const [relatedPool, author, sidebarPinned] = await Promise.all([
     prisma.news.findMany({
       where: {
         isPublished: true,
@@ -192,24 +192,7 @@ export default async function AgricultureDetailPage({ params }: Props) {
       take: 5,
       select: SIDEBAR_LIST_SELECT,
     }),
-    prisma.news.findMany({
-      where: {
-        isPublished: true,
-        slug: { not: slug },
-        OR: [
-          { category: "AGRICULTURE" },
-          { secondaryCategories: { has: "AGRICULTURE" } },
-        ],
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 6,
-      select: SIDEBAR_LIST_SELECT,
-    }),
   ])
-
-  // Dedupe sidebar: latest không trùng pinned.
-  const pinnedIdSet = new Set(sidebarPinned.map((n) => n.id))
-  const sidebarRecent = sidebarLatest.filter((n) => !pinnedIdSet.has(n.id)).slice(0, 5)
 
   let related = relatedPool
   if (related.length < 3) {
@@ -482,10 +465,6 @@ export default async function AgricultureDetailPage({ params }: Props) {
 
         {/* Right rail — sticky desktop, mobile dồn xuống cuối article */}
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
-          </Suspense>
-
           <SidebarList
             title="Khuyến nông nổi bật"
             items={sidebarPinned}
@@ -493,13 +472,9 @@ export default async function AgricultureDetailPage({ params }: Props) {
             itemHrefPrefix="/khuyen-nong"
           />
 
-          <SidebarList
-            title="Mới đăng"
-            items={sidebarRecent}
-            locale={locale}
-            itemHrefPrefix="/khuyen-nong"
-            compact
-          />
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
+          </Suspense>
         </aside>
       </div>
 

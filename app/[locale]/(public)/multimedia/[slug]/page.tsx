@@ -252,11 +252,8 @@ export default async function MultimediaDetailPage({
       </div>
         </article>
 
-        {/* Right rail — sticky desktop. Pattern khớp /tin-tuc/[slug]. */}
+        {/* Right rail — sticky desktop. Banner xuống cuối (dưới Mới đăng). */}
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
-          </Suspense>
           <SidebarList
             title="Multimedia nổi bật"
             items={sidebarPinned}
@@ -270,6 +267,9 @@ export default async function MultimediaDetailPage({
             itemHrefPrefix="/multimedia"
             compact
           />
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
+          </Suspense>
         </aside>
       </div>
 

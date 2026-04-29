@@ -362,11 +362,11 @@ export default async function ResearchPage({
 
         {/* ─── 2. Aside — mobile: giữa hero và latest; desktop: sticky cột phải. */}
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
-          </Suspense>
           <Suspense fallback={<SidebarFeaturedSkeleton />}>
             <SidebarFeaturedBlock title="Nghiên cứu nổi bật" locale={locale} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
           </Suspense>
         </aside>
 

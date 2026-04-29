@@ -325,11 +325,11 @@ export default async function AgriculturePage({
         </div>
 
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
-          <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
-          </Suspense>
           <Suspense fallback={<SidebarFeaturedSkeleton />}>
             <SidebarFeaturedBlock title="Khuyến nông nổi bật" locale={locale} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
           </Suspense>
         </aside>
 

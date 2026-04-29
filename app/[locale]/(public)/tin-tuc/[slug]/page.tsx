@@ -165,7 +165,7 @@ export default async function NewsDetailPage({ params }: Props) {
     publishedAt: true,
     template: true, gallery: true, // Phase 3.7 round 4 — sidebar fallback thumb
   } as const
-  const [relatedPool, author, sidebarPinned, sidebarLatest] = await Promise.all([
+  const [relatedPool, author, sidebarPinned] = await Promise.all([
     prisma.news.findMany({
       where: {
         isPublished: true,
@@ -221,24 +221,7 @@ export default async function NewsDetailPage({ params }: Props) {
       take: 5,
       select: SIDEBAR_LIST_SELECT,
     }),
-    prisma.news.findMany({
-      where: {
-        isPublished: true,
-        slug: { not: slug },
-        OR: [
-          { category: { in: [...TIN_TUC_PUBLIC_CATEGORIES] } },
-          { secondaryCategories: { hasSome: [...TIN_TUC_PUBLIC_CATEGORIES] } },
-        ],
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 6,
-      select: SIDEBAR_LIST_SELECT,
-    }),
   ])
-
-  // Dedupe sidebar: latest không trùng với pinned để tránh card lặp.
-  const pinnedIdSet = new Set(sidebarPinned.map((n) => n.id))
-  const sidebarRecent = sidebarLatest.filter((n) => !pinnedIdSet.has(n.id)).slice(0, 5)
 
   // Fallback: if keyword search returned fewer than 3, top up by recency.
   let related = relatedPool
@@ -615,11 +598,6 @@ export default async function NewsDetailPage({ params }: Props) {
 
         {/* Right rail — sticky trên desktop, ẩn mobile dồn xuống cuối article. */}
         <aside className="mt-10 min-w-0 space-y-8 lg:col-span-3 lg:mt-0 lg:sticky lg:top-16 lg:self-start">
-          {/* Banner SIDEBAR — poster dọc 2:3, ẩn nếu không có banner active */}
-          <Suspense fallback={null}>
-            <HomepageBannerSlot position="SIDEBAR" />
-          </Suspense>
-
           {/* Tin nổi bật — pinned articles (editor's pick).
               TODO: chuyển label sang i18n khi translations bổ sung. */}
           <SidebarList
@@ -629,14 +607,10 @@ export default async function NewsDetailPage({ params }: Props) {
             itemHrefPrefix="/tin-tuc"
           />
 
-          {/* Mới đăng — latest news (dedupe với pinned) */}
-          <SidebarList
-            title="Mới đăng"
-            items={sidebarRecent}
-            locale={locale}
-            itemHrefPrefix="/tin-tuc"
-            compact
-          />
+          {/* Banner SIDEBAR — poster dọc 2:3, ẩn nếu không có banner active */}
+          <Suspense fallback={null}>
+            <HomepageBannerSlot position="SIDEBAR" />
+          </Suspense>
         </aside>
       </div>
 
