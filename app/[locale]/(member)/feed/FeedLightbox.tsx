@@ -73,14 +73,23 @@ export function FeedLightbox({ images, startIndex, onClose }: Props) {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onClose() }}
-        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors"
+        // top/right dùng safe-area-inset để không bị notch/status bar mobile che.
+        // Touch target 48×48 cho dễ bấm (cũ 40×40 sát giới hạn iOS).
+        style={{
+          top: "max(1rem, env(safe-area-inset-top))",
+          right: "max(1rem, env(safe-area-inset-right))",
+        }}
+        className="absolute w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 text-white text-2xl flex items-center justify-center transition-colors"
         aria-label="Đóng"
       >
         ✕
       </button>
 
       {multi && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1">
+        <div
+          style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+          className="absolute left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1"
+        >
           {index + 1} / {images.length}
         </div>
       )}

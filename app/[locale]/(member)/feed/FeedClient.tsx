@@ -731,9 +731,18 @@ function PostCard({
       ) : (
         <div className="mb-3" suppressHydrationWarning>
           <div
+            onClick={(e) => {
+              if (!needsTruncation) return
+              // Bấm vào link/button bên trong prose phải hoạt động bình thường,
+              // không trigger toggle (closest fail-safe).
+              const target = e.target as HTMLElement
+              if (target.closest("a, button")) return
+              setExpanded((prev) => !prev)
+            }}
             className={cn(
               "prose prose-sm max-w-none text-sm text-brand-800",
               !expanded && needsTruncation && "line-clamp-2",
+              needsTruncation && "cursor-pointer",
             )}
             /* Content từ DB đã được sanitize tại save-time (xem
                /api/posts POST/PATCH dùng DOMPurify.sanitize). Trust content
@@ -743,12 +752,13 @@ function PostCard({
               __html: rewriteCloudinaryInHtml(contentForProse, 800),
             }}
           />
-          {needsTruncation && !expanded && (
+          {needsTruncation && (
             <button
-              onClick={() => setExpanded(true)}
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
               className="mt-1 text-sm font-semibold text-brand-700 hover:text-brand-900"
             >
-              {t("readMore")}
+              {expanded ? t("readLess") : t("readMore")}
             </button>
           )}
         </div>
