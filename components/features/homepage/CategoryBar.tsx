@@ -22,7 +22,7 @@ const CATEGORIES: NavItem[] = [
   { labelKey: "products", href: "/san-pham-chung-nhan" },
   {
     labelKey: "about",
-    href: "/gioi-thieu",
+    href: "/gioi-thieu-v2",
     children: [
       { labelKey: "leadership", href: "/ban-lanh-dao" },
       { labelKey: "members", href: "/hoi-vien" },
@@ -112,7 +112,24 @@ export function CategoryBar({ loggedIn = false }: Props) {
               .join(" ")
 
             return "children" in item && item.children ? (
-              <li key={item.href} className="group relative">
+              <li
+                key={item.href}
+                className="group relative"
+                /* Auto-close submenu khi chuột rời khỏi vùng group:
+                   CSS dropdown trigger qua group-hover + group-focus-within.
+                   Khi user CLICK trên parent link, focus stay trên đó →
+                   focus-within giữ submenu mở dù mouse đã ra. Blur active
+                   element trong group khi mouseleave để focus-within tắt.
+                   Keyboard nav vẫn ok: Tab move focus ra ngoài group thì
+                   focus-within tự false (mouseleave không fire vì mouse
+                   không đi cùng), submenu vẫn close đúng lúc. */
+                onMouseLeave={(e) => {
+                  const focused = document.activeElement as HTMLElement | null
+                  if (focused && e.currentTarget.contains(focused)) {
+                    focused.blur()
+                  }
+                }}
+              >
                 <Link
                   href={item.href}
                   className={triggerClass}

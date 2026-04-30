@@ -25,6 +25,7 @@ export const ROUTE_MENU_MAP: Entry[] = [
   { prefix: "/", exact: true, menuKey: "trang-chu" },
 
   // Giới thiệu cụm
+  { prefix: "/gioi-thieu-v2", menuKey: "gioi-thieu" },
   { prefix: "/gioi-thieu", menuKey: "gioi-thieu" },
   { prefix: "/about", menuKey: "gioi-thieu" },
   { prefix: "/ban-lanh-dao", menuKey: "gioi-thieu" },

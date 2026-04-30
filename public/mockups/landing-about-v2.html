@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<!--
+  VAWA Landing — Trang Giới thiệu redesign V2
+  Phong cách: corporate-professional (như cyberlogitec.com.vn/about-us/)
+  Giữ nguyên cấu trúc nội dung của app/[locale]/(public)/gioi-thieu/page.tsx
+  nhưng nâng cấp visual: hero cinematic, stats counter, magazine layout,
+  refined org chart, motion mượt. KHÔNG có hiệu ứng phá cách.
+
+  Font system (đồng bộ với (public) layout — VTV-style báo chí):
+    • Inter — body, eyebrow uppercase, UI labels (= --font-inter trong production)
+    • Merriweather — display headings, intro-quote, decorative initials
+      (= class .font-serif-headline trong production, globals.css line 393–395)
+    Đã thay Cormorant Garamond + Be Vietnam Pro của V1 vì khách hàng phản hồi
+    "lạ lẫm so với tổng thể hệ thống". Bộ duo này đã được verify qua toàn bộ
+    public routes (tin-tuc, nghien-cuu, san-pham, ban-lanh-dao, …).
+
+  R2 changes (theo feedback khách):
+    • Bỏ section "Sứ mệnh của Hội" (3 trụ cột Kết nối / Bảo tồn / Nâng tầm)
+    • Thêm motion để trang sinh động:
+      - Hero entrance staggered fade-up (eyebrow → title → sub → meta)
+      - Gold shimmer cho italic <em> accents (thay flourish của Cormorant)
+      - Hero ornamental rings rotation 90s
+      - Intro image ken-burns float
+      - Stagger reveal-on-scroll cho stats / leader / members grids (--i index)
+      - Image hover zoom cho leader photos + member avatars
+      - Tab underline slide-in
+    • Tất cả respect prefers-reduced-motion: reduce
+
+  R3 changes (theo feedback khách):
+    • Stats counter "nhảy nhảy":
+      - easeOutBack thay easeOutCubic → con số overshoot ~9% rồi giật về target
+      - Thêm class .pop scale-pulse 1.12× re-fire mỗi lần digit thay đổi
+      - Fix bug nodeValue cũ (firstChild là <em> element, không phải Text node)
+    • Intro section:
+      - intro-text: reveal-from-bottom (translateY 60px → 0)
+      - intro-image: reveal-from-right (translateX 80px → 0)
+      - Stagger 80ms tự động qua --i (script gán theo sibling order)
+
+  R4 changes (theo feedback khách):
+    • Background phân cách giữa các section:
+      - Bg alternation strict: paper/white/paper/white/paper/white/paper
+        (đổi leadership white→paper, org gradient→white)
+      - Bỏ border-bottom của stats (divider mới thay thế)
+      - .section::before + .section::after — hairline gold + ornament ✦
+        ở top mỗi section, ornament dùng `background: inherit` để mask
+        line phía sau, tạo punctuation rõ giữa 2 phân đoạn
+    • Fix .leader-card.featured & .leader-card:hover bg (đổi từ paper
+      sang white/brown-50 để không bị invisible trên leadership paper bg)
+
+  R5 changes (theo feedback khách):
+    • Cộng đồng hội viên lazy-load:
+      - Bỏ nút "Xem toàn bộ hội viên" → thay bằng .members-sentinel
+      - IntersectionObserver với rootMargin 300px → preload trước khi
+        sentinel vào viewport
+      - PAGE_SIZE 6, artificial delay 350ms để loader pulse visible
+      - Mỗi page mới fade-in via .reveal + --i stagger 80ms
+      - Khi pool hết, sentinel chuyển data-done với count tổng
+      - Production: thay MEMBERS_REMAINING bằng fetch /api/members?cursor
+
+  R6 changes (theo feedback khách):
+    • Hero — logo VAWA luminous bên phải (vùng trống trước đó):
+      - <img src="../logo.png"> đặt ở center của .hero-rings (rings xoay
+        90s/vòng làm khung trang trí xung quanh logo)
+      - Halo radial gold pulse 4.5s (.hero-logo::before, blur 24px)
+      - Spotlight conic rays quay 28s linear (.hero-logo::after, blur 14px)
+        — tạo cảm giác "chiếu sáng nổi" lan tỏa
+      - drop-shadow chồng 3 lớp (gold gần + gold xa + đen đáy) → luminous
+      - Logo size 58% (vượt innermost ring 48%, nằm gọn trong middle ring 76%)
+      - Float translateY ±9px loop 6s (bồng bềnh rõ hơn so với ±5px ban đầu)
+      - Entrance fade-in 1.2s sau hero text 0.95s (sequenced cinematic)
+
+  R7 changes (theo feedback khách):
+    • Hero entrance cinematic timeline:
+      - Text (eyebrow → title → sub → meta) đổi từ "below up" sang
+        "TOP DOWN" — translateY(-32px → 0) (rơi từ trên xuống vị trí)
+      - Logo zoom từ 1 chấm đen → kích thước thật:
+        · Container scale 0.02 → 1 trong 1.5s, easing easeOutQuint
+        · Image filter brightness(0) + transparent shadows → brightness(1)
+          + drop-shadows full (cùng filter chain để interpolate smooth)
+      - Sau entrance (2.45s+): các effects hiện tại tiếp tục
+        · Float translateY ±9px loop 6s
+        · Halo gold pulse 4.5s (delay 2.95s, fade-in 0.5s ở 2.45s)
+        · Spotlight rays rotate 28s (delay 2.95s, fade-in 0.5s ở 2.45s)
+      - Reduced-motion: skip entrance, hiện full-state ngay (không bị
+        kẹt ở chấm đen)
+
+  R8 changes (theo feedback khách):
+    • Stats con số (15+, 59+, 21, 3) đổi màu để nổi bật:
+      - Trước: solid brown-900 + weight 500 (Merriweather fallback 400) →
+        khá khiêm tốn trên paper bg
+      - Sau: gold metallic gradient (gold-deep 0% → gold 55% → gold-deep
+        100%) + weight 700 (Merriweather full bold) → cảm giác con số
+        "khắc" bằng vàng, ánh kim phản chiếu từ giữa
+      - Implement: linear-gradient + background-clip:text + transparent
+        text-fill-color để render gradient lên shape của chữ
+      - em ("+") giữ solid gold-deep (override -webkit-text-fill-color
+        vì child elements vẫn inherit transparent fill từ parent)
+
+  R9 changes (theo feedback khách):
+    • Intro section right-side: dùng ảnh thật rừng gió bầu
+      - HTML: thêm <img src="./rung-gio-bau.jpg" alt="Rừng gió bầu">
+      - CSS: bỏ gradient + SVG silhouette placeholder (radial-gradient
+        gold + linear-gradient brown + data-URL SVG branches)
+      - .intro-image bg → brown-900 fallback (tránh flash khi load)
+      - .intro-image::after đổi từ SVG decorative → vignette gradient
+        phía dưới (tối nhẹ để tag .intro-image-tag đọc rõ trên photo)
+      - intro-image-float ken-burns animation di chuyển từ ::after → img
+      - Tag text: "Rừng dó bầu Hà Tĩnh" → "Rừng gió bầu"
+      - File ảnh: public/rung-gio-bau.jpg (img src `../rung-gio-bau.jpg`,
+        cùng convention với hero logo dùng ../logo.png)
+
+  R10 changes (theo feedback khách):
+    • Cộng đồng hội viên: section không mở rộng dù pool nhiều hội viên
+      - Wrap .members-grid + .members-sentinel trong .members-scroll
+      - .members-scroll: max-height 600px, overflow-y auto, brand
+        scrollbar (brown-200 thumb, brown-300 hover, 8px width)
+      - max-width 1200px + margin auto chuyển từ .members-grid sang
+        .members-scroll → scrollbar nằm đúng mép phải grid content
+      - IntersectionObserver: pass `root: membersScroll` thay vì
+        viewport, rootMargin giảm 300px → 100px
+      - Sentinel padding/margin giảm: 3rem→1.5rem, 2rem→1rem (vùng
+        nhỏ hơn nên không cần spacing rộng)
+      - Behavior: 3-4 page đầu auto-load để fill 600px container
+        (sentinel còn visible), pages còn lại trigger khi user cuộn
+        trong container tới gần đáy
+
+  R11 changes (theo feedback khách):
+    • Contact map: thay placeholder grid pattern + ornament bằng iframe
+      Google Maps thật
+      - Short link khách cung cấp: maps.app.goo.gl/pd9r1vz99Ya8p4Z59
+        → resolve qua HTTP 302 → tọa độ 10.785890, 106.684595 (TP.HCM)
+      - Embed URL: maps.google.com/maps?q=LAT,LNG&hl=vi&z=18&output=embed
+        (hl=vi cho UI tiếng Việt, z=18 để zoom rõ tòa nhà)
+      - Iframe: lazy loading, referrerpolicy strict-origin-when-cross-origin,
+        title attr cho a11y, không cần API key (legacy embed format)
+      - CSS: iframe absolute fill .contact-map (đã có aspect-ratio 4/3
+        + overflow:hidden + border-radius 4px → corner mượt)
+      - Bỏ background grid pattern + ::before ornament ✦ (không còn cần)
+
+  R12 changes (theo feedback khách):
+    • Mobile: "Hội Trầm Hương" phải đi cùng nhau, không split
+      - Thêm `white-space: nowrap` vào .hero-title em
+      - Em là atomic unit — browser không break giữa "Hội/Trầm" hay
+        "Trầm/Hương" nữa. Wrap point chỉ ở trước em hoặc tại <br>.
+      - Layout mobile mong đợi: "Về" / "Hội Trầm Hương" / "Việt Nam"
+
+  R13 changes (theo feedback khách):
+    • Hero mobile reorder: text tên hội/mô tả → logo → meta items
+      - HTML: thêm <div class="hero-logo hero-logo-mobile"> bên trong
+        hero-inner giữa sub và meta. Multi-class: share toàn bộ
+        visual rules (.hero-logo halo/rays/drop-shadow/float),
+        .hero-logo-mobile chỉ override positioning.
+      - Desktop logo (sibling của hero-inner) ẩn ở mobile via
+        .hero-logo:not(.hero-logo-mobile) → desktop layout không đổi
+      - hero-inner thành flex column khi ≤880px, dùng `order` per child:
+        eyebrow(1) → title(2) → sub(3) → logo(4) → meta(5)
+      - Mobile logo: position relative, width min(220px, 55vw),
+        margin auto, transform scale(0.02)→1 (không có translateY(-50%)
+        vì in-flow). Animation hero-logo-zoom-mobile riêng.
+      - hero-meta items chuyển từ horizontal flex sang column gap 1rem
+      - hero-rings ẩn trên mobile (decorative, không fit khi logo
+        chuyển từ absolute sang flow)
+      - hero min-height: auto (cho phép section grow theo content)
+      - Reduced-motion: split selector cho hero-logo:not(.hero-logo-mobile)
+        (translateY -50%) vs .hero-logo-mobile (chỉ scale 1)
+
+  R14 changes (theo feedback khách):
+    • Bỏ section "Kênh truyền thông chính thức & cảnh báo giả mạo"
+      - Xóa toàn bộ HTML <section class="section channels"> block
+      - Xóa CSS rules: .channels, .channels-card, .channels-card h4/p,
+        .channels-list, .channels-item, .channels-item .ic,
+        .channels-item-label, .channels-item-value + @media 600px
+      - Renumber: 8. CTA (was 9)
+      - Bg alternation vẫn ổn: members(paper) → contact(white) → cta(brown)
+
+  R15 changes (theo feedback khách):
+    • Mobile: "Những người dẫn dắt" (Ban lãnh đạo) không rớt xuống dòng
+      - Trước: .display-1 dùng clamp(2.25rem, 5vw, 4.25rem) → 36px
+        ở mobile, "Những người dẫn dắt" (~18 chars × 22px = 396px)
+        wrap thành 2 dòng trên content area 256-311px của phone
+      - Sau: trong @media ≤880px, override `.leadership .display-1`
+        font-size clamp(1.5rem, 6vw, 2.75rem) + white-space: nowrap
+        → ở 375px viewport text ~24px × 18 = 220px, fit gọn 311px
+      - Selector scope chỉ ảnh hưởng h2 trong section.leadership;
+        các display-1 khác (.intro, .org, .members, .contact, .cta)
+        giữ nguyên
+
+  Mở qua dev server (cần fix proxy.ts add 'html' vào exclusion):
+    http://localhost:3000/mockups/landing-about-v2.html
+  Hoặc mở trực tiếp:
+    file:///c:/DATA/Projects/agarwood-community/public/mockups/landing-about-v2.html
+-->
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Về Hội Trầm Hương Việt Nam — VAWA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Merriweather:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brown-900: #1a1008;
+    --brown-800: #2a1810;
+    --brown-700: #3d2415;
+    --brown-600: #5a3a26;
+    --brown-500: #7a5a3e;
+    --brown-300: #b8a087;
+    --brown-200: #d8c8b0;
+    --brown-100: #ede0c4;
+    --brown-50:  #faf3e3;
+    --gold:      #c9a961;
+    --gold-deep: #8b6914;
+    --gold-soft: #e0c887;
+    --cream:     #f5ebd6;
+    --paper:     #faf6ea;
+    --white:     #ffffff;
+    --gray-100:  #f5f5f4;
+    --gray-300:  #d6d3d1;
+    --gray-500:  #78716c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-feature-settings: "cv11", "ss03", "kern";
+    color: var(--brown-800);
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+  img { max-width: 100%; display: block; }
+
+  /* === Common typography === */
+  .eyebrow {
+    color: var(--gold-deep);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .display-1 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: clamp(2.25rem, 5vw, 4.25rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--brown-900);
+  }
+  .display-2 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--brown-900);
+  }
+  .display-1 em, .display-2 em {
+    font-style: italic;
+    color: var(--gold-deep);
+  }
+  .lead {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: var(--brown-700);
+  }
+
+  /* === Reveal-on-scroll === */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1);
+    /* --i set inline (or via JS) on grid children → stagger entrance */
+    transition-delay: calc(var(--i, 0) * 80ms);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ===========================================================
+     ANIMATIONS — entrance, ambient, hover
+     =========================================================== */
+
+  /* Hero entrance — staggered fade từ trên xuống (text "rơi" vào vị trí) */
+  @keyframes hero-fade-in {
+    from { opacity: 0; transform: translateY(-32px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero-eyebrow { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .15s both; }
+  .hero-title   { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .35s both; }
+  .hero-sub     { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .55s both; }
+  .hero-meta    { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .75s both; }
+
+  /* Hero ambient — slow rotation cho ornamental rings để hero không "đứng im" */
+  @keyframes hero-rings-rotate {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to   { transform: translateY(-50%) rotate(360deg); }
+  }
+  .hero-rings { animation: hero-rings-rotate 90s linear infinite; }
+
+  /* Gold gradient shimmer cho italic em accents — sweep ánh kim chầm chậm.
+     Dùng có chủ đích để gợi cảm giác "tinh hoa / di sản" thay cho italic
+     flourish của Cormorant Garamond đã bỏ. */
+  @keyframes gold-shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+  .hero-title em,
+  .display-1 em,
+  .display-2 em,
+  .cta h2 em {
+    background: linear-gradient(
+      90deg,
+      var(--gold-deep) 0%,
+      var(--gold) 35%,
+      var(--gold-soft) 50%,
+      var(--gold) 65%,
+      var(--gold-deep) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gold-shimmer 6s ease-in-out infinite;
+  }
+
+  /* Intro image — ken-burns float subtle để background không phẳng lì */
+  @keyframes intro-image-float {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50%      { transform: scale(1.04) translateY(-6px); }
+  }
+  /* intro-image-float animation moved sang `.intro-image img` (R9) */
+
+  /* Stats counter — "nhảy nhảy" theo từng nhịp số đếm.
+     Script gắn class .pop sau mỗi lần digit thay đổi → animation re-fire.
+     Combined với easeOutBack trong JS → con số overshoot rồi giật lại. */
+  @keyframes number-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .stat-num {
+    display: inline-block;
+    transform-origin: center bottom;
+    will-change: transform;
+  }
+  .stat-num.pop { animation: number-pop .22s cubic-bezier(.34,1.56,.64,1); }
+
+  /* Reveal direction modifiers — override translateY default của .reveal.
+     Dùng cho intro section: text từ dưới, image từ phải. */
+  .reveal-from-bottom { transform: translateY(60px); }
+  .reveal-from-bottom.in { transform: translateY(0); }
+  .reveal-from-right { transform: translateX(80px); }
+  .reveal-from-right.in { transform: translateX(0); }
+
+  /* Image hover zoom cho leader photos + member avatars */
+  .leader-photo, .member-avatar {
+    overflow: hidden;
+    transition: transform .5s cubic-bezier(.2,.7,.2,1), box-shadow .5s ease;
+  }
+  .leader-card:hover .leader-photo,
+  .member:hover .member-avatar {
+    transform: scale(1.06);
+    box-shadow: 0 8px 18px -8px rgba(26,16,8,0.35);
+  }
+
+  /* Org node — pulse ring khi hover để feel "hệ thống đang sống" */
+  .org-node.primary::after { transition: inset .4s ease, border-color .4s ease; }
+  .org-node.primary:hover::after {
+    inset: 2px;
+    border-color: var(--gold);
+  }
+
+  /* Tabs underline — slide-in thay vì pop-in */
+  .tab.active::after { animation: tab-underline-in .4s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes tab-underline-in {
+    from { transform: scaleX(0); opacity: 0; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+
+  /* ===========================================================
+     SECTION DIVIDERS — background phân cách giữa các session
+     • Bg alternation strict paper/white (đã set ở .leadership/.org)
+     • Mỗi .section có thêm hairline gold + ornament ✦ ở top
+     • Ornament `background: inherit` để mask hairline phía sau, tạo
+       cảm giác punctuation rõ ràng giữa 2 phân đoạn
+     =========================================================== */
+  .section { position: relative; }
+  .section::before {
+    /* Hairline gradient gold ngang ở top */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(220px, 38%, 380px);
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(184, 160, 135, 0.25) 18%,
+      rgba(201, 169, 97, 0.7) 50%,
+      rgba(184, 160, 135, 0.25) 82%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .section::after {
+    /* Ornament ✦ giữa hairline, bg inherit từ section để punch-through */
+    content: '✦';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gold);
+    background: inherit;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* ===========================================================
+     HERO — full-bleed, cinematic
+     =========================================================== */
+  .hero {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    color: var(--cream);
+    background: var(--brown-900);
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 70% 30%, rgba(201,169,97,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 20% 80%, rgba(122, 90, 62, 0.4) 0%, transparent 60%),
+      linear-gradient(135deg, #1a1008 0%, #2a1810 40%, #3d2415 70%, #1a1008 100%);
+  }
+  /* Decorative agarwood wisps */
+  .hero-bg::before, .hero-bg::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .hero-bg::before {
+    top: -20%; right: -10%;
+    width: 60%; height: 80%;
+    background: radial-gradient(circle, rgba(201,169,97,0.08) 0%, transparent 65%);
+    filter: blur(40px);
+  }
+  .hero-bg::after {
+    bottom: -30%; left: -10%;
+    width: 70%; height: 80%;
+    background: radial-gradient(circle, rgba(201,169,97,0.06) 0%, transparent 65%);
+    filter: blur(40px);
+  }
+  /* Subtle ornamental rings */
+  .hero-rings {
+    position: absolute;
+    top: 50%; right: 8%;
+    transform: translateY(-50%);
+    width: min(560px, 55vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid rgba(201,169,97,0.15);
+    pointer-events: none;
+  }
+  .hero-rings::before, .hero-rings::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(201,169,97,0.18);
+  }
+  .hero-rings::before { inset: 12%; }
+  .hero-rings::after  { inset: 26%; border-color: rgba(201,169,97,0.25); }
+
+  /* ===========================================================
+     Hero logo — luminous floating logo ở giữa hero-rings.
+     Container có cùng kích thước với .hero-rings → share center.
+     Logo image được center bằng flex, kích thước 45% để fit trong
+     innermost ring (inset 26% → 48% diameter container).
+     =========================================================== */
+  .hero-logo {
+    position: absolute;
+    top: 50%;
+    right: 8%;
+    /* Static = entrance starting state: tiny dot tại đúng vị trí center.
+       Opacity:0 ẩn cho tới khi animation fire ở 0.95s (tránh thấy dot
+       trước khi text vào xong). */
+    transform: translateY(-50%) scale(0.02);
+    width: min(560px, 55vw);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    animation: hero-logo-zoom 1.5s cubic-bezier(.16, 1, .3, 1) 0.95s forwards;
+  }
+  /* Zoom: chấm đen 2% → kích thước thật. easing easeOutQuint (.16,1,.3,1)
+     cho cảm giác "explode" rồi settle mượt, không overshoot cartoony. */
+  @keyframes hero-logo-zoom {
+    from { opacity: 1; transform: translateY(-50%) scale(0.02); }
+    to   { opacity: 1; transform: translateY(-50%) scale(1); }
+  }
+
+  /* Halo pulsing — radial gold glow ngay phía sau logo.
+     Delay 2.45s = đợi logo zoom xong. Fade-in 0.5s rồi halo-pulse infinite. */
+  .hero-logo::before {
+    content: '';
+    position: absolute;
+    width: 72%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(201, 169, 97, 0.55) 0%,
+      rgba(201, 169, 97, 0.28) 28%,
+      rgba(201, 169, 97, 0.08) 52%,
+      transparent 75%
+    );
+    filter: blur(24px);
+    opacity: 0;
+    animation:
+      hero-logo-aura-fade 0.5s ease 2.45s forwards,
+      hero-logo-halo 4.5s ease-in-out 2.95s infinite;
+  }
+  @keyframes hero-logo-aura-fade {
+    to { opacity: 0.7; }
+  }
+  @keyframes hero-logo-halo {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.12); }
+  }
+
+  /* Spotlight rays — conic gradient quay chậm tạo cảm giác "chiếu sáng".
+     Delay 2.45s đồng bộ với halo, fade-in 0.5s rồi rotate vô hạn. */
+  .hero-logo::after {
+    content: '';
+    position: absolute;
+    width: 92%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(201, 169, 97, 0.18) 30deg,
+      transparent 70deg,
+      transparent 150deg,
+      rgba(201, 169, 97, 0.20) 180deg,
+      transparent 220deg,
+      transparent 300deg,
+      rgba(201, 169, 97, 0.14) 330deg,
+      transparent 360deg
+    );
+    filter: blur(14px);
+    opacity: 0;
+    animation:
+      hero-logo-aura-fade 0.5s ease 2.45s forwards,
+      hero-logo-rays 28s linear 2.95s infinite;
+  }
+  @keyframes hero-logo-rays {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Logo image — entrance: brightness 0 + transparent shadows → full color
+     + drop-shadows trong 1.5s (đồng bộ với zoom của container).
+     Sau entrance: float lên xuống ±9px loop 6s.
+     Quan trọng: 2 keyframes phải có cùng filter chain (cùng số function,
+     cùng thứ tự) để browser interpolate smooth, không jump. */
+  .hero-logo img {
+    position: relative;
+    z-index: 2;
+    width: 58%;
+    height: auto;
+    object-fit: contain;
+    filter:
+      drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+      drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+      drop-shadow(0 0 0 rgba(0, 0, 0, 0))
+      brightness(0);
+    animation:
+      hero-logo-reveal 1.5s ease-out 0.95s forwards,
+      hero-logo-float 6s ease-in-out 2.45s infinite;
+  }
+  @keyframes hero-logo-reveal {
+    from {
+      filter:
+        drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+        drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+        drop-shadow(0 0 0 rgba(0, 0, 0, 0))
+        brightness(0);
+    }
+    to {
+      filter:
+        drop-shadow(0 0 24px rgba(201, 169, 97, 0.55))
+        drop-shadow(0 0 48px rgba(201, 169, 97, 0.32))
+        drop-shadow(0 8px 32px rgba(0, 0, 0, 0.55))
+        brightness(1);
+    }
+  }
+  @keyframes hero-logo-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-18px); }
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 6rem 2rem 8rem;
+    width: 100%;
+  }
+  .hero-eyebrow {
+    color: var(--gold);
+    margin-bottom: 1.75rem;
+  }
+  .hero-eyebrow::before { background: var(--gold); }
+  .hero-title {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.75rem, 7vw, 6rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    color: var(--cream);
+    max-width: 14ch;
+    margin-bottom: 2rem;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+    /* "Hội Trầm Hương" phải đi cùng nhau trên mobile — không cho browser
+       break giữa các chữ. Browser sẽ wrap trước em khi không đủ chỗ:
+       → "Về" / "Hội Trầm Hương" / "Việt Nam" thay vì split ngẫu nhiên. */
+    white-space: nowrap;
+  }
+  .hero-sub {
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    color: rgba(245,235,214,0.78);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+  .hero-meta {
+    margin-top: 3.5rem;
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+  .hero-meta-item {
+    border-left: 1px solid rgba(201,169,97,0.4);
+    padding: 0.25rem 0 0.25rem 1.25rem;
+  }
+  .hero-meta-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(201,169,97,0.7);
+    margin-bottom: 0.25rem;
+  }
+  .hero-meta-value {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: 1.125rem;
+    color: var(--cream);
+  }
+  .hero-scroll {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    color: rgba(245,235,214,0.5);
+    font-size: 0.6875rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .hero-scroll::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 36px;
+    margin: 0.75rem auto 0;
+    background: linear-gradient(180deg, var(--gold), transparent);
+    animation: scroll-cue 2s ease-in-out infinite;
+  }
+  @keyframes scroll-cue {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+    50%      { opacity: 1;   transform: scaleY(1);   transform-origin: top; }
+  }
+
+  /* ===========================================================
+     Hero mobile layout (R13) — sắp xếp lại order khi ≤ 880px:
+     eyebrow → title → sub → LOGO → meta (vertical)
+     • Mobile logo (.hero-logo-mobile) là duplicate đặt trong hero-inner,
+       desktop logo (sibling) bị ẩn → giữ nguyên desktop layout không đổi
+     • hero-inner thành flex column với explicit `order` per child
+     • hero-meta items stack vertical thay vì horizontal
+     =========================================================== */
+  .hero-logo-mobile { display: none; }
+
+  @keyframes hero-logo-zoom-mobile {
+    /* Mobile entrance không có translateY(-50%) (vì position: relative
+       chứ không absolute như desktop) — chỉ scale 0.02 → 1 */
+    from { opacity: 1; transform: scale(0.02); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @media (max-width: 880px) {
+    .hero { min-height: auto; }
+    .hero-rings { display: none; }
+    /* Hide desktop logo on mobile */
+    .hero-logo:not(.hero-logo-mobile) { display: none; }
+
+    /* hero-inner: column flex để dùng order per child */
+    .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 4rem 1.5rem 5rem;
+    }
+    .hero-eyebrow      { order: 1; }
+    .hero-title        { order: 2; max-width: none; }
+    .hero-sub          { order: 3; }
+    .hero-logo-mobile  { order: 4; }
+    .hero-meta         { order: 5; }
+
+    /* Mobile logo: in flow, override desktop absolute positioning + animation */
+    .hero-logo-mobile {
+      display: flex;
+      position: relative;
+      top: auto;
+      right: auto;
+      width: min(220px, 55vw);
+      margin: 1.5rem auto 0.5rem;
+      align-self: center;
+      transform: scale(0.02);
+      animation: hero-logo-zoom-mobile 1.5s cubic-bezier(.16, 1, .3, 1) 0.95s forwards;
+    }
+
+    /* Hero meta items stack vertical với gap nhỏ hơn */
+    .hero-meta {
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+  }
+
+  /* ===========================================================
+     STATS counter
+     =========================================================== */
+  .stats {
+    background: var(--paper);
+    /* Border-bottom đã bỏ — divider .section::before của intro thay thế */
+  }
+  .stats-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  .stat {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-right: 1px solid var(--brown-100);
+  }
+  .stat:last-child { border-right: 0; }
+  .stat-num {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: clamp(2.75rem, 5vw, 4rem);
+    font-weight: 700;
+    /* Gold metallic gradient — đậm trên/dưới, sáng giữa (như ánh kim
+       phản chiếu từ giữa). Tạo cảm giác con số "khắc" bằng vàng,
+       nổi bật trên paper bg. background-clip:text + transparent fill
+       để render gradient lên đúng shape của chữ. */
+    background: linear-gradient(
+      180deg,
+      var(--gold-deep) 0%,
+      var(--gold) 55%,
+      var(--gold-deep) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+  }
+  .stat-num em {
+    /* em là child element → không inherit background-clip → solid color.
+       Cần explicit -webkit-text-fill-color để override transparent fill
+       của parent (bị inherit qua descendant). */
+    font-style: italic;
+    font-size: 0.6em;
+    margin-left: 0.1em;
+    color: var(--gold-deep);
+    -webkit-text-fill-color: var(--gold-deep);
+  }
+  .stat-label {
+    font-size: 0.8125rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--brown-500);
+    font-weight: 500;
+  }
+  @media (max-width: 880px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat { border-right: 0; border-bottom: 1px solid var(--brown-100); padding: 3rem 1.5rem; }
+    .stat:nth-child(odd)  { border-right: 1px solid var(--brown-100); }
+    .stat:nth-last-child(-n+2) { border-bottom: 0; }
+  }
+
+  /* ===========================================================
+     INTRO — magazine layout
+     =========================================================== */
+  .section { padding: clamp(5rem, 10vw, 8rem) 2rem; }
+  .container { max-width: 1280px; margin: 0 auto; }
+
+  .intro {
+    background: var(--white);
+    position: relative;
+  }
+  .intro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+  .intro-text .display-1 {
+    margin: 1.25rem 0 2rem;
+  }
+  .intro-text .lead + .lead {
+    margin-top: 1.25rem;
+  }
+  .intro-quote {
+    margin-top: 2.5rem;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--gold);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--brown-700);
+  }
+  .intro-image {
+    position: relative;
+    aspect-ratio: 4/5;
+    border-radius: 4px;
+    overflow: hidden;
+    /* Brown-900 fallback nếu ảnh chưa load → tránh flash trắng */
+    background: var(--brown-900);
+    box-shadow: 0 30px 60px -20px rgba(26,16,8,0.3);
+  }
+  .intro-image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Ken-burns: subtle scale + drift để ảnh "thở" nhẹ. Animation
+       moved từ ::after sang img khi chuyển từ SVG silhouette sang ảnh
+       thật ở R9. */
+    animation: intro-image-float 12s ease-in-out infinite;
+  }
+  .intro-image::after {
+    /* Vignette gradient — tối phía dưới để tag .intro-image-tag đọc
+       rõ trên ảnh thật (paper text trên photo background không match). */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(26, 16, 8, 0.55) 0%,
+      rgba(26, 16, 8, 0.15) 35%,
+      transparent 60%
+    );
+    pointer-events: none;
+  }
+  .intro-image-tag {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    color: var(--gold);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 1.125rem;
+    z-index: 2;
+  }
+  .intro-image-tag::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 880px) {
+    .intro-grid { grid-template-columns: 1fr; gap: 3rem; }
+  }
+
+  /* ===========================================================
+     SECTION HEADS — utility (dùng chung leadership/org/members/contact)
+     =========================================================== */
+  .section-head {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 4rem;
+  }
+  .section-head .eyebrow {
+    margin-bottom: 1.25rem;
+  }
+  .section-head .eyebrow::before,
+  .section-head .eyebrow::after {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .section-head .eyebrow::after { display: inline-block; }
+
+  /* ===========================================================
+     LEADERSHIP — tabs + chairman + grid
+     =========================================================== */
+  .leadership {
+    background: var(--paper);
+  }
+  .tabs {
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid var(--brown-100);
+    margin-bottom: 4rem;
+    overflow-x: auto;
+  }
+  .tab {
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--brown-500);
+    padding: 1rem 1.75rem;
+    cursor: pointer;
+    position: relative;
+    transition: color .25s ease;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .tab:hover { color: var(--brown-800); }
+  .tab.active { color: var(--brown-900); font-weight: 600; }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 2px;
+    background: var(--gold);
+  }
+  .tab-count {
+    color: var(--gray-500);
+    font-weight: 400;
+    margin-left: 0.375rem;
+    font-size: 0.8125rem;
+  }
+  .term-label {
+    text-align: center;
+    color: var(--gray-500);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    margin-bottom: 3rem;
+    font-size: 1rem;
+  }
+
+  .chairman-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4rem;
+  }
+  .leader-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: var(--white);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .3s ease;
+    text-align: left;
+    width: 100%;
+  }
+  .leader-card.featured {
+    max-width: 480px;
+    border-color: var(--gold);
+    background: var(--white);
+    padding: 1.5rem;
+    box-shadow: 0 12px 30px -16px rgba(201, 169, 97, 0.35);
+  }
+  .leader-card:hover {
+    border-color: var(--gold);
+    background: var(--brown-50);
+    box-shadow: 0 12px 30px -10px rgba(26,16,8,0.12);
+  }
+  .leader-photo {
+    flex-shrink: 0;
+    width: 96px;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, var(--brown-700), var(--brown-900));
+    border-radius: 2px;
+    overflow: hidden;
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+  .leader-card.featured .leader-photo {
+    width: 120px;
+  }
+  .leader-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .leader-honorific {
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .leader-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--brown-900);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+  }
+  .leader-card.featured .leader-name {
+    font-size: 1.125rem;
+  }
+  .leader-title {
+    font-size: 0.8125rem;
+    color: var(--brown-600);
+    line-height: 1.5;
+  }
+
+  .leader-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .leader-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 1100px;
+    margin: 3rem auto 2rem;
+    color: var(--gray-500);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 0.875rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .leader-divider::before, .leader-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--brown-100);
+  }
+  @media (max-width: 880px) {
+    .leader-grid { grid-template-columns: 1fr; }
+    /* "Những người dẫn dắt" không được rớt xuống dòng trên mobile.
+       Giảm font-size + white-space:nowrap để text fit trong content area
+       (~256-380px tuỳ phone) mà không overflow. Clamp 1.5rem-2.75rem
+       smooth ở viewport 320-880px, vượt 880px thì rule mặc định
+       .display-1 (clamp 2.25rem-4.25rem) tiếp quản. */
+    .leadership .display-1 {
+      font-size: clamp(1.5rem, 6vw, 2.75rem);
+      white-space: nowrap;
+    }
+  }
+
+  /* ===========================================================
+     ORG CHART — refined visual
+     =========================================================== */
+  .org {
+    background: var(--white);
+  }
+  .org-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .org-node {
+    background: var(--white);
+    border: 1px solid var(--brown-200);
+    border-radius: 4px;
+    padding: 1rem 2.25rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--brown-900);
+    font-size: 0.9375rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 12px -6px rgba(26,16,8,0.08);
+    position: relative;
+    min-width: 240px;
+    transition: all .3s ease;
+  }
+  .org-node:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(26,16,8,0.15);
+  }
+  .org-node.primary {
+    background: linear-gradient(135deg, var(--brown-800), var(--brown-900));
+    color: var(--cream);
+    border-color: var(--brown-900);
+  }
+  .org-node.primary::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(201,169,97,0.3);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .org-node.accent {
+    background: var(--brown-700);
+    color: var(--cream);
+    border-color: var(--brown-700);
+  }
+  .org-line {
+    width: 1px;
+    height: 36px;
+    background: var(--brown-300);
+  }
+  .org-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    width: 100%;
+    position: relative;
+  }
+  .org-row::before {
+    content: '';
+    position: absolute;
+    top: -36px;
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    height: 1px;
+    background: var(--brown-300);
+  }
+  .org-row .org-line { justify-self: center; }
+  .org-leaf {
+    text-align: center;
+  }
+  .org-leaf .org-line {
+    margin: 0 auto;
+  }
+  .org-leaf .org-node {
+    width: 100%;
+    min-width: 0;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  @media (max-width: 880px) {
+    .org-row { grid-template-columns: 1fr; gap: 0.5rem; }
+    .org-row::before { display: none; }
+  }
+
+  /* ===========================================================
+     MEMBERS — grid with search
+     =========================================================== */
+  .members {
+    background: var(--paper);
+  }
+  .members-toolbar {
+    max-width: 600px;
+    margin: 0 auto 3rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+  .members-search {
+    flex: 1;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid var(--brown-200);
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    background: var(--white);
+    color: var(--brown-800);
+    transition: border-color .25s ease;
+  }
+  .members-search:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .members-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    /* max-width + margin chuyển sang .members-scroll wrapper (R10) để
+       scrollbar nằm đúng mép phải của grid content. */
+  }
+  .member {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--white);
+    padding: 1rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .3s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .member:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(26,16,8,0.1);
+  }
+  .member-avatar {
+    flex-shrink: 0;
+    width: 64px;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, var(--brown-600), var(--brown-800));
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.125rem;
+    border-radius: 2px;
+  }
+  .member-info { min-width: 0; flex: 1; }
+  .member-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--brown-900);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .member-position {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--gold-deep);
+    font-weight: 600;
+  }
+  .member-company {
+    margin-top: 0.125rem;
+    font-size: 0.75rem;
+    color: var(--brown-500);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  @media (max-width: 880px) {
+    .members-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Members scroll container — fix chiều cao 600px (R10).
+     Section không mở rộng dù pool nhiều hội viên; lazy load chỉ trong
+     vùng này. IntersectionObserver dùng container này làm `root` thay
+     vì viewport, sentinel trigger khi cuộn tới gần đáy container. */
+  .members-scroll {
+    max-width: 1200px;
+    margin: 0 auto;
+    max-height: 600px;
+    overflow-y: auto;
+    /* Padding 0.5rem để hover translateY(-2px) + box-shadow của member
+       card không bị overflow:auto cắt mép. Padding-right 4px để chừa
+       chỗ cho scrollbar khỏi đè lên grid content. */
+    padding: 0.5rem 4px 0.5rem 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--brown-300) transparent;
+  }
+  .members-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  .members-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .members-scroll::-webkit-scrollbar-thumb {
+    background: var(--brown-200);
+    border-radius: 4px;
+    transition: background .25s ease;
+  }
+  .members-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--brown-300);
+  }
+
+  /* Members lazy-load sentinel — thay nút "Xem toàn bộ":
+     khi user cuộn xuống đây, IntersectionObserver fire load thêm hội viên.
+     Khi pool hết, chuyển trạng thái data-done với text "Đã hiển thị toàn bộ".
+     Padding giảm xuống vì giờ ở trong scroll container 600px (R10). */
+  .members-sentinel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.875rem;
+    padding: 1.5rem 1rem 0.75rem;
+    margin-top: 1rem;
+    color: var(--brown-500);
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    min-height: 3rem;
+  }
+  .members-sentinel .loader-dot {
+    color: var(--gold);
+    font-size: 1rem;
+    line-height: 1;
+    animation: members-loader-pulse 1.4s ease-in-out infinite;
+  }
+  .members-sentinel[data-done="true"] {
+    color: var(--brown-600);
+  }
+  .members-sentinel[data-done="true"] .loader-dot {
+    animation: none;
+  }
+  .members-sentinel strong {
+    color: var(--brown-900);
+    font-weight: 700;
+  }
+  @keyframes members-loader-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.8); }
+    50%      { opacity: 1;    transform: scale(1.2); }
+  }
+
+  /* ===========================================================
+     MAP + ADDRESS
+     =========================================================== */
+  .contact {
+    background: var(--white);
+  }
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 3rem;
+    align-items: stretch;
+  }
+  .contact-map {
+    background: var(--brown-50);
+    border: 1px solid var(--brown-100);
+    aspect-ratio: 4/3;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .contact-map iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+  .contact-card {
+    background: var(--brown-900);
+    color: var(--cream);
+    padding: 3rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .contact-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle at top right, rgba(201,169,97,0.2) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .contact-card .eyebrow { color: var(--gold); margin-bottom: 1rem; }
+  .contact-card .eyebrow::before { background: var(--gold); }
+  .contact-card h3 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.75rem;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    position: relative;
+  }
+  .contact-list {
+    list-style: none;
+    position: relative;
+  }
+  .contact-list li {
+    display: flex;
+    gap: 0.875rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(201,169,97,0.15);
+    font-size: 0.875rem;
+    color: rgba(245,235,214,0.85);
+    line-height: 1.5;
+  }
+  .contact-list li:last-child { border-bottom: 0; }
+  .contact-list .ic {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(201,169,97,0.15);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+  }
+  @media (max-width: 880px) {
+    .contact-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .contact-card { padding: 2rem; }
+  }
+
+  /* ===========================================================
+     CTA — full-width banner
+     =========================================================== */
+  .cta {
+    position: relative;
+    overflow: hidden;
+    color: var(--cream);
+    background: var(--brown-900);
+  }
+  .cta-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 70% 50%, rgba(201,169,97,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 50%, rgba(122,90,62,0.4) 0%, transparent 60%),
+      linear-gradient(135deg, #1a1008 0%, #2a1810 50%, #1a1008 100%);
+  }
+  .cta-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 7rem 2rem;
+    text-align: center;
+  }
+  .cta .eyebrow { color: var(--gold); margin-bottom: 1.5rem; }
+  .cta .eyebrow::before { background: var(--gold); }
+  .cta h2 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.25rem, 5vw, 3.75rem);
+    line-height: 1.1;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  .cta h2 em { font-style: italic; color: var(--gold); }
+  .cta p {
+    font-size: 1.0625rem;
+    color: rgba(245,235,214,0.8);
+    max-width: 580px;
+    margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-decoration: none;
+    border: 1px solid var(--gold);
+    background: var(--gold);
+    color: var(--brown-900);
+    border-radius: 0;
+    transition: all .3s ease;
+    cursor: pointer;
+  }
+  .btn:hover {
+    background: transparent;
+    color: var(--gold);
+  }
+  .btn::after {
+    content: '→';
+    transition: transform .3s ease;
+  }
+  .btn:hover::after { transform: translateX(4px); }
+
+  /* Notice strip at top of file (dev only) */
+  .dev-notice {
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    padding: 0.625rem 1rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #92400e;
+  }
+  .dev-notice strong { color: #78350f; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .reveal-from-bottom, .reveal-from-right { transform: none; }
+    .hero-scroll::after,
+    .hero-eyebrow, .hero-title, .hero-sub, .hero-meta,
+    .hero-rings,
+    .hero-logo, .hero-logo::before, .hero-logo::after, .hero-logo img,
+    .hero-title em, .display-1 em, .display-2 em, .cta h2 em,
+    .intro-image img,
+    .stat-num.pop,
+    .tab.active::after,
+    .members-sentinel .loader-dot {
+      animation: none !important;
+    }
+    /* Reduced motion: bỏ qua entrance, hiện logo + glow full-state ngay.
+       Desktop logo dùng translateY(-50%) cho vertical centering absolute;
+       mobile logo position relative nên chỉ cần scale(1). */
+    .hero-logo:not(.hero-logo-mobile) {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+    .hero-logo-mobile {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .hero-logo::before, .hero-logo::after { opacity: 0.7; }
+    .hero-logo img {
+      filter:
+        drop-shadow(0 0 24px rgba(201, 169, 97, 0.55))
+        drop-shadow(0 0 48px rgba(201, 169, 97, 0.32))
+        drop-shadow(0 8px 32px rgba(0, 0, 0, 0.55))
+        brightness(1);
+    }
+    /* Em vẫn cần hiển thị màu vàng dù không shimmer */
+    .hero-title em, .display-1 em, .display-2 em, .cta h2 em {
+      color: var(--gold-deep);
+      -webkit-text-fill-color: var(--gold-deep);
+      background: none;
+    }
+    .leader-photo, .member-avatar { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="dev-notice">
+  📐 <strong>MOCKUP V2 · R15</strong> — Mobile fix: "Những người dẫn dắt" (Ban lãnh đạo) không rớt xuống dòng — nowrap + font-size clamp 1.5–2.75rem responsive
+</div>
+
+<!-- ========================================================
+     1. HERO
+     ======================================================== -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-rings"></div>
+  <div class="hero-logo">
+    <img src="../logo.png" alt="Logo Hội Trầm Hương Việt Nam — VAWA" />
+  </div>
+  <div class="hero-inner">
+    <div class="eyebrow hero-eyebrow">Vietnam Agarwood Association · Est. 2010</div>
+    <h1 class="hero-title">
+      Về <em>Hội Trầm Hương</em><br>
+      Việt Nam
+    </h1>
+    <p class="hero-sub">
+      Tổ chức xã hội nghề nghiệp kết nối, bảo tồn và nâng tầm giá trị
+      Trầm Hương Việt Nam — di sản nghìn năm của đất nước hình chữ S.
+    </p>
+    <!-- Mobile-only logo: hiển thị giữa sub và meta khi viewport ≤ 880px.
+         Desktop logo (sibling của hero-inner) bị ẩn ở mobile. Cùng class
+         .hero-logo để share toàn bộ visual rules (halo, rays, drop-shadow,
+         float); class .hero-logo-mobile chỉ override positioning. -->
+    <div class="hero-logo hero-logo-mobile">
+      <img src="../logo.png" alt="Logo Hội Trầm Hương Việt Nam — VAWA" />
+    </div>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">Thành lập</div>
+        <div class="hero-meta-value">11 · 01 · 2010</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">Trụ sở</div>
+        <div class="hero-meta-value">Thành phố Hồ Chí Minh</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">Phạm vi</div>
+        <div class="hero-meta-value">Toàn quốc</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll">Cuộn xuống</div>
+</section>
+
+<!-- ========================================================
+     2. STATS
+     ======================================================== -->
+<section class="stats">
+  <div class="stats-grid">
+    <div class="stat reveal">
+      <div class="stat-num" data-counter="15"><em>+</em></div>
+      <div class="stat-label">Năm hoạt động</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-num" data-counter="59"><em>+</em></div>
+      <div class="stat-label">Hội viên</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-num" data-counter="21"></div>
+      <div class="stat-label">Lãnh đạo</div>
+    </div>
+    <div class="stat reveal">
+      <div class="stat-num" data-counter="3"></div>
+      <div class="stat-label">Ngôn ngữ</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     3. INTRO — magazine layout
+     ======================================================== -->
+<section class="section intro">
+  <div class="container">
+    <div class="intro-grid">
+      <div class="intro-text reveal reveal-from-bottom">
+        <div class="eyebrow">Giới thiệu chung</div>
+        <h2 class="display-1">
+          Kết nối <em>tinh hoa</em>,<br>
+          bảo tồn <em>di sản</em>,<br>
+          nâng tầm <em>giá trị</em>
+        </h2>
+        <p class="lead">
+          Hội Trầm Hương Việt Nam (VAWA — Vietnam Agarwood Association) được
+          thành lập ngày <strong>11/01/2010</strong> theo Quyết định số 23/QĐ-BNV
+          của Bộ Nội vụ. Là tổ chức xã hội nghề nghiệp tự nguyện, phi lợi nhuận,
+          hoạt động theo Điều lệ và pháp luật Việt Nam.
+        </p>
+        <p class="lead">
+          Sứ mệnh của Hội là kết nối cộng đồng doanh nghiệp, nghệ nhân, nhà
+          nghiên cứu trong và ngoài nước; bảo tồn nguồn gen dó bầu quý và tri
+          thức truyền thống; nâng tầm thương hiệu Trầm Hương Việt trên trường
+          quốc tế.
+        </p>
+        <blockquote class="intro-quote">
+          "Trầm Hương Việt Nam — không chỉ là nguyên liệu, mà là di sản
+          văn hoá nghìn năm cần được gìn giữ và lan toả."
+        </blockquote>
+      </div>
+      <div class="intro-image reveal reveal-from-right">
+        <img src="../rung-gio-bau.jpg" alt="Rừng gió bầu" />
+        <div class="intro-image-tag">Rừng gió bầu</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     4. LEADERSHIP
+     ======================================================== -->
+<section class="section leadership">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Ban lãnh đạo Hội</div>
+      <h2 class="display-1" style="margin-top: 1.25rem;">
+        Những người <em>dẫn dắt</em>
+      </h2>
+    </div>
+
+    <div class="tabs reveal">
+      <button class="tab active" data-tab="btv">Ban Thường vụ <span class="tab-count">(7)</span></button>
+      <button class="tab" data-tab="bch">Ban Chấp hành <span class="tab-count">(15)</span></button>
+      <button class="tab" data-tab="bkt">Ban Kiểm tra <span class="tab-count">(5)</span></button>
+      <button class="tab" data-tab="hdtd">HĐ Thẩm định <span class="tab-count">(5)</span></button>
+    </div>
+
+    <div class="term-label reveal">Nhiệm kỳ III · 2023 — 2028</div>
+
+    <!-- Chairman -->
+    <div class="chairman-row reveal">
+      <button class="leader-card featured">
+        <div class="leader-photo">PV</div>
+        <div class="leader-info">
+          <div class="leader-honorific">Nhiệm kỳ III · 2023–2028</div>
+          <div class="leader-name">Phạm Văn Dư</div>
+          <div class="leader-title">Chủ tịch Hội · TS</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- Vice Presidents -->
+    <div class="leader-grid reveal">
+      <button class="leader-card">
+        <div class="leader-photo">NB</div>
+        <div class="leader-info">
+          <div class="leader-honorific">ThS</div>
+          <div class="leader-name">Nguyễn Văn Bình</div>
+          <div class="leader-title">Phó Chủ tịch</div>
+        </div>
+      </button>
+      <button class="leader-card">
+        <div class="leader-photo">NH</div>
+        <div class="leader-info">
+          <div class="leader-honorific">ThS</div>
+          <div class="leader-name">Nguyễn Văn Hùng</div>
+          <div class="leader-title">Phó Chủ tịch</div>
+        </div>
+      </button>
+      <button class="leader-card">
+        <div class="leader-photo">NT</div>
+        <div class="leader-info">
+          <div class="leader-honorific">Bà</div>
+          <div class="leader-name">Nguyễn Thị Thu</div>
+          <div class="leader-title">Phó Chủ tịch</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- Members -->
+    <div class="leader-divider reveal">Uỷ viên Thường vụ</div>
+    <div class="leader-grid reveal">
+      <button class="leader-card">
+        <div class="leader-photo">VK</div>
+        <div class="leader-info">
+          <div class="leader-name">Võ Đào Khanh</div>
+          <div class="leader-title">Uỷ viên Thường vụ</div>
+        </div>
+      </button>
+      <button class="leader-card">
+        <div class="leader-photo">NT</div>
+        <div class="leader-info">
+          <div class="leader-name">Nguyễn Văn Tòng</div>
+          <div class="leader-title">Uỷ viên Thường vụ</div>
+        </div>
+      </button>
+      <button class="leader-card">
+        <div class="leader-photo">DH</div>
+        <div class="leader-info">
+          <div class="leader-name">Đoàn Tranh Hoàng</div>
+          <div class="leader-title">Uỷ viên Thường vụ</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     5. ORG CHART — refined
+     ======================================================== -->
+<section class="section org">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Cơ cấu tổ chức</div>
+      <h2 class="display-1" style="margin-top: 1.25rem;">
+        Bộ máy <em>vận hành</em>
+      </h2>
+      <p class="lead" style="margin-top: 1.25rem; color: var(--gray-500);">
+        Theo Điều lệ sửa đổi, bổ sung 2023
+      </p>
+    </div>
+
+    <div class="org-tree reveal">
+      <div class="org-node primary">Đại hội</div>
+      <div class="org-line"></div>
+      <div class="org-node accent">Ban Chấp hành</div>
+      <div class="org-line"></div>
+      <div class="org-node">Ban Thường vụ</div>
+      <div class="org-line"></div>
+      <div class="org-row">
+        <div class="org-leaf">
+          <div class="org-line"></div>
+          <div class="org-node">Ban Kiểm tra</div>
+        </div>
+        <div class="org-leaf">
+          <div class="org-line"></div>
+          <div class="org-node">Văn phòng & Chuyên môn</div>
+        </div>
+        <div class="org-leaf">
+          <div class="org-line"></div>
+          <div class="org-node">Tổ chức trực thuộc</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     6. MEMBERS
+     ======================================================== -->
+<section class="section members">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Cộng đồng hội viên</div>
+      <h2 class="display-1" style="margin-top: 1.25rem;">
+        Quy tụ <em>tinh hoa</em>
+      </h2>
+      <p class="lead" style="margin-top: 1.25rem; color: var(--gray-500);">
+        59 hội viên VIP · doanh nghiệp · nghệ nhân từ khắp Việt Nam
+      </p>
+    </div>
+
+    <div class="members-toolbar reveal">
+      <input type="search" class="members-search" placeholder="Tìm hội viên hoặc doanh nghiệp...">
+    </div>
+
+    <!-- Scroll container fix 600px (R10) — section không mở rộng dù
+         lazy-load thêm bao nhiêu cards. IntersectionObserver dùng
+         element này làm `root` thay vì viewport. -->
+    <div class="members-scroll">
+      <div class="members-grid reveal">
+        <a class="member" href="#"><div class="member-avatar">PD</div><div class="member-info"><div class="member-name">Phạm Văn Dư</div><div class="member-position">Chủ tịch</div><div class="member-company">Cty TNHH Trầm Mê Cường</div></div></a>
+        <a class="member" href="#"><div class="member-avatar">BL</div><div class="member-info"><div class="member-name">Đinh Mai Lương</div><div class="member-position">Chủ tịch</div><div class="member-company">VPĐD Bộ Mã Lương</div></div></a>
+        <a class="member" href="#"><div class="member-avatar">NB</div><div class="member-info"><div class="member-name">Nguyễn Văn Bình</div><div class="member-position">Giám đốc</div><div class="member-company">Cty TRINH TM ENK TET</div></div></a>
+        <a class="member" href="#"><div class="member-avatar">NT</div><div class="member-info"><div class="member-name">Nguyễn Thị Thu</div><div class="member-position">Giám đốc</div><div class="member-company">Cty TNHH TM ENK Tet</div></div></a>
+        <a class="member" href="#"><div class="member-avatar">NT</div><div class="member-info"><div class="member-name">Nguyễn Thị Tòng</div><div class="member-position">Phó Phòng</div><div class="member-company">Cty Agarvina</div></div></a>
+        <a class="member" href="#"><div class="member-avatar">NL</div><div class="member-info"><div class="member-name">Nguyễn Phú Lực</div><div class="member-position">Phòng Hợp</div><div class="member-company">Cty Sâm Xuân Tâm</div></div></a>
+      </div>
+
+      <!-- Lazy-load sentinel — cuộn trong vùng 600px tới đây sẽ trigger
+           auto-load page tiếp. -->
+      <div class="members-sentinel" data-loading="false">
+        <span class="loader-dot">✦</span>
+        <span class="loader-text">Đang tải hội viên...</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     7. CONTACT — map + address
+     ======================================================== -->
+<section class="section contact">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="eyebrow">Địa chỉ trụ sở</div>
+      <h2 class="display-1" style="margin-top: 1.25rem;">
+        Đến <em>thăm</em> chúng tôi
+      </h2>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-map reveal">
+        <iframe
+          src="https://www.google.com/maps?q=10.785890,106.684595&hl=vi&z=18&output=embed"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allowfullscreen
+          title="Bản đồ trụ sở Hội Trầm Hương Việt Nam — 150 Lý Chính Thắng, Q.3"
+        ></iframe>
+      </div>
+      <div class="contact-card reveal">
+        <div class="eyebrow">VAWA</div>
+        <h3>Hội Trầm Hương<br>Việt Nam</h3>
+        <ul class="contact-list">
+          <li>
+            <div class="ic">◎</div>
+            <div>Số 150, Đường Lý Chính Thắng,<br>Phường Xuân Hoà, TP. Hồ Chí Minh</div>
+          </li>
+          <li>
+            <div class="ic">☏</div>
+            <div>0913 810 060 · 0938 334 647</div>
+          </li>
+          <li>
+            <div class="ic">✉</div>
+            <div>hoitramhuongvietnam2010@gmail.com</div>
+          </li>
+          <li>
+            <div class="ic">⌖</div>
+            <div>hoitramhuong.vn</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     8. CTA
+     ======================================================== -->
+<section class="cta">
+  <div class="cta-bg"></div>
+  <div class="cta-inner reveal">
+    <div class="eyebrow">Tham gia VAWA</div>
+    <h2>
+      Cùng <em>kết nối</em>,<br>
+      bảo tồn và <em>nâng tầm</em><br>
+      Trầm Hương Việt Nam
+    </h2>
+    <p>
+      Trở thành hội viên để đồng hành cùng cộng đồng doanh nghiệp Trầm Hương
+      hàng đầu Việt Nam — kết nối chuyên gia, tham gia sự kiện, được chứng
+      nhận sản phẩm và xúc tiến thương mại quốc tế.
+    </p>
+    <a href="/dang-ky" class="btn">Trở thành hội viên</a>
+  </div>
+</section>
+
+<script>
+  // Stagger reveal — gán --i index cho mỗi .reveal theo thứ tự sibling reveals,
+  // để CSS `transition-delay: calc(var(--i) * 80ms)` tạo wave entrance trong
+  // các grid (stats, leader-grid, members-grid). Standalone reveals → --i=0.
+  document.querySelectorAll('.reveal').forEach(el => {
+    const parent = el.parentElement;
+    if (!parent) return;
+    const siblings = Array.from(parent.children).filter(c => c.classList.contains('reveal'));
+    const idx = siblings.indexOf(el);
+    el.style.setProperty('--i', idx);
+  });
+
+  // Reveal-on-scroll
+  const io = new IntersectionObserver(
+    (entries) => entries.forEach(e => e.isIntersecting && e.target.classList.add('in')),
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Counter animation for stats — "nhảy nhảy" effect:
+  //   • easeOutBack: con số chạy nhanh đầu, vọt qua target ~9% rồi giật lại
+  //   • mỗi lần digit thay đổi → re-fire .pop class để scale-pulse 1.12×
+  //
+  // Note: original code dùng `el.firstChild.nodeValue` giả định firstChild là
+  // text node, nhưng HTML là `<div data-counter="15"><em>+</em></div>` →
+  // firstChild là <em> element, set nodeValue silent fail. Fix bằng cách
+  // tự inject một Text node phía trước <em> để hold digits.
+  const counters = document.querySelectorAll('[data-counter]');
+  const easeOutBack = (t) => {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  };
+  const counterIO = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const target = parseInt(el.dataset.counter, 10);
+      const suffix = el.querySelector('em');
+      // Detach suffix → re-append khi xong, để text node luôn đứng đầu.
+      if (suffix) suffix.remove();
+      const textNode = document.createTextNode('0');
+      el.insertBefore(textNode, el.firstChild);
+
+      const duration = 1800;
+      const start = performance.now();
+      let lastShown = -1;
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = easeOutBack(t);
+        const value = Math.max(0, Math.round(target * eased));
+        if (value !== lastShown) {
+          lastShown = value;
+          textNode.nodeValue = value;
+          // Re-trigger .pop animation: remove → reflow → add
+          el.classList.remove('pop');
+          void el.offsetWidth;
+          el.classList.add('pop');
+        }
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          textNode.nodeValue = target;
+          if (suffix) el.appendChild(suffix);
+        }
+      };
+      requestAnimationFrame(tick);
+      counterIO.unobserve(el);
+    });
+  }, { threshold: 0.4 });
+  counters.forEach(c => counterIO.observe(c));
+
+  // Tabs (visual only — no actual tab switching for mockup)
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  // ============================================================
+  // Members lazy load — sentinel infinite scroll trong section
+  // -----------------------------------------------------------
+  // Thay nút "Xem toàn bộ hội viên" bằng vùng tự động load:
+  //   • Initial 6 hội viên hard-code trong HTML (paint nhanh)
+  //   • Khi user cuộn xuống .members-sentinel, IO fire load thêm
+  //     PAGE_SIZE hội viên với artificial delay 350ms (mockup feel)
+  //   • Mỗi card mới fade-in via .reveal + --i stagger 80ms
+  //   • Khi pool hết, sentinel chuyển data-done với count tổng
+  //
+  // Wiring production (sau): MEMBERS_REMAINING sẽ thay bằng fetch
+  //   /api/members?cursor=... — UI/UX không đổi.
+  // ============================================================
+  const MEMBERS_REMAINING = [
+    { initials: "VK", name: "Võ Đào Khanh",       position: "Tổng Giám đốc",     company: "Cty CP Trầm Hương Khánh Hòa" },
+    { initials: "TH", name: "Trần Quốc Hùng",      position: "Giám đốc",          company: "Cty TNHH Hương Trầm Phú Quốc" },
+    { initials: "LM", name: "Lê Thị Mai",          position: "Phó Giám đốc",      company: "HTX Trầm Hương Quảng Nam" },
+    { initials: "NV", name: "Nguyễn Văn Vinh",     position: "Chủ tịch HĐQT",     company: "Cty CP Lâm Nghiệp Bình Phước" },
+    { initials: "PT", name: "Phạm Thị Tâm",        position: "Giám đốc",          company: "Cty TNHH Tinh Dầu Trầm Sài Gòn" },
+    { initials: "DM", name: "Đỗ Văn Minh",         position: "Tổng Giám đốc",     company: "Cty TNHH Hương Liệu Đồng Nai" },
+    { initials: "HK", name: "Hoàng Quốc Khanh",    position: "Giám đốc",          company: "Cty CP Trầm Hương Hà Tĩnh" },
+    { initials: "BD", name: "Bùi Anh Dũng",        position: "Phó Tổng Giám đốc", company: "Cty TNHH Nông Lâm Bến Tre" },
+    { initials: "NT", name: "Ngô Thanh Tùng",      position: "Giám đốc",          company: "Cty TNHH Trầm Việt" },
+    { initials: "TL", name: "Trần Thị Lan",        position: "Trưởng phòng KD",   company: "Cty CP Hương Trầm Long An" },
+    { initials: "VT", name: "Vũ Đức Trung",        position: "Giám đốc",          company: "Cty TNHH Trầm Hương Bình Định" },
+    { initials: "LH", name: "Lê Văn Hải",          position: "Chủ tịch HĐQT",     company: "Cty CP Phú Yên Wood" },
+    { initials: "PB", name: "Phan Thị Bích",       position: "Giám đốc",          company: "Cty TNHH MTV Trầm Tây Nguyên" },
+    { initials: "NQ", name: "Nguyễn Quang Anh",    position: "Tổng Giám đốc",     company: "Cty CP Trầm Hương Việt Nam" },
+    { initials: "TV", name: "Trương Văn Vũ",       position: "Giám đốc",          company: "Cty TNHH Hương Đà Nẵng" },
+    { initials: "DH", name: "Đặng Quốc Huy",       position: "Chủ tịch",          company: "Cty CP Trầm Hương Quảng Bình" },
+    { initials: "MN", name: "Mai Thị Nga",         position: "Giám đốc",          company: "Cty TNHH Tinh Hương Nghệ An" },
+    { initials: "CT", name: "Cao Thanh Tú",        position: "Phó Giám đốc",      company: "Cty CP Lâm Sản Tây Ninh" },
+    { initials: "LQ", name: "Lương Văn Quang",     position: "Giám đốc",          company: "Cty TNHH Trầm Hương Bắc Giang" },
+    { initials: "TN", name: "Thái Hoài Nam",       position: "Tổng Giám đốc",     company: "Cty CP Hương Liệu Cần Thơ" },
+    { initials: "PV", name: "Phùng Đức Việt",      position: "Giám đốc",          company: "Cty TNHH Trầm Hương Gia Lai" },
+    { initials: "HM", name: "Hà Tuấn Minh",        position: "Chủ tịch HĐQT",     company: "Cty CP Trầm Hương Lâm Đồng" },
+    { initials: "NL", name: "Nguyễn Thị Liên",     position: "Giám đốc",          company: "Cty TNHH Hương Trầm Bình Thuận" },
+    { initials: "VD", name: "Vương Anh Đức",       position: "Tổng Giám đốc",     company: "Cty CP Hương Phước An" },
+  ];
+  const PAGE_SIZE = 6;
+  const INITIAL_COUNT = document.querySelectorAll('.members-grid .member').length;
+  const TOTAL_MEMBERS = INITIAL_COUNT + MEMBERS_REMAINING.length;
+  const membersGrid = document.querySelector('.members-grid');
+  const membersSentinel = document.querySelector('.members-sentinel');
+  // R10: scroll container 600px — IO observe relative tới element này,
+  // không phải viewport. Sentinel chỉ trigger khi cuộn trong container.
+  const membersScroll = document.querySelector('.members-scroll');
+  let nextMemberIdx = 0;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderMembersPage() {
+    const slice = MEMBERS_REMAINING.slice(nextMemberIdx, nextMemberIdx + PAGE_SIZE);
+    slice.forEach((m, i) => {
+      const a = document.createElement('a');
+      a.className = 'member reveal';
+      a.href = '#';
+      a.style.setProperty('--i', i);
+      a.innerHTML = `
+        <div class="member-avatar">${escapeHtml(m.initials)}</div>
+        <div class="member-info">
+          <div class="member-name">${escapeHtml(m.name)}</div>
+          <div class="member-position">${escapeHtml(m.position)}</div>
+          <div class="member-company">${escapeHtml(m.company)}</div>
+        </div>
+      `;
+      membersGrid.appendChild(a);
+    });
+    nextMemberIdx += slice.length;
+
+    // Double rAF: đợi browser commit initial styles (opacity:0) rồi mới
+    // gắn .in để transition thực sự fire (single rAF có thể bị batch).
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      membersGrid.querySelectorAll('.member.reveal:not(.in)').forEach(el => el.classList.add('in'));
+    }));
+  }
+
+  function setMembersSentinelDone() {
+    membersSentinel.dataset.done = 'true';
+    membersSentinel.innerHTML =
+      `<span class="loader-dot">✦</span>` +
+      `<span class="loader-text">Đã hiển thị toàn bộ <strong>${TOTAL_MEMBERS}</strong> hội viên</span>`;
+  }
+
+  if (membersSentinel && membersGrid && membersScroll) {
+    const memberIO = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        if (nextMemberIdx >= MEMBERS_REMAINING.length) {
+          memberIO.unobserve(membersSentinel);
+          setMembersSentinelDone();
+          return;
+        }
+        memberIO.unobserve(membersSentinel);
+        membersSentinel.dataset.loading = 'true';
+        // Artificial delay để loader pulse có thời gian visible (~1 nhịp pulse)
+        setTimeout(() => {
+          renderMembersPage();
+          membersSentinel.dataset.loading = 'false';
+          if (nextMemberIdx >= MEMBERS_REMAINING.length) {
+            setMembersSentinelDone();
+          } else {
+            memberIO.observe(membersSentinel);
+          }
+        }, 350);
+      });
+    }, {
+      // R10: root = scroll container 600px (thay vì viewport).
+      // Sentinel trigger khi cuộn trong container tới gần đáy.
+      // rootMargin giảm 300px → 100px vì container nhỏ hơn nhiều.
+      root: membersScroll,
+      rootMargin: '100px 0px',
+    });
+    memberIO.observe(membersSentinel);
+  }
+</script>
+
+</body>
+</html>

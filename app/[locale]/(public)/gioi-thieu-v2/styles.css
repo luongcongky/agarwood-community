@@ -1,0 +1,1403 @@
+/* Scoped V2 styles — all rules prefixed with .gtv2-page to avoid global conflicts.
+ * Generated from public/mockups/landing-about-v2.html (R15).
+ */
+
+
+  /* Wrapper: CSS variables + body-like text styles (gốc mockup là body
+     selector, ở đây gộp vào wrapper vì .gtv2-page body sẽ không match
+     được — body là tổ tiên chứ không phải con). */
+  .gtv2-page {
+    --brown-900: #1a1008;
+    --brown-800: #2a1810;
+    --brown-700: #3d2415;
+    --brown-600: #5a3a26;
+    --brown-500: #7a5a3e;
+    --brown-300: #b8a087;
+    --brown-200: #d8c8b0;
+    --brown-100: #ede0c4;
+    --brown-50:  #faf3e3;
+    --gold:      #c9a961;
+    --gold-deep: #8b6914;
+    --gold-soft: #e0c887;
+    --cream:     #f5ebd6;
+    --paper:     #faf6ea;
+    --white:     #ffffff;
+    --gray-100:  #f5f5f4;
+    --gray-300:  #d6d3d1;
+    --gray-500:  #78716c;
+
+    font-family: 'Inter', "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-feature-settings: "cv11", "ss03", "kern";
+    color: var(--brown-800);
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  .gtv2-page * { margin: 0; padding: 0; box-sizing: border-box; }
+  .gtv2-page img { max-width: 100%; display: block; }
+
+  /* === Common typography === */
+  .gtv2-page .eyebrow {
+    color: var(--gold-deep);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+  .gtv2-page .eyebrow::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .gtv2-page .display-1 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: clamp(2.25rem, 5vw, 4.25rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--brown-900);
+  }
+  .gtv2-page .display-2 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--brown-900);
+  }
+  .gtv2-page .display-1 em, .gtv2-page .display-2 em {
+    font-style: italic;
+    color: var(--gold-deep);
+  }
+  .gtv2-page .lead {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: var(--brown-700);
+  }
+
+  /* === Reveal-on-scroll === */
+  .gtv2-page .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1);
+    /* --i set inline (or via JS) on grid children → stagger entrance */
+    transition-delay: calc(var(--i, 0) * 80ms);
+  }
+  .gtv2-page .reveal.in { opacity: 1; transform: none; }
+
+  /* ===========================================================
+     ANIMATIONS — entrance, ambient, hover
+     =========================================================== */
+
+  /* Hero entrance — staggered fade từ trên xuống (text "rơi" vào vị trí) */
+  @keyframes hero-fade-in {
+    from { opacity: 0; transform: translateY(-32px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .gtv2-page .hero-eyebrow { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .15s both; }
+  .gtv2-page .hero-title   { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .35s both; }
+  .gtv2-page .hero-sub     { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .55s both; }
+  .gtv2-page .hero-meta    { animation: hero-fade-in .9s cubic-bezier(.2,.7,.2,1) .75s both; }
+
+  /* Hero ambient — slow rotation cho ornamental rings để hero không "đứng im" */
+  @keyframes hero-rings-rotate {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to   { transform: translateY(-50%) rotate(360deg); }
+  }
+  .gtv2-page .hero-rings { animation: hero-rings-rotate 90s linear infinite; }
+
+  /* Gold gradient shimmer cho italic em accents — sweep ánh kim chầm chậm.
+     Dùng có chủ đích để gợi cảm giác "tinh hoa / di sản" thay cho italic
+     flourish của Cormorant Garamond đã bỏ. */
+  @keyframes gold-shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
+  .gtv2-page .hero-title em,
+  .gtv2-page .display-1 em,
+  .gtv2-page .display-2 em,
+  .gtv2-page .cta h2 em {
+    background: linear-gradient(
+      90deg,
+      var(--gold-deep) 0%,
+      var(--gold) 35%,
+      var(--gold-soft) 50%,
+      var(--gold) 65%,
+      var(--gold-deep) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: gold-shimmer 6s ease-in-out infinite;
+    /* Fix italic-overhang clipping: italic glyphs (a, t, ị, …) trồi ra
+       phải qua bounding box. Khi text-fill-color: transparent +
+       background-clip: text, phần overhang ngoài box không có background
+       để clip → không paint gì → chữ trông bị cắt mép phải.
+       Padding-right mở rộng box ~0.12em (đủ cover overhang typical italic),
+       margin-right âm bù lại để sibling (dấu phẩy, <br>) render đúng vị trí
+       layout cũ. */
+    padding-right: 0.12em;
+    margin-right: -0.12em;
+  }
+
+  /* Intro image — ken-burns float subtle để background không phẳng lì */
+  @keyframes intro-image-float {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50%      { transform: scale(1.06) translateY(-12px); }
+  }
+  /* intro-image-float animation moved sang `.intro-image img` (R9) */
+
+  /* Stats counter — "nhảy nhảy" theo từng nhịp số đếm.
+     Script gắn class .pop sau mỗi lần digit thay đổi → animation re-fire.
+     Combined với easeOutBack trong JS → con số overshoot rồi giật lại. */
+  @keyframes number-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .gtv2-page .stat-num {
+    display: inline-block;
+    transform-origin: center bottom;
+    will-change: transform;
+  }
+  .gtv2-page .stat-num.pop { animation: number-pop .22s cubic-bezier(.34,1.56,.64,1); }
+
+  /* Reveal direction modifiers — override translateY default của .reveal.
+     Dùng cho intro section: text từ dưới, image từ phải. */
+  .gtv2-page .reveal-from-bottom { transform: translateY(60px); }
+  .gtv2-page .reveal-from-bottom.in { transform: translateY(0); }
+  .gtv2-page .reveal-from-right { transform: translateX(80px); }
+  .gtv2-page .reveal-from-right.in { transform: translateX(0); }
+
+  /* Image hover zoom cho leader photos + member avatars */
+  .gtv2-page .leader-photo, .gtv2-page .member-avatar {
+    overflow: hidden;
+    transition: transform .5s cubic-bezier(.2,.7,.2,1), box-shadow .5s ease;
+  }
+  .gtv2-page .leader-card:hover .leader-photo,
+  .gtv2-page .member:hover .member-avatar {
+    transform: scale(1.06);
+    box-shadow: 0 8px 18px -8px rgba(26,16,8,0.35);
+  }
+
+  /* Org node — pulse ring khi hover để feel "hệ thống đang sống" */
+  .gtv2-page .org-node.primary::after { transition: inset .4s ease, border-color .4s ease; }
+  .gtv2-page .org-node.primary:hover::after {
+    inset: 2px;
+    border-color: var(--gold);
+  }
+
+  /* Tabs underline — slide-in thay vì pop-in */
+  .gtv2-page .tab.active::after { animation: tab-underline-in .4s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes tab-underline-in {
+    from { transform: scaleX(0); opacity: 0; }
+    to   { transform: scaleX(1); opacity: 1; }
+  }
+
+  /* ===========================================================
+     SECTION DIVIDERS — background phân cách giữa các session
+     • Bg alternation strict paper/white (đã set ở .leadership/.org)
+     • Mỗi .section có thêm hairline gold + ornament ✦ ở top
+     • Ornament `background: inherit` để mask hairline phía sau, tạo
+       cảm giác punctuation rõ ràng giữa 2 phân đoạn
+     =========================================================== */
+  .gtv2-page .section { position: relative; }
+  .gtv2-page .section::before {
+    /* Hairline gradient gold ngang ở top */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(220px, 38%, 380px);
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(184, 160, 135, 0.25) 18%,
+      rgba(201, 169, 97, 0.7) 50%,
+      rgba(184, 160, 135, 0.25) 82%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .gtv2-page .section::after {
+    /* Ornament ✦ giữa hairline, bg inherit từ section để punch-through */
+    content: '✦';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--gold);
+    background: inherit;
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* ===========================================================
+     HERO — full-bleed, cinematic
+     =========================================================== */
+  .gtv2-page .hero {
+    position: relative;
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    color: var(--cream);
+    background: var(--brown-900);
+  }
+  .gtv2-page .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 70% 30%, rgba(201,169,97,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 20% 80%, rgba(122, 90, 62, 0.4) 0%, transparent 60%),
+      linear-gradient(135deg, #1a1008 0%, #2a1810 40%, #3d2415 70%, #1a1008 100%);
+  }
+  /* Decorative agarwood wisps */
+  .gtv2-page .hero-bg::before, .gtv2-page .hero-bg::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .gtv2-page .hero-bg::before {
+    top: -20%; right: -10%;
+    width: 60%; height: 80%;
+    background: radial-gradient(circle, rgba(201,169,97,0.08) 0%, transparent 65%);
+    filter: blur(40px);
+  }
+  .gtv2-page .hero-bg::after {
+    bottom: -30%; left: -10%;
+    width: 70%; height: 80%;
+    background: radial-gradient(circle, rgba(201,169,97,0.06) 0%, transparent 65%);
+    filter: blur(40px);
+  }
+  /* Subtle ornamental rings */
+  .gtv2-page .hero-rings {
+    position: absolute;
+    top: 50%; right: 8%;
+    transform: translateY(-50%);
+    width: min(560px, 55vw);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid rgba(201,169,97,0.15);
+    pointer-events: none;
+  }
+  .gtv2-page .hero-rings::before, .gtv2-page .hero-rings::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(201,169,97,0.18);
+  }
+  .gtv2-page .hero-rings::before { inset: 12%; }
+  .gtv2-page .hero-rings::after  { inset: 26%; border-color: rgba(201,169,97,0.25); }
+
+  /* ===========================================================
+     Hero logo — luminous floating logo ở giữa hero-rings.
+     Container có cùng kích thước với .hero-rings → share center.
+     Logo image được center bằng flex, kích thước 45% để fit trong
+     innermost ring (inset 26% → 48% diameter container).
+     =========================================================== */
+  .gtv2-page .hero-logo {
+    position: absolute;
+    top: 50%;
+    right: 8%;
+    /* Static = entrance starting state: tiny dot tại đúng vị trí center.
+       Opacity:0 ẩn cho tới khi animation fire ở 0.95s (tránh thấy dot
+       trước khi text vào xong). */
+    transform: translateY(-50%) scale(0.02);
+    width: min(560px, 55vw);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    animation: hero-logo-zoom 1.5s cubic-bezier(.16, 1, .3, 1) 0.95s forwards;
+  }
+  /* Zoom: chấm đen 2% → kích thước thật. easing easeOutQuint (.16,1,.3,1)
+     cho cảm giác "explode" rồi settle mượt, không overshoot cartoony. */
+  @keyframes hero-logo-zoom {
+    from { opacity: 1; transform: translateY(-50%) scale(0.02); }
+    to   { opacity: 1; transform: translateY(-50%) scale(1); }
+  }
+
+  /* Halo pulsing — radial gold glow ngay phía sau logo.
+     Delay 2.45s = đợi logo zoom xong. Fade-in 0.5s rồi halo-pulse infinite. */
+  .gtv2-page .hero-logo::before {
+    content: '';
+    position: absolute;
+    width: 72%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(201, 169, 97, 0.55) 0%,
+      rgba(201, 169, 97, 0.28) 28%,
+      rgba(201, 169, 97, 0.08) 52%,
+      transparent 75%
+    );
+    filter: blur(24px);
+    opacity: 0;
+    animation:
+      hero-logo-aura-fade 0.5s ease 2.45s forwards,
+      hero-logo-halo 4.5s ease-in-out 2.95s infinite;
+  }
+  @keyframes hero-logo-aura-fade {
+    to { opacity: 0.7; }
+  }
+  @keyframes hero-logo-halo {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.12); }
+  }
+
+  /* Spotlight rays — conic gradient quay chậm tạo cảm giác "chiếu sáng".
+     Delay 2.45s đồng bộ với halo, fade-in 0.5s rồi rotate vô hạn. */
+  .gtv2-page .hero-logo::after {
+    content: '';
+    position: absolute;
+    width: 92%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(201, 169, 97, 0.18) 30deg,
+      transparent 70deg,
+      transparent 150deg,
+      rgba(201, 169, 97, 0.20) 180deg,
+      transparent 220deg,
+      transparent 300deg,
+      rgba(201, 169, 97, 0.14) 330deg,
+      transparent 360deg
+    );
+    filter: blur(14px);
+    opacity: 0;
+    animation:
+      hero-logo-aura-fade 0.5s ease 2.45s forwards,
+      hero-logo-rays 28s linear 2.95s infinite;
+  }
+  @keyframes hero-logo-rays {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Logo image — entrance: brightness 0 + transparent shadows → full color
+     + drop-shadows trong 1.5s (đồng bộ với zoom của container).
+     Sau entrance: float lên xuống ±9px loop 6s.
+     Quan trọng: 2 keyframes phải có cùng filter chain (cùng số function,
+     cùng thứ tự) để browser interpolate smooth, không jump. */
+  .gtv2-page .hero-logo img {
+    position: relative;
+    z-index: 2;
+    width: 58%;
+    height: auto;
+    object-fit: contain;
+    filter:
+      drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+      drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+      drop-shadow(0 0 0 rgba(0, 0, 0, 0))
+      brightness(0);
+    animation:
+      hero-logo-reveal 1.5s ease-out 0.95s forwards,
+      hero-logo-float 6s ease-in-out 2.45s infinite;
+  }
+  @keyframes hero-logo-reveal {
+    from {
+      filter:
+        drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+        drop-shadow(0 0 0 rgba(201, 169, 97, 0))
+        drop-shadow(0 0 0 rgba(0, 0, 0, 0))
+        brightness(0);
+    }
+    to {
+      filter:
+        drop-shadow(0 0 24px rgba(201, 169, 97, 0.55))
+        drop-shadow(0 0 48px rgba(201, 169, 97, 0.32))
+        drop-shadow(0 8px 32px rgba(0, 0, 0, 0.55))
+        brightness(1);
+    }
+  }
+  @keyframes hero-logo-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-18px); }
+  }
+
+  .gtv2-page .hero-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 6rem 2rem 8rem;
+    width: 100%;
+  }
+  .gtv2-page .hero-eyebrow {
+    color: var(--gold);
+    margin-bottom: 1.75rem;
+  }
+  .gtv2-page .hero-eyebrow::before { background: var(--gold); }
+  .gtv2-page .hero-title {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.75rem, 7vw, 6rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    color: var(--cream);
+    max-width: 14ch;
+    margin-bottom: 2rem;
+  }
+  .gtv2-page .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+    /* "Hội Trầm Hương" phải đi cùng nhau trên mobile — không cho browser
+       break giữa các chữ. Browser sẽ wrap trước em khi không đủ chỗ:
+       → "Về" / "Hội Trầm Hương" / "Việt Nam" thay vì split ngẫu nhiên. */
+    white-space: nowrap;
+  }
+  .gtv2-page .hero-sub {
+    font-size: clamp(1rem, 1.4vw, 1.25rem);
+    color: rgba(245,235,214,0.78);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+  .gtv2-page .hero-meta {
+    margin-top: 3.5rem;
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+  .gtv2-page .hero-meta-item {
+    border-left: 1px solid rgba(201,169,97,0.4);
+    padding: 0.25rem 0 0.25rem 1.25rem;
+  }
+  .gtv2-page .hero-meta-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(201,169,97,0.7);
+    margin-bottom: 0.25rem;
+  }
+  .gtv2-page .hero-meta-value {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: 1.125rem;
+    color: var(--cream);
+  }
+  .gtv2-page .hero-scroll {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    color: rgba(245,235,214,0.5);
+    font-size: 0.6875rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .gtv2-page .hero-scroll::after {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 36px;
+    margin: 0.75rem auto 0;
+    background: linear-gradient(180deg, var(--gold), transparent);
+    animation: scroll-cue 2s ease-in-out infinite;
+  }
+  @keyframes scroll-cue {
+    0%, 100% { opacity: 0.3; transform: scaleY(0.6); transform-origin: top; }
+    50%      { opacity: 1;   transform: scaleY(1);   transform-origin: top; }
+  }
+
+  /* ===========================================================
+     Hero mobile layout (R13) — sắp xếp lại order khi ≤ 880px:
+     eyebrow → title → sub → LOGO → meta (vertical)
+     • Mobile logo (.hero-logo-mobile) là duplicate đặt trong hero-inner,
+       desktop logo (sibling) bị ẩn → giữ nguyên desktop layout không đổi
+     • hero-inner thành flex column với explicit `order` per child
+     • hero-meta items stack vertical thay vì horizontal
+     =========================================================== */
+  .gtv2-page .hero-logo-mobile { display: none; }
+
+  @keyframes hero-logo-zoom-mobile {
+    /* Mobile entrance không có translateY(-50%) (vì position: relative
+       chứ không absolute như desktop) — chỉ scale 0.02 → 1 */
+    from { opacity: 1; transform: scale(0.02); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @media (max-width: 880px) {
+    .gtv2-page .hero { min-height: auto; }
+    .gtv2-page .hero-rings { display: none; }
+    /* Hide desktop logo on mobile */
+    .gtv2-page .hero-logo:not(.hero-logo-mobile) { display: none; }
+
+    /* hero-inner: column flex để dùng order per child */
+    .gtv2-page .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 4rem 1.5rem 5rem;
+    }
+    .gtv2-page .hero-eyebrow      { order: 1; }
+    .gtv2-page .hero-title        { order: 2; max-width: none; }
+    .gtv2-page .hero-sub          { order: 3; }
+    .gtv2-page .hero-logo-mobile  { order: 4; }
+    .gtv2-page .hero-meta         { order: 5; }
+
+    /* Mobile logo: in flow, override desktop absolute positioning + animation */
+    .gtv2-page .hero-logo-mobile {
+      display: flex;
+      position: relative;
+      top: auto;
+      right: auto;
+      width: min(220px, 55vw);
+      margin: 1.5rem auto 0.5rem;
+      align-self: center;
+      transform: scale(0.02);
+      animation: hero-logo-zoom-mobile 1.5s cubic-bezier(.16, 1, .3, 1) 0.95s forwards;
+    }
+
+    /* Hero meta items stack vertical với gap nhỏ hơn */
+    .gtv2-page .hero-meta {
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+  }
+
+  /* ===========================================================
+     STATS counter
+     =========================================================== */
+  .gtv2-page .stats {
+    background: var(--paper);
+    /* Border-bottom đã bỏ — divider .section::before của intro thay thế */
+  }
+  .gtv2-page .stats-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  .gtv2-page .stat {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-right: 1px solid var(--brown-100);
+  }
+  .gtv2-page .stat:last-child { border-right: 0; }
+  .gtv2-page .stat-num {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: clamp(2.75rem, 5vw, 4rem);
+    font-weight: 700;
+    /* Gold metallic gradient — đậm trên/dưới, sáng giữa (như ánh kim
+       phản chiếu từ giữa). Tạo cảm giác con số "khắc" bằng vàng,
+       nổi bật trên paper bg. background-clip:text + transparent fill
+       để render gradient lên đúng shape của chữ. */
+    background: linear-gradient(
+      180deg,
+      var(--gold-deep) 0%,
+      var(--gold) 55%,
+      var(--gold-deep) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+  }
+  .gtv2-page .stat-num em {
+    /* em là child element → không inherit background-clip → solid color.
+       Cần explicit -webkit-text-fill-color để override transparent fill
+       của parent (bị inherit qua descendant). */
+    font-style: italic;
+    font-size: 0.6em;
+    margin-left: 0.1em;
+    color: var(--gold-deep);
+    -webkit-text-fill-color: var(--gold-deep);
+  }
+  .gtv2-page .stat-label {
+    font-size: 0.8125rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--brown-500);
+    font-weight: 500;
+  }
+  @media (max-width: 880px) {
+    .gtv2-page .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .gtv2-page .stat { border-right: 0; border-bottom: 1px solid var(--brown-100); padding: 3rem 1.5rem; }
+    .gtv2-page .stat:nth-child(odd)  { border-right: 1px solid var(--brown-100); }
+    .gtv2-page .stat:nth-last-child(-n+2) { border-bottom: 0; }
+  }
+
+  /* ===========================================================
+     INTRO — magazine layout
+     =========================================================== */
+  .gtv2-page .section { padding: clamp(5rem, 10vw, 8rem) 2rem; }
+  .gtv2-page .container { max-width: 1280px; margin: 0 auto; }
+
+  .gtv2-page .intro {
+    background: var(--white);
+    position: relative;
+  }
+  .gtv2-page .intro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+  .gtv2-page .intro-text .display-1 {
+    margin: 1.25rem 0 2rem;
+  }
+  .gtv2-page .intro-text .lead + .lead {
+    margin-top: 1.25rem;
+  }
+  .gtv2-page .intro-quote {
+    margin-top: 2.5rem;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--gold);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--brown-700);
+  }
+  .gtv2-page .intro-image {
+    position: relative;
+    aspect-ratio: 4/5;
+    border-radius: 4px;
+    overflow: hidden;
+    /* Brown-900 fallback nếu ảnh chưa load → tránh flash trắng */
+    background: var(--brown-900);
+    box-shadow: 0 30px 60px -20px rgba(26,16,8,0.3);
+  }
+  .gtv2-page .intro-image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Ken-burns: subtle scale + drift để ảnh "thở" nhẹ. Animation
+       moved từ ::after sang img khi chuyển từ SVG silhouette sang ảnh
+       thật ở R9. */
+    animation: intro-image-float 12s ease-in-out infinite;
+  }
+  .gtv2-page .intro-image::after {
+    /* Vignette gradient — tối phía dưới để tag .intro-image-tag đọc
+       rõ trên ảnh thật (paper text trên photo background không match). */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(26, 16, 8, 0.55) 0%,
+      rgba(26, 16, 8, 0.15) 35%,
+      transparent 60%
+    );
+    pointer-events: none;
+  }
+  .gtv2-page .intro-image-tag {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    color: var(--gold);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 1.125rem;
+    z-index: 2;
+  }
+  .gtv2-page .intro-image-tag::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 880px) {
+    .gtv2-page .intro-grid { grid-template-columns: 1fr; gap: 3rem; }
+  }
+
+  /* ===========================================================
+     SECTION HEADS — utility (dùng chung leadership/org/members/contact)
+     =========================================================== */
+  .gtv2-page .section-head {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 4rem;
+  }
+  .gtv2-page .section-head .eyebrow {
+    margin-bottom: 1.25rem;
+  }
+  .gtv2-page .section-head .eyebrow::before,
+  .gtv2-page .section-head .eyebrow::after {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .gtv2-page .section-head .eyebrow::after { display: inline-block; }
+
+  /* ===========================================================
+     LEADERSHIP — tabs + chairman + grid
+     =========================================================== */
+  .gtv2-page .leadership {
+    background: var(--paper);
+  }
+  .gtv2-page .tabs {
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid var(--brown-100);
+    margin-bottom: 4rem;
+    overflow-x: auto;
+  }
+  .gtv2-page .tab {
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--brown-500);
+    padding: 1rem 1.75rem;
+    cursor: pointer;
+    position: relative;
+    transition: color .25s ease;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .gtv2-page .tab:hover { color: var(--brown-800); }
+  .gtv2-page .tab.active { color: var(--brown-900); font-weight: 600; }
+  .gtv2-page .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 2px;
+    background: var(--gold);
+  }
+  .gtv2-page .tab-count {
+    color: var(--gray-500);
+    font-weight: 400;
+    margin-left: 0.375rem;
+    font-size: 0.8125rem;
+  }
+  .gtv2-page .term-label {
+    text-align: center;
+    color: var(--gray-500);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    margin-bottom: 3rem;
+    font-size: 1rem;
+  }
+
+  .gtv2-page .chairman-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4rem;
+  }
+  .gtv2-page .leader-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem;
+    background: var(--white);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .3s ease;
+    text-align: left;
+    width: 100%;
+  }
+  .gtv2-page .leader-card.featured {
+    max-width: 480px;
+    border-color: var(--gold);
+    background: var(--white);
+    padding: 1.5rem;
+    box-shadow: 0 12px 30px -16px rgba(201, 169, 97, 0.35);
+  }
+  .gtv2-page .leader-card:hover {
+    border-color: var(--gold);
+    background: var(--brown-50);
+    box-shadow: 0 12px 30px -10px rgba(26,16,8,0.12);
+  }
+  .gtv2-page .leader-photo {
+    flex-shrink: 0;
+    width: 96px;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, var(--brown-700), var(--brown-900));
+    border-radius: 2px;
+    overflow: hidden;
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+  .gtv2-page .leader-card.featured .leader-photo {
+    width: 120px;
+  }
+  .gtv2-page .leader-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .gtv2-page .leader-honorific {
+    font-size: 0.6875rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .gtv2-page .leader-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--brown-900);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+  }
+  .gtv2-page .leader-card.featured .leader-name {
+    font-size: 1.125rem;
+  }
+  .gtv2-page .leader-title {
+    font-size: 0.8125rem;
+    color: var(--brown-600);
+    line-height: 1.5;
+  }
+
+  .gtv2-page .leader-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .gtv2-page .leader-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 1100px;
+    margin: 3rem auto 2rem;
+    color: var(--gray-500);
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-size: 0.875rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .gtv2-page .leader-divider::before, .gtv2-page .leader-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--brown-100);
+  }
+  @media (max-width: 880px) {
+    .gtv2-page .leader-grid { grid-template-columns: 1fr; }
+    /* "Những người dẫn dắt" không được rớt xuống dòng trên mobile.
+       Giảm font-size + white-space:nowrap để text fit trong content area
+       (~256-380px tuỳ phone) mà không overflow. Clamp 1.5rem-2.75rem
+       smooth ở viewport 320-880px, vượt 880px thì rule mặc định
+       .display-1 (clamp 2.25rem-4.25rem) tiếp quản. */
+    .gtv2-page .leadership .display-1 {
+      font-size: clamp(1.5rem, 6vw, 2.75rem);
+      white-space: nowrap;
+    }
+  }
+
+  /* ===========================================================
+     ORG CHART — refined visual
+     =========================================================== */
+  .gtv2-page .org {
+    background: var(--white);
+  }
+  .gtv2-page .org-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .gtv2-page .org-node {
+    background: var(--white);
+    border: 1px solid var(--brown-200);
+    border-radius: 4px;
+    padding: 1rem 2.25rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--brown-900);
+    font-size: 0.9375rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 12px -6px rgba(26,16,8,0.08);
+    position: relative;
+    min-width: 240px;
+    transition: all .3s ease;
+  }
+  .gtv2-page .org-node:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(26,16,8,0.15);
+  }
+  .gtv2-page .org-node.primary {
+    background: linear-gradient(135deg, var(--brown-800), var(--brown-900));
+    color: var(--cream);
+    border-color: var(--brown-900);
+  }
+  .gtv2-page .org-node.primary::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(201,169,97,0.3);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .gtv2-page .org-node.accent {
+    background: var(--brown-700);
+    color: var(--cream);
+    border-color: var(--brown-700);
+  }
+  .gtv2-page .org-line {
+    width: 1px;
+    height: 36px;
+    background: var(--brown-300);
+  }
+  .gtv2-page .org-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    width: 100%;
+    position: relative;
+  }
+  .gtv2-page .org-row::before {
+    content: '';
+    position: absolute;
+    top: -36px;
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    height: 1px;
+    background: var(--brown-300);
+  }
+  .gtv2-page .org-row .org-line { justify-self: center; }
+  .gtv2-page .org-leaf {
+    text-align: center;
+  }
+  .gtv2-page .org-leaf .org-line {
+    margin: 0 auto;
+  }
+  .gtv2-page .org-leaf .org-node {
+    width: 100%;
+    min-width: 0;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  @media (max-width: 880px) {
+    .gtv2-page .org-row { grid-template-columns: 1fr; gap: 0.5rem; }
+    .gtv2-page .org-row::before { display: none; }
+  }
+
+  /* ===========================================================
+     MEMBERS — grid with search
+     =========================================================== */
+  .gtv2-page .members {
+    background: var(--paper);
+  }
+  .gtv2-page .members-toolbar {
+    max-width: 600px;
+    margin: 0 auto 3rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+  .gtv2-page .members-search {
+    flex: 1;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid var(--brown-200);
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    background: var(--white);
+    color: var(--brown-800);
+    transition: border-color .25s ease;
+  }
+  .gtv2-page .members-search:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .gtv2-page .members-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    /* max-width + margin chuyển sang .members-scroll wrapper (R10) để
+       scrollbar nằm đúng mép phải của grid content. */
+  }
+  .gtv2-page .member {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--white);
+    padding: 1rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .3s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .gtv2-page .member:hover {
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(26,16,8,0.1);
+  }
+  .gtv2-page .member-avatar {
+    flex-shrink: 0;
+    width: 64px;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, var(--brown-600), var(--brown-800));
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.125rem;
+    border-radius: 2px;
+  }
+  .gtv2-page .member-info { min-width: 0; flex: 1; }
+  .gtv2-page .member-name {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--brown-900);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gtv2-page .member-position {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--gold-deep);
+    font-weight: 600;
+  }
+  .gtv2-page .member-company {
+    margin-top: 0.125rem;
+    font-size: 0.75rem;
+    color: var(--brown-500);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  @media (max-width: 880px) {
+    .gtv2-page .members-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Members scroll container — fix chiều cao 600px (R10).
+     Section không mở rộng dù pool nhiều hội viên; lazy load chỉ trong
+     vùng này. IntersectionObserver dùng container này làm `root` thay
+     vì viewport, sentinel trigger khi cuộn tới gần đáy container. */
+  .gtv2-page .members-scroll {
+    max-width: 1200px;
+    margin: 0 auto;
+    max-height: 600px;
+    overflow-y: auto;
+    /* Padding 0.5rem để hover translateY(-2px) + box-shadow của member
+       card không bị overflow:auto cắt mép. Padding-right 4px để chừa
+       chỗ cho scrollbar khỏi đè lên grid content. */
+    padding: 0.5rem 4px 0.5rem 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--brown-300) transparent;
+  }
+  .gtv2-page .members-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  .gtv2-page .members-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gtv2-page .members-scroll::-webkit-scrollbar-thumb {
+    background: var(--brown-200);
+    border-radius: 4px;
+    transition: background .25s ease;
+  }
+  .gtv2-page .members-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--brown-300);
+  }
+
+  /* Members lazy-load sentinel — thay nút "Xem toàn bộ":
+     khi user cuộn xuống đây, IntersectionObserver fire load thêm hội viên.
+     Khi pool hết, chuyển trạng thái data-done với text "Đã hiển thị toàn bộ".
+     Padding giảm xuống vì giờ ở trong scroll container 600px (R10). */
+  .gtv2-page .members-sentinel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.875rem;
+    padding: 1.5rem 1rem 0.75rem;
+    margin-top: 1rem;
+    color: var(--brown-500);
+    font-size: 0.875rem;
+    letter-spacing: 0.02em;
+    min-height: 3rem;
+  }
+  .gtv2-page .members-sentinel .loader-dot {
+    color: var(--gold);
+    font-size: 1rem;
+    line-height: 1;
+    animation: members-loader-pulse 1.4s ease-in-out infinite;
+  }
+  .gtv2-page .members-sentinel[data-done="true"] {
+    color: var(--brown-600);
+  }
+  .gtv2-page .members-sentinel[data-done="true"] .loader-dot {
+    animation: none;
+  }
+  .gtv2-page .members-sentinel strong {
+    color: var(--brown-900);
+    font-weight: 700;
+  }
+  @keyframes members-loader-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.8); }
+    50%      { opacity: 1;    transform: scale(1.2); }
+  }
+
+  /* ===========================================================
+     MAP + ADDRESS
+     =========================================================== */
+  .gtv2-page .contact {
+    background: var(--white);
+  }
+  .gtv2-page .contact-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 3rem;
+    align-items: stretch;
+  }
+  .gtv2-page .contact-map {
+    background: var(--brown-50);
+    border: 1px solid var(--brown-100);
+    aspect-ratio: 4/3;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .gtv2-page .contact-map iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+  .gtv2-page .contact-card {
+    background: var(--brown-900);
+    color: var(--cream);
+    padding: 3rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .gtv2-page .contact-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle at top right, rgba(201,169,97,0.2) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .gtv2-page .contact-card .eyebrow { color: var(--gold); margin-bottom: 1rem; }
+  .gtv2-page .contact-card .eyebrow::before { background: var(--gold); }
+  .gtv2-page .contact-card h3 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 500;
+    font-size: 1.75rem;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    position: relative;
+  }
+  .gtv2-page .contact-list {
+    list-style: none;
+    position: relative;
+  }
+  .gtv2-page .contact-list li {
+    display: flex;
+    gap: 0.875rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(201,169,97,0.15);
+    font-size: 0.875rem;
+    color: rgba(245,235,214,0.85);
+    line-height: 1.5;
+  }
+  .gtv2-page .contact-list li:last-child { border-bottom: 0; }
+  .gtv2-page .contact-list .ic {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(201,169,97,0.15);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+  }
+  @media (max-width: 880px) {
+    .gtv2-page .contact-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .gtv2-page .contact-card { padding: 2rem; }
+  }
+
+  /* ===========================================================
+     CTA — full-width banner
+     =========================================================== */
+  .gtv2-page .cta {
+    position: relative;
+    overflow: hidden;
+    color: var(--cream);
+    background: var(--brown-900);
+  }
+  .gtv2-page .cta-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 70% 50%, rgba(201,169,97,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 50%, rgba(122,90,62,0.4) 0%, transparent 60%),
+      linear-gradient(135deg, #1a1008 0%, #2a1810 50%, #1a1008 100%);
+  }
+  .gtv2-page .cta-inner {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 7rem 2rem;
+    text-align: center;
+  }
+  .gtv2-page .cta .eyebrow { color: var(--gold); margin-bottom: 1.5rem; }
+  .gtv2-page .cta .eyebrow::before { background: var(--gold); }
+  .gtv2-page .cta h2 {
+    font-family: 'Merriweather', Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: clamp(2.25rem, 5vw, 3.75rem);
+    line-height: 1.1;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  .gtv2-page .cta h2 em { font-style: italic; color: var(--gold); }
+  .gtv2-page .cta p {
+    font-size: 1.0625rem;
+    color: rgba(245,235,214,0.8);
+    max-width: 580px;
+    margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+  .gtv2-page .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-decoration: none;
+    border: 1px solid var(--gold);
+    background: var(--gold);
+    color: var(--brown-900);
+    border-radius: 0;
+    transition: all .3s ease;
+    cursor: pointer;
+  }
+  .gtv2-page .btn:hover {
+    background: transparent;
+    color: var(--gold);
+  }
+  .gtv2-page .btn::after {
+    content: '→';
+    transition: transform .3s ease;
+  }
+  .gtv2-page .btn:hover::after { transform: translateX(4px); }
+
+  /* Notice strip at top of file (dev only) */
+  .gtv2-page .dev-notice {
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    padding: 0.625rem 1rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: #92400e;
+  }
+  .gtv2-page .dev-notice strong { color: #78350f; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gtv2-page .reveal { opacity: 1; transform: none; transition: none; }
+    .gtv2-page .reveal-from-bottom, .gtv2-page .reveal-from-right { transform: none; }
+    .gtv2-page .hero-scroll::after,
+    .gtv2-page .hero-eyebrow, .gtv2-page .hero-title, .gtv2-page .hero-sub, .gtv2-page .hero-meta,
+    .gtv2-page .hero-rings,
+    .gtv2-page .hero-logo, .gtv2-page .hero-logo::before, .gtv2-page .hero-logo::after, .gtv2-page .hero-logo img,
+    .gtv2-page .hero-title em, .gtv2-page .display-1 em, .gtv2-page .display-2 em, .gtv2-page .cta h2 em,
+    .gtv2-page .intro-image img,
+    .gtv2-page .stat-num.pop,
+    .gtv2-page .tab.active::after,
+    .gtv2-page .members-sentinel .loader-dot {
+      animation: none !important;
+    }
+    /* Reduced motion: bỏ qua entrance, hiện logo + glow full-state ngay.
+       Desktop logo dùng translateY(-50%) cho vertical centering absolute;
+       mobile logo position relative nên chỉ cần scale(1). */
+    .gtv2-page .hero-logo:not(.hero-logo-mobile) {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+    .gtv2-page .hero-logo-mobile {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .gtv2-page .hero-logo::before, .gtv2-page .hero-logo::after { opacity: 0.7; }
+    .gtv2-page .hero-logo img {
+      filter:
+        drop-shadow(0 0 24px rgba(201, 169, 97, 0.55))
+        drop-shadow(0 0 48px rgba(201, 169, 97, 0.32))
+        drop-shadow(0 8px 32px rgba(0, 0, 0, 0.55))
+        brightness(1);
+    }
+    /* Em vẫn cần hiển thị màu vàng dù không shimmer */
+    .gtv2-page .hero-title em, .gtv2-page .display-1 em, .gtv2-page .display-2 em, .gtv2-page .cta h2 em {
+      color: var(--gold-deep);
+      -webkit-text-fill-color: var(--gold-deep);
+      background: none;
+    }
+    .gtv2-page .leader-photo, .gtv2-page .member-avatar { transition: none; }
+  }
+
+  /* Production overrides — img bên trong avatar/photo containers fill 100%.
+     Mockup gốc dùng text initials; với DB data có photoUrl, render <img>
+     đè lên gradient bg. */
+  .gtv2-page .leader-photo img,
+  .gtv2-page .member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }

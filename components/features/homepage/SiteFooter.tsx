@@ -144,7 +144,7 @@ export async function SiteFooter() {
           </h3>
           <ul className="space-y-1.5 text-[13px]">
             <li>
-              <Link href="/gioi-thieu" className="hover:text-white hover:underline">
+              <Link href="/gioi-thieu-v2" className="hover:text-white hover:underline">
                 {tNav("about")}
               </Link>
             </li>
