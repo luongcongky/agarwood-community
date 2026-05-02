@@ -1108,6 +1108,18 @@
   }
   @media (max-width: 880px) {
     .gtv2-page .members-grid { grid-template-columns: 1fr; }
+    /* Mobile: bỏ 600px cap + overflow-y nested scroll. Lý do:
+       1. Touch event conflict — user vuốt trong vùng 600px bị page scroll
+          "ăn" trước, không scroll được vào container → thấy như list không
+          load được.
+       2. Với 65 hội viên × ~112px = 7000+px content nén trong 600px
+          window → UX cực tệ kể cả khi scroll work.
+       Mobile thuần page scroll: section dài tự nhiên, user vuốt như mọi
+       trang khác. Desktop giữ nguyên 600px cap (UX compact). */
+    .gtv2-page .members-scroll {
+      max-height: none;
+      overflow-y: visible;
+    }
   }
 
   /* Members scroll container — fix chiều cao 600px (R10).
