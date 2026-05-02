@@ -3,6 +3,7 @@ import { Inter, Merriweather } from "next/font/google"
 import { SiteHeader } from "@/components/features/homepage/SiteHeader"
 import { SiteFooter } from "@/components/features/homepage/SiteFooter"
 import { BackToTop } from "@/components/features/layout/BackToTop"
+import { JoinFloatingBadge } from "@/components/features/register-nudge/JoinFloatingBadge"
 
 function SiteFooterSkeleton() {
   return <footer aria-hidden className="min-h-[380px] bg-brand-900" />
@@ -44,6 +45,12 @@ export default function MemberLayout({
         <SiteFooter />
       </Suspense>
       <BackToTop />
+      {/* Floating badge "Đăng ký thành viên" — guest only, gate ở server.
+          Đồng bộ với (public) layout để guest landing /feed cũng thấy CTA
+          giống các trang khác. */}
+      <Suspense fallback={null}>
+        <JoinFloatingBadge />
+      </Suspense>
     </div>
   )
 }
