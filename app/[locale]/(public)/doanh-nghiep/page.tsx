@@ -11,6 +11,8 @@ import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { CERT_VALIDITY_YEARS } from "@/lib/certification-council-constants"
 import { FeatureToggleBtn } from "./FeatureToggleBtn"
 import { AnimatedCount } from "./AnimatedCount"
+import type { CompanyCardData } from "./DirectoryCard"
+import { DirectorySearch } from "./DirectorySearch"
 
 export async function generateMetadata() {
   const t = await getTranslations("companies")
@@ -28,10 +30,6 @@ export const dynamic = "force-dynamic"
 
 function lastAddressSegment(addr: string): string {
   return addr.split(",").pop()?.trim() ?? addr
-}
-
-function displayWebsite(url: string): string {
-  return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
 }
 
 const COMPANY_SELECT = {
@@ -291,40 +289,30 @@ export default async function MembersPage() {
         </section>
       )}
 
-      {/* ── DIRECTORY GRID ───────────────────────────────────────────── */}
+      {/* ── DIRECTORY GRID ─────────────────────────────────────────────
+           DirectorySearch render title + search input cùng hàng + grid
+           cards (client filter instant). Empty state khi cards=[] cũng
+           do component xử lý. */}
       <section className="bg-brand-50/30">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-700">
-                <span className="h-px w-10 bg-brand-700/40" />
-                Toàn bộ hội viên
-              </p>
-              <h2 className="font-serif-headline mt-2 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-                Danh bạ doanh nghiệp
-              </h2>
-            </div>
-            <p className="hidden text-sm text-brand-500 tabular-nums sm:block">
-              {restCompanies.length} đơn vị
-            </p>
-          </div>
-
-          {restCompanies.length === 0 ? (
-            <p className="text-center text-brand-500">Chưa có doanh nghiệp nào trong danh bạ.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {restCompanies.map((c, i) => (
-                <DirectoryCard
-                  key={c.id}
-                  company={c}
-                  l={l}
-                  isAdmin={isAdminUser}
-                  visitWebsiteLabel={t("visitWebsite")}
-                  index={i}
-                />
-              ))}
-            </div>
-          )}
+          <DirectorySearch
+            cards={restCompanies.map<CompanyCardData>((c) => ({
+              id: c.id,
+              slug: c.slug,
+              name: l(c, "name"),
+              address: l(c, "address") ?? "",
+              logoUrl: c.logoUrl,
+              coverImageUrl: c.coverImageUrl,
+              foundedYear: c.foundedYear,
+              phone: c.phone,
+              website: c.website,
+              isVerified: c.isVerified,
+              isFeatured: c.isFeatured,
+              productsCount: c._count.products,
+            }))}
+            isAdmin={isAdminUser}
+            visitWebsiteLabel={t("visitWebsite")}
+          />
         </div>
       </section>
 
@@ -587,157 +575,6 @@ function FeaturedSidePlaceholder({ ctaHref }: { ctaHref: string }) {
       <p className="mt-2 text-sm font-semibold text-brand-900">Vị trí Tiêu biểu còn trống</p>
       <p className="mt-1 text-xs text-brand-600">Đăng ký để được Hội đề cử</p>
     </Link>
-  )
-}
-
-function DirectoryCard({
-  company,
-  l,
-  isAdmin,
-  visitWebsiteLabel,
-  index,
-}: {
-  company: CompanyCard
-  l: <T extends Record<string, unknown>>(rec: T, field: string) => string
-  isAdmin: boolean
-  visitWebsiteLabel: string
-  /** Index trong list — dùng cho stagger delay. */
-  index: number
-}) {
-  const productsCount = company._count.products
-  const address = l(company, "address")
-  const detailUrl = `/doanh-nghiep/${company.slug}`
-
-  return (
-    // Card không phải <a> wrapper duy nhất — footer chứa <a website> +
-    // <button toggle> sẽ vi phạm HTML5 (<a> không nest <a>/<button>).
-    // Cover + header có Link riêng tới detail; footer là layer độc lập.
-    <div
-      className="dn-card-stagger group flex flex-col overflow-hidden rounded-xl border border-brand-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-400 hover:shadow-xl"
-      style={{ "--i": index } as React.CSSProperties}
-    >
-      {/* Cover (clickable) */}
-      <Link
-        href={detailUrl}
-        aria-label={l(company, "name")}
-        className="relative block aspect-16/7 w-full overflow-hidden bg-brand-100"
-      >
-        {company.coverImageUrl ? (
-          <Image
-            src={company.coverImageUrl}
-            alt=""
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-700 group-hover:scale-110"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-linear-to-br from-brand-100 via-amber-50/40 to-brand-200/60" />
-        )}
-        {company.isFeatured && (
-          <span
-            className="dn-pop absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.15em] text-brand-900 shadow ring-1 ring-white"
-            style={{ "--d": "200ms" } as React.CSSProperties}
-          >
-            ★ Tiêu biểu
-          </span>
-        )}
-      </Link>
-
-      {/* Header (logo + name) clickable */}
-      <Link href={detailUrl} className="flex items-start gap-3 px-4 pt-3">
-        <div className="relative -mt-9 h-14 w-14 shrink-0 overflow-hidden rounded-full bg-white shadow-md ring-4 ring-white">
-          {company.logoUrl ? (
-            <Image
-              src={company.logoUrl}
-              alt=""
-              fill
-              sizes="56px"
-              className="object-cover"
-            />
-          ) : (
-            <AgarwoodPlaceholder
-              className="h-full w-full"
-              shape="full"
-              size="sm"
-              tone="light"
-            />
-          )}
-        </div>
-        <div className="min-w-0 flex-1 pt-1">
-          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-brand-900 transition-colors group-hover:text-brand-700">
-            {l(company, "name")}
-          </h3>
-          {company.isVerified && (
-            <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700">
-              ✓ Đã xác minh
-            </span>
-          )}
-        </div>
-      </Link>
-
-      {/* Body — chỉ hiện số điện thoại liên hệ. Description gốc dài + chứa
-          dữ liệu lộn xộn (Địa chỉ + Hotline trộn nhau) đã bỏ. */}
-      <div className="flex flex-1 flex-col gap-2 px-4 pt-2">
-        {company.phone && (
-          <a
-            href={`tel:${company.phone.replace(/\s+/g, "")}`}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:text-brand-900 transition-colors"
-          >
-            <span aria-hidden>📞</span>
-            <span className="tabular-nums">{company.phone}</span>
-          </a>
-        )}
-
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
-          {productsCount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-              ✓ {productsCount} chứng nhận
-            </span>
-          )}
-          {company.foundedYear && (
-            <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">
-              Từ {company.foundedYear}
-            </span>
-          )}
-          {address && (
-            <span className="inline-flex items-center rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[10px] font-medium text-brand-600">
-              📍 {lastAddressSegment(address)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Footer — actions: detail + website + admin toggle.
-          Tách khỏi Link wrapper để các phần tử anchor/button hợp lệ HTML5. */}
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-brand-100 px-4 py-2.5">
-        <Link
-          href={detailUrl}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700/80 transition-colors hover:text-brand-900 group-hover:text-brand-900"
-        >
-          <span>Xem chi tiết</span>
-          <span className="inline-block transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-        </Link>
-        <div className="flex items-center gap-1.5">
-          {company.website && (
-            <a
-              href={company.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={displayWebsite(company.website)}
-              className="inline-flex items-center gap-1 rounded-md border border-brand-300 bg-white px-2 py-1 text-[10px] font-semibold text-brand-700 transition-colors hover:bg-brand-50"
-            >
-              {visitWebsiteLabel}
-            </a>
-          )}
-          {isAdmin && (
-            <FeatureToggleBtn
-              companyId={company.id}
-              initialFeatured={company.isFeatured}
-            />
-          )}
-        </div>
-      </div>
-    </div>
   )
 }
 

@@ -1,0 +1,132 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { Search, X } from "lucide-react"
+import { DirectoryCard, type CompanyCardData } from "./DirectoryCard"
+
+/**
+ * Client-side filter cho danh bạ doanh nghiệp. Dataset ~30 DN nên
+ * `name + address`.toLowerCase().includes() là đủ instant — không cần debounce
+ * hoặc fetch server.
+ *
+ * Hidden cards qua CSS class `hidden` (display:none) thay vì unmount để
+ * stagger animation chỉ chạy 1 lần ở mount đầu — user clear/đổi query không
+ * gây "wave" re-animate gây jitter.
+ */
+export function DirectorySearch({
+  cards,
+  isAdmin,
+  visitWebsiteLabel,
+}: {
+  cards: CompanyCardData[]
+  isAdmin: boolean
+  visitWebsiteLabel: string
+}) {
+  const [query, setQuery] = useState("")
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return new Set(cards.map((c) => c.id))
+    return new Set(
+      cards
+        .filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            c.address.toLowerCase().includes(q),
+        )
+        .map((c) => c.id),
+    )
+  }, [cards, query])
+
+  const visibleCount = matches.size
+  const hasQuery = query.trim().length > 0
+
+  return (
+    <>
+      {/* Title row — title trái, search bar phải. Mobile stack dọc. */}
+      <div className="mb-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-700">
+            <span className="h-px w-10 bg-brand-700/40" />
+            Toàn bộ hội viên
+          </p>
+          <h2 className="font-serif-headline mt-2 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
+            Danh bạ doanh nghiệp
+          </h2>
+        </div>
+
+        {/* Search bar — pill input, full-width mobile, max-w-xs desktop */}
+        <div className="relative w-full sm:w-72 sm:shrink-0">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-400"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Tìm doanh nghiệp..."
+            aria-label="Tìm doanh nghiệp"
+            className="w-full rounded-full border border-brand-300 bg-white py-2.5 pl-10 pr-10 text-sm text-brand-900 placeholder:text-brand-400 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+          />
+          {hasQuery && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Xoá tìm kiếm"
+              className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-brand-400 transition-colors hover:bg-brand-100 hover:text-brand-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Empty: không có DN nào trong danh bạ (server data rỗng) */}
+      {cards.length === 0 && (
+        <p className="py-10 text-center text-brand-500">
+          Chưa có doanh nghiệp nào trong danh bạ.
+        </p>
+      )}
+
+      {/* Empty: search miss */}
+      {cards.length > 0 && hasQuery && visibleCount === 0 && (
+        <div className="py-10 text-center">
+          <p className="text-brand-500">
+            Không tìm thấy doanh nghiệp nào khớp với{" "}
+            <span className="font-semibold text-brand-900">&ldquo;{query}&rdquo;</span>.
+          </p>
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="mt-3 text-sm font-semibold text-brand-700 underline hover:text-brand-900"
+          >
+            Xem tất cả doanh nghiệp
+          </button>
+        </div>
+      )}
+
+      {/* Grid — luôn render đầy đủ cards, ẩn cái không match qua `hidden` */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((c, i) => (
+          <DirectoryCard
+            key={c.id}
+            card={c}
+            isAdmin={isAdmin}
+            visitWebsiteLabel={visitWebsiteLabel}
+            index={i}
+            hidden={!matches.has(c.id)}
+          />
+        ))}
+      </div>
+
+      {/* Counter — chỉ hiện khi đang filter để thông báo còn lại bao nhiêu */}
+      {hasQuery && visibleCount > 0 && (
+        <p className="mt-6 text-center text-xs text-brand-500 tabular-nums">
+          Hiển thị <span className="font-semibold text-brand-700">{visibleCount}</span>{" "}
+          / {cards.length} doanh nghiệp
+        </p>
+      )}
+    </>
+  )
+}
