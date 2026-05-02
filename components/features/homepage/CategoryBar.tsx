@@ -3,11 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { locales } from "@/i18n/config"
 
+type SubItem = { labelKey: string; href: string }
 type NavItem =
   | { labelKey: string; href: string; children?: never }
-  | { labelKey: string; href: string; children: { labelKey: string; href: string }[] }
+  | { labelKey: string; href: string; children: SubItem[] }
 
 const CATEGORIES: NavItem[] = [
   { labelKey: "home", href: "/" },
@@ -70,6 +73,90 @@ export function CategoryBar({ loggedIn = false }: Props) {
   const pathname = stripLocale(usePathname() || "/")
   const t = useTranslations("navbar")
 
+  // Submenu open state — render dropdown qua portal vào document.body để
+  // escape overflow clipping của <ul> parent (overflow-x-auto + overflow-y-
+  // hidden bắt buộc do browser spec, dropdown absolute trong <li> sẽ bị
+  // clip khỏi viewport, đặc biệt mobile khi không có lg:overflow-visible).
+  const [openHref, setOpenHref] = useState<string | null>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number } | null>(null)
+  const triggerRefs = useRef<Record<string, HTMLLIElement | null>>({})
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Đánh dấu mounted để portal không SSR (createPortal ngoài body chỉ
+  // hợp lệ ở client; render gì đó SSR rồi swap qua portal sẽ flicker).
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Close dropdown khi chuyển trang
+  useEffect(() => {
+    setOpenHref(null)
+  }, [pathname])
+
+  const recomputePos = useCallback((href: string) => {
+    const trigger = triggerRefs.current[href]
+    if (!trigger) {
+      setDropdownPos(null)
+      return
+    }
+    const rect = trigger.getBoundingClientRect()
+    setDropdownPos({ left: rect.left, top: rect.bottom })
+  }, [])
+
+  // Khi openHref đổi, compute position của dropdown tương ứng
+  useLayoutEffect(() => {
+    if (openHref) recomputePos(openHref)
+    else setDropdownPos(null)
+  }, [openHref, recomputePos])
+
+  // Đóng khi click ngoài + recompute position khi scroll/resize
+  useEffect(() => {
+    if (!openHref) return
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (target.closest("[data-cb-trigger]") || target.closest("[data-cb-dropdown]")) return
+      setOpenHref(null)
+    }
+    const onScroll = () => setOpenHref(null)
+    const onResize = () => setOpenHref(null)
+    document.addEventListener("click", onDocClick)
+    window.addEventListener("scroll", onScroll, true)
+    window.addEventListener("resize", onResize)
+    return () => {
+      document.removeEventListener("click", onDocClick)
+      window.removeEventListener("scroll", onScroll, true)
+      window.removeEventListener("resize", onResize)
+    }
+  }, [openHref])
+
+  // Hover handlers — mở khi enter trigger HOẶC dropdown, schedule close
+  // 120ms khi leave để mouse có thể di chuyển từ trigger xuống dropdown
+  // (giữa có gap nhỏ vì dropdown nằm ngoài trigger bounds).
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }, [])
+  const scheduleClose = useCallback(() => {
+    cancelClose()
+    closeTimerRef.current = setTimeout(() => setOpenHref(null), 120)
+  }, [cancelClose])
+
+  const openMenu = (href: string) => {
+    cancelClose()
+    setOpenHref(href)
+  }
+
+  // Tìm item đang mở để render children trong portal
+  const openItem = openHref
+    ? (CATEGORIES.find((it) => it.href === openHref && "children" in it) as
+        | (NavItem & { children: SubItem[] })
+        | undefined)
+    : undefined
+
   return (
     <nav
       aria-label={t("categoriesLabel")}
@@ -94,79 +181,54 @@ export function CategoryBar({ loggedIn = false }: Props) {
             `pt-0.5 sm:pt-0` (Phase 3.7 round 4): mobile có 2px padding-top
             để badge Demo (-top-0.5) khớp ngay ul-top (không bị overflow-y-hidden
             của ul cắt mất). Desktop reset về 0 vì badge ở vùng trắng nav
-            (sm:pt-2) và ul:lg:overflow-visible đã không cắt. */}
+            (sm:pt-2) và ul:lg:overflow-visible đã không cắt.
+            R-mobile-fix: dropdown đã chuyển sang portal (renders vào body),
+            không còn phụ thuộc overflow của ul → mobile dropdown work. */}
         <ul className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] pt-0.5 sm:pt-0 lg:overflow-visible">
           {CATEGORIES.map((item) => {
             const active = isItemActive(item, pathname)
+            const hasChildren = "children" in item && !!item.children
+            const isOpen = openHref === item.href
             const triggerClass = [
               BASE_TRIGGER,
               active
                 ? "bg-brand-900 text-white"
                 : "text-white/95 hover:bg-brand-800",
-              // Giữ highlight trên parent khi dropdown đang mở (hover submenu).
-              "children" in item && item.children && !active
-                ? "group-hover:bg-brand-800 group-focus-within:bg-brand-800"
-                : "",
+              // Giữ highlight trên parent khi dropdown đang mở
+              hasChildren && !active && isOpen ? "bg-brand-800" : "",
             ]
               .filter(Boolean)
               .join(" ")
 
-            return "children" in item && item.children ? (
+            return hasChildren ? (
               <li
                 key={item.href}
-                className="group relative"
-                /* Auto-close submenu khi chuột rời khỏi vùng group:
-                   CSS dropdown trigger qua group-hover + group-focus-within.
-                   Khi user CLICK trên parent link, focus stay trên đó →
-                   focus-within giữ submenu mở dù mouse đã ra. Blur active
-                   element trong group khi mouseleave để focus-within tắt.
-                   Keyboard nav vẫn ok: Tab move focus ra ngoài group thì
-                   focus-within tự false (mouseleave không fire vì mouse
-                   không đi cùng), submenu vẫn close đúng lúc. */
-                onMouseLeave={(e) => {
-                  const focused = document.activeElement as HTMLElement | null
-                  if (focused && e.currentTarget.contains(focused)) {
-                    focused.blur()
-                  }
+                className="relative"
+                data-cb-trigger
+                ref={(el) => {
+                  triggerRefs.current[item.href] = el
                 }}
+                onMouseEnter={() => openMenu(item.href)}
+                onMouseLeave={scheduleClose}
               >
                 <Link
                   href={item.href}
                   className={triggerClass}
                   aria-haspopup="true"
+                  aria-expanded={isOpen}
                   aria-current={active ? "page" : undefined}
+                  onClick={(e) => {
+                    // First tap (touch hoặc mouse): mở dropdown thay vì navigate.
+                    // Tap lần 2 trên parent (khi đã open) → navigate bình thường.
+                    if (!isOpen) {
+                      e.preventDefault()
+                      openMenu(item.href)
+                    }
+                  }}
                 >
                   {t(item.labelKey)}
                   <Chevron />
                 </Link>
-                <ul
-                  className="
-                    invisible absolute left-0 top-full z-50 min-w-[220px]
-                    bg-brand-800 opacity-0 shadow-lg transition-opacity
-                    group-hover:visible group-hover:opacity-100
-                    group-focus-within:visible group-focus-within:opacity-100
-                  "
-                >
-                  {item.children.map((sub) => {
-                    const subActive = matchesPath(sub.href, pathname)
-                    return (
-                      <li key={sub.href}>
-                        <Link
-                          href={sub.href}
-                          className={[
-                            "block px-4 py-2.5 text-[13px] font-medium uppercase tracking-wide transition-colors",
-                            subActive
-                              ? "bg-brand-900 text-white"
-                              : "text-white/95 hover:bg-brand-900",
-                          ].join(" ")}
-                          aria-current={subActive ? "page" : undefined}
-                        >
-                          {t(sub.labelKey)}
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
               </li>
             ) : (
               <li key={item.href} className="relative">
@@ -212,6 +274,45 @@ export function CategoryBar({ loggedIn = false }: Props) {
         </ul>
       </div>
       </div>
+
+      {/* Portal dropdown — render vào document.body để không bị overflow
+          clipping của <ul> parent. Position: fixed với coords từ trigger's
+          getBoundingClientRect → khớp đúng vị trí trigger, không phụ thuộc
+          ancestor stacking context. */}
+      {mounted && openItem && dropdownPos &&
+        createPortal(
+          <ul
+            data-cb-dropdown
+            role="menu"
+            className="fixed z-50 min-w-[220px] bg-brand-800 shadow-lg"
+            style={{ left: dropdownPos.left, top: dropdownPos.top }}
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+          >
+            {openItem.children.map((sub) => {
+              const subActive = matchesPath(sub.href, pathname)
+              return (
+                <li key={sub.href} role="none">
+                  <Link
+                    href={sub.href}
+                    role="menuitem"
+                    onClick={() => setOpenHref(null)}
+                    className={[
+                      "block px-4 py-2.5 text-[13px] font-medium uppercase tracking-wide transition-colors",
+                      subActive
+                        ? "bg-brand-900 text-white"
+                        : "text-white/95 hover:bg-brand-900",
+                    ].join(" ")}
+                    aria-current={subActive ? "page" : undefined}
+                  >
+                    {t(sub.labelKey)}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>,
+          document.body,
+        )}
     </nav>
   )
 }
