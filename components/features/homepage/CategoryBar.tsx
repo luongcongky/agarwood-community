@@ -80,6 +80,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
   const [openHref, setOpenHref] = useState<string | null>(null)
   const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number } | null>(null)
   const triggerRefs = useRef<Record<string, HTMLLIElement | null>>({})
+  const ulRef = useRef<HTMLUListElement | null>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Đánh dấu mounted để portal không SSR (createPortal ngoài body chỉ
   // hợp lệ ở client; render gì đó SSR rồi swap qua portal sẽ flicker).
@@ -92,6 +93,22 @@ export function CategoryBar({ loggedIn = false }: Props) {
   // Close dropdown khi chuyển trang
   useEffect(() => {
     setOpenHref(null)
+  }, [pathname])
+
+  // Mobile: scroll item active vào giữa scroll-x container để user thấy
+  // được vị trí của họ trong dải menu. Desktop có lg:overflow-visible nên
+  // scrollLeft no-op (clientWidth = scrollWidth → delta = 0). Dùng
+  // getBoundingClientRect thay vì offsetLeft vì <ul> không phải offsetParent
+  // (không có position). useLayoutEffect → set trước paint, không flash.
+  useLayoutEffect(() => {
+    const ul = ulRef.current
+    if (!ul) return
+    const active = ul.querySelector('[aria-current="page"]') as HTMLElement | null
+    if (!active) return
+    const ulBox = ul.getBoundingClientRect()
+    const aBox = active.getBoundingClientRect()
+    const delta = aBox.left + aBox.width / 2 - (ulBox.left + ulBox.width / 2)
+    ul.scrollLeft = Math.max(0, ul.scrollLeft + delta)
   }, [pathname])
 
   const recomputePos = useCallback((href: string) => {
@@ -184,7 +201,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
             (sm:pt-2) và ul:lg:overflow-visible đã không cắt.
             R-mobile-fix: dropdown đã chuyển sang portal (renders vào body),
             không còn phụ thuộc overflow của ul → mobile dropdown work. */}
-        <ul className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] pt-0.5 sm:pt-0 lg:overflow-visible">
+        <ul ref={ulRef} className="category-scroll flex overflow-x-auto overflow-y-hidden whitespace-nowrap [touch-action:pan-x] pt-0.5 sm:pt-0 lg:overflow-visible">
           {CATEGORIES.map((item) => {
             const active = isItemActive(item, pathname)
             const hasChildren = "children" in item && !!item.children
