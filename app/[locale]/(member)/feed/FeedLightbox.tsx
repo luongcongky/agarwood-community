@@ -79,7 +79,7 @@ export function FeedLightbox({ images, startIndex, onClose }: Props) {
           top: "max(1rem, env(safe-area-inset-top))",
           right: "max(1rem, env(safe-area-inset-right))",
         }}
-        className="absolute w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 text-white text-2xl flex items-center justify-center transition-colors"
+        className="absolute z-10 w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 text-white text-2xl flex items-center justify-center transition-colors"
         aria-label="Đóng"
       >
         ✕
@@ -88,7 +88,7 @@ export function FeedLightbox({ images, startIndex, onClose }: Props) {
       {multi && (
         <div
           style={{ top: "max(1rem, env(safe-area-inset-top))" }}
-          className="absolute left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1"
+          className="absolute z-10 left-1/2 -translate-x-1/2 text-white/80 text-sm font-medium tabular-nums bg-black/40 rounded-full px-3 py-1"
         >
           {index + 1} / {images.length}
         </div>
@@ -98,7 +98,7 @@ export function FeedLightbox({ images, startIndex, onClose }: Props) {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); prev() }}
-          className="absolute left-4 sm:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+          className="absolute z-10 left-4 sm:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
           aria-label="Ảnh trước"
         >
           ‹
@@ -122,7 +122,7 @@ export function FeedLightbox({ images, startIndex, onClose }: Props) {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); next() }}
-          className="absolute right-4 sm:right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
+          className="absolute z-10 right-4 sm:right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors"
           aria-label="Ảnh sau"
         >
           ›
