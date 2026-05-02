@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import DOMPurify from "isomorphic-dompurify"
+import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { cn } from "@/lib/utils"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { localize } from "@/i18n/localize"
@@ -92,14 +92,17 @@ export function CompanyTabs({
 
   return (
     <div className="mt-6">
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-brand-200">
+      {/* Tab bar — mobile: scroll-x thay vì wrap. Label như "Thư viện ảnh
+          (5)" dễ rớt 2 dòng trong button khi viewport hẹp. whitespace-nowrap
+          giữ label 1 dòng; overflow-x-auto cho phép quẹt ngang khi tổng
+          chiều rộng tabs vượt container. */}
+      <div className="flex gap-1 overflow-x-auto border-b border-brand-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
+              "shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
               activeTab === tab.id
                 ? "border-brand-600 text-brand-800"
                 : "border-transparent text-brand-500 hover:text-brand-700 hover:border-brand-300",
@@ -115,7 +118,7 @@ export function CompanyTabs({
         {activeTab === "intro" && (
           <div className="prose max-w-none text-brand-800 leading-relaxed">
             {description ? (
-              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description) }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(description) }} />
             ) : (
               <p className="text-brand-400 italic">{t("noDescription")}</p>
             )}
