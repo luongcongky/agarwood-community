@@ -147,15 +147,9 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
           <X size={20} />
         </button>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "240px 1fr",
-            gap: "1.5rem",
-            padding: "2rem",
-          }}
-        >
+        <div className="leader-modal-grid">
           <div
+            className="leader-modal-photo"
             style={{
               position: "relative",
               width: "100%",

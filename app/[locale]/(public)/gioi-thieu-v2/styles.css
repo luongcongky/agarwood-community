@@ -1413,3 +1413,24 @@
     height: 100%;
     object-fit: cover;
   }
+
+  /* Leader detail modal — grid 240px photo + 1fr info trên desktop.
+     Mobile (≤600px): stack vertical, photo trên (centered, capped 180px)
+     để info column rộng full width thay vì bị chèn ép sang phải. */
+  .gtv2-page .leader-modal-grid {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+  @media (max-width: 600px) {
+    .gtv2-page .leader-modal-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+    .gtv2-page .leader-modal-photo {
+      max-width: 180px;
+      margin: 0 auto;
+    }
+  }
