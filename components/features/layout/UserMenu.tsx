@@ -67,7 +67,7 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
 
   // VIP chưa kích hoạt / hết hạn → dropdown chỉ có "Gia hạn" (bỏ qua INFINITE/ADMIN)
   const isInactiveVip = role === "VIP" && !membershipActive
-  // INFINITE thấy cả "Trang quản lý" + "Trang quản trị admin"
+  // INFINITE thấy cả "Quản lý cá nhân" + "Quản lý admin"
   const isInfinite = role === "INFINITE"
   // ADMIN chuyên dụng
   const isPureAdmin = role === "ADMIN"
@@ -146,7 +146,7 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
                 className="font-semibold text-brand-700 focus:text-brand-800"
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" />
-                Trang quản lý
+                Quản lý cá nhân
               </DropdownMenuItem>
             )}
             {(isInfinite || isPureAdmin) && (
@@ -155,7 +155,7 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
                 className="font-semibold text-brand-700 focus:text-brand-800"
               >
                 <ShieldCheck className="mr-2 h-4 w-4" />
-                {isInfinite ? "Trang quản trị admin" : "Vào trang quản trị"}
+                Quản lý admin
               </DropdownMenuItem>
             )}
           </>
@@ -192,7 +192,7 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
                 className="font-semibold text-brand-700 focus:text-brand-800"
               >
                 <ShieldCheck className="mr-2 h-4 w-4" />
-                Trang quản trị admin
+                Quản lý admin
               </DropdownMenuItem>
             )}
             {isInfinite && mode === "admin" && (
@@ -201,7 +201,7 @@ export function UserMenu({ name, email, image, role, mode = "public", membership
                 className="font-semibold text-brand-700 focus:text-brand-800"
               >
                 <LayoutDashboard className="mr-2 h-4 w-4" />
-                Trang quản lý
+                Quản lý cá nhân
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
