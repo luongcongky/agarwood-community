@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { cloudinaryResize } from "@/lib/cloudinary"
 import {
   calcCertFee,
   CERT_FEE_ONLINE_MIN,
@@ -109,6 +111,12 @@ export default function NopDonPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   const [selectedProductId, setSelectedProductId] = useState("")
+  // Search + filter + pagination để UI thân thiện khi user có nhiều sản phẩm
+  // (1000+). Tất cả filter chạy client-side vì JSON từ /api/my-products đã
+  // load 1 lần ở đầu — search 1k items qua includes() đủ instant.
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "renewal" | "review">("all")
+  const [visibleCount, setVisibleCount] = useState(20)
 
   // Pre-select product khi đang gia hạn
   useEffect(() => {
@@ -169,6 +177,49 @@ export default function NopDonPage() {
   }, [])
 
   const selectedProduct = products.find((p) => p.id === selectedProductId)
+
+  // Đếm số sản phẩm theo từng status group để hiển thị badge trên filter chip
+  const statusCounts = useMemo(() => {
+    return products.reduce(
+      (acc, p) => {
+        if (BLOCKING_CERT_STATUSES.includes(p.certStatus)) acc.review++
+        else if (p.certStatus === "APPROVED") acc.renewal++
+        else acc.available++
+        return acc
+      },
+      { available: 0, renewal: 0, review: 0 },
+    )
+  }, [products])
+
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    return products
+      .filter((p) => {
+        if (q && !p.name.toLowerCase().includes(q)) return false
+        if (statusFilter === "all") return true
+        const blocked = BLOCKING_CERT_STATUSES.includes(p.certStatus)
+        const approved = p.certStatus === "APPROVED"
+        if (statusFilter === "review") return blocked
+        if (statusFilter === "renewal") return approved
+        if (statusFilter === "available") return !blocked && !approved
+        return true
+      })
+      .sort((a, b) => {
+        // Selectable (available + renewal) trước, blocked cuối cho user khỏi
+        // mất công lướt qua sản phẩm không thể chọn.
+        const aBlocked = BLOCKING_CERT_STATUSES.includes(a.certStatus) ? 1 : 0
+        const bBlocked = BLOCKING_CERT_STATUSES.includes(b.certStatus) ? 1 : 0
+        if (aBlocked !== bBlocked) return aBlocked - bBlocked
+        return a.name.localeCompare(b.name, "vi")
+      })
+  }, [products, searchQuery, statusFilter])
+
+  const visibleProducts = filteredProducts.slice(0, visibleCount)
+
+  // Reset pagination khi filter đổi để user thấy kết quả từ đầu
+  useEffect(() => {
+    setVisibleCount(20)
+  }, [searchQuery, statusFilter])
 
   function handleStep1Next() {
     if (!selectedProductId) return
@@ -277,63 +328,193 @@ export default function NopDonPage() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
-              {products.map((product) => {
-                const isBlocked = BLOCKING_CERT_STATUSES.includes(product.certStatus)
-                const isApproved = product.certStatus === "APPROVED"
-                const expiredAt = product.certExpiredAt ? new Date(product.certExpiredAt) : null
-                const daysLeft = expiredAt ? Math.floor((expiredAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
-                const isRenewal = isApproved && daysLeft !== null
-                return (
-                  <label
-                    key={product.id}
-                    className={cn(
-                      "flex items-start gap-3 p-4 rounded-xl border-2 transition-all",
-                      isBlocked
-                        ? "border-brand-200 bg-brand-50 opacity-60 cursor-not-allowed"
-                        : selectedProductId === product.id
-                        ? "border-brand-600 bg-brand-50 cursor-pointer"
-                        : "border-brand-200 bg-white hover:border-brand-400 cursor-pointer"
+            <>
+              {/* Sticky banner — giữ "Đã chọn" hiển thị cả khi filter đẩy
+                  item ra khỏi list để user không bị mất context. */}
+              {selectedProduct && (
+                <div className="rounded-lg bg-brand-50 border border-brand-300 p-3 flex items-center gap-3">
+                  <div className="relative w-10 h-10 rounded-md bg-brand-100 overflow-hidden shrink-0">
+                    {selectedProduct.imageUrls[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cloudinaryResize(selectedProduct.imageUrls[0], 100)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-brand-300 text-base font-bold">
+                        {selectedProduct.name[0]?.toUpperCase() ?? "?"}
+                      </div>
                     )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-500">Đã chọn</p>
+                    <p className="font-semibold text-brand-900 text-sm truncate">{selectedProduct.name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductId("")}
+                    className="text-xs text-brand-600 hover:text-brand-900 underline shrink-0"
                   >
+                    Bỏ chọn
+                  </button>
+                </div>
+              )}
+
+              {/* Search + filter chips — chỉ hiện khi >5 SP để UI gọn cho
+                  list ngắn (đa số use case ban đầu). */}
+              {products.length > 5 && (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-400 pointer-events-none" />
                     <input
-                      type="radio"
-                      name="product"
-                      value={product.id}
-                      disabled={isBlocked}
-                      checked={selectedProductId === product.id}
-                      onChange={() => setSelectedProductId(product.id)}
-                      className="mt-1 accent-brand-600"
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Tìm sản phẩm theo tên..."
+                      className="w-full rounded-lg border border-brand-300 bg-white pl-9 pr-9 py-2 text-sm text-brand-900 placeholder:text-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
                     />
-                    <div className="flex-1">
-                      <p className="font-semibold text-brand-900 text-sm">
-                        {product.name}
-                      </p>
-                      {isBlocked ? (
-                        <p className="text-sm text-brand-500 mt-0.5">
-                          Đang trong quá trình xét duyệt
-                        </p>
-                      ) : isRenewal ? (
-                        <p className={cn(
-                          "text-xs mt-0.5",
-                          daysLeft! <= 0 ? "text-red-600 font-semibold" : daysLeft! <= 60 ? "text-amber-700 font-semibold" : "text-brand-500",
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-brand-400 hover:text-brand-700"
+                        aria-label="Xoá tìm kiếm"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {[
+                      { key: "all" as const, label: "Tất cả", count: products.length },
+                      { key: "available" as const, label: "Có thể chứng nhận", count: statusCounts.available },
+                      { key: "renewal" as const, label: "Cần gia hạn", count: statusCounts.renewal },
+                      { key: "review" as const, label: "Đang xét duyệt", count: statusCounts.review },
+                    ].map(({ key, label, count }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setStatusFilter(key)}
+                        className={cn(
+                          "shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-colors whitespace-nowrap",
+                          statusFilter === key
+                            ? "bg-brand-700 text-white border-brand-700"
+                            : "bg-white text-brand-700 border-brand-200 hover:bg-brand-50",
+                        )}
+                      >
+                        {label}
+                        <span className={cn(
+                          "rounded-full px-1.5 py-px text-[10px] font-semibold tabular-nums",
+                          statusFilter === key ? "bg-white/20 text-white" : "bg-brand-100 text-brand-600",
                         )}>
-                          {daysLeft! <= 0
-                            ? `Đã hết hạn (gia hạn)`
-                            : daysLeft! <= 60
-                              ? `Còn ${daysLeft} ngày — nên gia hạn`
-                              : `Hiệu lực đến ${expiredAt!.toLocaleDateString("vi-VN")}`}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-brand-500 mt-0.5">
-                          Trạng thái: {product.certStatus}
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                )
-              })}
-            </div>
+                          {count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Product list — pagination chunk 20 row để DOM nhẹ kể cả 1000 SP */}
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-8 text-sm text-brand-500">
+                  Không tìm thấy sản phẩm phù hợp với bộ lọc.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {visibleProducts.map((product) => {
+                    const isBlocked = BLOCKING_CERT_STATUSES.includes(product.certStatus)
+                    const isApproved = product.certStatus === "APPROVED"
+                    const expiredAt = product.certExpiredAt ? new Date(product.certExpiredAt) : null
+                    const daysLeft = expiredAt ? Math.floor((expiredAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null
+                    const isRenewal = isApproved && daysLeft !== null
+                    const thumb = product.imageUrls[0]
+                    return (
+                      <label
+                        key={product.id}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-xl border-2 transition-all",
+                          isBlocked
+                            ? "border-brand-200 bg-brand-50 opacity-60 cursor-not-allowed"
+                            : selectedProductId === product.id
+                            ? "border-brand-600 bg-brand-50 cursor-pointer"
+                            : "border-brand-200 bg-white hover:border-brand-400 cursor-pointer"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="product"
+                          value={product.id}
+                          disabled={isBlocked}
+                          checked={selectedProductId === product.id}
+                          onChange={() => setSelectedProductId(product.id)}
+                          className="accent-brand-600 shrink-0"
+                        />
+                        <div className="relative w-12 h-12 rounded-md bg-brand-100 overflow-hidden shrink-0">
+                          {thumb ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={cloudinaryResize(thumb, 120)}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-brand-300 text-lg font-bold">
+                              {product.name[0]?.toUpperCase() ?? "?"}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-brand-900 text-sm truncate">
+                            {product.name}
+                          </p>
+                          {isBlocked ? (
+                            <p className="text-xs text-brand-500 mt-0.5">
+                              Đang trong quá trình xét duyệt
+                            </p>
+                          ) : isRenewal ? (
+                            <p className={cn(
+                              "text-xs mt-0.5",
+                              daysLeft! <= 0 ? "text-red-600 font-semibold" : daysLeft! <= 60 ? "text-amber-700 font-semibold" : "text-brand-500",
+                            )}>
+                              {daysLeft! <= 0
+                                ? `Đã hết hạn (gia hạn)`
+                                : daysLeft! <= 60
+                                  ? `Còn ${daysLeft} ngày — nên gia hạn`
+                                  : `Hiệu lực đến ${expiredAt!.toLocaleDateString("vi-VN")}`}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-brand-500 mt-0.5">
+                              Trạng thái: {product.certStatus}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {filteredProducts.length > 0 && (
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <p className="text-xs text-brand-500 tabular-nums">
+                    Hiển thị {Math.min(visibleCount, filteredProducts.length)} / {filteredProducts.length}
+                    {searchQuery || statusFilter !== "all" ? " (đã lọc)" : ""}
+                  </p>
+                  {filteredProducts.length > visibleCount && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((c) => c + 20)}
+                      className="text-xs font-medium text-brand-700 hover:text-brand-900 underline"
+                    >
+                      Xem thêm ({filteredProducts.length - visibleCount})
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex justify-end pt-2">
