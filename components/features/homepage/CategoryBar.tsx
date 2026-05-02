@@ -105,7 +105,7 @@ export function CategoryBar({ loggedIn = false }: Props) {
                 : "text-white/95 hover:bg-brand-800",
               // Giữ highlight trên parent khi dropdown đang mở (hover submenu).
               "children" in item && item.children && !active
-                ? "lg:group-hover:bg-brand-800 lg:group-focus-within:bg-brand-800"
+                ? "group-hover:bg-brand-800 group-focus-within:bg-brand-800"
                 : "",
             ]
               .filter(Boolean)
@@ -143,8 +143,8 @@ export function CategoryBar({ loggedIn = false }: Props) {
                   className="
                     invisible absolute left-0 top-full z-50 min-w-[220px]
                     bg-brand-800 opacity-0 shadow-lg transition-opacity
-                    lg:group-hover:visible lg:group-hover:opacity-100
-                    lg:group-focus-within:visible lg:group-focus-within:opacity-100
+                    group-hover:visible group-hover:opacity-100
+                    group-focus-within:visible group-focus-within:opacity-100
                   "
                 >
                   {item.children.map((sub) => {
