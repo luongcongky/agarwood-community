@@ -763,6 +763,20 @@
     margin-bottom: 4rem;
     overflow-x: auto;
   }
+  /* Mobile: tabs khi tổng width > viewport, justify-content: center sẽ
+     đẩy tab đầu RA NGOÀI bên trái (vì content overflow → centered
+     position bắt đầu từ tọa độ âm). Switch sang flex-start để tab đầu
+     luôn anchor mép trái, user vuốt ngang thấy các tab khác. */
+  @media (max-width: 880px) {
+    .gtv2-page .tabs {
+      justify-content: flex-start;
+      padding-left: 0.25rem;
+      padding-right: 0.25rem;
+    }
+    /* Hide scrollbar visually nhưng vẫn cho phép scroll, để look gọn */
+    .gtv2-page .tabs::-webkit-scrollbar { display: none; }
+    .gtv2-page .tabs { scrollbar-width: none; }
+  }
   .gtv2-page .tab {
     background: transparent;
     border: 0;

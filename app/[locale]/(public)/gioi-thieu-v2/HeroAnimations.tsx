@@ -33,6 +33,12 @@ export function HeroAnimations() {
     })
 
     // ── Reveal-on-scroll IO ─────────────────────────────────────────────────
+    // threshold: 0 (fire khi target có ANY pixel intersect viewport) thay
+    // vì 0.12. Lý do: target lớn hơn viewport (vd. members-grid mobile
+    // ~7000px tall vs viewport 800px) thì max intersectionRatio chỉ đạt
+    // ~10% < 12% threshold → IO không bao giờ fire → element kẹt opacity:0.
+    // rootMargin -50px bottom giữ trigger sớm vừa phải (top of target tới
+    // 50px trên đáy viewport mới fire), đảm bảo fade-in mượt.
     const revealIO = new IntersectionObserver(
       (entries) =>
         entries.forEach((e) => {
@@ -41,7 +47,7 @@ export function HeroAnimations() {
             revealIO.unobserve(e.target)
           }
         }),
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0, rootMargin: "0px 0px -50px 0px" },
     )
     document.querySelectorAll(".gtv2-page .reveal").forEach((el) => revealIO.observe(el))
 
