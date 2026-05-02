@@ -431,11 +431,25 @@ function PostCard({
   const displayImages = post.imageUrls.length > 0
     ? (post.imageUrls as string[])
     : extractImageUrlsFromHtml(post.content)
-  // When images are displayed as separate thumbnails, strip them from
-  // the prose block so they don't render twice.
-  const contentForProse = displayImages.length > 0
-    ? stripImgTagsFromHtml(post.content)
-    : post.content
+  // Collapse → Facebook style (text intro trên, grid ảnh phía dưới).
+  // Expand → giữ nguyên format bài post: nếu content có <img> đan xen với
+  // text (post từ PostEditor rich text), render nguyên HTML để text+ảnh
+  // hiện đúng thứ tự tác giả viết. Post không có <img> trong content
+  // (composer upload tách rời) → expand vẫn dùng layout tách (content chỉ
+  // có text, không có gì để đan xen).
+  const contentHasInlineImages = /<img\b/i.test(post.content)
+  const useInterleavedLayout = expanded && contentHasInlineImages
+  const contentForProse = useInterleavedLayout
+    ? post.content
+    : displayImages.length > 0
+      ? stripImgTagsFromHtml(post.content)
+      : post.content
+  // Lightbox indexing phải khớp DOM order của <img> đang hiển thị. Khi
+  // interleaved, dùng extract từ content (cùng order với render); khi tách
+  // layout, dùng displayImages (chính là grid order).
+  const lightboxImages = useInterleavedLayout
+    ? extractImageUrlsFromHtml(post.content)
+    : displayImages
   const userHasReacted = post.reactions.some((r) => r.type === "LIKE")
   const isAuthor = currentUserId === post.authorId
   const isAdmin = currentUserRole === "ADMIN"
@@ -773,10 +787,21 @@ function PostCard({
         <div className="mb-3" suppressHydrationWarning>
           <div
             onClick={(e) => {
+              const target = e.target as HTMLElement
+              // Click inline <img> ở interleaved view → mở lightbox tại
+              // đúng index của ảnh trong DOM order. Không trigger toggle
+              // collapse trong case này.
+              if (useInterleavedLayout && target.tagName === "IMG") {
+                e.preventDefault()
+                e.stopPropagation()
+                const imgs = (e.currentTarget as HTMLElement).querySelectorAll("img")
+                const idx = Array.from(imgs).indexOf(target as HTMLImageElement)
+                if (idx >= 0) setLightboxIndex(idx)
+                return
+              }
               if (!needsTruncation) return
               // Bấm vào link/button bên trong prose phải hoạt động bình thường,
               // không trigger toggle (closest fail-safe).
-              const target = e.target as HTMLElement
               if (target.closest("a, button")) return
               setExpanded((prev) => !prev)
             }}
@@ -784,6 +809,7 @@ function PostCard({
               "prose prose-sm max-w-none text-sm text-brand-800",
               !expanded && needsTruncation && "line-clamp-2",
               needsTruncation && "cursor-pointer",
+              useInterleavedLayout && "[&_img]:cursor-zoom-in",
             )}
             /* Content từ DB đã được sanitize tại save-time (xem
                /api/posts POST/PATCH dùng DOMPurify.sanitize). Trust content
@@ -805,8 +831,10 @@ function PostCard({
         </div>
       )}
 
-      {/* IMAGES SAU — Facebook-style layout 1/2/3/4+ ảnh full container width */}
-      {!isGuestBlurred && displayImages.length > 0 && (
+      {/* IMAGES SAU — Facebook-style grid khi collapse (hoặc khi expand bài
+          không có inline imgs). Khi expand+interleaved, ảnh đã render
+          inline trong prose ở trên, không cần grid riêng. */}
+      {!isGuestBlurred && !useInterleavedLayout && displayImages.length > 0 && (
         <div className="mb-3">
           <PostImageGrid
             images={displayImages}
@@ -817,7 +845,7 @@ function PostCard({
 
       {lightboxIndex !== null && (
         <FeedLightbox
-          images={displayImages}
+          images={lightboxImages}
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
