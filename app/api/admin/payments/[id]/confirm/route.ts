@@ -3,11 +3,20 @@ import { auth } from "@/lib/auth"
 import { canAdminWrite } from "@/lib/roles"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
+import { PAYMENT_TYPE_TO_CATEGORY } from "@/lib/ledger"
+import type { PaymentType } from "@prisma/client"
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
 
+const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
+  MEMBERSHIP_FEE: "Hội phí thường niên",
+  CERTIFICATION_FEE: "Phí chứng nhận",
+  BANNER_FEE: "Phí banner quảng cáo",
+  MEDIA_SERVICE: "Phí dịch vụ truyền thông",
+}
+
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
@@ -16,6 +25,12 @@ export async function POST(
   }
 
   const { id } = await params
+
+  // Body có thể rỗng (compat với client cũ) — default ghi vào sổ quỹ.
+  const body = await req
+    .json()
+    .catch(() => ({}) as { recordToLedger?: boolean })
+  const recordToLedger = body.recordToLedger !== false
 
   const payment = await prisma.payment.findUnique({
     where: { id },
@@ -26,6 +41,7 @@ export async function POST(
       amount: true,
       status: true,
       description: true,
+      payosOrderCode: true,
       membershipId: true,
       certificationId: true,
       bannerId: true,
@@ -224,6 +240,29 @@ export async function POST(
   } else {
     // Generic payment (MEDIA_SERVICE etc.)
     await prisma.payment.update({ where: { id }, data: { status: "SUCCESS" } })
+  }
+
+  // Ghi vào sổ quỹ (sau cùng, ngoài transaction nghiệp vụ chính). Lý do tách:
+  // ledger insert chỉ là book-keeping, không nên fail flow xác nhận CK nếu
+  // có vấn đề. Trùng (relatedPaymentId @unique) → catch silently — đã có sẵn.
+  if (recordToLedger) {
+    try {
+      await prisma.ledgerTransaction.create({
+        data: {
+          type: "INCOME",
+          categoryId: PAYMENT_TYPE_TO_CATEGORY[payment.type],
+          amount: BigInt(payment.amount),
+          transactionDate: new Date(),
+          paymentMethod: "BANK",
+          referenceNo: payment.payosOrderCode || payment.description || null,
+          description: `${PAYMENT_TYPE_LABEL[payment.type]} - ${payment.user.name ?? payment.user.email}`,
+          relatedPaymentId: payment.id,
+          recordedById: session.user.id,
+        },
+      })
+    } catch (err) {
+      console.error("Failed to create ledger entry for payment", payment.id, err)
+    }
   }
 
   return NextResponse.json({ success: true })

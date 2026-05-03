@@ -32,7 +32,7 @@ export function MediaEmbedModal({ onConfirm, onCancel }: MediaEmbedModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
       <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
         {/* Close button góc phải — đóng nhanh không cần kéo chuột xuống nút Hủy. */}
         <button

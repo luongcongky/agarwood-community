@@ -16,8 +16,9 @@ import {
   COUNCIL_SIZE,
 } from "@/lib/certification-council-constants"
 import { ProductFilters } from "./ProductFilters"
-import { CertProductCard, type CertProductCardData } from "./CertProductCard"
+import { CertProductCard } from "./CertProductCard"
 import { ProductFeatureToggleBtn } from "./ProductFeatureToggleBtn"
+import { CertifiedSeal } from "@/components/ui/CertifiedSeal"
 
 export const revalidate = 3600
 
@@ -103,10 +104,21 @@ const getCertProductsFilterMeta = unstable_cache(
         where: { certStatus: "APPROVED", isPublished: true },
       }),
     ])
+    const oldest = oldestApproved._min.certApprovedAt
+    const monthsActive = oldest
+      ? Math.max(
+          1,
+          Math.floor(
+            (Date.now() - new Date(oldest).getTime()) /
+              (1000 * 60 * 60 * 24 * 30),
+          ),
+        )
+      : 1
     return {
       totalProducts,
       totalCompanies,
-      oldestApproved: oldestApproved._min.certApprovedAt,
+      oldestApproved: oldest,
+      monthsActive,
     }
   },
   ["cert-products_filter_meta"],
@@ -215,23 +227,12 @@ export default async function CertifiedProductsPage({
     getCertProductsFilterMeta(),
   ])
 
-  const { totalProducts, totalCompanies, oldestApproved } = filterMeta
+  const { totalProducts, totalCompanies, monthsActive } = filterMeta
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const lastUpdated = new Date().toLocaleDateString("vi-VN", {
     day: "2-digit", month: "2-digit", year: "numeric",
   })
-
-  // Stats hero — số tháng hoạt động kể từ chứng nhận đầu tiên
-  const monthsActive = oldestApproved
-    ? Math.max(
-        1,
-        Math.floor(
-          (Date.now() - new Date(oldestApproved).getTime()) /
-            (1000 * 60 * 60 * 24 * 30),
-        ),
-      )
-    : 1
 
   // Build URLSearchParams cho pagination links (preserve search/sort/view)
   const currentParams = new URLSearchParams()
@@ -423,7 +424,7 @@ export default async function CertifiedProductsPage({
       <section className="relative overflow-hidden bg-brand-900 text-white">
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-40 -left-20 h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,var(--color-emerald-500)_0%,transparent_60%)]/15 blur-3xl"
+          className="pointer-events-none absolute -bottom-40 -left-20 h-112 w-md rounded-full bg-[radial-gradient(circle,var(--color-emerald-500)_0%,transparent_60%)]/15 blur-3xl"
         />
         <div
           aria-hidden
@@ -618,6 +619,7 @@ export default async function CertifiedProductsPage({
                 {hasActiveFilter && (
                   <Link
                     href="/san-pham-chung-nhan"
+                    scroll={false}
                     className="ml-3 text-xs text-emerald-700 underline hover:text-emerald-800"
                   >
                     Xoá bộ lọc
@@ -719,6 +721,7 @@ export default async function CertifiedProductsPage({
                 {page > 1 && (
                   <Link
                     href={buildUrl({ page: String(page - 1) }, currentParams)}
+                    scroll={false}
                     className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-emerald-500 hover:text-emerald-700"
                   >
                     ← Trước
@@ -732,6 +735,7 @@ export default async function CertifiedProductsPage({
                     <Link
                       key={p}
                       href={buildUrl({ page: String(p) }, currentParams)}
+                      scroll={false}
                       className={cn(
                         "flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors",
                         p === page
@@ -747,6 +751,7 @@ export default async function CertifiedProductsPage({
                 {page < totalPages && (
                   <Link
                     href={buildUrl({ page: String(page + 1) }, currentParams)}
+                    scroll={false}
                     className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-emerald-500 hover:text-emerald-700"
                   >
                     Tiếp →
@@ -904,24 +909,7 @@ function CertSealIcon({ className }: { className?: string }) {
   )
 }
 
-function CertSealStamp({ size = 64, delay = 600 }: { size?: number; delay?: number }) {
-  return (
-    <div
-      className="cp-stamp pointer-events-none flex shrink-0 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-emerald-700 text-white shadow-xl ring-[3px] ring-emerald-200"
-      style={{
-        width: size,
-        height: size,
-        "--d": `${delay}ms`,
-      } as React.CSSProperties}
-      aria-label="Chứng nhận"
-    >
-      <div className="text-center leading-none">
-        <div className="text-base">★</div>
-        <div className="text-[7px] font-extrabold uppercase tracking-wider">Chứng nhận</div>
-      </div>
-    </div>
-  )
-}
+
 
 function FeaturedProductCard({
   product,
@@ -961,8 +949,8 @@ function FeaturedProductCard({
         ) : (
           <AgarwoodPlaceholder className="h-full w-full" size="md" shape="square" tone="dark" />
         )}
-        <div className="absolute right-3 top-3">
-          <CertSealStamp size={56} delay={600 + index * 120} />
+        <div className="absolute right-3 top-3 z-20">
+          <CertifiedSeal size={56} delay={600 + index * 120} />
         </div>
         {/* Admin-only ★ tiêu biểu toggle — góc trái-trên, z-20 nhận click trước Link overlay */}
         {isAdmin && (

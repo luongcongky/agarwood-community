@@ -301,6 +301,7 @@ model User {
   promotionRequestsReviewed    PostPromotionRequest[]  @relation("PromotionReviewer")
   committeeMemberships         CommitteeMembership[]   @relation("CommitteeMember")
   committeeAssignmentsMade     CommitteeMembership[]   @relation("CommitteeAssignedBy")
+  ledgerTransactionsRecorded   LedgerTransaction[]     @relation("LedgerTransactionRecorder")
 
   @@index([role])
   @@index([accountType])
@@ -397,11 +398,13 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id])
-  membership    Membership?    @relation(fields: [membershipId], references: [id])
-  certification Certification? @relation(fields: [certificationId], references: [id])
-  mediaOrder    MediaOrder?    @relation(fields: [mediaOrderId], references: [id])
-  banner        Banner?        @relation(fields: [bannerId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  membership        Membership?        @relation(fields: [membershipId], references: [id])
+  certification     Certification?     @relation(fields: [certificationId], references: [id])
+  mediaOrder        MediaOrder?        @relation(fields: [mediaOrderId], references: [id])
+  banner            Banner?            @relation(fields: [bannerId], references: [id])
+  // Sổ quỹ — auto-tạo khi admin xác nhận CK; 1-1 qua relatedPaymentId @unique.
+  ledgerTransaction LedgerTransaction?
 
   @@index([userId])
   @@index([type])
@@ -738,16 +741,16 @@ model CertificationReview {
 // ============================================================
 
 model Post {
-  id        String     @id @default(cuid())
-  authorId  String
-  title     String?
-  content   String     @db.Text
-  imageUrls String[] // ảnh đính kèm (Cloudinary)
+  id            String     @id @default(cuid())
+  authorId      String
+  title         String?
+  content       String     @db.Text
+  imageUrls     String[] // ảnh đính kèm (Cloudinary)
   // Phase 3.7 round 4 (2026-04): thumbnail 16:9 hiển thị trên homepage
   // section "Tin DN/SP mới nhất". Fallback nếu null: imageUrls[0] →
   // extract first image trong content → AgarwoodPlaceholder.
   coverImageUrl String?
-  status    PostStatus @default(PENDING) // mới: mặc định chờ admin duyệt. Admin tạo thì code override sang PUBLISHED.
+  status        PostStatus @default(PENDING) // mới: mặc định chờ admin duyệt. Admin tạo thì code override sang PUBLISHED.
 
   // Moderation — lý do admin reject khi duyệt (khác với lockReason của
   // auto-lock từ report). Hiển thị cho owner ở trang bài viết để biết
@@ -1008,22 +1011,22 @@ model Report {
 // ============================================================
 
 model News {
-  id            String       @id @default(cuid())
-  title         String
-  title_en      String?
-  title_zh      String?
-  title_ar      String?
-  slug          String       @unique
-  excerpt       String?
-  excerpt_en    String?
-  excerpt_zh    String?
-  excerpt_ar    String?
-  content       String       @db.Text
-  content_en    String?      @db.Text
-  content_zh    String?      @db.Text
-  content_ar    String?      @db.Text
-  coverImageUrl String?
-  category      NewsCategory @default(GENERAL)
+  id                  String         @id @default(cuid())
+  title               String
+  title_en            String?
+  title_zh            String?
+  title_ar            String?
+  slug                String         @unique
+  excerpt             String?
+  excerpt_en          String?
+  excerpt_zh          String?
+  excerpt_ar          String?
+  content             String         @db.Text
+  content_en          String?        @db.Text
+  content_zh          String?        @db.Text
+  content_ar          String?        @db.Text
+  coverImageUrl       String?
+  category            NewsCategory   @default(GENERAL)
   // Phase 3.7 round 4 (2026-04): max 3 secondary categories cho phép 1 bài
   // xuất hiện ở nhiều list page (vd primary=BUSINESS + secondary=RESEARCH
   // → bài hiện ở cả /tin-tuc + /nghien-cuu). Homepage giữ primary-only filter.
@@ -1034,12 +1037,12 @@ model News {
   // featured). pinnedInCategories=[BUSINESS,RESEARCH] → bài lên top section
   // homepage Tin DN + Nghiên cứu, kể cả khi primary là cái khác (mở rộng
   // visibility cross-list). Empty = không pin section nào.
-  pinnedInCategories NewsCategory[] @default([])
-  template      NewsTemplate @default(NORMAL)
-  isPublished   Boolean      @default(false)
-  isPinned      Boolean      @default(false)
-  publishedAt   DateTime?
-  authorId      String // adminId
+  pinnedInCategories  NewsCategory[] @default([])
+  template            NewsTemplate   @default(NORMAL)
+  isPublished         Boolean        @default(false)
+  isPinned            Boolean        @default(false)
+  publishedAt         DateTime?
+  authorId            String // adminId
 
   // Phase 3 (2026-04) — links cho category BUSINESS/PRODUCT.
   // BUSINESS: chỉ relatedCompanyId. PRODUCT: cả relatedCompanyId +
@@ -1594,4 +1597,82 @@ model ContactMessage {
 
   @@index([status, createdAt])
   @@map("contact_messages")
+}
+
+// ============================================================
+// LEDGER — Sổ quỹ thu chi của Hội (admin only)
+// ============================================================
+//
+// Single-account ledger: hội dùng 1 tài khoản duy nhất → số dư =
+// SUM(income) - SUM(expense). Số dư đầu kỳ là 1 transaction system
+// (category isSystem=true) nhập 1 lần qua wizard.
+//
+// amount: BigInt nguyên đồng VND (không phần lẻ). Khi serialize qua
+// Server → Client phải Number(amount) — VND không vượt 2^53.
+
+enum LedgerType {
+  INCOME // Thu
+  EXPENSE // Chi
+}
+
+enum LedgerPaymentMethod {
+  CASH // Tiền mặt
+  BANK // Chuyển khoản ngân hàng
+}
+
+model LedgerCategory {
+  id           String     @id @default(cuid())
+  name         String
+  type         LedgerType
+  parentId     String?
+  displayOrder Int        @default(0)
+  isActive     Boolean    @default(true)
+  // Danh mục hệ thống (Số dư đầu kỳ, các danh mục map từ PaymentType) —
+  // không cho xóa qua UI thường, vẫn cho rename.
+  isSystem     Boolean    @default(false)
+
+  parent       LedgerCategory?     @relation("LedgerCategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     LedgerCategory[]    @relation("LedgerCategoryHierarchy")
+  transactions LedgerTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, displayOrder])
+  @@index([parentId])
+  @@map("ledger_categories")
+}
+
+model LedgerTransaction {
+  id              String              @id @default(cuid())
+  type            LedgerType
+  categoryId      String
+  amount          BigInt // VND nguyên đồng — luôn dương; type quyết định +/-
+  transactionDate DateTime            @db.Date
+  paymentMethod   LedgerPaymentMethod @default(BANK)
+  referenceNo     String? // số phiếu thu/chi, mã GD ngân hàng
+  description     String              @db.Text
+  receiptUrl      String? // ảnh chứng từ — Cloudinary thu-chi/{MM-YYYY}/
+
+  // Liên kết tới Payment khi auto-tạo từ flow xác nhận CK; null khi nhập tay.
+  // 1 Payment chỉ sinh 1 LedgerTransaction (avoid double counting).
+  relatedPaymentId String? @unique
+
+  // System transaction = "Số dư đầu kỳ" — không cho xóa, cho phép edit.
+  isSystem Boolean @default(false)
+
+  recordedById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category   LedgerCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recordedBy User           @relation("LedgerTransactionRecorder", fields: [recordedById], references: [id])
+  payment    Payment?       @relation(fields: [relatedPaymentId], references: [id], onDelete: SetNull)
+
+  @@index([type, transactionDate])
+  @@index([categoryId])
+  @@index([transactionDate])
+  @@index([recordedById])
+  @@map("ledger_transactions")
 }

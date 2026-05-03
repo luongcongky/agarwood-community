@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     "doanh-nghiep": 1600, // logo + cover chung; client có thể override
     banner: 2560, // banner quảng cáo full-width desktop
     gallery: 2560, // gallery hero trang chủ — full viewport width, cần nét trên 4K
+    "thu-chi": 1600, // ảnh chứng từ sổ quỹ — cần đọc rõ chữ trên hóa đơn/UNC
   }
   const DEFAULT_MAX_WIDTH = 1600
 

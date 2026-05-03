@@ -37,7 +37,7 @@ export function ProductFilters({ totalProducts, totalCompanies, lastUpdated }: P
         if (v) next.set(k, v)
         else next.delete(k)
       }
-      router.push(`/san-pham-chung-nhan?${next.toString()}`)
+      router.push(`/san-pham-chung-nhan?${next.toString()}`, { scroll: false })
     },
     [sp, router],
   )

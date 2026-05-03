@@ -30,6 +30,7 @@ import {
   Mail,
   UserPlus,
   BarChart3,
+  Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePendingCounts } from "@/components/features/admin/PendingCountsContext"
@@ -63,6 +64,7 @@ type AdminPerm =
   | "payment:confirm"
   | "document:write"
   | "banner:approve"
+  | "ledger:read"
 
 type NavItem = {
   label: string
@@ -140,6 +142,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Đối tác", href: "/admin/doi-tac", icon: Handshake },
       { label: "Xác nhận CK", href: "/admin/thanh-toan", icon: BadgeCheck, pendingKey: "payment", requiredPerm: "payment:confirm" },
+      { label: "Sổ quỹ thu chi", href: "/admin/thu-chi", icon: Wallet, requiredPerm: "ledger:read" },
     ],
   },
   {
@@ -198,6 +201,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
   const canPostModerate = useHasAdminPerm("post:moderate")
   const canPostPromote = useHasAdminPerm("post:promote")
   const canPaymentConfirm = useHasAdminPerm("payment:confirm")
+  const canLedgerRead = useHasAdminPerm("ledger:read")
 
   // Filter items theo perm. Items không có `requiredPerm` luôn show (chúng
   // cần `admin:read` tối thiểu mà proxy đã gate rồi). Group rỗng sau filter
@@ -211,6 +215,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
     "post:moderate": canPostModerate,
     "post:promote": canPostPromote,
     "payment:confirm": canPaymentConfirm,
+    "ledger:read": canLedgerRead,
   }
   const visibleGroups = useMemo(
     () =>
@@ -224,6 +229,7 @@ export function AdminNavLinks({ onNavigate }: AdminNavLinksProps) {
     [
       canMember, canCertApprove, canNewsWrite, canDocWrite,
       canBannerApprove, canPostModerate, canPostPromote, canPaymentConfirm,
+      canLedgerRead,
     ],
   )
 

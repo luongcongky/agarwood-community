@@ -5,6 +5,7 @@ import { cloudinaryResize } from "@/lib/cloudinary"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductFeatureToggleBtn } from "./ProductFeatureToggleBtn"
+import { CertifiedSeal } from "@/components/ui/CertifiedSeal"
 
 /**
  * Card sản phẩm chứng nhận — portrait orientation 4/5 + cert seal stamp
@@ -88,19 +89,8 @@ export function CertProductCard({
           />
         )}
         {/* Cert seal stamp — emerald wax-seal style ở góc phải-trên */}
-        <div className="absolute right-2 top-2">
-          <div
-            className="cp-stamp pointer-events-none flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-emerald-700 text-white shadow-xl ring-[3px] ring-emerald-200"
-            style={{ "--d": "400ms" } as React.CSSProperties}
-            aria-label="Chứng nhận"
-          >
-            <div className="text-center leading-none">
-              <div className="text-base">★</div>
-              <div className="text-[7px] font-extrabold uppercase tracking-wider">
-                Chứng nhận
-              </div>
-            </div>
-          </div>
+        <div className="absolute right-2 top-2 z-20">
+          <CertifiedSeal size={48} delay={400} />
         </div>
 
         {/* Admin-only ★ tiêu biểu toggle — góc trái-trên (không đè cert seal) */}

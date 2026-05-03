@@ -24,10 +24,17 @@ export function PaymentActionRow({
   const [status, setStatus] = useState<"idle" | "loading" | "confirmed" | "rejected" | "rejecting">("idle")
   const [rejectReason, setRejectReason] = useState("")
   const [rejectError, setRejectError] = useState("")
+  // Default true — admin gần như luôn muốn ghi vào sổ quỹ. Bỏ tích khi
+  // payment trùng với entry đã nhập tay trước đó (hiếm).
+  const [recordToLedger, setRecordToLedger] = useState(true)
 
   async function handleConfirm() {
     setStatus("loading")
-    const res = await fetch(`/api/admin/payments/${id}/confirm`, { method: "POST" })
+    const res = await fetch(`/api/admin/payments/${id}/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recordToLedger }),
+    })
     if (res.ok) {
       setStatus("confirmed")
       refreshPendingCounts()
@@ -110,23 +117,35 @@ export function PaymentActionRow({
   }
 
   return (
-    <div className="flex gap-2">
-      <button
-        onClick={() => setStatus("rejecting")}
-        disabled={status === "loading" || readOnly}
-        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
-        className="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
-      >
-        Từ chối ✕
-      </button>
-      <button
-        onClick={handleConfirm}
-        disabled={status === "loading" || readOnly}
-        title={readOnly ? READ_ONLY_TOOLTIP : undefined}
-        className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
-      >
-        {status === "loading" ? "Đang xử lý..." : "Xác nhận ✓"}
-      </button>
+    <div className="flex flex-col items-end gap-2">
+      <label className="inline-flex items-center gap-1.5 text-xs text-brand-600 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={recordToLedger}
+          onChange={(e) => setRecordToLedger(e.target.checked)}
+          disabled={status === "loading" || readOnly}
+          className="rounded border-brand-300"
+        />
+        Ghi nhận vào sổ quỹ thu chi
+      </label>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setStatus("rejecting")}
+          disabled={status === "loading" || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+          className="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          Từ chối ✕
+        </button>
+        <button
+          onClick={handleConfirm}
+          disabled={status === "loading" || readOnly}
+          title={readOnly ? READ_ONLY_TOOLTIP : undefined}
+          className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+        >
+          {status === "loading" ? "Đang xử lý..." : "Xác nhận ✓"}
+        </button>
+      </div>
     </div>
   )
 }

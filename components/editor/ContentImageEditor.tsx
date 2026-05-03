@@ -98,7 +98,7 @@ export function ContentImageEditor({
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
       <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
         {/* Close button góc phải — quick close khi user lỡ mở modal. */}
         <button

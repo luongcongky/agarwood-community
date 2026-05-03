@@ -29,6 +29,8 @@ export type Permission =
   | "document:write" // upload/sửa văn bản pháp lý
   | "banner:approve" // duyệt banner quảng cáo
   | "product:write" // admin sửa Product của owner khác (có audit trail)
+  | "ledger:read" // xem sổ quỹ thu chi
+  | "ledger:write" // ghi/sửa/xóa giao dịch sổ quỹ + danh mục
 
 /** Baseline permission theo Role — không phụ thuộc committee. */
 const ROLE_PERMS: Record<Role, readonly Permission[]> = {
@@ -52,7 +54,9 @@ const ROLE_PERMS: Record<Role, readonly Permission[]> = {
 const COMMITTEE_PERMS: Record<Committee, readonly Permission[]> = {
   THUONG_VU: ["admin:read", "member:approve", "cert:approve"],
   CHAP_HANH: ["admin:read"],
-  KIEM_TRA: ["admin:read", "payment:confirm"],
+  // Ban Kiểm tra giám sát tài chính → đọc sổ quỹ; admin (admin:full) là người
+  // duy nhất ghi/sửa giao dịch để tránh phân tán trách nhiệm.
+  KIEM_TRA: ["admin:read", "payment:confirm", "ledger:read"],
   THAM_DINH: ["admin:read", "cert:review"],
   THU_KY: ["admin:read", "news:write", "document:write", "post:moderate"],
   TRUYEN_THONG: [

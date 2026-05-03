@@ -18,6 +18,8 @@ type Permission =
   | "document:write"
   | "banner:approve"
   | "product:write"
+  | "ledger:read"
+  | "ledger:write"
 
 /** Tóm tắt user đang đăng nhập — dùng cho UI cần preset (vd Author selector
  *  default = current user). Optional vì root layout có thể chưa có session. */
