@@ -207,7 +207,7 @@ export async function BreakingTicker() {
             title="TikTok Hội Trầm Hương"
             className="group relative flex h-7 w-7 items-center justify-center overflow-hidden rounded-md bg-[#000000] text-white shadow-[0_3px_8px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
           >
-            <span className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-50" />
+            <span className="absolute inset-0 bg-linear-to-b from-white/20 to-transparent opacity-50" />
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="relative z-10 transition-transform group-hover:scale-110">
               <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1.84-.1z" />
             </svg>
