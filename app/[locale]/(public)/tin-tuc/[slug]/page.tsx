@@ -2,18 +2,16 @@ import { cache, Suspense } from "react"
 import { notFound, redirect } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
 import { sanitizeArticleHtml } from "@/lib/sanitize"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { slugify } from "@/lib/utils"
-import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { BASE_URL, SITE_NAME, hreflangAlternates, localizedUrl } from "@/lib/seo/site"
 import { addAnchorIdsToH2 } from "@/lib/seo/toc"
-import { cloudinaryResize, rewriteCloudinaryInHtml } from "@/lib/cloudinary"
-import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
+import { rewriteCloudinaryInHtml } from "@/lib/cloudinary"
+import { CloudinaryImage } from "@/components/ui/CloudinaryImage"
 import { Section } from "@/components/features/homepage/Section"
 import { HomepageBannerSlot } from "@/components/features/homepage/HomepageBannerSlot"
 import { SidebarList } from "@/components/features/article/SidebarList"
@@ -315,13 +313,6 @@ export default async function NewsDetailPage({ params }: Props) {
     ],
   }
 
-  const publishedDate = news.publishedAt
-    ? new Date(news.publishedAt).toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
-    : null
   const wasUpdatedAfterPublish =
     news.updatedAt &&
     news.publishedAt &&
@@ -403,15 +394,14 @@ export default async function NewsDetailPage({ params }: Props) {
           {news.coverImageUrl && (
             <figure className="mb-6">
               <div className="relative aspect-video w-full bg-neutral-100">
-                <Image
-                  src={cloudinaryResize(news.coverImageUrl, 1280)}
+                <CloudinaryImage
+                  src={news.coverImageUrl}
                   alt={coverAlt}
                   fill
                   className="object-cover"
                   priority
                   sizes="(max-width: 1024px) 100vw, 860px"
-                  placeholder="blur"
-                  blurDataURL={BLUR_DATA_URL}
+                  maxWidth={1280}
                 />
               </div>
               {hasDistinctCaption && (
@@ -445,12 +435,12 @@ export default async function NewsDetailPage({ params }: Props) {
                 (item, i) =>
                   item.url ? (
                     <figure key={`${item.url}-${i}`} className="space-y-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <CloudinaryImage
                         src={item.url}
                         alt={item.caption ?? ""}
                         loading={i === 0 ? "eager" : "lazy"}
                         className="w-full h-auto rounded-lg"
+                        maxWidth={1280}
                       />
                       {item.caption && (
                         <figcaption className="text-center text-[13px] italic text-neutral-600 leading-snug">
@@ -554,19 +544,16 @@ export default async function NewsDetailPage({ params }: Props) {
           {author && (authorBio || author.avatarUrl) && (
             <aside className="mt-8 flex items-start gap-4 border-t-[3px] border-brand-700 pt-5">
               <div className="relative h-16 w-16 shrink-0 overflow-hidden bg-neutral-200">
-                {author.avatarUrl ? (
-                  <Image
-                    src={author.avatarUrl}
-                    alt={author.name}
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-lg font-bold text-neutral-600">
-                    {author.name.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
+                <CloudinaryImage
+                  src={author.avatarUrl}
+                  alt={author.name}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                  maxWidth={200}
+                  fallbackSize="sm"
+                  fallbackTone="brand"
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700">
@@ -625,19 +612,16 @@ export default async function NewsDetailPage({ params }: Props) {
                   href={`/tin-tuc/${item.slug}`}
                   className="group block"
                 >
-                  {item.coverImageUrl ? (
                     <div className="relative aspect-16/10 w-full overflow-hidden bg-neutral-100">
-                      <Image
-                        src={cloudinaryResize(item.coverImageUrl, 480)}
+                      <CloudinaryImage
+                        src={item.coverImageUrl}
                         alt={l(item, "title")}
                         fill
                         className="object-cover"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        maxWidth={480}
                       />
                     </div>
-                  ) : (
-                    <AgarwoodPlaceholder className="aspect-16/10 w-full" size="md" shape="square" />
-                  )}
                   <div className="mt-3">
                     <h3 className="line-clamp-3 text-base font-bold leading-snug text-neutral-900 group-hover:text-brand-700">
                       {l(item, "title")}

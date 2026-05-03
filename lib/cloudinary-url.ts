@@ -1,3 +1,5 @@
+import type { PrismaClient } from "@prisma/client"
+
 /**
  * Pure URL helpers cho Cloudinary — không import cloudinary SDK, không
  * `server-only` marker → an toàn import từ client component, server component,
@@ -70,4 +72,143 @@ export function collectNewsCloudinaryIds(news: {
     }
   }
   return ids
+}
+
+/**
+ * Tập hợp mọi public_id Cloudinary đang được tham chiếu trong toàn bộ database.
+ * Dùng cho scripts/sweep-cloudinary-orphans.ts để tránh xoá nhầm ảnh của
+ * các model khác ngoài News.
+ */
+export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set<string>> {
+  const allIds = new Set<string>()
+
+  // 1. News (Cover + Content + Gallery)
+  const news = await prisma.news.findMany({
+    select: {
+      coverImageUrl: true,
+      content: true, content_en: true, content_zh: true, content_ar: true,
+      gallery: true
+    }
+  })
+  for (const n of news) {
+    for (const id of collectNewsCloudinaryIds(n)) allIds.add(id)
+    // Gallery JSON: [{url, caption}]
+    if (Array.isArray(n.gallery)) {
+      const gallery = n.gallery as Array<{ url?: string }>
+      for (const item of gallery) {
+        if (typeof item?.url === "string") {
+          const id = extractPublicId(item.url)
+          if (id) allIds.add(id)
+        }
+      }
+    }
+  }
+
+  // 2. Product (imageUrls + badgeUrl + revisions)
+  const products = await prisma.product.findMany({
+    select: { imageUrls: true, badgeUrl: true }
+  })
+  for (const p of products) {
+    for (const url of p.imageUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+    if (p.badgeUrl) {
+      const id = extractPublicId(p.badgeUrl)
+      if (id) allIds.add(id)
+    }
+  }
+  const pRevisions = await prisma.productRevision.findMany({ select: { imageUrls: true } })
+  for (const r of pRevisions) {
+    for (const url of r.imageUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 3. Post (imageUrls + coverImageUrl + revisions)
+  const posts = await prisma.post.findMany({
+    select: { imageUrls: true, coverImageUrl: true }
+  })
+  for (const p of posts) {
+    for (const url of p.imageUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+    if (p.coverImageUrl) {
+      const id = extractPublicId(p.coverImageUrl)
+      if (id) allIds.add(id)
+    }
+  }
+  const postRevisions = await prisma.postRevision.findMany({ select: { imageUrls: true } })
+  for (const r of postRevisions) {
+    for (const url of r.imageUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 4. Company (logoUrl + coverImageUrl + gallery)
+  const companies = await prisma.company.findMany({
+    select: { logoUrl: true, coverImageUrl: true }
+  })
+  for (const c of companies) {
+    if (c.logoUrl) {
+      const id = extractPublicId(c.logoUrl)
+      if (id) allIds.add(id)
+    }
+    if (c.coverImageUrl) {
+      const id = extractPublicId(c.coverImageUrl)
+      if (id) allIds.add(id)
+    }
+  }
+  const cGallery = await prisma.companyGalleryImage.findMany({ select: { imageUrl: true } })
+  for (const g of cGallery) {
+    const id = extractPublicId(g.imageUrl)
+    if (id) allIds.add(id)
+  }
+
+  // 5. User (avatarUrl)
+  const users = await prisma.user.findMany({ select: { avatarUrl: true } })
+  for (const u of users) {
+    if (u.avatarUrl) {
+      const id = extractPublicId(u.avatarUrl)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 6. Others (Hero, Banner, Partner, Leader, MediaOrder)
+  const heroes = await prisma.heroImage.findMany({ select: { imageUrl: true } })
+  for (const h of heroes) {
+    const id = extractPublicId(h.imageUrl)
+    if (id) allIds.add(id)
+  }
+  const banners = await prisma.banner.findMany({ select: { imageUrl: true } })
+  for (const b of banners) {
+    const id = extractPublicId(b.imageUrl)
+    if (id) allIds.add(id)
+  }
+  const partners = await prisma.partner.findMany({ select: { logoUrl: true } })
+  for (const p of partners) {
+    if (p.logoUrl) {
+      const id = extractPublicId(p.logoUrl)
+      if (id) allIds.add(id)
+    }
+  }
+  const leaders = await prisma.leader.findMany({ select: { photoUrl: true } })
+  for (const l of leaders) {
+    if (l.photoUrl) {
+      const id = extractPublicId(l.photoUrl)
+      if (id) allIds.add(id)
+    }
+  }
+  const mOrders = await prisma.mediaOrder.findMany({ select: { deliveryFileUrls: true } })
+  for (const o of mOrders) {
+    for (const url of o.deliveryFileUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+  }
+
+  return allIds
 }

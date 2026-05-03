@@ -20,7 +20,7 @@
  */
 
 import { readFileSync, existsSync } from "node:fs"
-import { collectNewsCloudinaryIds } from "@/lib/cloudinary-url"
+import { collectAllCloudinaryIds } from "@/lib/cloudinary-url"
 import { prisma } from "@/lib/prisma"
 
 // ── Env loading (same convention as cloudinary-cleanup-root.ts) ─────────
@@ -63,6 +63,15 @@ const folderIdx = args.indexOf("--folder")
 const FOLDER = folderIdx >= 0 ? (args[folderIdx + 1] ?? "tin-tuc") : "tin-tuc"
 const MIN_AGE_HOURS = Number(process.env.SWEEP_MIN_AGE_HOURS ?? 1)
 
+// Danh sách các folder cực kỳ quan trọng, KHÔNG bao giờ cho phép sweep tự động
+// trừ khi có flag override (chưa implement). Tránh xoá nhầm avatar, logo...
+const PROTECTED_FOLDERS = [
+  "avatar",
+  "doanh-nghiep",
+  "he-thong",
+  "banners",
+]
+
 type CloudinaryResource = { public_id: string; created_at: string }
 
 async function listAllAssets(folder: string): Promise<CloudinaryResource[]> {
@@ -88,20 +97,7 @@ async function listAllAssets(folder: string): Promise<CloudinaryResource[]> {
 }
 
 async function collectReferencedIds(): Promise<Set<string>> {
-  const rows = await prisma.news.findMany({
-    select: {
-      coverImageUrl: true,
-      content: true,
-      content_en: true,
-      content_zh: true,
-      content_ar: true,
-    },
-  })
-  const ids = new Set<string>()
-  for (const row of rows) {
-    for (const id of collectNewsCloudinaryIds(row)) ids.add(id)
-  }
-  return ids
+  return collectAllCloudinaryIds(prisma)
 }
 
 async function main(): Promise<void> {
@@ -111,6 +107,11 @@ async function main(): Promise<void> {
   console.log(`Min age:  ${MIN_AGE_HOURS}h (asset mới hơn bị skip)`)
   console.log(`Mode:     ${EXECUTE ? "🔴 EXECUTE" : "🟢 DRY-RUN"}`)
   console.log("═".repeat(60))
+
+  if (PROTECTED_FOLDERS.includes(FOLDER)) {
+    console.error(`\n❌ Folder "${FOLDER}" nằm trong danh sách bảo vệ. Không thể sweep.`)
+    process.exit(1)
+  }
 
   const [assets, referenced] = await Promise.all([
     listAllAssets(FOLDER),

@@ -1,8 +1,8 @@
 "use client"
 
-import Image from "next/image"
 import { useState, type MouseEvent as ReactMouseEvent } from "react"
 import { cn } from "@/lib/utils"
+import { CloudinaryImage } from "@/components/ui/CloudinaryImage"
 
 type Props = {
   imageUrls: string[]
@@ -23,6 +23,7 @@ const LENS_PCT = 100 / ZOOM_SCALE
 export function ProductGallery({ imageUrls, productName }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isZooming, setIsZooming] = useState(false)
+  const [hasError, setHasError] = useState(false)
   // Mouse position normalized 0-100 % của main image
   const [pos, setPos] = useState({ x: 50, y: 50 })
 
@@ -70,7 +71,7 @@ export function ProductGallery({ imageUrls, productName }: Props) {
           onMouseLeave={() => setIsZooming(false)}
           onMouseMove={handleMouseMove}
         >
-          <Image
+          <CloudinaryImage
             src={currentImage}
             alt={`${productName} - ảnh ${selectedIndex + 1}`}
             fill
@@ -78,6 +79,7 @@ export function ProductGallery({ imageUrls, productName }: Props) {
             sizes="(max-width: 768px) 100vw, 40vw"
             priority={selectedIndex === 0}
             draggable={false}
+            onError={() => setHasError(true)}
           />
           {/* Lens — chỉ desktop, hiện khi đang hover */}
           {isZooming && (
@@ -97,7 +99,7 @@ export function ProductGallery({ imageUrls, productName }: Props) {
             (≈ info column 3/5) × height = gallery height (qua h-full + relative
             wrapper aspect-square). KH yêu cầu (2026-04-29): panel full width
             của info column, không square nhỏ. */}
-        {isZooming && (
+        {isZooming && !hasError && (
           <div
             aria-hidden
             className="pointer-events-none absolute left-full top-0 ml-4 hidden md:block h-full bg-white shadow-2xl ring-1 ring-neutral-200 z-40 overflow-hidden"
@@ -119,7 +121,10 @@ export function ProductGallery({ imageUrls, productName }: Props) {
             <button
               key={i}
               type="button"
-              onClick={() => setSelectedIndex(i)}
+              onClick={() => {
+                setSelectedIndex(i)
+                setHasError(false)
+              }}
               aria-label={`Xem ảnh ${i + 1}`}
               aria-pressed={i === selectedIndex}
               className={cn(
@@ -130,12 +135,14 @@ export function ProductGallery({ imageUrls, productName }: Props) {
                   : "border-neutral-200 hover:border-amber-400",
               )}
             >
-              <Image
+              <CloudinaryImage
                 src={url}
                 alt={`Thumbnail ${i + 1}`}
                 fill
                 className="object-cover"
                 sizes="80px"
+                maxWidth={200}
+                fallbackSize="xs"
               />
             </button>
           ))}

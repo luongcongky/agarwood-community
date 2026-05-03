@@ -1,9 +1,6 @@
 import Link from "next/link"
-import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { cloudinaryResize } from "@/lib/cloudinary"
-import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
-import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { CloudinaryImage } from "@/components/ui/CloudinaryImage"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import type { NewsListItem } from "./actions"
@@ -45,19 +42,15 @@ export function NewsListItemCard({
               📝 Bài hội viên
             </span>
           )}
-          {item.coverImageUrl ? (
-            <Image
-              src={cloudinaryResize(item.coverImageUrl, 320)}
-              alt={title}
-              fill
-              sizes="(max-width: 640px) 128px, 176px"
-              className="object-cover"
-              placeholder="blur"
-              blurDataURL={BLUR_DATA_URL}
-            />
-          ) : (
-            <AgarwoodPlaceholder className="h-full w-full" size="md" shape="square" />
-          )}
+          <CloudinaryImage
+            src={item.coverImageUrl}
+            alt={title}
+            fill
+            sizes="(max-width: 640px) 128px, 176px"
+            className="object-cover"
+            maxWidth={480}
+            fallbackSize="sm"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="line-clamp-2 text-[16px] font-bold leading-snug text-neutral-900 group-hover:text-brand-700 sm:text-[18px]">

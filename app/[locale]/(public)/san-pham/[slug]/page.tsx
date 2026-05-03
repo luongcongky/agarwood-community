@@ -9,9 +9,9 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
 import DOMPurify from "isomorphic-dompurify"
-import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
+import { CloudinaryImage } from "@/components/ui/CloudinaryImage"
+import { rewriteCloudinaryInHtml } from "@/lib/cloudinary"
 import { ProductGallery } from "./ProductGallery"
 import { ProductActionsMenu } from "./ProductActionsMenu"
 import { ProductPriceBlock, type ProductVariant } from "./ProductPriceBlock"
@@ -355,13 +355,15 @@ export default async function ProductDetailPage({ params }: Props) {
           <div className="flex flex-col sm:flex-row gap-5">
             {/* Logo */}
             <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-brand-100 overflow-hidden shrink-0">
-              {product.company!.logoUrl ? (
-                <Image src={product.company!.logoUrl} alt={product.company!.name} fill className="object-cover" sizes="96px" />
-              ) : (
-                <span className="w-full h-full flex items-center justify-center text-2xl font-bold text-brand-700">
-                  {product.company!.name[0]}
-                </span>
-              )}
+              <CloudinaryImage
+                src={product.company!.logoUrl}
+                alt={product.company!.name}
+                fill
+                className="object-cover"
+                sizes="96px"
+                maxWidth={200}
+                fallbackSize="sm"
+              />
             </div>
 
             {/* Info column */}
@@ -438,7 +440,9 @@ export default async function ProductDetailPage({ params }: Props) {
               <h2 className="text-base font-bold text-brand-900 mb-3">Mô tả sản phẩm</h2>
               <div
                 className="prose prose-sm max-w-none text-brand-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(l(product, "description") ?? "") }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(rewriteCloudinaryInHtml(l(product, "description") ?? "", 1024)),
+                }}
               />
             </div>
           )}
@@ -505,11 +509,14 @@ export default async function ProductDetailPage({ params }: Props) {
                   className="group block bg-white border border-brand-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="relative aspect-square bg-brand-100">
-                    {rpImages.length > 0 ? (
-                      <Image src={rpImages[0]} alt={l(rp, "name")} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
-                    ) : (
-                      <AgarwoodPlaceholder className="w-full h-full" size="md" shape="square" tone="light" />
-                    )}
+                    <CloudinaryImage
+                      src={rpImages[0]}
+                      alt={l(rp, "name")}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                      maxWidth={480}
+                    />
                     {rp.certStatus === "APPROVED" && (
                       <span className="absolute top-2 right-2 bg-amber-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full shadow">
                         ✓
