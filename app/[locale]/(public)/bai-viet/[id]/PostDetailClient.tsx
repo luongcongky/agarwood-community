@@ -629,7 +629,6 @@ export function PostDetailClient({
             )}
             <span className="text-sm text-brand-400">💬 {comments.length} {t("comments")}</span>
           </div>
-          <span className="text-sm text-brand-500">{post.viewCount + 1} {t("views")}</span>
         </div>
 
         {/* Phase 3.6 (2026-04): owner + admin actions row.

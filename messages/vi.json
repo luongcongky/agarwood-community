@@ -919,6 +919,8 @@
     "validUntil": "Hiệu lực đến",
     "viewCompany": "Xem trang doanh nghiệp →",
     "backToListBtn": "Quay lại danh sách",
+    "tabProducts": "Sản phẩm ({count})",
+    "noProducts": "Hội viên chưa đăng sản phẩm nào.",
     "printCard": "🖨️ In thẻ"
   },
   "printCard": {

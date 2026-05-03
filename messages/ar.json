@@ -919,6 +919,8 @@
     "validUntil": "ساري حتى",
     "viewCompany": "عرض صفحة الشركة →",
     "backToListBtn": "العودة إلى القائمة",
+    "tabProducts": "المنتجات ({count})",
+    "noProducts": "لم يقم هذا العضو بإدراج أي منتجات بعد.",
     "printCard": "🖨️ طباعة"
   },
   "printCard": {

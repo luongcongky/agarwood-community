@@ -8,6 +8,8 @@ import { calcTier, getTierThresholds } from "@/lib/tier"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
 import type { Metadata } from "next"
+import { auth } from "@/lib/auth"
+import { MemberTabs } from "./MemberTabs"
 
 export const revalidate = 600
 
@@ -38,6 +40,19 @@ const getMember = cache(async (id: string) =>
           representativePosition_zh: true,
           representativePosition_ar: true,
           isPublished: true,
+        },
+      },
+      products: {
+        where: { isPublished: true },
+        orderBy: { certStatus: "desc" },
+        select: {
+          id: true,
+          name: true, name_en: true, name_zh: true, name_ar: true,
+          slug: true,
+          imageUrls: true,
+          category: true,
+          priceRange: true,
+          certStatus: true,
         },
       },
     },
@@ -91,6 +106,13 @@ export default async function MemberProfilePage({
   ])
 
   if (!member) notFound()
+
+  const session = await auth()
+  const currentUserId = session?.user?.id
+  const currentUserRole = session?.user?.role
+  const isOwner = currentUserId === member.id
+  const isAdmin = currentUserRole === "ADMIN"
+  const canEdit = isOwner || isAdmin
 
   const thresholds =
     member.accountType === "INDIVIDUAL" ? individualThresholds : businessThresholds
@@ -152,19 +174,32 @@ export default async function MemberProfilePage({
       {/* Main content */}
       <div className="bg-brand-50/60">
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
-        {/* Bio */}
-        <section className="bg-white rounded-xl border border-brand-200 p-6">
-          <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide mb-3">
-            {tM("intro")}
-          </h2>
-          {bio.trim() ? (
-            <p className="text-sm leading-relaxed text-brand-800 whitespace-pre-wrap">
-              {bio}
-            </p>
-          ) : (
-            <p className="text-sm text-brand-400 italic">{tM("introEmpty")}</p>
-          )}
-        </section>
+        {/* Bio or Tabs */}
+        {member.products.length > 0 ? (
+          <div className="bg-white rounded-xl border border-brand-200 p-6">
+            <MemberTabs
+              bio={bio}
+              products={member.products.map(p => ({ ...p, imageUrls: p.imageUrls as string[] }))}
+              canEdit={canEdit}
+            />
+          </div>
+        ) : (
+          <section className="bg-white rounded-xl border border-brand-200 p-6">
+            <h2 className="text-sm font-semibold text-brand-500 uppercase tracking-wide mb-3">
+              {tM("intro")}
+            </h2>
+            {bio.trim() ? (
+              <div
+                className="prose max-w-none text-sm leading-relaxed text-brand-800"
+                dangerouslySetInnerHTML={{
+                  __html: (localize(member, "bio", locale) as string | null) ?? member.bio ?? "",
+                }}
+              />
+            ) : (
+              <p className="text-sm text-brand-400 italic">{tM("introEmpty")}</p>
+            )}
+          </section>
+        )}
 
         {/* Membership info grid */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">

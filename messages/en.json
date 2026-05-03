@@ -917,9 +917,11 @@
     "introEmpty": "Not updated.",
     "joinedSince": "Joined",
     "validUntil": "Valid until",
-    "viewCompany": "View company page →",
+    "viewCompany": "View company profile →",
     "backToListBtn": "Back to list",
-    "printCard": "🖨️ Print"
+    "tabProducts": "Products ({count})",
+    "noProducts": "Member hasn't listed any products yet.",
+    "printCard": "🖨️ Print card"
   },
   "printCard": {
     "title": "Print Member Card",

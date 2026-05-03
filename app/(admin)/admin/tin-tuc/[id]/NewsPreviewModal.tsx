@@ -44,7 +44,7 @@ export default function NewsPreviewModal({
   onClose,
 }: NewsPreviewModalProps) {
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-white overflow-hidden">
+    <div className="fixed inset-0 z-60 flex flex-col bg-white overflow-hidden">
       {/* Simulated Navbar */}
       <header className="sticky top-0 z-50 w-full bg-brand-800 shadow-md shrink-0">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

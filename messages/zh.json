@@ -919,6 +919,8 @@
     "validUntil": "有效至",
     "viewCompany": "查看企业页面 →",
     "backToListBtn": "返回列表",
+    "tabProducts": "产品 ({count})",
+    "noProducts": "该会员尚未发布产品。",
     "printCard": "🖨️ 打印"
   },
   "printCard": {

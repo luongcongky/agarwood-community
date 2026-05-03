@@ -925,7 +925,6 @@ function PostCard({
               {linkCopied ? <Check size={16} /> : <Link2 size={16} />}
             </button>
           </div>
-          <span className="text-sm text-brand-500">{post.viewCount} {t("views")}</span>
         </div>
       )}
     </article>

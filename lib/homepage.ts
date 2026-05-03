@@ -255,16 +255,12 @@ export const getTopVipMemberPosts = unstable_cache(
   { revalidate: 300, tags: ["homepage", "posts"] },
 )
 
-/** Cửa sổ thời gian cho pool MemberRail rotate — chỉ lấy bài trong 3 ngày
- *  gần nhất (KH yêu cầu 2026-04-29). Bài cũ hơn không xoay vòng nữa để
- *  trang chủ luôn "tươi". Trade-off: ngày SL bài < 9 → MemberRail hiện ít
- *  item hơn, nhưng tốt hơn là show bài cũ. */
-const MEMBER_POOL_DAYS = 3
+const MEMBER_POOL_WINDOWS = [3, 7, 30] as const
 
 /**
- * Pool cho slot rotate — bài VIP+non-VIP mới nhất trong 3 ngày, KHÔNG filter
- * excludeIds ở DB. Filter + shuffle chạy ở JS (via `pickRotatingMembers`)
- * để MemberRail fetch pool + top song song.
+ * Pool cho slot rotate — bài VIP+non-VIP mới nhất. 
+ * Mở rộng cửa sổ thời gian nếu pool quá ít (3 ngày → 1 tuần → 1 tháng) để
+ * đảm bảo trang chủ luôn có nội dung xoay vòng (yêu cầu 2026-05-03).
  */
 export function getMemberPostsPool() {
   const bucket = Math.floor(Date.now() / 300_000) // 5-min bucket
@@ -274,13 +270,20 @@ export function getMemberPostsPool() {
 const getMemberPostsPoolCached = unstable_cache(
   async (_bucket: number) => {
     void _bucket
-    const cutoff = new Date(Date.now() - MEMBER_POOL_DAYS * 24 * 60 * 60 * 1000)
-    return prisma.post.findMany({
-      where: { status: "PUBLISHED", createdAt: { gte: cutoff } },
-      orderBy: [{ createdAt: "desc" }],
-      take: 30,
-      select: POST_CARD_SELECT,
-    })
+    for (const days of MEMBER_POOL_WINDOWS) {
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      const results = await prisma.post.findMany({
+        where: { status: "PUBLISHED", createdAt: { gte: cutoff } },
+        orderBy: [{ createdAt: "desc" }],
+        take: 30,
+        select: POST_CARD_SELECT,
+      })
+      // Nếu đủ 30 bài hoặc đã đạt tới giới hạn mở rộng cuối cùng (1 tháng)
+      if (results.length >= 30 || days === MEMBER_POOL_WINDOWS[MEMBER_POOL_WINDOWS.length - 1]) {
+        return results
+      }
+    }
+    return []
   },
   ["homepage_member_posts_pool"],
   { revalidate: 300, tags: ["homepage", "posts"] },
