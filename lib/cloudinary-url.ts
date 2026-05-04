@@ -81,8 +81,11 @@ export function collectNewsCloudinaryIds(news: {
  */
 export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set<string>> {
   const allIds = new Set<string>()
+  const threeMonthsAgo = new Date()
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
 
   // 1. News (Cover + Content + Gallery)
+  // News không có soft-delete, lấy tất cả.
   const news = await prisma.news.findMany({
     select: {
       coverImageUrl: true,
@@ -104,9 +107,10 @@ export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set
     }
   }
 
-  // 2. Product (imageUrls + badgeUrl + revisions)
+  // 2. Product (imageUrls + badgeUrl + revisions + description HTML)
+  // Product không có soft-delete.
   const products = await prisma.product.findMany({
-    select: { imageUrls: true, badgeUrl: true }
+    select: { imageUrls: true, badgeUrl: true, description: true }
   })
   for (const p of products) {
     for (const url of p.imageUrls) {
@@ -117,18 +121,37 @@ export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set
       const id = extractPublicId(p.badgeUrl)
       if (id) allIds.add(id)
     }
+    if (p.description) {
+      for (const url of extractCloudinaryUrls(p.description)) {
+        const id = extractPublicId(url)
+        if (id) allIds.add(id)
+      }
+    }
   }
-  const pRevisions = await prisma.productRevision.findMany({ select: { imageUrls: true } })
+  const pRevisions = await prisma.productRevision.findMany({ select: { imageUrls: true, description: true } })
   for (const r of pRevisions) {
     for (const url of r.imageUrls) {
       const id = extractPublicId(url)
       if (id) allIds.add(id)
     }
+    if (r.description) {
+      for (const url of extractCloudinaryUrls(r.description)) {
+        const id = extractPublicId(url)
+        if (id) allIds.add(id)
+      }
+    }
   }
 
-  // 3. Post (imageUrls + coverImageUrl + revisions)
+  // 3. Post (imageUrls + coverImageUrl + content + revisions)
+  // Post có status DELETED. Chỉ bỏ qua nếu đã xoá > 3 tháng.
   const posts = await prisma.post.findMany({
-    select: { imageUrls: true, coverImageUrl: true }
+    where: {
+      OR: [
+        { status: { not: "DELETED" } },
+        { updatedAt: { gte: threeMonthsAgo } }
+      ]
+    },
+    select: { imageUrls: true, coverImageUrl: true, content: true }
   })
   for (const p of posts) {
     for (const url of p.imageUrls) {
@@ -139,10 +162,36 @@ export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set
       const id = extractPublicId(p.coverImageUrl)
       if (id) allIds.add(id)
     }
+    for (const url of extractCloudinaryUrls(p.content)) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
   }
-  const postRevisions = await prisma.postRevision.findMany({ select: { imageUrls: true } })
+  const postRevisions = await prisma.postRevision.findMany({ select: { imageUrls: true, content: true } })
   for (const r of postRevisions) {
     for (const url of r.imageUrls) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+    for (const url of extractCloudinaryUrls(r.content)) {
+      const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 4. Comment (content HTML)
+  // Comment có soft-delete (deletedAt). Chỉ bỏ qua nếu đã xoá > 3 tháng.
+  const comments = await prisma.comment.findMany({
+    where: {
+      OR: [
+        { deletedAt: null },
+        { deletedAt: { gte: threeMonthsAgo } }
+      ]
+    },
+    select: { content: true }
+  })
+  for (const c of comments) {
+    for (const url of extractCloudinaryUrls(c.content)) {
       const id = extractPublicId(url)
       if (id) allIds.add(id)
     }
@@ -206,6 +255,28 @@ export async function collectAllCloudinaryIds(prisma: PrismaClient): Promise<Set
   for (const o of mOrders) {
     for (const url of o.deliveryFileUrls) {
       const id = extractPublicId(url)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 7. Ledger (receiptUrl)
+  const ledgerTx = await prisma.ledgerTransaction.findMany({ select: { receiptUrl: true } })
+  for (const tx of ledgerTx) {
+    if (tx.receiptUrl) {
+      const id = extractPublicId(tx.receiptUrl)
+      if (id) allIds.add(id)
+    }
+  }
+
+  // 8. Survey (avatarUrl + logoUrl)
+  const surveyRes = await prisma.surveyResponse.findMany({ select: { avatarUrl: true, logoUrl: true } })
+  for (const s of surveyRes) {
+    if (s.avatarUrl) {
+      const id = extractPublicId(s.avatarUrl)
+      if (id) allIds.add(id)
+    }
+    if (s.logoUrl) {
+      const id = extractPublicId(s.logoUrl)
       if (id) allIds.add(id)
     }
   }

@@ -13,9 +13,9 @@
  * Safety:
  *   - Default dry-run: in ra danh sách, không xoá.
  *   - Chỉ scan 1 folder prefix — không đụng avatar/, companies/, banners/…
- *   - Min-age filter 1h (config qua SWEEP_MIN_AGE_HOURS env): asset mới
- *     upload < 1h được bỏ qua để tránh race với editor đang soạn bài
- *     (user vừa upload ảnh nhưng chưa nhấn Save).
+ *   - Min-age filter 3 tháng (2160h) (config qua SWEEP_MIN_AGE_HOURS env): 
+ *     Asset mới upload < 3 tháng được bỏ qua để đảm bảo an toàn nếu record 
+ *     tham chiếu vừa mới bị xoá (soft-delete grace period) hoặc đang soạn thảo.
  *   - Batch delete 100/call (giới hạn `api.delete_resources`).
  */
 
@@ -61,7 +61,7 @@ const args = process.argv.slice(2)
 const EXECUTE = args.includes("--execute")
 const folderIdx = args.indexOf("--folder")
 const FOLDER = folderIdx >= 0 ? (args[folderIdx + 1] ?? "tin-tuc") : "tin-tuc"
-const MIN_AGE_HOURS = Number(process.env.SWEEP_MIN_AGE_HOURS ?? 1)
+const MIN_AGE_HOURS = Number(process.env.SWEEP_MIN_AGE_HOURS ?? 2160)
 
 // Danh sách các folder cực kỳ quan trọng, KHÔNG bao giờ cho phép sweep tự động
 // trừ khi có flag override (chưa implement). Tránh xoá nhầm avatar, logo...
