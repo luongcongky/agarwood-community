@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
 import { LeadershipTabs, type LeaderItem } from "./LeadershipTabs"
 import { MembersGrid, type MemberItem } from "./MembersGrid"
+import { getStaticTexts } from "@/lib/static-texts"
 
 export const revalidate = 600
 
@@ -95,7 +96,7 @@ const orgJsonLd = {
 
 export default async function GioiThieuPage() {
   const [t, locale] = await Promise.all([
-    getTranslations("about"),
+    getStaticTexts("about", (await getLocale()) as Locale),
     getLocale() as Promise<Locale>,
   ])
 

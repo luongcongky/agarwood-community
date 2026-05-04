@@ -150,6 +150,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Hệ thống",
     items: [
       { label: "Menu navbar", href: "/admin/menu", icon: MenuIcon },
+      { label: "Trang tĩnh", href: "/admin/trang-tinh", icon: FileText },
       { label: "Gallery trang chủ", href: "/admin/gallery", icon: Images },
       { label: "Cài đặt", href: "/admin/cai-dat", icon: Settings },
     ],

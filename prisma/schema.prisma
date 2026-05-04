@@ -1676,3 +1676,21 @@ model LedgerTransaction {
   @@index([recordedById])
   @@map("ledger_transactions")
 }
+
+// ============================================================
+// STATIC PAGE CONFIG — Cấu hình text cho các trang tĩnh
+// ============================================================
+
+model StaticPageConfig {
+  id        String   @id @default(cuid())
+  pageKey   String   // "about", "contact", "home", ...
+  itemKey   String   // "heroTitle", "heroDesc", ...
+  value     String   @db.Text
+  value_en  String?  @db.Text
+  value_zh  String?  @db.Text
+  value_ar  String?  @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageKey, itemKey])
+  @@map("static_page_configs")
+}

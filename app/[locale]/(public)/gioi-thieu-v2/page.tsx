@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config"
 import { LeadershipTabsV2, type LeaderItem } from "./LeadershipTabsV2"
 import { MembersScrollV2, type MemberItem } from "./MembersScrollV2"
 import { HeroAnimations } from "./HeroAnimations"
+import { getStaticTexts } from "@/lib/static-texts"
 import "./styles.css"
 
 export const revalidate = 600
@@ -98,12 +99,13 @@ const orgJsonLd = {
 const FOUNDING_YEAR = 2010
 
 export default async function GioiThieuV2Page() {
-  const [, locale] = await Promise.all([
-    getTranslations("about"),
-    getLocale() as Promise<Locale>,
-  ])
+  const locale = (await getLocale()) as Locale
 
-  const [rawLeaders, rawMembers] = await getLeadersAndMembers()
+  const [rawLeaders, rawMembers, t] = await Promise.all([
+    getLeadersAndMembers().then((res) => res[0]),
+    getLeadersAndMembers().then((res) => res[1]),
+    getStaticTexts("about", locale),
+  ])
   const totalMemberCount = rawMembers.length
 
   const currentTerm = rawLeaders[0]?.term ?? null
@@ -143,9 +145,7 @@ export default async function GioiThieuV2Page() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
       />
 
-      {/* ════════════════════════════════════════════════════════════════
-          1. HERO
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 1. HERO */}
       <section className="hero">
         <div className="hero-bg" />
         <div className="hero-rings" />
@@ -154,18 +154,12 @@ export default async function GioiThieuV2Page() {
         </div>
         <div className="hero-inner">
           <div className="eyebrow hero-eyebrow">
-            Vietnam Agarwood Association · Est. 2010
+            {t("heroEyebrow")}
           </div>
-          <h1 className="hero-title">
-            Về <em>Hội Trầm Hương</em>
-            <br />
-            Việt Nam
-          </h1>
+          <h1 className="hero-title" dangerouslySetInnerHTML={{ __html: t("heroTitle") }} />
           <p className="hero-sub">
-            Tổ chức xã hội nghề nghiệp kết nối, bảo tồn và nâng tầm giá trị
-            Trầm Hương Việt Nam — di sản nghìn năm của đất nước hình chữ S.
+            {t("heroSub")}
           </p>
-          {/* Mobile-only logo: hiện giữa sub và meta khi viewport ≤ 880px */}
           <div className="hero-logo hero-logo-mobile">
             <img src="/logo.png" alt="Logo Hội Trầm Hương Việt Nam — VAWA" />
           </div>
@@ -187,9 +181,7 @@ export default async function GioiThieuV2Page() {
         <div className="hero-scroll">Cuộn xuống</div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          2. STATS — counter động từ data thật
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 2. STATS */}
       <section className="stats">
         <div className="stats-grid">
           <div className="stat reveal">
@@ -215,36 +207,17 @@ export default async function GioiThieuV2Page() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          3. INTRO — magazine layout với ảnh rừng gió bầu
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 3. INTRO */}
       <section className="section intro">
         <div className="container">
           <div className="intro-grid">
             <div className="intro-text reveal reveal-from-bottom">
-              <div className="eyebrow">Giới thiệu chung</div>
-              <h2 className="display-1">
-                Kết nối <em>tinh hoa</em>,
-                <br />
-                bảo tồn <em>di sản</em>,
-                <br />
-                nâng tầm <em>giá trị</em>
-              </h2>
-              <p className="lead">
-                Hội Trầm Hương Việt Nam (VAWA — Vietnam Agarwood Association) được
-                thành lập ngày <strong>11/01/2010</strong> theo Quyết định số 23/QĐ-BNV
-                của Bộ Nội vụ. Là tổ chức xã hội nghề nghiệp tự nguyện, phi lợi nhuận,
-                hoạt động theo Điều lệ và pháp luật Việt Nam.
-              </p>
-              <p className="lead">
-                Sứ mệnh của Hội là kết nối cộng đồng doanh nghiệp, nghệ nhân, nhà
-                nghiên cứu trong và ngoài nước; bảo tồn nguồn gen dó bầu quý và tri
-                thức truyền thống; nâng tầm thương hiệu Trầm Hương Việt trên trường
-                quốc tế.
-              </p>
+              <div className="eyebrow">{t("introEyebrow")}</div>
+              <h2 className="display-1" dangerouslySetInnerHTML={{ __html: t("introTitle") }} />
+              <p className="lead" dangerouslySetInnerHTML={{ __html: t("introLead1") }} />
+              <p className="lead" dangerouslySetInnerHTML={{ __html: t("introLead2") }} />
               <blockquote className="intro-quote">
-                &ldquo;Trầm Hương Việt Nam — không chỉ là nguyên liệu, mà là di sản
-                văn hoá nghìn năm cần được gìn giữ và lan toả.&rdquo;
+                &ldquo;{t("introQuote")}&rdquo;
               </blockquote>
             </div>
             <div className="intro-image reveal reveal-from-right">
@@ -255,9 +228,7 @@ export default async function GioiThieuV2Page() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          4. LEADERSHIP — tabs + chairman + grid (V2 design)
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 4. LEADERSHIP */}
       <section className="section leadership">
         <div className="container">
           <div className="section-head reveal">
@@ -270,18 +241,16 @@ export default async function GioiThieuV2Page() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          5. ORG CHART
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 5. ORG CHART */}
       <section className="section org">
         <div className="container">
           <div className="section-head reveal">
             <div className="eyebrow">Cơ cấu tổ chức</div>
             <h2 className="display-1" style={{ marginTop: "1.25rem" }}>
-              Bộ máy <em>vận hành</em>
+              {t("orgTitle")}
             </h2>
             <p className="lead" style={{ marginTop: "1.25rem", color: "var(--gray-500)" }}>
-              Theo Điều lệ sửa đổi, bổ sung 2023
+              {t("orgSub")}
             </p>
           </div>
 
@@ -310,9 +279,7 @@ export default async function GioiThieuV2Page() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          6. MEMBERS — 600px scroll container, render all hội viên VIP
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 6. MEMBERS */}
       <section className="section members">
         <div className="container">
           <div className="section-head reveal">
@@ -324,17 +291,11 @@ export default async function GioiThieuV2Page() {
               {totalMemberCount} hội viên VIP · doanh nghiệp · nghệ nhân từ khắp Việt Nam
             </p>
           </div>
-
-          {/* Toolbar (search input) + scroll container đều nằm trong
-              MembersScrollV2 vì search là client-side state, cần controlled
-              input và filter logic chung component. */}
           <MembersScrollV2 members={members} totalCount={totalMemberCount} />
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          7. CONTACT — Google Maps embed + địa chỉ
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 7. CONTACT */}
       <section className="section contact">
         <div className="container">
           <div className="section-head reveal">
@@ -350,24 +311,16 @@ export default async function GioiThieuV2Page() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
-                title="Bản đồ trụ sở Hội Trầm Hương Việt Nam — 150 Lý Chính Thắng, Q.3"
+                title="Bản đồ trụ sở Hội Trầm Hương Việt Nam"
               />
             </div>
             <div className="contact-card reveal">
               <div className="eyebrow">VAWA</div>
-              <h3>
-                Hội Trầm Hương
-                <br />
-                Việt Nam
-              </h3>
+              <h3>Hội Trầm Hương Việt Nam</h3>
               <ul className="contact-list">
                 <li>
                   <div className="ic">◎</div>
-                  <div>
-                    Số 150, Đường Lý Chính Thắng,
-                    <br />
-                    Phường Xuân Hoà, TP. Hồ Chí Minh
-                  </div>
+                  <div>Số 150, Lý Chính Thắng, P. Xuân Hoà, TP. HCM</div>
                 </li>
                 <li>
                   <div className="ic">☏</div>
@@ -377,43 +330,27 @@ export default async function GioiThieuV2Page() {
                   <div className="ic">✉</div>
                   <div>hoitramhuongvietnam2010@gmail.com</div>
                 </li>
-                <li>
-                  <div className="ic">⌖</div>
-                  <div>hoitramhuong.vn</div>
-                </li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════
-          8. CTA — full-width banner
-          ════════════════════════════════════════════════════════════════ */}
+      {/* 8. CTA */}
       <section className="cta">
         <div className="cta-bg" />
         <div className="cta-inner reveal">
-          <div className="eyebrow">Tham gia VAWA</div>
-          <h2>
-            Cùng <em>kết nối</em>,
-            <br />
-            bảo tồn và <em>nâng tầm</em>
-            <br />
-            Trầm Hương Việt Nam
-          </h2>
-          <p>
-            Trở thành hội viên để đồng hành cùng cộng đồng doanh nghiệp Trầm Hương
-            hàng đầu Việt Nam — kết nối chuyên gia, tham gia sự kiện, được chứng
-            nhận sản phẩm và xúc tiến thương mại quốc tế.
-          </p>
+          <div className="eyebrow">{t("ctaEyebrow")}</div>
+          <h2 dangerouslySetInnerHTML={{ __html: t("ctaTitle") }} />
+          <p>{t("ctaDesc")}</p>
           <Link href="/dang-ky" className="btn">
             Trở thành hội viên
           </Link>
         </div>
       </section>
 
-      {/* Client interactivity — IO reveals + stat counter */}
       <HeroAnimations />
     </div>
   )
 }
+
