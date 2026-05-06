@@ -24,39 +24,21 @@ const SETTINGS_GROUPS = [
       { key: "facebook_url", label: "Link Facebook", type: "url" },
       { key: "zalo_url", label: "Link Zalo OA", type: "url" },
       { key: "youtube_url", label: "Link kênh YouTube", type: "url" },
+      { key: "tiktok_url", label: "Link TikTok", type: "url" },
     ],
   },
+  // ── "Footer website" group đã bỏ — chuyển sang CMS trang tĩnh tại
+  // /admin/trang-tinh?page=home (xem lib/static-page-meta.ts → STATIC_PAGES.home).
+  // Footer hiện đọc text qua getStaticTexts("home", locale, "footer") trong
+  // SiteFooter.tsx, không còn dùng SiteConfig keys "footer_*" nữa.
   {
-    title: "Footer website",
-    description: "Nội dung hiển thị tại chân trang — hỗ trợ nhiều dòng",
+    title: "Thông tin Chuyển khoản",
+    description: "Thay đổi ở đây sẽ cập nhật trang /gia-han và /chung-nhan/nop-don",
     keys: [
-      { key: "footer_brand_desc", label: "Mô tả ngắn về Hội — VI (dưới logo)", type: "textarea" },
-      { key: "footer_brand_desc_en", label: "Mô tả ngắn — EN", type: "textarea" },
-      { key: "footer_brand_desc_zh", label: "Mô tả ngắn — 中文", type: "textarea" },
-      { key: "footer_working_hours", label: "Giờ làm việc — VI", type: "text" },
-      { key: "footer_working_hours_en", label: "Giờ làm việc — EN", type: "text" },
-      { key: "footer_working_hours_zh", label: "Giờ làm việc — 中文", type: "text" },
-      { key: "footer_legal_basis", label: "Căn cứ pháp lý — VI", type: "textarea" },
-      { key: "footer_legal_basis_en", label: "Căn cứ pháp lý — EN", type: "textarea" },
-      { key: "footer_legal_basis_zh", label: "Căn cứ pháp lý — 中文", type: "textarea" },
-      { key: "footer_copyright_notice", label: "Cảnh báo bản quyền — VI", type: "textarea" },
-      { key: "footer_copyright_notice_en", label: "Cảnh báo bản quyền — EN", type: "textarea" },
-      { key: "footer_copyright_notice_zh", label: "Cảnh báo bản quyền — 中文", type: "textarea" },
-      {
-        key: "footer_quick_links",
-        label: "Liên kết nhanh — VI (mỗi dòng: Nhãn|đường-dẫn)",
-        type: "textarea",
-      },
-      {
-        key: "footer_quick_links_en",
-        label: "Liên kết nhanh — EN (để trống sẽ fallback về ZH → VI)",
-        type: "textarea",
-      },
-      {
-        key: "footer_quick_links_zh",
-        label: "Liên kết nhanh — 中文 (để trống sẽ fallback về EN → VI)",
-        type: "textarea",
-      },
+      { key: "bank_name", label: "Tên ngân hàng nhận", type: "text" },
+      { key: "bank_account_number", label: "Số tài khoản", type: "text" },
+      { key: "bank_account_name", label: "Tên chủ tài khoản", type: "text" },
+      { key: "bank_branch", label: "Chi nhánh (nếu cần)", type: "text" },
     ],
   },
   {
@@ -70,16 +52,6 @@ const SETTINGS_GROUPS = [
       { key: "cert_fee", label: "Phí xét duyệt chứng nhận (VND)", type: "number" },
       { key: "max_vip_accounts", label: "Số slot VIP tối đa", type: "number" },
       { key: "post_cooldown_minutes", label: "Cooldown đăng bài (phút)", type: "number" },
-    ],
-  },
-  {
-    title: "Thông tin Chuyển khoản",
-    description: "Thay đổi ở đây sẽ cập nhật trang /gia-han và /chung-nhan/nop-don",
-    keys: [
-      { key: "bank_name", label: "Tên ngân hàng nhận", type: "text" },
-      { key: "bank_account_number", label: "Số tài khoản", type: "text" },
-      { key: "bank_account_name", label: "Tên chủ tài khoản", type: "text" },
-      { key: "bank_branch", label: "Chi nhánh (nếu cần)", type: "text" },
     ],
   },
   {

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAdminReadOnly, READ_ONLY_TOOLTIP } from "@/components/features/admin/AdminReadOnlyContext"
 
 type Props = {
-  /** Locale for this uploader (vi/en/zh). Passed to upload API as query param. */
-  locale: "vi" | "en" | "zh"
+  /** Locale for this uploader (vi/en/zh/ar). Passed to upload API as query param. */
+  locale: "vi" | "en" | "zh" | "ar"
   /** Drive file ID hiện tại (nếu có) */
   currentFileId: string | null
   /** Tên file hiện tại */
@@ -17,10 +17,11 @@ type Props = {
   currentUploadedAt: string | null
 }
 
-const LOCALE_LABEL: Record<"vi" | "en" | "zh", string> = {
+const LOCALE_LABEL: Record<"vi" | "en" | "zh" | "ar", string> = {
   vi: "🇻🇳 Bản tiếng Việt (gốc pháp lý)",
   en: "🇬🇧 Bản tiếng Anh (công chứng)",
   zh: "🇨🇳 Bản tiếng Trung (công chứng)",
+  ar: "🇸🇦 Bản tiếng Ả Rập (công chứng)",
 }
 
 function formatBytes(bytes: number): string {
@@ -152,7 +153,9 @@ export function DieuLeUploader({
             ? "Upload PDF bản tiếng Việt đã được Bộ Nội Vụ phê duyệt. Hiển thị mặc định trên /dieu-le."
             : locale === "en"
               ? "Upload bản dịch PDF tiếng Anh đã công chứng. Hiển thị tại /en/dieu-le. Nếu không có, fallback về bản VI."
-              : "Upload bản dịch PDF tiếng Trung đã công chứng. Hiển thị tại /zh/dieu-le. Nếu không có, fallback về bản VI."}
+              : locale === "zh"
+                ? "Upload bản dịch PDF tiếng Trung đã công chứng. Hiển thị tại /zh/dieu-le. Nếu không có, fallback về bản VI."
+                : "Upload bản dịch PDF tiếng Ả Rập đã công chứng. Hiển thị tại /ar/dieu-le. Nếu không có, fallback về bản VI."}
         </p>
       </div>
 

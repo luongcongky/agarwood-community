@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getLocale, getTranslations } from "next-intl/server"
 import { localize } from "@/i18n/localize"
 import type { Locale } from "@/i18n/config"
+import { getStaticTexts } from "@/lib/static-texts"
 
 // Fetch Chủ tịch + Phó CT + TTK + CVP cho cột "Lãnh đạo Hội".
 // Match title bằng regex vì admin nhập free-text (đồng bộ cách Footer v1 đang làm).
@@ -35,12 +36,14 @@ const getLeadership = unstable_cache(
 )
 
 export async function SiteFooter() {
-  const [leaders, t, tCommon, tNav, locale] = await Promise.all([
+  const locale = (await getLocale()) as Locale
+  const [leaders, t, tCommon, tNav] = await Promise.all([
     getLeadership(),
-    getTranslations("footer"),
+    // pageKey "home" + fallbackNamespace "footer" → admin /admin/trang-tinh
+    // ?page=home edit text trực tiếp, không cần thay đổi messages files.
+    getStaticTexts("home", locale, "footer"),
     getTranslations("common"),
     getTranslations("navbar"),
-    getLocale() as Promise<Locale>,
   ])
   const year = new Date().getFullYear()
 

@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils"
-import { getTranslations } from "next-intl/server"
+import { getLocale, getTranslations } from "next-intl/server"
+import type { Locale } from "@/i18n/config"
 import { ContactForm } from "./ContactForm"
 import { OfficialChannelsBlock } from "@/components/features/layout/OfficialChannelsBlock"
+import { getStaticTexts } from "@/lib/static-texts"
 
 export const revalidate = 600
 
@@ -15,7 +17,10 @@ export async function generateMetadata() {
 }
 
 export default async function LienHePage() {
-  const t = await getTranslations("contact")
+  const locale = (await getLocale()) as Locale
+  // `t` đọc StaticPageConfig (admin CMS override) trước, fallback messages —
+  // admin /admin/trang-tinh?page=contact có thể chỉnh trực tiếp.
+  const t = await getStaticTexts("contact", locale)
 
   return (
     <div>

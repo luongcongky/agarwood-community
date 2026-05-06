@@ -7,7 +7,7 @@ import { parseDriveFileId, getDriveFileMetadata } from "@/lib/google-drive"
 
 /**
  * POST /api/admin/dieu-le/link-existing
- * Body: { driveUrl: string, locale?: "vi" | "en" | "zh" }
+ * Body: { driveUrl: string, locale?: "vi" | "en" | "zh" | "ar" }
  *
  * Liên kết SiteConfig Điều lệ với 1 file ĐÃ CÓ SẴN trên Google Drive, không
  * upload lại. Dùng cho admin đã có link tài liệu (copy từ /admin/tai-lieu).
@@ -18,8 +18,8 @@ import { parseDriveFileId, getDriveFileMetadata } from "@/lib/google-drive"
  *  - Metadata (name/size) lấy từ Drive API.
  */
 
-type Locale = "vi" | "en" | "zh"
-const LOCALES: readonly Locale[] = ["vi", "en", "zh"] as const
+type Locale = "vi" | "en" | "zh" | "ar"
+const LOCALES: readonly Locale[] = ["vi", "en", "zh", "ar"] as const
 
 function keysFor(locale: Locale) {
   const suffix = locale === "vi" ? "" : `_${locale}`

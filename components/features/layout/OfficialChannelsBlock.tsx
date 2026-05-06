@@ -14,6 +14,7 @@ const KEYS = [
   "facebook_url",
   "zalo_url",
   "youtube_url",
+  "tiktok_url",
   "association_website",
   "association_email",
   "association_phone",
@@ -48,6 +49,8 @@ export async function OfficialChannelsBlock({
     channels.push({ label: t("labelZalo"), value: cfg.zalo_url, href: cfg.zalo_url, icon: "💬" })
   if (cfg.youtube_url)
     channels.push({ label: t("labelYoutube"), value: cfg.youtube_url, href: cfg.youtube_url, icon: "▶️" })
+  if (cfg.tiktok_url)
+    channels.push({ label: t("labelTiktok"), value: cfg.tiktok_url, href: cfg.tiktok_url, icon: "🎵" })
   if (cfg.association_website)
     channels.push({
       label: t("labelWebsite"),

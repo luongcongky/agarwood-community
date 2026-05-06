@@ -19,6 +19,7 @@ import { ProductFilters } from "./ProductFilters"
 import { CertProductCard } from "./CertProductCard"
 import { ProductFeatureToggleBtn } from "./ProductFeatureToggleBtn"
 import { CertifiedSeal } from "@/components/ui/CertifiedSeal"
+import { getStaticTexts } from "@/lib/static-texts"
 
 export const revalidate = 3600
 
@@ -172,11 +173,13 @@ export default async function CertifiedProductsPage({
     view?: string
   }>
 }) {
-  const [locale, t, session] = await Promise.all([
+  const [locale, session] = await Promise.all([
     getLocale() as Promise<Locale>,
-    getTranslations("certProducts"),
     auth(),
   ])
+  // `t` đọc StaticPageConfig (admin CMS override) trước, fallback messages —
+  // admin /admin/trang-tinh?page=certProducts có thể chỉnh trực tiếp.
+  const t = await getStaticTexts("certProducts", locale)
   const isAdminUser = isAdmin(session?.user?.role)
   const l = <T extends Record<string, unknown>>(record: T, field: string) =>
     localize(record, field, locale) as string
@@ -535,7 +538,7 @@ export default async function CertifiedProductsPage({
           <p
             className="mx-auto mt-10 max-w-2xl rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-center text-xs text-amber-900"
           >
-            ⚠️ <span dangerouslySetInnerHTML={{ __html: t.raw("vetoNotice") as string }} />
+            ⚠️ <span dangerouslySetInnerHTML={{ __html: t("vetoNotice") }} />
           </p>
         </div>
       </section>

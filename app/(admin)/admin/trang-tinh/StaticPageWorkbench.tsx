@@ -4,6 +4,11 @@ import { useState } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { STATIC_PAGES, type StaticPageKey, type StaticTextMeta } from "@/lib/static-page-meta"
 import { AboutMockup } from "./AboutMockup"
+import { CompaniesMockup } from "./CompaniesMockup"
+import { CertProductsMockup } from "./CertProductsMockup"
+import { ContactMockup } from "./ContactMockup"
+import { HomeMockup } from "./HomeMockup"
+import { DieuLeMockup } from "./DieuLeMockup"
 import { TextConfigEditor } from "./TextConfigEditor"
 import { cn } from "@/lib/utils"
 import type { StaticPageConfig } from "@prisma/client"
@@ -13,9 +18,12 @@ interface Props {
   configMap: Record<string, StaticPageConfig>
   defaultValues: Record<string, string>
   defaultValuesAllLocales?: Record<string, { vi: string, en: string, zh: string, ar: string }>
+  /** Truyền vào khi pageKey === "dieuLe" — map từ SiteConfig key (dieu_le_*)
+   *  → value, dùng để DieuLeMockup hydrate trạng thái 3 file uploader. */
+  dieuLeFiles?: Record<string, string>
 }
 
-export function StaticPageWorkbench({ currentPageKey, configMap, defaultValues, defaultValuesAllLocales }: Props) {
+export function StaticPageWorkbench({ currentPageKey, configMap, defaultValues, defaultValuesAllLocales, dieuLeFiles }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -51,6 +59,11 @@ export function StaticPageWorkbench({ currentPageKey, configMap, defaultValues, 
         ))}
       </div>
 
+      {/* Page có kind="dieu-le" (vd "dieuLe") không edit text-config — render
+          full-width DieuLeMockup với 3 file uploader inline, skip 2-col grid. */}
+      {pageMeta.kind === "dieu-le" ? (
+        <DieuLeMockup files={dieuLeFiles ?? {}} />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ── Left: Mockup ── */}
         <div className="space-y-4">
@@ -60,15 +73,51 @@ export function StaticPageWorkbench({ currentPageKey, configMap, defaultValues, 
             </h3>
             
             {currentPageKey === "about" && (
-              <AboutMockup 
-                selectedKey={selectedItemKey} 
-                onSelect={setSelectedItemKey} 
+              <AboutMockup
+                selectedKey={selectedItemKey}
+                onSelect={setSelectedItemKey}
                 configMap={configMap}
                 defaultValues={defaultValues}
               />
             )}
 
-            {currentPageKey !== "about" && (
+            {currentPageKey === "companies" && (
+              <CompaniesMockup
+                selectedKey={selectedItemKey}
+                onSelect={setSelectedItemKey}
+                configMap={configMap}
+                defaultValues={defaultValues}
+              />
+            )}
+
+            {currentPageKey === "certProducts" && (
+              <CertProductsMockup
+                selectedKey={selectedItemKey}
+                onSelect={setSelectedItemKey}
+                configMap={configMap}
+                defaultValues={defaultValues}
+              />
+            )}
+
+            {currentPageKey === "contact" && (
+              <ContactMockup
+                selectedKey={selectedItemKey}
+                onSelect={setSelectedItemKey}
+                configMap={configMap}
+                defaultValues={defaultValues}
+              />
+            )}
+
+            {currentPageKey === "home" && (
+              <HomeMockup
+                selectedKey={selectedItemKey}
+                onSelect={setSelectedItemKey}
+                configMap={configMap}
+                defaultValues={defaultValues}
+              />
+            )}
+
+            {currentPageKey !== "about" && currentPageKey !== "companies" && currentPageKey !== "certProducts" && currentPageKey !== "contact" && currentPageKey !== "home" && (
               <div className="bg-white rounded-lg border border-dashed border-brand-300 p-12 text-center text-brand-500">
                 Mockup cho trang {pageMeta.label} đang được cập nhật...
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -124,6 +173,7 @@ export function StaticPageWorkbench({ currentPageKey, configMap, defaultValues, 
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

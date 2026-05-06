@@ -52,8 +52,15 @@ export async function getStaticText(
 
 /**
  * Lấy toàn bộ text cho một trang để tránh query nhiều lần.
+ *
+ * @param fallbackNamespace - Khi messages namespace ≠ pageKey (vd page "home"
+ *   đọc text từ namespace "footer"). Mặc định fallback dùng namespace = pageKey.
  */
-export async function getStaticTexts(pageKey: string, locale: Locale) {
+export async function getStaticTexts(
+  pageKey: string,
+  locale: Locale,
+  fallbackNamespace?: string,
+) {
   const configs = await prisma.staticPageConfig.findMany({
     where: { pageKey },
   })
@@ -63,7 +70,7 @@ export async function getStaticTexts(pageKey: string, locale: Locale) {
   )
 
   // We still need the fallback from next-intl for items not in DB
-  const t = await getTranslations(pageKey)
+  const t = await getTranslations(fallbackNamespace ?? pageKey)
   
   // Create a proxy or a helper that prefers dbTexts
   return (itemKey: string, values?: Record<string, string | number>): string => {

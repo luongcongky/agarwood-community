@@ -9,6 +9,7 @@ import type { Locale } from "@/i18n/config"
 import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { CERT_VALIDITY_YEARS } from "@/lib/certification-council-constants"
+import { getStaticTexts } from "@/lib/static-texts"
 import { FeatureToggleBtn } from "./FeatureToggleBtn"
 import { AnimatedCount } from "./AnimatedCount"
 import type { CompanyCardData } from "./DirectoryCard"
@@ -60,11 +61,14 @@ type CompanyCard = Awaited<
 >[number]
 
 export default async function MembersPage() {
-  const [locale, session, t] = await Promise.all([
+  const [locale, session] = await Promise.all([
     getLocale() as Promise<Locale>,
     auth(),
-    getTranslations("companies"),
   ])
+  // `t` đọc StaticPageConfig (admin CMS override) trước, fallback messages.
+  // Như vậy admin /admin/trang-tinh?page=companies có thể chỉnh trực tiếp text
+  // trên trang này mà không cần redeploy.
+  const t = await getStaticTexts("companies", locale)
   const isAdminUser = isAdmin(session?.user?.role)
 
   // 4 query song song: list DN + 3 stats hero. Stats nhẹ (count/aggregate),
@@ -191,7 +195,7 @@ export default async function MembersPage() {
               <h1
                 className="dn-load font-serif-headline mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-brand-900 sm:text-5xl lg:text-[58px]"
                 style={{ "--d": "120ms" } as React.CSSProperties}
-                dangerouslySetInnerHTML={{ __html: t.raw("heroTitle") as string }}
+                dangerouslySetInnerHTML={{ __html: t("heroTitle") }}
               />
               <p
                 className="dn-load mt-6 max-w-xl text-base leading-relaxed text-brand-600 sm:text-lg"
@@ -329,6 +333,8 @@ export default async function MembersPage() {
             }))}
             isAdmin={isAdminUser}
             visitWebsiteLabel={t("visitWebsite")}
+            eyebrowLabel={t("directoryEyebrow")}
+            titleLabel={t("directoryTitle")}
           />
         </div>
       </section>

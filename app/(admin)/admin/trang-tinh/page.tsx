@@ -25,12 +25,29 @@ export default async function AdminStaticPagesPage({
 
   const configMap = Object.fromEntries(configs.map((c) => [c.itemKey, c]))
 
+  const pageMeta = STATIC_PAGES[currentPageKey]
+
+  // Page "dieuLe" có kind="dieu-le" — không edit StaticPageConfig text mà
+  // upload PDF qua SiteConfig (key dieu_le_drive_file_id{_locale}, ...).
+  // Fetch riêng các key đó để truyền xuống workbench.
+  let dieuLeFiles: Record<string, string> = {}
+  if (pageMeta.kind === "dieu-le") {
+    const dieuLeRows = await prisma.siteConfig.findMany({
+      where: { key: { startsWith: "dieu_le_" } },
+      select: { key: true, value: true },
+    })
+    dieuLeFiles = Object.fromEntries(dieuLeRows.map((r) => [r.key, r.value]))
+  }
+  // Namespace fallback có thể khác pageKey — vd page "home" đọc text trong
+  // namespace "footer" của messages files.
+  const messagesNamespace = pageMeta.fallbackNamespace ?? currentPageKey
+
   // Dùng `t.raw()` để bypass ICU formatting — cần raw template string ("Những
   // người <em>dẫn dắt</em>", "{count} hội viên...") để hiển thị placeholder
   // trong CMS editor, không phải kết quả format.
   const safeT = async (locale: string) => {
     try {
-      const t = await getTranslations({ locale, namespace: currentPageKey })
+      const t = await getTranslations({ locale, namespace: messagesNamespace })
       return (key: string) => {
         try {
           const raw = t.raw(key)
@@ -49,7 +66,6 @@ export default async function AdminStaticPagesPage({
   const tZh = await safeT("zh")
   const tAr = await safeT("ar")
 
-  const pageMeta = STATIC_PAGES[currentPageKey]
   const defaultValues = Object.fromEntries(
     pageMeta.items.map((item) => [item.key, tVi(item.key)])
   )
@@ -90,11 +106,12 @@ export default async function AdminStaticPagesPage({
         </p>
       </header>
 
-      <StaticPageWorkbench 
-        currentPageKey={currentPageKey} 
-        configMap={configMap} 
+      <StaticPageWorkbench
+        currentPageKey={currentPageKey}
+        configMap={configMap}
         defaultValues={defaultValues}
         defaultValuesAllLocales={defaultValuesAllLocales}
+        dieuLeFiles={dieuLeFiles}
       />
     </div>
   )

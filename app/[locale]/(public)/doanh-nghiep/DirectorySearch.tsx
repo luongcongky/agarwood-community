@@ -18,10 +18,15 @@ export function DirectorySearch({
   cards,
   isAdmin,
   visitWebsiteLabel,
+  eyebrowLabel,
+  titleLabel,
 }: {
   cards: CompanyCardData[]
   isAdmin: boolean
   visitWebsiteLabel: string
+  /** Section header — server truyền xuống để admin CMS override được. */
+  eyebrowLabel: string
+  titleLabel: string
 }) {
   const t = useTranslations("companies")
   const [query, setQuery] = useState("")
@@ -58,10 +63,10 @@ export function DirectorySearch({
         <div>
           <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-700">
             <span className="h-px w-10 bg-brand-700/40" />
-            {t("directoryEyebrow")}
+            {eyebrowLabel}
           </p>
           <h2 className="font-serif-headline mt-2 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-            {t("directoryTitle")}
+            {titleLabel}
           </h2>
         </div>
 

@@ -6,19 +6,20 @@ import { prisma } from "@/lib/prisma"
 import { uploadToDrive, deleteFromDrive } from "@/lib/google-drive"
 
 /**
- * POST /api/admin/dieu-le/upload?locale={vi|en|zh}
+ * POST /api/admin/dieu-le/upload?locale={vi|en|zh|ar}
  * Upload file PDF Điều lệ Hội lên Google Drive và lưu metadata vào SiteConfig.
  *
  * Per-locale keys:
  *  - locale=vi (default): dieu_le_drive_file_id, dieu_le_file_name, dieu_le_file_size, dieu_le_uploaded_at
  *  - locale=en: dieu_le_drive_file_id_en, dieu_le_file_name_en, ...
  *  - locale=zh: dieu_le_drive_file_id_zh, ...
+ *  - locale=ar: dieu_le_drive_file_id_ar, ...
  *
  * Nếu đã có file cũ cùng locale → xóa file cũ trên Drive trước khi upload file mới.
  */
 
-type Locale = "vi" | "en" | "zh"
-const LOCALES: readonly Locale[] = ["vi", "en", "zh"] as const
+type Locale = "vi" | "en" | "zh" | "ar"
+const LOCALES: readonly Locale[] = ["vi", "en", "zh", "ar"] as const
 
 function keysFor(locale: Locale) {
   const suffix = locale === "vi" ? "" : `_${locale}`
