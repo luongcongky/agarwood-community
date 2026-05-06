@@ -35,16 +35,27 @@ function displayWebsite(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
 }
 
+type DirectoryCardLabels = {
+  visitWebsite: string
+  featuredBadge: string
+  verified: string
+  viewDetails: string
+  certBadge: (count: number) => string
+  foundedSince: (year: number) => string
+}
+
 export function DirectoryCard({
   card,
   isAdmin,
   visitWebsiteLabel,
+  labels,
   index,
   hidden,
 }: {
   card: CompanyCardData
   isAdmin: boolean
   visitWebsiteLabel: string
+  labels: DirectoryCardLabels
   /** Index trong list — dùng cho stagger delay (không đổi khi filter để tránh re-animate). */
   index: number
   /** Khi search filter ẩn card — dùng `hidden` class thay vì unmount để
@@ -86,7 +97,7 @@ export function DirectoryCard({
             className="dn-pop absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.15em] text-brand-900 shadow ring-1 ring-white"
             style={{ "--d": "200ms" } as React.CSSProperties}
           >
-            ★ Tiêu biểu
+            ★ {labels.featuredBadge}
           </span>
         )}
       </Link>
@@ -111,7 +122,7 @@ export function DirectoryCard({
           </h3>
           {card.isVerified && (
             <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700">
-              ✓ Đã xác minh
+              {labels.verified}
             </span>
           )}
         </div>
@@ -132,12 +143,12 @@ export function DirectoryCard({
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
           {card.productsCount > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-              ✓ {card.productsCount} chứng nhận
+              {labels.certBadge(card.productsCount)}
             </span>
           )}
           {card.foundedYear && (
             <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">
-              Từ {card.foundedYear}
+              {labels.foundedSince(card.foundedYear)}
             </span>
           )}
           {card.address && (
@@ -155,8 +166,7 @@ export function DirectoryCard({
           href={detailUrl}
           className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700/80 transition-colors hover:text-brand-900 group-hover:text-brand-900"
         >
-          <span>Xem chi tiết</span>
-          <span className="inline-block transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+          <span>{labels.viewDetails}</span>
         </Link>
         <div className="flex items-center gap-1.5">
           {card.website && (

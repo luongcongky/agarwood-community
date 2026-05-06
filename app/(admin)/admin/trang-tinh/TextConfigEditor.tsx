@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
+import Image from "next/image"
 import type { StaticTextMeta } from "@/lib/static-page-meta"
 import { saveStaticText } from "./actions"
-import { Loader2, Save, Sparkles } from "lucide-react"
+import { ImagePlus, Loader2, Save, Sparkles, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { StaticPageConfig } from "@prisma/client"
 
@@ -18,14 +19,43 @@ interface Props {
 export function TextConfigEditor({ pageKey, itemMeta, initialData, defaultTranslations, onSuccess }: Props) {
   const [isPending, startTransition] = useTransition()
   const [isTranslating, setIsTranslating] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const isImage = itemMeta.type === "image"
+
   const [formData, setFormData] = useState({
     value: initialData?.value || defaultTranslations?.vi || "",
     value_en: initialData?.value_en || defaultTranslations?.en || "",
     value_zh: initialData?.value_zh || defaultTranslations?.zh || "",
     value_ar: initialData?.value_ar || defaultTranslations?.ar || "",
   })
+
+  async function handleImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setMsg({ type: "error", text: "Chỉ chấp nhận file ảnh" })
+      return
+    }
+    setMsg(null)
+    setIsUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      // Lưu vào folder "trang-tinh" để tách khỏi ảnh CMS khác.
+      fd.append("folder", "trang-tinh")
+      const res = await fetch("/api/upload", { method: "POST", body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Upload thất bại")
+      setFormData((prev) => ({ ...prev, value: data.secure_url ?? data.url }))
+      setMsg({ type: "success", text: "Đã tải ảnh lên. Nhớ bấm Lưu cấu hình!" })
+    } catch (err) {
+      setMsg({ type: "error", text: "Lỗi tải ảnh: " + (err as Error).message })
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
 
   async function handleAiTranslate() {
     if (!formData.value) {
@@ -108,6 +138,39 @@ export function TextConfigEditor({ pageKey, itemMeta, initialData, defaultTransl
       </header>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-6 gap-6 overflow-auto">
+        {/* Action bar — sticky để luôn nhìn thấy nút Lưu khi cuộn dài */}
+        <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 py-3 bg-white/95 backdrop-blur border-b border-brand-100 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setFormData({
+              value: initialData?.value || defaultTranslations?.vi || "",
+              value_en: initialData?.value_en || defaultTranslations?.en || "",
+              value_zh: initialData?.value_zh || defaultTranslations?.zh || "",
+              value_ar: initialData?.value_ar || defaultTranslations?.ar || "",
+            })}
+            className="text-sm font-medium text-brand-500 hover:text-brand-700 transition-colors"
+          >
+            Hủy thay đổi
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Lưu cấu hình
+              </>
+            )}
+          </button>
+        </div>
+
         {msg && (
           <div className={cn(
             "rounded-lg border px-4 py-2.5 text-sm animate-in fade-in slide-in-from-top-1",
@@ -117,6 +180,84 @@ export function TextConfigEditor({ pageKey, itemMeta, initialData, defaultTransl
           </div>
         )}
 
+        {isImage ? (
+          /* Image picker — chỉ lưu URL vào field `value`, không multilang */
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-brand-700 flex items-center gap-2">
+              Ảnh
+              <span className="text-[10px] font-normal text-brand-400 italic">JPG/PNG/WebP, tối đa 5MB</span>
+            </label>
+
+            {formData.value ? (
+              <div className="relative rounded-lg overflow-hidden border border-brand-200 bg-brand-50">
+                <Image
+                  src={formData.value}
+                  alt="Preview"
+                  width={800}
+                  height={1000}
+                  unoptimized
+                  className="w-full h-auto max-h-[420px] object-contain bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFormData((p) => ({ ...p, value: "" }))}
+                  className="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/90 backdrop-blur border border-brand-200 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Xoá ảnh
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-brand-200 bg-brand-50/40 p-8 text-center text-sm text-brand-500">
+                Chưa có ảnh. Bấm nút bên dưới để tải lên.
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleImageUpload(file)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-md text-sm font-bold transition-colors disabled:opacity-50"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Đang tải lên...
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="w-4 h-4" />
+                  {formData.value ? "Đổi ảnh khác" : "Tải ảnh lên"}
+                </>
+              )}
+            </button>
+
+            {/* URL field cho phép paste link Cloudinary có sẵn */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-brand-500 uppercase tracking-wider">
+                Hoặc dán URL ảnh
+              </label>
+              <input
+                type="url"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                placeholder="https://res.cloudinary.com/..."
+              />
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Tiếng Việt (Gốc) */}
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-brand-700 flex items-center gap-2">
@@ -230,38 +371,9 @@ export function TextConfigEditor({ pageKey, itemMeta, initialData, defaultTransl
             )}
           </div>
         </div>
+        </>
+        )}
 
-        <div className="mt-auto pt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setFormData({
-              value: initialData?.value || defaultTranslations?.vi || "",
-              value_en: initialData?.value_en || defaultTranslations?.en || "",
-              value_zh: initialData?.value_zh || defaultTranslations?.zh || "",
-              value_ar: initialData?.value_ar || defaultTranslations?.ar || "",
-            })}
-            className="text-sm font-medium text-brand-500 hover:text-brand-700 transition-colors"
-          >
-            Hủy thay đổi
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white font-bold rounded-lg hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Đang lưu...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Lưu cấu hình
-              </>
-            )}
-          </button>
-        </div>
       </form>
     </div>
   )

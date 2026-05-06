@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
+import { useTranslations } from "next-intl"
 import { X } from "lucide-react"
 
 // V2-styled leadership tabs — visual khác với LeadershipTabs cũ.
@@ -22,11 +23,14 @@ export type LeaderItem = {
 
 type TabKey = "BTV" | "BCH" | "BKT" | "HDTD"
 
-const TAB_LABELS: Record<TabKey, string> = {
-  BTV: "Ban Thường vụ",
-  BCH: "Ban Chấp hành",
-  BKT: "Ban Kiểm tra",
-  HDTD: "HĐ Thẩm định",
+function useTabLabels(): Record<TabKey, string> {
+  const t = useTranslations("about")
+  return {
+    BTV: t("tabBTV"),
+    BCH: t("tabBCH"),
+    BKT: t("tabBKT"),
+    HDTD: t("tabHDTD"),
+  }
 }
 
 function rankFromTitle(title: string): "chairman" | "vice" | "member" {
@@ -85,6 +89,8 @@ function LeaderCard({
 }
 
 function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => void }) {
+  const t = useTranslations("about")
+  const tabLabels = useTabLabels()
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
     window.addEventListener("keydown", onKey)
@@ -127,7 +133,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
         <button
           type="button"
           onClick={onClose}
-          aria-label="Đóng"
+          aria-label={t("closeBtn")}
           style={{
             position: "absolute",
             top: "1rem",
@@ -186,7 +192,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
                 color: "var(--gold-deep)",
               }}
             >
-              {TAB_LABELS[leader.category]} · {leader.term}
+              {tabLabels[leader.category]} · {leader.term}
             </div>
             <h3
               style={{
@@ -221,7 +227,7 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
                     marginBottom: "0.5rem",
                   }}
                 >
-                  Tiểu sử
+                  {t("bioLabel")}
                 </div>
                 <p
                   style={{
@@ -243,9 +249,11 @@ function LeaderModal({ leader, onClose }: { leader: LeaderItem; onClose: () => v
 }
 
 export function LeadershipTabsV2({ leaders }: { leaders: LeaderItem[] }) {
+  const t = useTranslations("about")
+  const tabLabels = useTabLabels()
   const availableTabs = useMemo<TabKey[]>(() => {
     const all = new Set(leaders.map((l) => l.category))
-    return (["BTV", "BCH", "BKT", "HDTD"] as TabKey[]).filter((t) => all.has(t))
+    return (["BTV", "BCH", "BKT", "HDTD"] as TabKey[]).filter((cat) => all.has(cat))
   }, [leaders])
 
   const [activeTab, setActiveTab] = useState<TabKey>(availableTabs[0] ?? "BTV")
@@ -282,7 +290,7 @@ export function LeadershipTabsV2({ leaders }: { leaders: LeaderItem[] }) {
           margin: "0 auto",
         }}
       >
-        Chưa có thông tin Ban lãnh đạo.
+        {t("noLeaders")}
       </div>
     )
   }
@@ -297,7 +305,7 @@ export function LeadershipTabsV2({ leaders }: { leaders: LeaderItem[] }) {
             className={`tab${tab === activeTab ? " active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
-            {TAB_LABELS[tab]} <span className="tab-count">({tabCounts[tab]})</span>
+            {tabLabels[tab]} <span className="tab-count">({tabCounts[tab]})</span>
           </button>
         ))}
       </div>
@@ -322,7 +330,7 @@ export function LeadershipTabsV2({ leaders }: { leaders: LeaderItem[] }) {
         <>
           {(chairman || vicePresidents.length > 0) && (
             <div className="leader-divider reveal">
-              {activeTab === "BTV" ? "Uỷ viên Thường vụ" : "Thành viên"}
+              {activeTab === "BTV" ? t("dividerStanding") : t("dividerOther")}
             </div>
           )}
           <div className="leader-grid reveal">

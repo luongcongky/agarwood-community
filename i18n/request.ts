@@ -10,12 +10,22 @@ import ar from "@/messages/ar.json"
 // Lookup is O(1) and avoids the dynamic import() overhead each render path.
 const messages: Record<Locale, typeof vi> = { vi, en, zh, ar }
 
-export default getRequestConfig(async () => {
-  // Read locale from the x-locale header set by proxy.ts
-  const h = await headers()
-  const headerLocale = h.get("x-locale")
-  const locale: Locale =
-    headerLocale && isValidLocale(headerLocale) ? headerLocale : defaultLocale
+export default getRequestConfig(async ({ requestLocale }) => {
+  // Ưu tiên explicit locale do caller truyền vào (vd
+  // `getTranslations({ locale: "en" })` ở admin CMS load 4 ngôn ngữ trong 1
+  // request). Nếu không có → fallback về header x-locale do proxy.ts set theo
+  // URL/ cookie. Trước đây handler này luôn dùng header → admin gọi
+  // `getTranslations({ locale: "en" })` ở route /admin/* nhận về vi messages
+  // (vì admin route bypass URL locale, header luôn "vi").
+  const explicit = await requestLocale
+  let locale: Locale
+  if (explicit && isValidLocale(explicit)) {
+    locale = explicit
+  } else {
+    const h = await headers()
+    const headerLocale = h.get("x-locale")
+    locale = headerLocale && isValidLocale(headerLocale) ? headerLocale : defaultLocale
+  }
 
   return {
     locale,

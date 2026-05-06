@@ -302,6 +302,14 @@
   .gtv2-page .hero-rings::before { inset: 12%; }
   .gtv2-page .hero-rings::after  { inset: 26%; border-color: rgba(201,169,97,0.25); }
 
+  /* RTL (Arabic): text đã flow phải → flip logo + rings sang trái cho cân.
+     Apply trên html[dir="rtl"] (set bởi app/layout.tsx khi locale = ar). */
+  [dir="rtl"] .gtv2-page .hero-rings,
+  [dir="rtl"] .gtv2-page .hero-logo:not(.hero-logo-mobile) {
+    right: auto;
+    left: 8%;
+  }
+
   /* ===========================================================
      Hero logo — luminous floating logo ở giữa hero-rings.
      Container có cùng kích thước với .hero-rings → share center.

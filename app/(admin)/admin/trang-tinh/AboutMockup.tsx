@@ -133,18 +133,81 @@ export function AboutMockup({ selectedKey, onSelect, configMap, defaultValues }:
                 />
               </div>
             </div>
-            <div className="col-span-2">
-              <div className="aspect-4/5 bg-brand-100 rounded-lg overflow-hidden relative border border-brand-200 shadow-sm">
-                <div className="absolute inset-0 bg-brand-900/5" />
-                <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded text-[7px] font-bold text-brand-900 uppercase">
-                  Rừng dó bầu
-                </div>
-              </div>
+            <div className="col-span-2 space-y-1">
+              <button
+                type="button"
+                onClick={() => onSelect("introImage")}
+                className={cn(
+                  "block w-full aspect-4/5 rounded-lg overflow-hidden relative border shadow-sm transition-all",
+                  selectedKey === "introImage"
+                    ? "ring-2 ring-amber-500 ring-offset-2 border-amber-400"
+                    : "border-brand-200 hover:ring-2 hover:ring-amber-300 ring-offset-1"
+                )}
+              >
+                {configMap["introImage"]?.value ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={configMap["introImage"].value}
+                    alt="intro"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-brand-100 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-brand-500 uppercase">Click để đổi ảnh</span>
+                  </div>
+                )}
+                <span className={cn(
+                  "absolute -top-4 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider whitespace-nowrap pointer-events-none transition-opacity",
+                  selectedKey === "introImage"
+                    ? "bg-amber-500 text-white opacity-100"
+                    : "bg-amber-200 text-amber-800 opacity-0 hover:opacity-100"
+                )}>
+                  introImage
+                </span>
+              </button>
+              <EditableArea
+                itemKey="introImageCaption"
+                label="Rừng gió bầu"
+                value={configMap["introImageCaption"]?.value}
+                defaultValue={defaultValues["introImageCaption"]}
+                selectedKey={selectedKey}
+                onSelect={onSelect}
+                className="text-[7px] font-bold text-brand-900 uppercase"
+              />
             </div>
           </div>
         </section>
 
-        {/* ── 4. Org Tree ── */}
+        {/* ── 4. Leadership ── */}
+        <section className="py-8 px-6 bg-white text-center border-t border-brand-100">
+          <div className="space-y-2 max-w-sm mx-auto">
+            <EditableArea
+              itemKey="leadershipEyebrow"
+              label="Ban lãnh đạo Hội"
+              value={configMap["leadershipEyebrow"]?.value}
+              defaultValue={defaultValues["leadershipEyebrow"]}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              className="text-[8px] font-bold uppercase tracking-widest text-brand-600"
+            />
+            <EditableArea
+              itemKey="leadershipHeading"
+              label="Những người <em>dẫn dắt</em>"
+              value={configMap["leadershipHeading"]?.value}
+              defaultValue={defaultValues["leadershipHeading"]}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              className="text-sm font-bold text-brand-900 leading-snug"
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-4 gap-2 max-w-xs mx-auto">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="aspect-square bg-brand-100 rounded-full border border-brand-200" />
+            ))}
+          </div>
+        </section>
+
+        {/* ── 5. Org Tree ── */}
         <section className="py-8 px-6 bg-brand-50/20 text-center">
           <div className="space-y-4 max-w-sm mx-auto">
             <div className="space-y-1">
@@ -181,7 +244,45 @@ export function AboutMockup({ selectedKey, onSelect, configMap, defaultValues }:
           </div>
         </section>
 
-        {/* ── 5. CTA ── */}
+        {/* ── 6. Members ── */}
+        <section className="py-8 px-6 bg-white text-center border-t border-brand-100">
+          <div className="space-y-2 max-w-sm mx-auto">
+            <EditableArea
+              itemKey="membersEyebrow"
+              label="Cộng đồng hội viên"
+              value={configMap["membersEyebrow"]?.value}
+              defaultValue={defaultValues["membersEyebrow"]}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              className="text-[8px] font-bold uppercase tracking-widest text-brand-600"
+            />
+            <EditableArea
+              itemKey="membersHeading"
+              label="Quy tụ <em>tinh hoa</em>"
+              value={configMap["membersHeading"]?.value}
+              defaultValue={defaultValues["membersHeading"]}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              className="text-sm font-bold text-brand-900 leading-snug"
+            />
+            <EditableArea
+              itemKey="membersLead"
+              label="{count} hội viên VIP · doanh nghiệp · nghệ nhân từ khắp Việt Nam"
+              value={configMap["membersLead"]?.value}
+              defaultValue={defaultValues["membersLead"]}
+              selectedKey={selectedKey}
+              onSelect={onSelect}
+              className="text-[9px] text-brand-500 leading-relaxed"
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-6 gap-1 max-w-xs mx-auto">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="aspect-square bg-brand-100 rounded-full border border-brand-200" />
+            ))}
+          </div>
+        </section>
+
+        {/* ── 7. CTA ── */}
         <section className="py-10 px-8 bg-brand-900 text-center space-y-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
           <div className="relative space-y-3">

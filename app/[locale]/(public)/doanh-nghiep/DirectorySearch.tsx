@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useTranslations } from "next-intl"
 import { Search, X } from "lucide-react"
 import { DirectoryCard, type CompanyCardData } from "./DirectoryCard"
 
@@ -22,7 +23,16 @@ export function DirectorySearch({
   isAdmin: boolean
   visitWebsiteLabel: string
 }) {
+  const t = useTranslations("companies")
   const [query, setQuery] = useState("")
+  const cardLabels = {
+    visitWebsite: visitWebsiteLabel,
+    featuredBadge: t("featuredBadge"),
+    verified: t("verified"),
+    viewDetails: t("viewDetails"),
+    certBadge: (count: number) => t("cardCertBadge", { count }),
+    foundedSince: (year: number) => t("foundedSince", { year }),
+  }
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -48,10 +58,10 @@ export function DirectorySearch({
         <div>
           <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-700">
             <span className="h-px w-10 bg-brand-700/40" />
-            Toàn bộ hội viên
+            {t("directoryEyebrow")}
           </p>
           <h2 className="font-serif-headline mt-2 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-            Danh bạ doanh nghiệp
+            {t("directoryTitle")}
           </h2>
         </div>
 
@@ -65,15 +75,15 @@ export function DirectorySearch({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm doanh nghiệp..."
-            aria-label="Tìm doanh nghiệp"
+            placeholder={t("directorySearchPlaceholder")}
+            aria-label={t("directorySearchAriaLabel")}
             className="w-full rounded-full border border-brand-300 bg-white py-2.5 pl-10 pr-10 text-sm text-brand-900 placeholder:text-brand-400 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           />
           {hasQuery && (
             <button
               type="button"
               onClick={() => setQuery("")}
-              aria-label="Xoá tìm kiếm"
+              aria-label={t("directoryClearSearch")}
               className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-brand-400 transition-colors hover:bg-brand-100 hover:text-brand-700"
             >
               <X className="h-4 w-4" />
@@ -85,7 +95,7 @@ export function DirectorySearch({
       {/* Empty: không có DN nào trong danh bạ (server data rỗng) */}
       {cards.length === 0 && (
         <p className="py-10 text-center text-brand-500">
-          Chưa có doanh nghiệp nào trong danh bạ.
+          {t("directoryEmpty")}
         </p>
       )}
 
@@ -93,7 +103,7 @@ export function DirectorySearch({
       {cards.length > 0 && hasQuery && visibleCount === 0 && (
         <div className="py-10 text-center">
           <p className="text-brand-500">
-            Không tìm thấy doanh nghiệp nào khớp với{" "}
+            {t("directoryNoMatch")}{" "}
             <span className="font-semibold text-brand-900">&ldquo;{query}&rdquo;</span>.
           </p>
           <button
@@ -101,7 +111,7 @@ export function DirectorySearch({
             onClick={() => setQuery("")}
             className="mt-3 text-sm font-semibold text-brand-700 underline hover:text-brand-900"
           >
-            Xem tất cả doanh nghiệp
+            {t("directoryViewAll")}
           </button>
         </div>
       )}
@@ -114,6 +124,7 @@ export function DirectorySearch({
             card={c}
             isAdmin={isAdmin}
             visitWebsiteLabel={visitWebsiteLabel}
+            labels={cardLabels}
             index={i}
             hidden={!matches.has(c.id)}
           />
@@ -123,8 +134,7 @@ export function DirectorySearch({
       {/* Counter — chỉ hiện khi đang filter để thông báo còn lại bao nhiêu */}
       {hasQuery && visibleCount > 0 && (
         <p className="mt-6 text-center text-xs text-brand-500 tabular-nums">
-          Hiển thị <span className="font-semibold text-brand-700">{visibleCount}</span>{" "}
-          / {cards.length} doanh nghiệp
+          {t("directoryShowingCount", { visible: visibleCount, total: cards.length })}
         </p>
       )}
     </>

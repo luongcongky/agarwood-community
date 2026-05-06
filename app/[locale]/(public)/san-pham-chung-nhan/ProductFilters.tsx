@@ -21,6 +21,7 @@ type Props = {
 
 export function ProductFilters({ totalProducts, totalCompanies, lastUpdated }: Props) {
   const t = useTranslations("productFilters")
+  const tC = useTranslations("certProducts")
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -70,7 +71,7 @@ export function ProductFilters({ totalProducts, totalCompanies, lastUpdated }: P
             <button
               type="button"
               onClick={() => update({ q: "" })}
-              aria-label="Xoá tìm kiếm"
+              aria-label={tC("searchClearAria")}
               className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
             >
               <X className="h-4 w-4" />

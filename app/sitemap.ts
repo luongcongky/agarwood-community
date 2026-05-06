@@ -45,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // `san-pham-doanh-nghiep`, `multimedia` (đã có từ trước nhưng chưa index).
   const staticRoutes: MetadataRoute.Sitemap = [
     entry("/", now, "daily", 1.0),
-    entry("/gioi-thieu", now, "monthly", 0.7),
+    entry("/gioi-thieu-v2", now, "monthly", 0.7),
     entry("/ban-lanh-dao", now, "monthly", 0.7),
     entry("/tin-tuc", now, "daily", 0.9),
     entry("/nghien-cuu", now, "weekly", 0.7),

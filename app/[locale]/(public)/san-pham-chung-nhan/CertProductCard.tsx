@@ -6,6 +6,7 @@ import { BLUR_DATA_URL } from "@/lib/seo/blur-placeholder"
 import { AgarwoodPlaceholder } from "@/components/ui/AgarwoodPlaceholder"
 import { ProductFeatureToggleBtn } from "./ProductFeatureToggleBtn"
 import { CertifiedSeal } from "@/components/ui/CertifiedSeal"
+import type { Locale } from "@/i18n/config"
 
 /**
  * Card sản phẩm chứng nhận — portrait orientation 4/5 + cert seal stamp
@@ -29,12 +30,20 @@ export function CertProductCard({
   card,
   index,
   isAdmin,
+  locale,
+  featuredTagline,
+  featuredBadge,
 }: {
   card: CertProductCardData
   /** Index trong list — dùng cho stagger delay (--i CSS var). */
   index: number
   /** Admin-only quick toggle "SP tiêu biểu" — render ở góc trên-trái. */
   isAdmin?: boolean
+  locale: Locale
+  /** "★ Tiêu biểu của Hội" tagline (above name) — already localized. */
+  featuredTagline: string
+  /** Featured ribbon badge text (e.g. "Tiêu biểu") — already localized. */
+  featuredBadge: string
 }) {
   // Featured cards có "tủ kính prestige" treatment riêng: gold ring +
   // warm shadow + cream-amber gradient bg → user lướt qua thấy ngay sự
@@ -108,7 +117,7 @@ export function CertProductCard({
         {featured && !isAdmin && (
           <span className="cp-ribbon-gold absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-linear-to-br from-amber-400 to-amber-600 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-900 shadow-lg ring-2 ring-white">
             <span className="text-xs leading-none">★</span>
-            <span>Tiêu biểu</span>
+            <span>{featuredBadge}</span>
           </span>
         )}
       </div>
@@ -118,7 +127,7 @@ export function CertProductCard({
             uppercase serif → cảm giác "danh hiệu của Hội" khác hẳn SP thường */}
         {featured && (
           <p className="font-serif-headline text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">
-            ★ Tiêu biểu của Hội
+            {featuredTagline}
           </p>
         )}
         <h3
@@ -140,7 +149,7 @@ export function CertProductCard({
           )}
           {card.certApprovedAt && (
             <span className="shrink-0 tabular-nums">
-              {new Date(card.certApprovedAt).toLocaleDateString("vi-VN", {
+              {new Date(card.certApprovedAt).toLocaleDateString(locale, {
                 month: "2-digit",
                 year: "numeric",
               })}

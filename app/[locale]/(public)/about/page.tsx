@@ -6,5 +6,5 @@ export default async function AboutPage({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
-  redirect(`/${locale}/gioi-thieu`)
+  redirect(`/${locale}/gioi-thieu-v2`)
 }

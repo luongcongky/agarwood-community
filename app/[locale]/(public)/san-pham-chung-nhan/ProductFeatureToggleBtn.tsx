@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 
 /**
@@ -18,6 +19,7 @@ export function ProductFeatureToggleBtn({
   productId: string
   initialFeatured: boolean
 }) {
+  const t = useTranslations("certProducts")
   const [featured, setFeatured] = useState(initialFeatured)
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
@@ -31,9 +33,7 @@ export function ProductFeatureToggleBtn({
     if (saving) return
     const next = !featured
     const ok = window.confirm(
-      next
-        ? "Chọn sản phẩm này làm Sản phẩm tiêu biểu?"
-        : "Bỏ Sản phẩm tiêu biểu? SP sẽ không còn xuất hiện ở mục SP tiêu biểu trên trang chủ.",
+      next ? t("toggleConfirmOn") : t("toggleConfirmOff"),
     )
     if (!ok) return
     setSaving(true)
@@ -48,7 +48,7 @@ export function ProductFeatureToggleBtn({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setFeatured(!next) // rollback
-        setError(data.error ?? "Lưu thất bại")
+        setError(data.error ?? t("toggleSaveFailed"))
         return
       }
       setSavedFlash(true)
@@ -58,7 +58,7 @@ export function ProductFeatureToggleBtn({
       }, 900)
     } catch {
       setFeatured(!next) // rollback
-      setError("Lỗi mạng")
+      setError(t("toggleNetworkError"))
     } finally {
       setSaving(false)
     }
@@ -73,10 +73,10 @@ export function ProductFeatureToggleBtn({
         error
           ? error
           : featured
-            ? "Click để bỏ SP tiêu biểu"
-            : "Click để chọn SP tiêu biểu"
+            ? t("toggleTitleOff")
+            : t("toggleTitleOn")
       }
-      aria-label={featured ? "Bỏ SP tiêu biểu" : "Chọn SP tiêu biểu"}
+      aria-label={featured ? t("toggleAriaOff") : t("toggleAriaOn")}
       className={cn(
         "inline-flex h-7 w-7 items-center justify-center rounded-md border text-base leading-none shadow-sm transition-colors",
         savedFlash

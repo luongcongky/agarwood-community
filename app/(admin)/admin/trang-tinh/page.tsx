@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { STATIC_PAGES, type StaticPageKey } from "@/lib/static-page-meta"
 import { StaticPageWorkbench } from "./StaticPageWorkbench"
 import { getTranslations } from "next-intl/server"
+import type { Locale } from "@/i18n/config"
 
 export const metadata = {
   title: "Cấu hình Trang tĩnh | Admin",
@@ -13,7 +14,9 @@ export default async function AdminStaticPagesPage({
   searchParams: Promise<{ page?: string }>
 }) {
   const sp = await searchParams
-  const currentPageKey = (sp.page as StaticPageKey) || "about"
+  const requested = sp.page as StaticPageKey | undefined
+  const currentPageKey: StaticPageKey =
+    requested && requested in STATIC_PAGES ? requested : "about"
 
   // Fetch all configs for the current page
   const configs = await prisma.staticPageConfig.findMany({
@@ -22,11 +25,19 @@ export default async function AdminStaticPagesPage({
 
   const configMap = Object.fromEntries(configs.map((c) => [c.itemKey, c]))
 
+  // Dùng `t.raw()` để bypass ICU formatting — cần raw template string ("Những
+  // người <em>dẫn dắt</em>", "{count} hội viên...") để hiển thị placeholder
+  // trong CMS editor, không phải kết quả format.
   const safeT = async (locale: string) => {
     try {
       const t = await getTranslations({ locale, namespace: currentPageKey })
       return (key: string) => {
-        try { return t(key) } catch { return "" }
+        try {
+          const raw = t.raw(key)
+          return typeof raw === "string" ? raw : ""
+        } catch {
+          return ""
+        }
       }
     } catch {
       return () => ""
@@ -42,15 +53,30 @@ export default async function AdminStaticPagesPage({
   const defaultValues = Object.fromEntries(
     pageMeta.items.map((item) => [item.key, tVi(item.key)])
   )
-  
+
+  // Match public viewer (lib/static-texts.ts): per-locale column trực tiếp
+  // (value_en/value_zh/value_ar/value), KHÔNG cross-language fallback. Khi
+  // cột rỗng → messages.{locale}.json. Như vậy admin và public hoàn toàn
+  // đồng bộ — text user thấy trong form chính là text đang render publicly.
+  const messagesFallback: Record<Locale, (key: string) => string> = {
+    vi: tVi, en: tEn, zh: tZh, ar: tAr,
+  }
+  const dbColumn = (loc: Locale) => loc === "vi" ? "value" as const : `value_${loc}` as const
+  const resolveLocale = (item: typeof pageMeta.items[number], loc: Locale): string => {
+    const row = configMap[item.key]
+    const colVal = row?.[dbColumn(loc)]
+    if (typeof colVal === "string" && colVal.trim() !== "") return colVal
+    return messagesFallback[loc](item.key) || ""
+  }
+
   const defaultValuesAllLocales = Object.fromEntries(
     pageMeta.items.map((item) => [
       item.key,
       {
-        vi: defaultValues[item.key] || "",
-        en: tEn(item.key) || "",
-        zh: tZh(item.key) || "",
-        ar: tAr(item.key) || "",
+        vi: resolveLocale(item, "vi"),
+        en: resolveLocale(item, "en"),
+        zh: resolveLocale(item, "zh"),
+        ar: resolveLocale(item, "ar"),
       }
     ])
   )

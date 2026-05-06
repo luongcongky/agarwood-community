@@ -230,7 +230,7 @@ export default async function CertifiedProductsPage({
   const { totalProducts, totalCompanies, monthsActive } = filterMeta
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
-  const lastUpdated = new Date().toLocaleDateString("vi-VN", {
+  const lastUpdated = new Date().toLocaleDateString(locale, {
     day: "2-digit", month: "2-digit", year: "numeric",
   })
 
@@ -437,38 +437,37 @@ export default async function CertifiedProductsPage({
             style={{ "--d": "0ms" } as React.CSSProperties}
           >
             <CertSealIcon className="h-5 w-5" />
-            <span>Chứng nhận chính thức · Hội Trầm Hương Việt Nam</span>
+            <span>{t("heroEyebrow")}</span>
           </div>
 
           <h1
             className="cp-load font-serif-headline mt-6 text-3xl font-bold leading-[1.15] tracking-tight text-white sm:text-5xl lg:text-[56px]"
             style={{ "--d": "150ms" } as React.CSSProperties}
           >
-            Mỗi sản phẩm trên đây
+            {t("heroTitle1")}
             <br />
-            đã đi qua hội đồng thẩm định
+            {t("heroTitle2")}
             <br />
-            <span className="text-emerald-300">{COUNCIL_SIZE} thành viên</span> của Hội.
+            <span className="text-emerald-300">{t("heroTitleCouncil", { count: COUNCIL_SIZE })}</span>{" "}
+            {t("heroTitleSuffix")}
           </h1>
 
           <p
             className="cp-load mt-6 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg"
             style={{ "--d": "320ms" } as React.CSSProperties}
           >
-            Không phải tự công bố. Không phải nhãn dán phong trào. Đây là chứng nhận có
-            giá trị {CERT_VALIDITY_YEARS} năm, do Hội đồng chuyên môn xét duyệt — và bạn
-            có thể đưa sản phẩm của mình vào danh sách này.
+            {t("heroSub", { validity: CERT_VALIDITY_YEARS })}
           </p>
 
           <div
             className="cp-load mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-white/15 pt-8"
             style={{ "--d": "480ms" } as React.CSSProperties}
           >
-            <Stat number={totalProducts} label="sản phẩm đã chứng nhận" />
+            <Stat number={totalProducts} label={t("statProducts")} />
             <Divider />
-            <Stat number={totalCompanies} label="doanh nghiệp tham gia" />
+            <Stat number={totalCompanies} label={t("statCompanies")} />
             <Divider />
-            <Stat number={monthsActive} label="tháng hoạt động" />
+            <Stat number={monthsActive} label={t("statMonthsActive")} />
           </div>
 
           <div
@@ -479,14 +478,14 @@ export default async function CertifiedProductsPage({
               href="/chung-nhan/nop-don"
               className="group inline-flex items-center justify-between gap-3 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 transition-all hover:-translate-y-0.5 hover:bg-emerald-500 hover:shadow-emerald-500/40"
             >
-              <span>Nộp đơn chứng nhận sản phẩm</span>
+              <span>{t("ctaSubmit")}</span>
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
             <a
               href="#process"
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
             >
-              <span>Xem quy trình {CERT_VALIDITY_YEARS} năm hiệu lực</span>
+              <span>{t("ctaProcess", { validity: CERT_VALIDITY_YEARS })}</span>
               <span aria-hidden>↓</span>
             </a>
           </div>
@@ -499,15 +498,14 @@ export default async function CertifiedProductsPage({
           <div className="mb-12 text-center">
             <p className="flex items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
               <span className="h-px w-10 bg-emerald-600/40" />
-              Quy trình chứng nhận
+              {t("processEyebrow")}
               <span className="h-px w-10 bg-emerald-600/40" />
             </p>
             <h2 className="font-serif-headline mt-4 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-              4 bước để có chứng nhận chính thức
+              {t("processTitle")}
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm text-brand-600 sm:text-base">
-              Tất cả sản phẩm hiển thị trên trang này đều đã hoàn thành đầy đủ 4 bước
-              dưới — không có ngoại lệ, không có short-cut.
+              {t("processSub")}
             </p>
           </div>
 
@@ -527,16 +525,17 @@ export default async function CertifiedProductsPage({
             </div>
 
             <div className="grid gap-8 md:grid-cols-4 md:gap-4">
-              <Step num="01" icon="📋" title="Nộp đơn" desc="Doanh nghiệp đăng tải hồ sơ sản phẩm + giá khai báo + tài liệu chứng minh nguồn gốc." index={0} />
-              <Step num="02" icon="👥" title="Hội đồng" desc={`${COUNCIL_SIZE} thành viên hội đồng được chỉ định ngẫu nhiên — đa lĩnh vực, không trùng doanh nghiệp.`} index={1} />
-              <Step num="03" icon="🔍" title="Thẩm định" desc="Mỗi thành viên đánh giá độc lập, vote APPROVE hoặc REJECT kèm nhận xét chi tiết." index={2} />
-              <Step num="04" icon="🏅" title="Chứng nhận" desc={`5/${COUNCIL_SIZE} APPROVE → cấp huy hiệu chính thức + mã xác thực, hiệu lực ${CERT_VALIDITY_YEARS} năm.`} index={3} />
+              <Step num={t("stepLabel", { num: "01" })} icon="📋" title={t("step1Title")} desc={t("step1Desc")} index={0} />
+              <Step num={t("stepLabel", { num: "02" })} icon="👥" title={t("step2Title")} desc={t("step2Desc", { count: COUNCIL_SIZE })} index={1} />
+              <Step num={t("stepLabel", { num: "03" })} icon="🔍" title={t("step3Title")} desc={t("step3Desc")} index={2} />
+              <Step num={t("stepLabel", { num: "04" })} icon="🏅" title={t("step4Title")} desc={t("step4Desc", { count: COUNCIL_SIZE, validity: CERT_VALIDITY_YEARS })} index={3} />
             </div>
           </div>
 
-          <p className="mx-auto mt-10 max-w-2xl rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-center text-xs text-amber-900">
-            ⚠️ <strong>Quyền phủ quyết:</strong> chỉ cần 1 thành viên REJECT là đơn bị
-            phủ quyết. Tiêu chuẩn được giữ nghiêm để chứng nhận có sức nặng thực sự.
+          <p
+            className="mx-auto mt-10 max-w-2xl rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 text-center text-xs text-amber-900"
+          >
+            ⚠️ <span dangerouslySetInnerHTML={{ __html: t.raw("vetoNotice") as string }} />
           </p>
         </div>
       </section>
@@ -553,17 +552,17 @@ export default async function CertifiedProductsPage({
               <div>
                 <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-300">
                   <span className="h-px w-10 bg-emerald-300/40" />
-                  Mới được cấp chứng nhận
+                  {t("featuredEyebrow")}
                 </p>
                 <h2 className="font-serif-headline mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                  Sản phẩm tiêu biểu
+                  {t("featuredTitle")}
                 </h2>
               </div>
               <Link
                 href="#directory"
                 className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300 transition-colors hover:text-emerald-200 sm:block"
               >
-                Xem toàn bộ danh sách →
+                {t("featuredViewAll")}
               </Link>
             </div>
 
@@ -575,6 +574,8 @@ export default async function CertifiedProductsPage({
                   l={l}
                   index={i}
                   isAdmin={isAdminUser}
+                  locale={locale}
+                  certIssuedLabel={(date) => t("cardCertIssued", { date })}
                 />
               ))}
             </div>
@@ -598,10 +599,10 @@ export default async function CertifiedProductsPage({
               <div>
                 <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-700">
                   <span className="h-px w-10 bg-emerald-600/40" />
-                  Kho sản phẩm chứng nhận
+                  {t("directoryEyebrow")}
                 </p>
                 <h2 className="font-serif-headline mt-3 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl">
-                  Toàn bộ sản phẩm
+                  {t("directoryTitle")}
                 </h2>
               </div>
             </div>
@@ -610,7 +611,7 @@ export default async function CertifiedProductsPage({
             <div className="mb-5 flex items-center justify-between">
               <p className="text-sm text-stone-600">
                 {total === 0
-                  ? "Không tìm thấy sản phẩm nào"
+                  ? t("noResultsFound")
                   : t("countLabel", {
                       first: ((page - 1) * PAGE_SIZE + 1).toLocaleString(locale),
                       last: Math.min(page * PAGE_SIZE, total).toLocaleString(locale),
@@ -622,7 +623,7 @@ export default async function CertifiedProductsPage({
                     scroll={false}
                     className="ml-3 text-xs text-emerald-700 underline hover:text-emerald-800"
                   >
-                    Xoá bộ lọc
+                    {t("clearFilters")}
                   </Link>
                 )}
               </p>
@@ -632,13 +633,13 @@ export default async function CertifiedProductsPage({
               <div className="py-24 text-center">
                 <AgarwoodPlaceholder className="mx-auto mb-4 h-20 w-20" size="lg" shape="full" tone="light" />
                 <p className="text-lg font-medium text-stone-600">
-                  Không tìm thấy sản phẩm phù hợp
+                  {t("noMatchTitle")}
                 </p>
                 <p className="mt-2 text-sm text-stone-400">
-                  Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm
+                  {t("noMatchDesc")}
                 </p>
                 <Link href="/san-pham-chung-nhan" className="mt-4 inline-block text-sm text-emerald-700 underline hover:text-emerald-800">
-                  Xem tất cả sản phẩm
+                  {t("viewAllProducts")}
                 </Link>
               </div>
             ) : view === "list" ? (
@@ -672,7 +673,7 @@ export default async function CertifiedProductsPage({
                             {l(product, "name")}
                           </h3>
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                            ✓ Chứng nhận
+                            {t("listCertBadge")}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-stone-500">
@@ -681,11 +682,11 @@ export default async function CertifiedProductsPage({
                           {product.company!.address &&
                             ` · ${product.company!.address.split(",").at(-1)?.trim()}`}
                           {product.certApprovedAt &&
-                            ` · Cấp ${new Date(product.certApprovedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}`}
+                            ` · ${t("listCertIssued", { date: new Date(product.certApprovedAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" }) })}`}
                         </p>
                       </div>
 
-                      <span className="hidden shrink-0 text-xs text-stone-400 sm:block">Xem →</span>
+                      <span className="hidden shrink-0 text-xs text-stone-400 sm:block">{t("listView")}</span>
                     </Link>
                   )
                 })}
@@ -710,6 +711,9 @@ export default async function CertifiedProductsPage({
                     }}
                     index={i}
                     isAdmin={isAdminUser}
+                    locale={locale}
+                    featuredTagline={t("cardFeaturedTagline")}
+                    featuredBadge={t("cardFeatured")}
                   />
                 ))}
               </div>
@@ -724,7 +728,7 @@ export default async function CertifiedProductsPage({
                     scroll={false}
                     className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-emerald-500 hover:text-emerald-700"
                   >
-                    ← Trước
+                    {t("paginationPrev")}
                   </Link>
                 )}
 
@@ -754,7 +758,7 @@ export default async function CertifiedProductsPage({
                     scroll={false}
                     className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 transition-colors hover:border-emerald-500 hover:text-emerald-700"
                   >
-                    Tiếp →
+                    {t("paginationNext")}
                   </Link>
                 )}
               </div>
@@ -783,37 +787,36 @@ export default async function CertifiedProductsPage({
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <p className="flex items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-300">
             <span className="h-px w-10 bg-amber-300/50" />
-            Bắt đầu ngay
+            {t("aspirationEyebrow")}
             <span className="h-px w-10 bg-amber-300/50" />
           </p>
           <h2 className="font-serif-headline mt-5 text-3xl font-bold leading-tight tracking-tight sm:text-5xl">
-            Đưa sản phẩm của bạn vào{" "}
-            <span className="text-amber-300">danh sách trên</span>.
+            {t("aspirationTitle")}{" "}
+            <span className="text-amber-300">{t("aspirationTitleEm")}</span>.
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-emerald-100/75">
-            Quá trình chứng nhận đang mở. Không yêu cầu doanh nghiệp lớn — chỉ cần
-            sản phẩm đạt chuẩn theo đánh giá của hội đồng.
+            {t("aspirationDesc")}
           </p>
 
           <div className="mx-auto mt-10 flex max-w-md items-center justify-between text-emerald-200/85">
-            <MiniStep label="Nộp đơn" icon="📋" />
+            <MiniStep label={t("miniStep1")} icon="📋" />
             <MiniDot />
-            <MiniStep label="Hội đồng" icon="👥" />
+            <MiniStep label={t("miniStep2")} icon="👥" />
             <MiniDot />
-            <MiniStep label="Thẩm định" icon="🔍" />
+            <MiniStep label={t("miniStep3")} icon="🔍" />
             <MiniDot />
-            <MiniStep label="Chứng nhận" icon="🏅" />
+            <MiniStep label={t("miniStep4")} icon="🏅" />
           </div>
 
           <Link
             href="/chung-nhan/nop-don"
             className="group mt-10 inline-flex items-center gap-3 rounded-xl bg-amber-500 px-7 py-4 text-sm font-semibold text-emerald-950 shadow-xl shadow-amber-500/30 transition-all hover:-translate-y-0.5 hover:bg-amber-400 hover:shadow-amber-400/50 sm:text-base"
           >
-            <span>Nộp đơn chứng nhận ngay</span>
+            <span>{t("aspirationCta")}</span>
             <span className="transition-transform group-hover:translate-x-1.5">→</span>
           </Link>
           <p className="mt-4 text-xs text-emerald-100/55">
-            Phí thẩm định hoàn lại 100% nếu đơn bị từ chối.
+            {t("aspirationNote")}
           </p>
         </div>
       </section>
@@ -864,7 +867,7 @@ function Step({
         <span aria-hidden>{icon}</span>
       </div>
       <span className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-        Bước {num}
+        {num}
       </span>
       <h3 className="font-serif-headline mt-1 text-xl font-bold text-brand-900">
         {title}
@@ -916,11 +919,15 @@ function FeaturedProductCard({
   l,
   index,
   isAdmin,
+  locale,
+  certIssuedLabel,
 }: {
   product: ProductRow
   l: <T extends Record<string, unknown>>(rec: T, field: string) => string
   index: number
   isAdmin?: boolean
+  locale: Locale
+  certIssuedLabel: (date: string) => string
 }) {
   const firstImage = product.imageUrls[0]
   return (
@@ -972,11 +979,12 @@ function FeaturedProductCard({
         </p>
         {product.certApprovedAt && (
           <p className="mt-2 text-[10px] uppercase tracking-wider text-emerald-300/70">
-            Cấp{" "}
-            {new Date(product.certApprovedAt).toLocaleDateString("vi-VN", {
-              month: "2-digit",
-              year: "numeric",
-            })}
+            {certIssuedLabel(
+              new Date(product.certApprovedAt).toLocaleDateString(locale, {
+                month: "2-digit",
+                year: "numeric",
+              }),
+            )}
           </p>
         )}
       </div>

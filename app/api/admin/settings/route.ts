@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   revalidatePath("/gia-han")
   revalidatePath("/dich-vu")
   revalidatePath("/chung-nhan/nop-don")
-  revalidatePath("/gioi-thieu")
+  revalidatePath("/gioi-thieu-v2")
   revalidatePath("/admin")
   revalidateTag("footer", "max")
   revalidateTag("site-config", "max")

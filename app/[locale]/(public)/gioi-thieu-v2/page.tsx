@@ -12,9 +12,7 @@ import "./styles.css"
 
 export const revalidate = 600
 
-/** Leaders + VIP/INFINITE members — cùng cache key với /gioi-thieu (v1)
- *  để chia sẻ cache 10 phút giữa 2 route. Tags giống nhau → revalidate
- *  một chỗ refresh cả hai. */
+/** Leaders + VIP/INFINITE members — cache 10 phút để share giữa các visitor. */
 const getLeadersAndMembers = unstable_cache(
   () =>
     Promise.all([
@@ -165,20 +163,20 @@ export default async function GioiThieuV2Page() {
           </div>
           <div className="hero-meta">
             <div className="hero-meta-item">
-              <div className="hero-meta-label">Thành lập</div>
-              <div className="hero-meta-value">11 · 01 · 2010</div>
+              <div className="hero-meta-label">{t("heroMetaFoundedLabel")}</div>
+              <div className="hero-meta-value">{t("heroMetaFoundedValue")}</div>
             </div>
             <div className="hero-meta-item">
-              <div className="hero-meta-label">Trụ sở</div>
-              <div className="hero-meta-value">Thành phố Hồ Chí Minh</div>
+              <div className="hero-meta-label">{t("heroMetaHQLabel")}</div>
+              <div className="hero-meta-value">{t("heroMetaHQValue")}</div>
             </div>
             <div className="hero-meta-item">
-              <div className="hero-meta-label">Phạm vi</div>
-              <div className="hero-meta-value">Toàn quốc</div>
+              <div className="hero-meta-label">{t("heroMetaScopeLabel")}</div>
+              <div className="hero-meta-value">{t("heroMetaScopeValue")}</div>
             </div>
           </div>
         </div>
-        <div className="hero-scroll">Cuộn xuống</div>
+        <div className="hero-scroll">{t("heroScroll")}</div>
       </section>
 
       {/* 2. STATS */}
@@ -188,21 +186,21 @@ export default async function GioiThieuV2Page() {
             <div className="stat-num" data-counter={String(yearsActive)}>
               <em>+</em>
             </div>
-            <div className="stat-label">Năm hoạt động</div>
+            <div className="stat-label">{t("statYearsActive")}</div>
           </div>
           <div className="stat reveal">
             <div className="stat-num" data-counter={String(totalMemberCount)}>
               <em>+</em>
             </div>
-            <div className="stat-label">Hội viên</div>
+            <div className="stat-label">{t("statMembersLabel")}</div>
           </div>
           <div className="stat reveal">
             <div className="stat-num" data-counter={String(currentLeaderCount)}></div>
-            <div className="stat-label">Lãnh đạo</div>
+            <div className="stat-label">{t("statLeadersLabel")}</div>
           </div>
           <div className="stat reveal">
             <div className="stat-num" data-counter="4"></div>
-            <div className="stat-label">Ngôn ngữ</div>
+            <div className="stat-label">{t("statLanguagesLabel")}</div>
           </div>
         </div>
       </section>
@@ -221,8 +219,11 @@ export default async function GioiThieuV2Page() {
               </blockquote>
             </div>
             <div className="intro-image reveal reveal-from-right">
-              <img src="/rung-gio-bau.jpg" alt="Rừng gió bầu" />
-              <div className="intro-image-tag">Rừng gió bầu</div>
+              <img
+                src={t("introImage") || "/rung-gio-bau.jpg"}
+                alt={t("introImageCaption")}
+              />
+              <div className="intro-image-tag">{t("introImageCaption")}</div>
             </div>
           </div>
         </div>
@@ -232,10 +233,12 @@ export default async function GioiThieuV2Page() {
       <section className="section leadership">
         <div className="container">
           <div className="section-head reveal">
-            <div className="eyebrow">Ban lãnh đạo Hội</div>
-            <h2 className="display-1" style={{ marginTop: "1.25rem" }}>
-              Những người <em>dẫn dắt</em>
-            </h2>
+            <div className="eyebrow">{t("leadershipEyebrow")}</div>
+            <h2
+              className="display-1"
+              style={{ marginTop: "1.25rem" }}
+              dangerouslySetInnerHTML={{ __html: t("leadershipHeading") }}
+            />
           </div>
           <LeadershipTabsV2 leaders={currentLeaders} />
         </div>
@@ -245,7 +248,7 @@ export default async function GioiThieuV2Page() {
       <section className="section org">
         <div className="container">
           <div className="section-head reveal">
-            <div className="eyebrow">Cơ cấu tổ chức</div>
+            <div className="eyebrow">{t("orgEyebrow")}</div>
             <h2 className="display-1" style={{ marginTop: "1.25rem" }}>
               {t("orgTitle")}
             </h2>
@@ -255,24 +258,24 @@ export default async function GioiThieuV2Page() {
           </div>
 
           <div className="org-tree reveal">
-            <div className="org-node primary">Đại hội</div>
+            <div className="org-node primary">{t("congress")}</div>
             <div className="org-line"></div>
-            <div className="org-node accent">Ban Chấp hành</div>
+            <div className="org-node accent">{t("executiveBoard")}</div>
             <div className="org-line"></div>
-            <div className="org-node">Ban Thường vụ</div>
+            <div className="org-node">{t("standingBoard")}</div>
             <div className="org-line"></div>
             <div className="org-row">
               <div className="org-leaf">
                 <div className="org-line"></div>
-                <div className="org-node">Ban Kiểm tra</div>
+                <div className="org-node">{t("inspectionBoard")}</div>
               </div>
               <div className="org-leaf">
                 <div className="org-line"></div>
-                <div className="org-node">Văn phòng &amp; Chuyên môn</div>
+                <div className="org-node">{t("departments")}</div>
               </div>
               <div className="org-leaf">
                 <div className="org-line"></div>
-                <div className="org-node">Tổ chức trực thuộc</div>
+                <div className="org-node">{t("affiliates")}</div>
               </div>
             </div>
           </div>
@@ -283,12 +286,14 @@ export default async function GioiThieuV2Page() {
       <section className="section members">
         <div className="container">
           <div className="section-head reveal">
-            <div className="eyebrow">Cộng đồng hội viên</div>
-            <h2 className="display-1" style={{ marginTop: "1.25rem" }}>
-              Quy tụ <em>tinh hoa</em>
-            </h2>
+            <div className="eyebrow">{t("membersEyebrow")}</div>
+            <h2
+              className="display-1"
+              style={{ marginTop: "1.25rem" }}
+              dangerouslySetInnerHTML={{ __html: t("membersHeading") }}
+            />
             <p className="lead" style={{ marginTop: "1.25rem", color: "var(--gray-500)" }}>
-              {totalMemberCount} hội viên VIP · doanh nghiệp · nghệ nhân từ khắp Việt Nam
+              {t("membersLead", { count: totalMemberCount })}
             </p>
           </div>
           <MembersScrollV2 members={members} totalCount={totalMemberCount} />
@@ -299,10 +304,12 @@ export default async function GioiThieuV2Page() {
       <section className="section contact">
         <div className="container">
           <div className="section-head reveal">
-            <div className="eyebrow">Địa chỉ trụ sở</div>
-            <h2 className="display-1" style={{ marginTop: "1.25rem" }}>
-              Đến <em>thăm</em> chúng tôi
-            </h2>
+            <div className="eyebrow">{t("contactEyebrow")}</div>
+            <h2
+              className="display-1"
+              style={{ marginTop: "1.25rem" }}
+              dangerouslySetInnerHTML={{ __html: t("contactTitle") }}
+            />
           </div>
           <div className="contact-grid">
             <div className="contact-map reveal">
@@ -311,16 +318,16 @@ export default async function GioiThieuV2Page() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
-                title="Bản đồ trụ sở Hội Trầm Hương Việt Nam"
+                title={t("mapTitle")}
               />
             </div>
             <div className="contact-card reveal">
               <div className="eyebrow">VAWA</div>
-              <h3>Hội Trầm Hương Việt Nam</h3>
+              <h3>{t("contactName")}</h3>
               <ul className="contact-list">
                 <li>
                   <div className="ic">◎</div>
-                  <div>Số 150, Lý Chính Thắng, P. Xuân Hoà, TP. HCM</div>
+                  <div>{t("contactAddress")}</div>
                 </li>
                 <li>
                   <div className="ic">☏</div>
@@ -344,7 +351,7 @@ export default async function GioiThieuV2Page() {
           <h2 dangerouslySetInnerHTML={{ __html: t("ctaTitle") }} />
           <p>{t("ctaDesc")}</p>
           <Link href="/dang-ky" className="btn">
-            Trở thành hội viên
+            {t("ctaButton")}
           </Link>
         </div>
       </section>

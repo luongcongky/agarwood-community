@@ -65,6 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CompanyProfilePage({ params }: Props) {
   const tC = await getTranslations("companyDetail")
+  const tCT = await getTranslations("companyTabs")
 
   const locale = await getLocale() as Locale
   const l = <T extends Record<string, unknown>>(record: T, field: string) => localize(record, field, locale) as string
@@ -144,7 +145,7 @@ export default async function CompanyProfilePage({ params }: Props) {
               href={`/doanh-nghiep/chinh-sua?slug=${company.slug}`}
               className="bg-white/90 text-brand-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow hover:bg-white transition-colors"
             >
-              Chỉnh sửa
+              {tC("edit")}
             </Link>
           </div>
         )}
@@ -156,18 +157,18 @@ export default async function CompanyProfilePage({ params }: Props) {
           <h1 className="text-2xl sm:text-3xl font-bold text-brand-900">{l(company, "name")}</h1>
           {company.isVerified && (
             <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full">
-              ✓ Đã xác minh
+              {tC("verified")}
             </span>
           )}
           {(company.owner.role === "VIP" || company.owner.role === "INFINITE") && (
             <span className="inline-flex items-center gap-1 bg-brand-100 text-brand-700 text-xs font-medium px-2 py-1 rounded-full">
-              Thành viên Hội
+              {tC("associationMember")}
             </span>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">
-          {company.foundedYear && <span className="text-sm text-brand-700 font-medium">Thành lập {company.foundedYear}</span>}
+          {company.foundedYear && <span className="text-sm text-brand-700 font-medium">{tC("founded")} {company.foundedYear}</span>}
           {l(company, "address") && <span className="text-sm text-brand-600">{l(company, "address")}</span>}
           <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-sm font-semibold px-2 py-0.5 rounded-full">
             {"★".repeat(tier.stars)} {tier.label}

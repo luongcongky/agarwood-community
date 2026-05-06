@@ -140,7 +140,7 @@ export function CompanyTabs({
             )}
 
             {products.length === 0 ? (
-              <p className="text-brand-400 italic text-sm">Doanh nghiệp chưa có sản phẩm nào.</p>
+              <p className="text-brand-400 italic text-sm">{t("noProducts")}</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {products.map((product) => (
@@ -223,7 +223,7 @@ export function CompanyTabs({
                         )}
                         {n.publishedAt && (
                           <time className="mt-1 block text-xs text-brand-400">
-                            {new Date(n.publishedAt).toLocaleDateString("vi-VN", {
+                            {new Date(n.publishedAt).toLocaleDateString(locale, {
                               day: "2-digit",
                               month: "2-digit",
                               year: "numeric",
@@ -244,7 +244,7 @@ export function CompanyTabs({
           <dl className="divide-y divide-brand-100 text-sm">
             <InfoRow label={t("companyName")} value={companyName} />
             {foundedYear && <InfoRow label={t("foundedYear")} value={String(foundedYear)} />}
-            {employeeCount && <InfoRow label={t("employeeCount")} value={`${employeeCount} người`} />}
+            {employeeCount && <InfoRow label={t("employeeCount")} value={`${employeeCount} ${t("people")}`} />}
             {businessLicense && <InfoRow label={t("businessLicense")} value={businessLicense} />}
             {address && <InfoRow label={t("address")} value={address} />}
             {phone && <InfoRow label={t("phone")} value={phone} />}

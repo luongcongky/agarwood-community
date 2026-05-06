@@ -103,11 +103,9 @@ export default async function MembersPage() {
 
   const isLoggedIn = !!session?.user
   const ctaHref = isLoggedIn ? "/admin" : "/dang-ky"
-  const ctaLabel = isLoggedIn
-    ? "Đăng ký vị trí Tiêu biểu"
-    : "Đăng ký hội viên doanh nghiệp"
+  const ctaLabel = isLoggedIn ? t("ctaFeatured") : t("ctaJoin")
 
-  const monthYear = new Intl.DateTimeFormat("vi-VN", {
+  const monthYear = new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
   }).format(new Date())
@@ -188,23 +186,18 @@ export default async function MembersPage() {
                 style={{ "--d": "0ms" } as React.CSSProperties}
               >
                 <span className="h-px w-10 bg-brand-700/40" />
-                Niên giám hội viên
+                {t("heroEyebrow")}
               </p>
               <h1
                 className="dn-load font-serif-headline mt-5 text-4xl font-bold leading-[1.05] tracking-tight text-brand-900 sm:text-5xl lg:text-[58px]"
                 style={{ "--d": "120ms" } as React.CSSProperties}
-              >
-                Những doanh nghiệp <br className="hidden sm:block" />
-                <span className="italic text-brand-700">giữ lửa</span> cho di sản{" "}
-                <span className="whitespace-nowrap">trầm hương Việt.</span>
-              </h1>
+                dangerouslySetInnerHTML={{ __html: t.raw("heroTitle") as string }}
+              />
               <p
                 className="dn-load mt-6 max-w-xl text-base leading-relaxed text-brand-600 sm:text-lg"
                 style={{ "--d": "280ms" } as React.CSSProperties}
               >
-                Niên giám doanh nghiệp được Hội Trầm Hương Việt Nam xét duyệt — đại diện cho những
-                đơn vị uy tín trong nuôi trồng, chế tác và phân phối trầm hương theo chuẩn mực bền
-                vững.
+                {t("heroSub")}
               </p>
             </div>
 
@@ -214,9 +207,9 @@ export default async function MembersPage() {
                 className="dn-load grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-brand-200/70 ring-1 ring-brand-300/60 shadow-sm"
                 style={{ "--d": "440ms" } as React.CSSProperties}
               >
-                <Stat value={totalCompanies} label="doanh nghiệp" />
-                <Stat value={totalCertified} label="sản phẩm chứng nhận" />
-                <Stat value={heritageYears} suffix="+" label="năm di sản" />
+                <Stat value={totalCompanies} label={t("statCompanies")} />
+                <Stat value={totalCertified} label={t("statCertProducts")} />
+                <Stat value={heritageYears} suffix="+" label={t("statHeritageYears")} />
               </ul>
               <Link
                 href={ctaHref}
@@ -255,15 +248,15 @@ export default async function MembersPage() {
               <div>
                 <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-700">
                   <span className="text-base text-amber-500">★</span>
-                  <span>Tiêu biểu của Hội</span>
+                  <span>{t("featuredEyebrow")}</span>
                 </p>
                 <h2 className="font-serif-headline mt-3 text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl lg:text-[44px]">
-                  Những đơn vị tiên phong
+                  {t("featuredTitle")}
                 </h2>
                 <div className="mt-4 h-[3px] w-20 rounded-full bg-linear-to-r from-amber-500 via-amber-400 to-amber-300" />
               </div>
               <span className="hidden text-xs font-medium uppercase tracking-[0.18em] text-amber-700/70 sm:block">
-                Niên giám {monthYear}
+                {t("featuredMonthYear", { monthYear })}
               </span>
             </div>
 
@@ -274,15 +267,39 @@ export default async function MembersPage() {
                   l={l}
                   isAdmin={isAdminUser}
                   visitWebsiteLabel={t("visitWebsite")}
+                  featuredBadge={t("featuredBadge")}
+                  productsCountLabel={(count) => t("productsCount", { count })}
+                  foundedSinceLabel={(year) => t("foundedSince", { year })}
                 />
               )}
 
               <div className="grid grid-cols-1 gap-4 lg:gap-6">
                 {featured.slice(1, 3).map((c) => (
-                  <FeaturedSide key={c.id} company={c} l={l} isAdmin={isAdminUser} />
+                  <FeaturedSide
+                    key={c.id}
+                    company={c}
+                    l={l}
+                    isAdmin={isAdminUser}
+                    featuredBadge={t("featuredBadge")}
+                    productsCountLabel={(count) => t("productsCount", { count })}
+                    memberSinceLabel={(year) => t("memberSince", { year })}
+                    genericMemberLabel={t("genericMember")}
+                  />
                 ))}
-                {featured.length === 1 && <FeaturedSidePlaceholder ctaHref={ctaHref} />}
-                {featured.length === 2 && <FeaturedSidePlaceholder ctaHref={ctaHref} />}
+                {featured.length === 1 && (
+                  <FeaturedSidePlaceholder
+                    ctaHref={ctaHref}
+                    title={t("feSlotEmptyTitle")}
+                    desc={t("feSlotEmptyDesc")}
+                  />
+                )}
+                {featured.length === 2 && (
+                  <FeaturedSidePlaceholder
+                    ctaHref={ctaHref}
+                    title={t("feSlotEmptyTitle")}
+                    desc={t("feSlotEmptyDesc")}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -327,33 +344,31 @@ export default async function MembersPage() {
             <div className="lg:col-span-7">
               <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-400">
                 <span className="h-px w-10 bg-amber-400/50" />
-                Trở thành hội viên
+                {t("ctaJoinEyebrow")}
               </p>
               <h2 className="font-serif-headline mt-4 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-                Vị trí tiếp theo trong niên giám —{" "}
-                <span className="italic text-amber-400">có thể là bạn.</span>
+                {t("ctaJoinTitle")}{" "}
+                <span className="italic text-amber-400">{t("ctaJoinTitleEm")}</span>
               </h2>
               <p className="mt-6 max-w-xl text-base leading-relaxed text-white/70">
-                Tham gia Hội để hiện diện cùng những thương hiệu đã định hình ngành trầm hương Việt
-                Nam — nâng cao uy tín, tiếp cận hệ thống chứng nhận & xét duyệt sản phẩm theo
-                chuẩn của Hội.
+                {t("ctaJoinDesc")}
               </p>
             </div>
             <div className="space-y-3 lg:col-span-5">
               <BenefitRow
                 num="01"
-                title="Niên giám điện tử"
-                desc="Tên doanh nghiệp xuất hiện trong danh bạ chính thức, được Google index."
+                title={t("benefit1Title")}
+                desc={t("benefit1Desc")}
               />
               <BenefitRow
                 num="02"
-                title="Chứng nhận sản phẩm"
-                desc={`Quy trình thẩm định 5 thành viên hội đồng — chứng nhận có hiệu lực ${CERT_VALIDITY_YEARS} năm, có thể gia hạn.`}
+                title={t("benefit2Title")}
+                desc={t("benefit2Desc", { validity: CERT_VALIDITY_YEARS })}
               />
               <BenefitRow
                 num="03"
-                title="Vị trí Tiêu biểu"
-                desc="Cơ hội được Hội đề cử lên đầu trang — tăng độ tin cậy với khách hàng."
+                title={t("benefit3Title")}
+                desc={t("benefit3Desc")}
               />
               <Link
                 href={ctaHref}
@@ -398,11 +413,17 @@ function FeaturedHero({
   l,
   isAdmin,
   visitWebsiteLabel,
+  featuredBadge,
+  productsCountLabel,
+  foundedSinceLabel,
 }: {
   company: CompanyCard
   l: <T extends Record<string, unknown>>(rec: T, field: string) => string
   isAdmin: boolean
   visitWebsiteLabel: string
+  featuredBadge: string
+  productsCountLabel: (count: number) => string
+  foundedSinceLabel: (year: number) => string
 }) {
   const productsCount = company._count.products
   return (
@@ -441,7 +462,7 @@ function FeaturedHero({
         className="dn-pop absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-full bg-linear-to-br from-amber-400 to-amber-600 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-brand-900 shadow-xl ring-2 ring-white"
         style={{ "--d": "700ms" } as React.CSSProperties}
       >
-        <span className="text-sm leading-none">★</span> Tiêu biểu
+        <span className="text-sm leading-none">★</span> {featuredBadge}
       </span>
 
       {isAdmin && (
@@ -471,16 +492,11 @@ function FeaturedHero({
               {l(company, "name")}
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/85 sm:text-sm">
-              {company.foundedYear && <span>Từ {company.foundedYear}</span>}
+              {company.foundedYear && <span>{foundedSinceLabel(company.foundedYear)}</span>}
               {company.foundedYear && productsCount > 0 && (
                 <span aria-hidden className="opacity-50">·</span>
               )}
-              {productsCount > 0 && (
-                <span>
-                  <span className="font-semibold text-amber-300">{productsCount}</span> sản phẩm
-                  chứng nhận
-                </span>
-              )}
+              {productsCount > 0 && <span>{productsCountLabel(productsCount)}</span>}
               {l(company, "address") && (
                 <>
                   <span aria-hidden className="opacity-50">·</span>
@@ -509,10 +525,18 @@ function FeaturedSide({
   company,
   l,
   isAdmin,
+  featuredBadge,
+  productsCountLabel,
+  memberSinceLabel,
+  genericMemberLabel,
 }: {
   company: CompanyCard
   l: <T extends Record<string, unknown>>(rec: T, field: string) => string
   isAdmin: boolean
+  featuredBadge: string
+  productsCountLabel: (count: number) => string
+  memberSinceLabel: (year: number) => string
+  genericMemberLabel: string
 }) {
   const productsCount = company._count.products
   return (
@@ -538,7 +562,7 @@ function FeaturedSide({
         className="dn-pop absolute left-3 top-3 z-20 inline-flex items-center gap-1 rounded-full bg-linear-to-br from-amber-400 to-amber-600 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.15em] text-brand-900 shadow-lg ring-2 ring-white/80"
         style={{ "--d": "850ms" } as React.CSSProperties}
       >
-        <span className="text-xs leading-none">★</span> Tiêu biểu
+        <span className="text-xs leading-none">★</span> {featuredBadge}
       </span>
       {isAdmin && (
         <div className="absolute right-2 top-2 z-20">
@@ -554,10 +578,10 @@ function FeaturedSide({
         </h3>
         <p className="mt-1 text-xs text-white/75">
           {productsCount > 0
-            ? `${productsCount} sản phẩm chứng nhận`
+            ? productsCountLabel(productsCount)
             : company.foundedYear
-              ? `Hội viên từ ${company.foundedYear}`
-              : "Hội viên Hội Trầm Hương VN"}
+              ? memberSinceLabel(company.foundedYear)
+              : genericMemberLabel}
         </p>
       </div>
     </div>
@@ -565,15 +589,23 @@ function FeaturedSide({
 }
 
 /** Empty featured slot — nudge cho admin (hoặc DN) thấy "vị trí trống" */
-function FeaturedSidePlaceholder({ ctaHref }: { ctaHref: string }) {
+function FeaturedSidePlaceholder({
+  ctaHref,
+  title,
+  desc,
+}: {
+  ctaHref: string
+  title: string
+  desc: string
+}) {
   return (
     <Link
       href={ctaHref}
       className="group relative flex aspect-16/10 flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-4 text-center transition-colors hover:border-amber-500 hover:bg-amber-50 lg:aspect-auto lg:flex-1"
     >
       <span className="font-serif-headline text-3xl text-amber-500">★</span>
-      <p className="mt-2 text-sm font-semibold text-brand-900">Vị trí Tiêu biểu còn trống</p>
-      <p className="mt-1 text-xs text-brand-600">Đăng ký để được Hội đề cử</p>
+      <p className="mt-2 text-sm font-semibold text-brand-900">{title}</p>
+      <p className="mt-1 text-xs text-brand-600">{desc}</p>
     </Link>
   )
 }

@@ -116,7 +116,7 @@ export default async function LeadershipPage({
           {/* Back link */}
           <div className="mt-10 text-center">
             <Link
-              href="/gioi-thieu"
+              href="/gioi-thieu-v2"
               className="inline-flex items-center text-sm font-medium text-brand-700 hover:text-brand-900 transition-colors"
             >
               {t("backToAbout")}

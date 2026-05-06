@@ -44,7 +44,7 @@ export async function PATCH(
     },
   })
 
-  revalidatePath("/gioi-thieu")
+  revalidatePath("/gioi-thieu-v2")
   revalidatePath("/ban-lanh-dao")
 
   return NextResponse.json(leader)
@@ -62,7 +62,7 @@ export async function DELETE(
   const { id } = await params
   await prisma.leader.delete({ where: { id } })
 
-  revalidatePath("/gioi-thieu")
+  revalidatePath("/gioi-thieu-v2")
   revalidatePath("/ban-lanh-dao")
 
   return NextResponse.json({ success: true })

@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     },
   })
 
-  revalidatePath("/gioi-thieu")
+  revalidatePath("/gioi-thieu-v2")
   revalidatePath("/ban-lanh-dao")
 
   return NextResponse.json(leader, { status: 201 })

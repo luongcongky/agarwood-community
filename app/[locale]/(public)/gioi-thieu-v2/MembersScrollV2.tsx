@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useDeferredValue, useMemo, useState } from "react"
+import { useTranslations } from "next-intl"
 
 // Members scroll + search — render TẤT CẢ hội viên trong server-side fetch,
 // scope 600px scroll container chống section mở rộng. Search là client-side
@@ -51,6 +52,7 @@ export function MembersScrollV2({
   members: MemberItem[]
   totalCount: number
 }) {
+  const t = useTranslations("about")
   const [query, setQuery] = useState("")
   // useDeferredValue: với pool nhỏ (~65) thì instant; nhưng chuẩn bị scale
   // — khi gõ nhanh, React có thể bỏ qua frames trung gian, chỉ commit final
@@ -89,7 +91,7 @@ export function MembersScrollV2({
         data-done="true"
         style={{ maxWidth: "600px", margin: "0 auto" }}
       >
-        <span className="loader-text">Chưa có hội viên VIP nào được hiển thị.</span>
+        <span className="loader-text">{t("noVipMembers")}</span>
       </div>
     )
   }
@@ -100,10 +102,10 @@ export function MembersScrollV2({
         <input
           type="search"
           className="members-search"
-          placeholder="Tìm hội viên hoặc doanh nghiệp..."
+          placeholder={t("memberSearchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Tìm hội viên hoặc doanh nghiệp"
+          aria-label={t("memberSearchAriaLabel")}
         />
       </div>
 
@@ -145,7 +147,7 @@ export function MembersScrollV2({
               fontStyle: "italic",
             }}
           >
-            Không tìm thấy hội viên phù hợp với &ldquo;{deferredQuery}&rdquo;
+            {t("memberNoMatch")} &ldquo;{deferredQuery}&rdquo;
           </div>
         )}
 
@@ -154,17 +156,33 @@ export function MembersScrollV2({
           <span className="loader-text">
             {isSearching ? (
               resultCount > 0 ? (
-                <>
-                  Tìm thấy <strong>{resultCount}</strong> hội viên phù hợp
-                  {resultCount < totalCount && ` (trong ${totalCount} hội viên)`}
-                </>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      resultCount < totalCount
+                        ? t.markup("memberSearchResultsInTotal", {
+                            count: resultCount,
+                            total: totalCount,
+                            strong: (chunks) => `<strong>${chunks}</strong>`,
+                          })
+                        : t.markup("memberSearchResults", {
+                            count: resultCount,
+                            strong: (chunks) => `<strong>${chunks}</strong>`,
+                          }),
+                  }}
+                />
               ) : (
-                <>Không có kết quả nào</>
+                t("memberSearchNoResult")
               )
             ) : (
-              <>
-                Đã hiển thị toàn bộ <strong>{totalCount}</strong> hội viên
-              </>
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: t.markup("memberShowingAll", {
+                    total: totalCount,
+                    strong: (chunks) => `<strong>${chunks}</strong>`,
+                  }),
+                }}
+              />
             )}
           </span>
         </div>

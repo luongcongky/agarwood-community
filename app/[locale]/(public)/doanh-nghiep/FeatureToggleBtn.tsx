@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 
 /**
@@ -17,6 +18,7 @@ export function FeatureToggleBtn({
   companyId: string
   initialFeatured: boolean
 }) {
+  const t = useTranslations("companies")
   const [featured, setFeatured] = useState(initialFeatured)
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
@@ -32,9 +34,7 @@ export function FeatureToggleBtn({
     // Confirm trước khi thực hiện — tránh lỡ tay bấm nhầm. Phase 3.7 round 4
     // (2026-04). Native window.confirm đủ dùng cho thao tác đơn lẻ này.
     const ok = window.confirm(
-      next
-        ? "Chọn doanh nghiệp này làm DN tiêu biểu?"
-        : "Bỏ DN tiêu biểu? DN sẽ không còn highlight ở danh sách + landing page.",
+      next ? t("toggleConfirmOn") : t("toggleConfirmOff"),
     )
     if (!ok) return
     setSaving(true)
@@ -49,7 +49,7 @@ export function FeatureToggleBtn({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setFeatured(!next) // rollback
-        setError(data.error ?? "Lưu thất bại")
+        setError(data.error ?? t("toggleSaveFailed"))
         return
       }
       // Saved feedback (✓ xanh ~900ms) rồi router.refresh(). Page giờ
@@ -61,7 +61,7 @@ export function FeatureToggleBtn({
       }, 900)
     } catch {
       setFeatured(!next) // rollback
-      setError("Lỗi mạng")
+      setError(t("toggleNetworkError"))
     } finally {
       setSaving(false)
     }
@@ -76,10 +76,10 @@ export function FeatureToggleBtn({
         error
           ? error
           : featured
-            ? "Click để bỏ tiêu biểu"
-            : "Click để chọn DN tiêu biểu"
+            ? t("toggleTitleOff")
+            : t("toggleTitleOn")
       }
-      aria-label={featured ? "Bỏ tiêu biểu" : "Chọn DN tiêu biểu"}
+      aria-label={featured ? t("toggleAriaOff") : t("toggleAriaOn")}
       className={cn(
         "inline-flex h-7 w-7 items-center justify-center rounded-md border text-base leading-none transition-colors",
         savedFlash
